@@ -8,6 +8,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { FAQ_DATA, SITE_NAME } from '@/lib/constants';
 import { HelpCircle } from 'lucide-react';
 
@@ -49,16 +51,12 @@ export default function FAQPage() {
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-6">
             If you can't find the answer you're looking for, please don't hesitate to reach out to our support team.
           </p>
-          <PublicFooter.Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            <PublicFooter.Link href="/contact">Contact Support</PublicFooter.Link>
-          </PublicFooter.Button>
+          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Link href="/contact">Contact Support</Link>
+          </Button>
         </Section>
       </main>
       <PublicFooter />
     </div>
   );
 }
-
-// Minimal Button and Link components for the PublicFooter call, ideally part of PublicFooter or Button/Link imports
-PublicFooter.Button = Button;
-PublicFooter.Link = Link;
