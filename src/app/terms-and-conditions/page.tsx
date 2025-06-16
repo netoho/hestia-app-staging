@@ -2,8 +2,8 @@ import PublicHeader from '@/components/layout/PublicHeader';
 import PublicFooter from '@/components/layout/PublicFooter';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SITE_NAME, COMPANY_LEGAL_NAME } from '@/lib/constants';
+import { Card, CardContent } from '@/components/ui/card'; // CardHeader and CardTitle were not used
+import { SITE_NAME, COMPANY_LEGAL_NAME, CONTACT_EMAIL } from '@/lib/constants';
 
 export default function TermsAndConditionsPage() {
   return (
@@ -47,7 +47,7 @@ export default function TermsAndConditionsPage() {
               <p>As long as the website and the information and services on the website are provided free of charge, we will not be liable for any loss or damage of any nature.</p>
               
               <p className="mt-8"><strong>Contact Information</strong></p>
-              <p>If you have any queries regarding any of our terms, please contact us at [Your Contact Email].</p>
+              <p>If you have any queries regarding any of our terms, please contact us at {CONTACT_EMAIL}.</p>
             </CardContent>
           </Card>
         </Section>
