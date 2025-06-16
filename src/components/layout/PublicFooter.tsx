@@ -1,12 +1,20 @@
+'use client';
+
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import { FOOTER_LINKS, SITE_NAME, COMPANY_LEGAL_NAME, CONTACT_EMAIL, CONTACT_PHONE } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Mail, Phone, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <footer className="bg-muted/50 text-muted-foreground pt-16 pb-8">
@@ -58,10 +66,18 @@ export default function PublicFooter() {
           <div>
             <h3 className="text-lg font-headline font-semibold text-foreground mb-4">Newsletter</h3>
             <p className="text-sm mb-3">Stay updated with our latest news and offers.</p>
-            <form className="flex gap-2">
-              <Input type="email" placeholder="Enter your email" className="bg-background" aria-label="Email for newsletter"/>
-              <Button type="submit" variant="default" className="bg-primary hover:bg-primary/90">Subscribe</Button>
-            </form>
+            {isClient ? (
+              <form className="flex gap-2">
+                <Input type="email" placeholder="Enter your email" className="bg-background" aria-label="Email for newsletter"/>
+                <Button type="submit" variant="default" className="bg-primary hover:bg-primary/90">Subscribe</Button>
+              </form>
+            ) : (
+              // Placeholder to prevent layout shift
+              <div className="flex gap-2">
+                <Input type="email" placeholder="Enter your email" className="bg-background" aria-label="Email for newsletter" disabled/>
+                <Button type="submit" variant="default" className="bg-primary hover:bg-primary/90" disabled>Subscribe</Button>
+              </div>
+            )}
           </div>
         </div>
 
