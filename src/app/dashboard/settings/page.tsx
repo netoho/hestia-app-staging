@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Globe, Bell, ShieldLock } from 'lucide-react';
+import { Globe, Bell, ShieldCheck } from 'lucide-react'; // Changed ShieldLock to ShieldCheck
 
 export default function SettingsPage() {
   return (
@@ -50,7 +50,7 @@ export default function SettingsPage() {
 
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><ShieldLock className="mr-2 h-5 w-5 text-primary"/> Security Settings</CardTitle>
+            <CardTitle className="font-headline text-xl flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary"/> Security Settings</CardTitle> {/* Changed ShieldLock to ShieldCheck */}
             <CardDescription>Manage your account security features.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -100,4 +100,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
