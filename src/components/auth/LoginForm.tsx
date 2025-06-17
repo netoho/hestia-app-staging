@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -10,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -21,6 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -35,13 +38,14 @@ export function LoginForm() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('Login data:', values);
-    // In a real app, you would navigate or set auth state here
+    
     toast({
       title: 'Login Successful (Mock)',
       description: `Welcome back, ${values.email}! Redirecting...`,
     });
-    // Example: router.push('/dashboard')
-    setIsLoading(false);
+    
+    router.push('/dashboard');
+    // setIsLoading(false); // Component will likely unmount before this is effective
   }
 
   return (
