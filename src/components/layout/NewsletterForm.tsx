@@ -11,29 +11,10 @@ export default function NewsletterForm() {
     setIsClient(true);
   }, []);
 
-  if (!isClient) {
-    // Render a placeholder on the server to prevent layout shift
-    return (
-      <div className="flex gap-2">
-        <Input
-          type="email"
-          placeholder="Enter your email"
-          className="bg-background"
-          aria-label="Email for newsletter"
-          disabled
-        />
-        <Button
-          type="submit"
-          variant="default"
-          className="bg-primary hover:bg-primary/90"
-          disabled
-        >
-          Subscribe
-        </Button>
-      </div>
-    );
-  }
-
+  // To prevent hydration mismatch, we render the form structure on both
+  // the server and the client, but disable the inputs on the server.
+  // The isClient state transition will re-render the component on the client
+  // with the inputs enabled.
   return (
     <form className="flex gap-2">
       <Input
@@ -41,11 +22,13 @@ export default function NewsletterForm() {
         placeholder="Enter your email"
         className="bg-background"
         aria-label="Email for newsletter"
+        disabled={!isClient}
       />
       <Button
         type="submit"
         variant="default"
         className="bg-primary hover:bg-primary/90"
+        disabled={!isClient}
       >
         Subscribe
       </Button>

@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
       <PublicHeader />
       <main className="flex-grow">
         <Section className="pt-24 pb-16">
-          <PageTitle title="Privacy Policy" subtitle={`Last updated: ${new Date().toLocaleDateString()}`} />
+          <PageTitle title="Privacy Policy" subtitle="Last updated: June 24, 2024" />
           <Card className="p-6 md:p-8 rounded-lg shadow-lg">
             <CardContent className="prose prose-lg max-w-none text-foreground">
               <p>{COMPANY_LEGAL_NAME} ("us", "we", or "our") operates the {SITE_NAME} website (the "Service").</p>

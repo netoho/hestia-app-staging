@@ -2,7 +2,7 @@ import PublicHeader from '@/components/layout/PublicHeader';
 import PublicFooter from '@/components/layout/PublicFooter';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
-import { Card, CardContent } from '@/components/ui/card'; // CardHeader and CardTitle were not used
+import { Card, CardContent } from '@/components/ui/card';
 import { SITE_NAME, COMPANY_LEGAL_NAME, CONTACT_EMAIL } from '@/lib/constants';
 
 export default function TermsAndConditionsPage() {
@@ -11,7 +11,7 @@ export default function TermsAndConditionsPage() {
       <PublicHeader />
       <main className="flex-grow">
         <Section className="pt-24 pb-16">
-          <PageTitle title="Terms and Conditions" subtitle={`Last updated: ${new Date().toLocaleDateString()}`} />
+          <PageTitle title="Terms and Conditions" subtitle="Last updated: June 24, 2024" />
           <Card className="p-6 md:p-8 rounded-lg shadow-lg">
             <CardContent className="prose prose-lg max-w-none text-foreground">
               <p>Welcome to {SITE_NAME}. These terms and conditions outline the rules and regulations for the use of {COMPANY_LEGAL_NAME}'s Website, located at [Your Website URL].</p>
