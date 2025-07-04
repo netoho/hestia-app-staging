@@ -1,3 +1,4 @@
+
 export interface Package {
   id: string;
   name: string;
@@ -47,4 +48,20 @@ export interface HowItWorksStep {
   description: string;
   icon: React.ElementType;
   dataAiHint: string;
+}
+
+export type PolicyStatus = 'pending' | 'approved' | 'active' | 'rejected' | 'expired';
+
+export interface Policy {
+  id: string;
+  applicant: {
+    name: string;
+    email: string;
+  };
+  property: {
+    address: string;
+  };
+  status: PolicyStatus;
+  createdAt: string;
+  premium: number;
 }

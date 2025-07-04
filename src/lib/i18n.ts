@@ -1,5 +1,5 @@
 
-import type { Package, Testimonial, NavItem, FAQ, HowItWorksStep } from './types';
+import type { Package, Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
 
@@ -26,6 +26,7 @@ const es = {
         startNow: "Comienza Ahora",
         contactSupport: "Contactar a Soporte",
         submit: "Enviar",
+        next: "Siguiente",
     },
 
     roles: {
@@ -40,6 +41,15 @@ const es = {
         loading: "Cargando...",
         demoUser: "Usuario Demo",
     },
+
+    policyStatus: {
+        pending: 'Pendiente',
+        approved: 'Aprobada',
+        active: 'Activa',
+        rejected: 'Rechazada',
+        expired: 'Expirada',
+    } as Record<PolicyStatus, string>,
+
 
     // Layout Components
     layout: {
@@ -248,6 +258,56 @@ const es = {
                 managePackages: "Gestionar Paquetes",
             }
         },
+        policies: {
+            title: "Gestión de Pólizas",
+            subtitle: "Consulta, filtra y gestiona todas las pólizas del sistema.",
+            cardTitle: "Todas las Pólizas",
+            cardDescription: (count: number) => `Actualmente hay ${count} pólizas en el sistema.`,
+            newPolicy: "Crear Nueva Póliza",
+            toggleMenu: "Abrir menú de acciones",
+            tableHeaders: {
+                policyId: "Póliza",
+                applicant: "Solicitante",
+                property: "Propiedad",
+                status: "Estatus",
+                premium: "Prima",
+                createdAt: "Fecha Creación",
+                actions: "Acciones",
+            },
+            actions: {
+                label: "Acciones",
+                view: "Ver detalles",
+                edit: "Editar",
+                cancel: "Cancelar Póliza",
+            }
+        },
+        newPolicy: {
+            title: "Crear Nueva Póliza",
+            subtitle: "Sigue los pasos para registrar una nueva póliza de garantía.",
+            steps: {
+                profile: "Perfil",
+                employment: "Situación Laboral",
+                references: "Referencias",
+                documents: "Documentos",
+                payment: "Pago",
+            },
+            profile: {
+                title: "Perfil del Solicitante",
+                description: "Los datos deben coincidir con los documentos oficiales, ya que así aparecerán en el contrato.",
+                nationality: "¿Eres mexicano?",
+                isMexican: "Sí",
+                isForeign: "No",
+                curpLabel: "CURP (18 caracteres)",
+                curpDescription: "Para completar tus datos, escribe tu CURP y da click en \"Confirmar CURP\"",
+                curpPlaceholder: "Escribe el CURP aquí...",
+                dontKnowCurp: "No conozco mi CURP",
+                passportLabel: "Número de Pasaporte",
+                passportPlaceholder: "Escribe el número de pasaporte...",
+                validation: {
+                    idRequired: "Se requiere un número de identificación (CURP o Pasaporte).",
+                }
+            },
+        },
         profile: {
             title: "Mi Perfil",
             subtitle: "Ve y gestiona tu información personal.",
@@ -339,7 +399,7 @@ const es = {
             agreeToTermsPart2: " y la ",
             agreeToTermsPart3: ".",
             terms: "Términos y Condiciones",
-            privacy: "Política de Privacidad",
+privacy: "Política de Privacidad",
             registerSuccess: "Registro Exitoso (Simulado)",
             welcomeUser: (name: string) => `¡Bienvenido, ${name}! Por favor revisa tu correo para verificar tu cuenta.`,
             validation: {
