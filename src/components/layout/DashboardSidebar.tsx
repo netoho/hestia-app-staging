@@ -16,7 +16,7 @@ import Logo from '@/components/Logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { LogOut, ChevronDown, Settings, UserCircle, Bell } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { t } from '@/lib/i18n';
 import {
@@ -71,6 +71,7 @@ export default function DashboardSidebar() {
   const { isMobile } = useSidebar();
   const [userRole, setUserRole] = useState<UserRole>('owner');
   const [navLinks, setNavLinks] = useState<NavItem[]>(t.layout.dashboardSidebar.ownerLinks);
+  const router = useRouter();
 
   useEffect(() => {
     const currentMockUserRole = MOCK_USER.role;
@@ -116,11 +117,11 @@ export default function DashboardSidebar() {
           <DropdownMenuContent side="top" align="start" className="w-56 mb-2 ml-1">
             <DropdownMenuLabel>{MOCK_USER.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/profile"><UserCircle className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.profile}</Link>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
+              <UserCircle className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.profile}
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings"><Settings className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.settings}</Link>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
+              <Settings className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.settings}
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Bell className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.notifications}
