@@ -51,7 +51,7 @@ const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
 
   return (
     <SidebarMenuItem>
-      <Link href={item.href} passHref legacyBehavior>
+      <Link href={item.href} asChild>
         <SidebarMenuButton
           isActive={isActive}
           onClick={handleClick}
