@@ -366,6 +366,28 @@ const es = {
                     websiteInvalid: "Por favor, introduce una URL válida.",
                 }
             },
+            references: {
+                title: "Referencias",
+                description: "Proporciona referencias para completar tu perfil.",
+                personalTitle: "Referencia Personal",
+                personalAlert: "Recuerda no colocar a tu obligado solidario o inquilinos adicionales que vivirán contigo como tu referencia personal.",
+                personalNameLabel: "Nombre completo de tu referencia personal",
+                phoneLabel: "Teléfono de contacto",
+                namePlaceholder: "ej. Israel Bahena",
+                phonePlaceholder: "10 dígitos",
+                optionalTitle: "Referencias Opcionales",
+                optionalAlert: "Las referencias opcionales te ayudan a mejorar tu perfil.",
+                workTitle: "Laboral",
+                workNameLabel: "Nombre completo de tu referencia laboral",
+                workPhoneLabel: "Teléfono de contacto para validar tus datos",
+                landlordTitle: "Casero",
+                landlordNameLabel: "Nombre completo de tu casero actual",
+                landlordPhoneLabel: "Teléfono de contacto",
+                validation: {
+                    nameRequired: "El nombre es requerido.",
+                    phoneRequired: "El teléfono debe tener al menos 10 dígitos.",
+                },
+            },
         },
         profile: {
             title: "Mi Perfil",
@@ -424,7 +446,7 @@ const es = {
               { question: "¿Cómo me registro en un paquete?", answer: "Puedes registrarte visitando nuestra sección de 'Paquetes' en el sitio web, eligiendo el que mejor se adapte a tus necesidades y haciendo clic en el botón 'Comenzar' o similar. Esto te guiará a través del proceso de registro." },
               { question: "¿Qué información se necesita para una póliza?", answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales." },
               { question: "¿Puedo cambiar mi paquete a uno superior?", answer: "Sí, generalmente puedes mejorar tu paquete. Por favor, contacta a nuestro equipo de soporte o revisa tu panel de control para ver las opciones de actualización." },
-              { question: "¿Quién paga por la póliza?", answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, y a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento." }
+              { question: "¿Quién paga por la póliza?", answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, и a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento." }
             ] as FAQ[],
         },
         login: {

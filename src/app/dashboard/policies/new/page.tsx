@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileForm';
 import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
+import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyReferencesForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
 
@@ -67,6 +68,7 @@ export default function NewPolicyPage() {
         <CardContent className="p-6">
           {currentStep === 1 && <CreatePolicyProfileForm onNext={handleNextStep} />}
           {currentStep === 2 && <CreatePolicyEmploymentForm onNext={handleNextStep} onBack={handlePrevStep} />}
+          {currentStep === 3 && <CreatePolicyReferencesForm onNext={handleNextStep} onBack={handlePrevStep} />}
           {/* Future steps will be rendered here */}
         </CardContent>
       </Card>
