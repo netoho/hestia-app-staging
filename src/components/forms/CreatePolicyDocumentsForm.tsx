@@ -48,11 +48,10 @@ interface FileUploaderProps {
   title: string;
   description: string;
   maxFiles: number;
-  onFilesChange: (files: UploadableFile[]) => void;
   form: ReturnType<typeof useForm<DocumentsFormValues>>;
 }
 
-const FileUploader = ({ id, title, description, maxFiles, onFilesChange, form }: FileUploaderProps) => {
+const FileUploader = ({ id, title, description, maxFiles, form }: FileUploaderProps) => {
   const [files, setFiles] = useState<UploadableFile[]>([]);
 
   const onDrop = useCallback(
@@ -73,8 +72,11 @@ const FileUploader = ({ id, title, description, maxFiles, onFilesChange, form }:
       
       const updatedFiles = [...files, ...newFiles].slice(0, maxFiles);
       setFiles(updatedFiles);
-      onFilesChange(updatedFiles);
-      form.setValue(id, updatedFiles.filter(f => f.progress !== 'error'));
+      
+      const validRawFiles = updatedFiles
+        .filter((f) => f.progress !== 'error')
+        .map((f) => f.file);
+      form.setValue(id, validRawFiles, { shouldValidate: true });
 
       // Simulate upload for new valid files
       updatedFiles.forEach(f => {
@@ -83,7 +85,7 @@ const FileUploader = ({ id, title, description, maxFiles, onFilesChange, form }:
         }
       });
     },
-    [files, maxFiles, onFilesChange, id, form]
+    [files, maxFiles, id, form]
   );
 
   const simulateUpload = (uploadableFile: UploadableFile) => {
@@ -102,8 +104,11 @@ const FileUploader = ({ id, title, description, maxFiles, onFilesChange, form }:
   const handleDelete = (fileId: string) => {
     const updatedFiles = files.filter(f => f.id !== fileId);
     setFiles(updatedFiles);
-    onFilesChange(updatedFiles);
-    form.setValue(id, updatedFiles.filter(f => f.progress !== 'error'));
+
+    const validRawFiles = updatedFiles
+        .filter((f) => f.progress !== 'error')
+        .map((f) => f.file);
+    form.setValue(id, validRawFiles, { shouldValidate: true });
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -193,7 +198,6 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
             title={t.pages.newPolicy.documents.id.title}
             description={t.pages.newPolicy.documents.id.description}
             maxFiles={2}
-            onFilesChange={(files) => form.setValue('identification', files.filter(f => f.progress === 'completed'))}
             form={form}
           />
           
@@ -204,7 +208,6 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
             title={t.pages.newPolicy.documents.income.title}
             description={t.pages.newPolicy.documents.income.description}
             maxFiles={9}
-            onFilesChange={(files) => form.setValue('proofOfIncome', files.filter(f => f.progress === 'completed'))}
             form={form}
           />
           <FormField
@@ -245,7 +248,6 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
             title={t.pages.newPolicy.documents.optional.title}
             description={t.pages.newPolicy.documents.optional.description}
             maxFiles={4}
-            onFilesChange={(files) => form.setValue('optional', files.filter(f => f.progress === 'completed'))}
             form={form}
           />
 
