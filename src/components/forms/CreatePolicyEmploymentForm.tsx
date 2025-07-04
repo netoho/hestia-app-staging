@@ -40,8 +40,15 @@ export function CreatePolicyEmploymentForm({ onNext, onBack }: CreatePolicyEmplo
   const form = useForm<EmploymentFormValues>({
     resolver: zodResolver(employmentSchema),
     defaultValues: {
+      employmentStatus: undefined,
+      industry: undefined,
+      occupation: '',
+      companyName: '',
+      position: '',
       companyWebsite: '',
       workAddress: '',
+      incomeSource: undefined,
+      monthlyIncome: undefined,
       creditCheckConsent: false,
     },
   });
@@ -92,7 +99,7 @@ export function CreatePolicyEmploymentForm({ onNext, onBack }: CreatePolicyEmplo
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t.pages.newPolicy.employment.industryPlaceholder} />
-                      </SelectTrigger>
+                      </Trigger>
                     </FormControl>
                     <SelectContent>
                       {Object.entries(t.pages.newPolicy.employment.industryOptions).map(([key, value]) => (
@@ -210,7 +217,7 @@ export function CreatePolicyEmploymentForm({ onNext, onBack }: CreatePolicyEmplo
                   <FormControl>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
-                      <Input type="number" placeholder={t.pages.newPolicy.employment.monthlyIncomePlaceholder} className="pl-7" {...field} />
+                      <Input type="number" placeholder={t.pages.newPolicy.employment.monthlyIncomePlaceholder} className="pl-7" {...field} value={field.value ?? ''} />
                     </div>
                   </FormControl>
                   <FormMessage />
