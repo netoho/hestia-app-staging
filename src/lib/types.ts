@@ -35,3 +35,16 @@ export interface NavItem {
   children?: NavItem[];
   matchExact?: boolean;
 }
+
+export interface FAQ {
+  question: string;
+  answer: string;
+}
+
+export interface HowItWorksStep {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  dataAiHint: string;
+}

@@ -12,18 +12,19 @@ import { Checkbox } from "@/components/ui/checkbox"
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { t } from '@/lib/i18n';
 
 const registerSchema = z.object({
-  fullName: z.string().min(2, { message: 'El nombre completo debe tener al menos 2 caracteres.' }),
-  email: z.string().email({ message: 'Dirección de correo electrónico inválida.' }),
-  password: z.string().min(8, { message: 'La contraseña debe tener al menos 8 caracteres.' }),
+  fullName: z.string().min(2, { message: t.pages.register.validation.fullNameMin }),
+  email: z.string().email({ message: t.pages.register.validation.emailInvalid }),
+  password: z.string().min(8, { message: t.pages.register.validation.passwordMin }),
   confirmPassword: z.string(),
-  role: z.enum(['owner', 'renter'], { required_error: 'Por favor selecciona un rol.' }),
+  role: z.enum(['owner', 'renter'], { required_error: t.pages.register.validation.roleRequired }),
   agreedToTerms: z.boolean().refine(val => val === true, {
-    message: "Debes aceptar los términos y condiciones."
+    message: t.pages.register.validation.termsRequired,
   }),
 }).refine(data => data.password === data.confirmPassword, {
-  message: "Las contraseñas no coinciden.",
+  message: t.pages.register.validation.passwordsNoMatch,
   path: ['confirmPassword'],
 });
 
@@ -47,14 +48,12 @@ export function RegisterForm() {
 
   async function onSubmit(values: RegisterFormValues) {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('Registration data:', values);
     toast({
-      title: 'Registro Exitoso (Simulado)',
-      description: `¡Bienvenido, ${values.fullName}! Por favor revisa tu correo para verificar tu cuenta.`,
+      title: t.pages.register.registerSuccess,
+      description: t.pages.register.welcomeUser(values.fullName),
     });
-    // Example: router.push('/login')
     setIsLoading(false);
   }
 
@@ -66,9 +65,9 @@ export function RegisterForm() {
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nombre Completo</FormLabel>
+              <FormLabel>{t.pages.register.fullName}</FormLabel>
               <FormControl>
-                <Input placeholder="Juan Pérez" {...field} />
+                <Input placeholder={t.pages.register.fullNamePlaceholder} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -79,9 +78,9 @@ export function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Correo Electrónico</FormLabel>
+              <FormLabel>{t.pages.register.email}</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="tu@ejemplo.com" {...field} />
+                <Input type="email" placeholder={t.pages.register.emailPlaceholder} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -92,9 +91,9 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contraseña</FormLabel>
+              <FormLabel>{t.pages.register.password}</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input type="password" placeholder={t.pages.register.passwordPlaceholder} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -105,9 +104,9 @@ export function RegisterForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirmar Contraseña</FormLabel>
+              <FormLabel>{t.pages.register.confirmPassword}</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input type="password" placeholder={t.pages.register.passwordPlaceholder} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -118,16 +117,16 @@ export function RegisterForm() {
           name="role"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Soy un...</FormLabel>
+              <FormLabel>{t.pages.register.role}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona tu rol" />
+                    <SelectValue placeholder={t.pages.register.selectRole} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="owner">Propietario</SelectItem>
-                  <SelectItem value="renter">Inquilino</SelectItem>
+                  <SelectItem value="owner">{t.roles.owner}</SelectItem>
+                  <SelectItem value="renter">{t.roles.renter}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -147,7 +146,11 @@ export function RegisterForm() {
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>
-                  Acepto los <Link href="/terms-and-conditions" className="text-primary hover:underline">Términos y Condiciones</Link> y la <Link href="/privacy-policy" className="text-primary hover:underline">Política de Privacidad</Link>.
+                  {t.pages.register.agreeToTermsPart1}
+                  <Link href="/terms-and-conditions" className="text-primary hover:underline">{t.pages.register.terms}</Link>
+                  {t.pages.register.agreeToTermsPart2}
+                  <Link href="/privacy-policy" className="text-primary hover:underline">{t.pages.register.privacy}</Link>
+                  {t.pages.register.agreeToTermsPart3}
                 </FormLabel>
                 <FormMessage />
               </div>
@@ -155,7 +158,7 @@ export function RegisterForm() {
           )}
         />
         <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6" disabled={isLoading}>
-           {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Crear Cuenta'}
+           {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : t.actions.createAccount}
         </Button>
       </form>
     </Form>

@@ -37,7 +37,6 @@ export function TestimonialCard({ testimonial }: TestimonialCardProps) {
         </blockquote>
       </CardContent>
        <CardFooter className="p-6 pt-0 mt-auto">
-        {/* Optional: Add a link or small note here */}
       </CardFooter>
     </Card>
   );

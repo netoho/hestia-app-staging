@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { t } from '@/lib/i18n';
 
 interface PackageCardProps {
   packageItem: Package;
@@ -20,7 +21,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
         <CardDescription className="text-base h-16">{packageItem.description}</CardDescription>
         <p className="text-4xl font-bold text-foreground pt-2">
           {packageItem.price}
-          <span className="text-sm font-normal text-muted-foreground">/mes</span>
+          <span className="text-sm font-normal text-muted-foreground">{t.misc.perMonth}</span>
         </p>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -38,7 +39,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
           "w-full text-lg py-6",
            packageItem.highlight ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-accent hover:bg-accent/90 text-accent-foreground"
            )}>
-          <Link href={packageItem.ctaLink}>{packageItem.ctaText || 'Saber Más'}</Link>
+          <Link href={packageItem.ctaLink}>{packageItem.ctaText || t.actions.learnMore}</Link>
         </Button>
       </CardFooter>
     </Card>

@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { SITE_NAME } from '@/lib/constants';
+import { t } from '@/lib/i18n';
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} - Garantías de Alquiler de Propiedades`,
-  description: 'Asegura tus contratos de alquiler con Hestia. Pólizas de garantía integrales para propietarios e inquilinos.',
-  keywords: ['garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
+  title: t.layout.root.metaTitle,
+  description: t.layout.root.metaDescription,
+  keywords: t.layout.root.metaKeywords,
 };
 
 export default function RootLayout({

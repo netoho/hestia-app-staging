@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { PUBLIC_NAVIATION_LINKS } from '@/lib/constants';
+import { t } from '@/lib/i18n';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ export default function PublicHeader() {
         <div className="flex h-20 items-center justify-between">
           <Logo />
           <nav className="hidden md:flex items-center space-x-2 lg:space-x-4">
-            {PUBLIC_NAVIATION_LINKS.map((item) => (
+            {t.layout.publicHeader.navLinks.map((item) => (
               <Button
                 key={item.label}
                 variant="ghost"
@@ -51,16 +51,16 @@ export default function PublicHeader() {
           </nav>
           <div className="hidden md:flex items-center space-x-3">
             <Button variant="outline" asChild>
-              <Link href="/login">Iniciar Sesión</Link>
+              <Link href="/login">{t.layout.publicHeader.login}</Link>
             </Button>
             <Button variant="default" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Link href="/register">Registrarse</Link>
+              <Link href="/register">{t.layout.publicHeader.register}</Link>
             </Button>
           </div>
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Abrir menú">
+                <Button variant="ghost" size="icon" aria-label={t.layout.publicHeader.openMenu}>
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
@@ -69,13 +69,13 @@ export default function PublicHeader() {
                   <div className="flex justify-between items-center mb-8">
                     <Logo size="sm" />
                     <SheetClose asChild>
-                       <Button variant="ghost" size="icon" aria-label="Cerrar menú">
+                       <Button variant="ghost" size="icon" aria-label={t.layout.publicHeader.closeMenu}>
                          <X className="h-6 w-6" />
                        </Button>
                     </SheetClose>
                   </div>
                   <nav className="flex flex-col space-y-3 mb-8">
-                    {PUBLIC_NAVIATION_LINKS.map((item) => (
+                    {t.layout.publicHeader.navLinks.map((item) => (
                       <SheetClose key={item.label} asChild>
                         <Link
                           href={item.href}
@@ -92,12 +92,12 @@ export default function PublicHeader() {
                   <div className="mt-auto space-y-3">
                      <SheetClose asChild>
                         <Button variant="outline" className="w-full" asChild>
-                          <Link href="/login">Iniciar Sesión</Link>
+                          <Link href="/login">{t.layout.publicHeader.login}</Link>
                         </Button>
                       </SheetClose>
                       <SheetClose asChild>
                         <Button variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                          <Link href="/register">Registrarse</Link>
+                          <Link href="/register">{t.layout.publicHeader.register}</Link>
                         </Button>
                       </SheetClose>
                   </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/i18n';
 
 export default function NewsletterForm() {
   const [isClient, setIsClient] = useState(false);
@@ -11,17 +12,13 @@ export default function NewsletterForm() {
     setIsClient(true);
   }, []);
 
-  // To prevent hydration mismatch, we render the form structure on both
-  // the server and the client, but disable the inputs on the server.
-  // The isClient state transition will re-render the component on the client
-  // with the inputs enabled.
   return (
     <form className="flex gap-2">
       <Input
         type="email"
-        placeholder="Ingresa tu correo"
+        placeholder={t.layout.newsletterForm.emailPlaceholder}
         className="bg-background"
-        aria-label="Correo para el boletín"
+        aria-label={t.layout.newsletterForm.emailPlaceholder}
         disabled={!isClient}
       />
       <Button
@@ -30,7 +27,7 @@ export default function NewsletterForm() {
         className="bg-primary hover:bg-primary/90"
         disabled={!isClient}
       >
-        Suscribirse
+        {t.layout.newsletterForm.subscribe}
       </Button>
     </form>
   );

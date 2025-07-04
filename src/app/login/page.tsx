@@ -1,17 +1,18 @@
 import Link from 'next/link';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { t } from '@/lib/i18n';
 
 export default function LoginPage() {
   return (
     <AuthCard
-      title="¡Bienvenido de Nuevo!"
-      description="Inicia sesión en tu cuenta de Hestia."
+      title={t.pages.login.title}
+      description={t.pages.login.description}
       footerContent={
         <>
-          ¿No tienes una cuenta?{' '}
+          {t.pages.login.noAccount}{' '}
           <Link href="/register" className="font-medium text-primary hover:underline">
-            Regístrate
+            {t.pages.login.registerLink}
           </Link>
         </>
       }

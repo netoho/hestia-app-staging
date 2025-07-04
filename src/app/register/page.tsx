@@ -1,17 +1,18 @@
 import Link from 'next/link';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { RegisterForm } from '@/components/auth/RegisterForm';
+import { t } from '@/lib/i18n';
 
 export default function RegisterPage() {
   return (
     <AuthCard
-      title="Crea Tu Cuenta"
-      description="Únete a Hestia y asegura tu experiencia de alquiler."
+      title={t.pages.register.title}
+      description={t.pages.register.description}
       footerContent={
         <>
-          ¿Ya tienes una cuenta?{' '}
+          {t.pages.register.hasAccount}{' '}
           <Link href="/login" className="font-medium text-primary hover:underline">
-            Inicia sesión
+            {t.pages.register.loginLink}
           </Link>
         </>
       }

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ShieldHalf } from 'lucide-react'; 
-import { SITE_NAME } from '@/lib/constants';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
@@ -18,10 +18,10 @@ const Logo = ({ size = 'md', className, iconOnly = false }: LogoProps) => {
       <ShieldHalf className={cn(iconSizeClass, 'text-primary group-hover:text-accent transition-colors')} aria-hidden="true" />
       {!iconOnly && (
         <span className={cn('font-headline font-bold', textSizeClass, 'text-primary group-hover:text-accent transition-colors')}>
-          {SITE_NAME}
+          {t.siteName}
         </span>
       )}
-      <span className="sr-only">{SITE_NAME} Home</span>
+      <span className="sr-only">{t.siteName} Home</span>
     </Link>
   );
 };

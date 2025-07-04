@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/accordion"
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { FAQ_DATA, SITE_NAME } from '@/lib/constants';
+import { t } from '@/lib/i18n';
 import { HelpCircle } from 'lucide-react';
 
 export default function FAQPage() {
@@ -20,15 +20,15 @@ export default function FAQPage() {
       <main className="flex-grow">
         <Section className="bg-primary/10 pt-24 pb-16">
           <PageTitle
-            title="Preguntas Frecuentes"
-            subtitle={`Encuentra respuestas a preguntas comunes sobre ${SITE_NAME} y nuestros servicios.`}
+            title={t.pages.faq.title}
+            subtitle={t.pages.faq.subtitle}
           />
         </Section>
 
         <Section>
           <div className="max-w-3xl mx-auto">
             <Accordion type="single" collapsible className="w-full space-y-4">
-              {FAQ_DATA.map((item, index) => (
+              {t.pages.faq.faqs.map((item, index) => (
                 <AccordionItem key={index} value={`item-${index + 1}`} className="bg-card shadow-md rounded-lg p-2 hover:shadow-lg transition-shadow">
                   <AccordionTrigger className="text-lg font-semibold text-foreground hover:no-underline px-4 py-3 text-left">
                     <div className="flex items-center">
@@ -46,13 +46,13 @@ export default function FAQPage() {
         </Section>
          <Section className="text-center bg-muted/30">
           <h2 className="text-2xl md:text-3xl font-headline font-bold text-foreground mb-4">
-            ¿Todavía tienes preguntas?
+            {t.pages.faq.stillHaveQuestions}
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-6">
-            Si no encuentras la respuesta que buscas, no dudes en contactar a nuestro equipo de soporte.
+            {t.pages.faq.stillHaveQuestionsDesc}
           </p>
           <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Link href="/contact">Contactar a Soporte</Link>
+            <Link href="/contact">{t.actions.contactSupport}</Link>
           </Button>
         </Section>
       </main>

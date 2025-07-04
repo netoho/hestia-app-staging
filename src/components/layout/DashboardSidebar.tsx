@@ -10,18 +10,15 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
-  SidebarGroup,
-  SidebarGroupLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
 import Logo from '@/components/Logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { LogOut, ChevronDown, ChevronRight, Settings, UserCircle, Bell } from 'lucide-react';
+import { LogOut, ChevronDown, Settings, UserCircle, Bell } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { SITE_NAME, OWNER_DASHBOARD_LINKS, RENTER_DASHBOARD_LINKS, STAFF_DASHBOARD_LINKS } from '@/lib/constants';
+import { t } from '@/lib/i18n';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,12 +29,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from 'react';
 
-// Mock user for demonstration. Replace with actual auth context.
 const MOCK_USER: User = {
   id: '1',
-  name: 'Usuario Demo',
+  name: t.misc.demoUser,
   email: 'demo@hestia.com',
-  role: 'owner', // Change this to 'renter' or 'staff' to see different sidebars
+  role: 'owner', 
   avatarUrl: 'https://placehold.co/100x100.png',
 };
 
@@ -73,17 +69,15 @@ const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
 
 export default function DashboardSidebar() {
   const { isMobile } = useSidebar();
-  const [userRole, setUserRole] = useState<UserRole>('owner'); // Default role
-  const [navLinks, setNavLinks] = useState<NavItem[]>(OWNER_DASHBOARD_LINKS);
+  const [userRole, setUserRole] = useState<UserRole>('owner');
+  const [navLinks, setNavLinks] = useState<NavItem[]>(t.layout.dashboardSidebar.ownerLinks);
 
-  // In a real app, userRole would come from an auth context/store
   useEffect(() => {
-    // Simulate fetching user role or getting from context
-    const currentMockUserRole = MOCK_USER.role; // This could be dynamic in a real app
+    const currentMockUserRole = MOCK_USER.role;
     setUserRole(currentMockUserRole);
-    if (currentMockUserRole === 'owner') setNavLinks(OWNER_DASHBOARD_LINKS);
-    else if (currentMockUserRole === 'renter') setNavLinks(RENTER_DASHBOARD_LINKS);
-    else if (currentMockUserRole === 'staff') setNavLinks(STAFF_DASHBOARD_LINKS);
+    if (currentMockUserRole === 'owner') setNavLinks(t.layout.dashboardSidebar.ownerLinks);
+    else if (currentMockUserRole === 'renter') setNavLinks(t.layout.dashboardSidebar.renterLinks);
+    else if (currentMockUserRole === 'staff') setNavLinks(t.layout.dashboardSidebar.staffLinks);
   }, []);
 
 
@@ -123,20 +117,19 @@ export default function DashboardSidebar() {
             <DropdownMenuLabel>{MOCK_USER.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/profile"><UserCircle className="mr-2 h-4 w-4" /> Perfil</Link>
+              <Link href="/dashboard/profile"><UserCircle className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.profile}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings"><Settings className="mr-2 h-4 w-4" /> Configuración</Link>
+              <Link href="/dashboard/settings"><Settings className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.settings}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Bell className="mr-2 h-4 w-4" /> Notificaciones
+              <Bell className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.notifications}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-              // onClick={() => console.log('Log out user')} // Replace with actual logout
             >
-              <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+              <LogOut className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.logout}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

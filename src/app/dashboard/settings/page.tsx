@@ -3,98 +3,97 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Globe, Bell, ShieldCheck } from 'lucide-react'; // Changed ShieldLock to ShieldCheck
+import { Globe, Bell, ShieldCheck } from 'lucide-react';
+import { t } from '@/lib/i18n';
 
 export default function SettingsPage() {
   return (
     <div>
-      <PageTitle title="Configuración de Cuenta" subtitle="Gestiona tus preferencias y la seguridad de tu cuenta." />
+      <PageTitle title={t.pages.settings.title} subtitle={t.pages.settings.subtitle} />
 
       <div className="space-y-8">
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><Bell className="mr-2 h-5 w-5 text-primary"/> Configuración de Notificaciones</CardTitle>
-            <CardDescription>Controla cómo recibes notificaciones de Hestia.</CardDescription>
+            <CardTitle className="font-headline text-xl flex items-center"><Bell className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.notifications}</CardTitle>
+            <CardDescription>{t.pages.settings.notificationsDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between space-x-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
               <Label htmlFor="emailNotifications" className="flex flex-col space-y-1">
-                <span>Notificaciones por Correo</span>
+                <span>{t.pages.settings.emailNotifications}</span>
                 <span className="font-normal leading-snug text-muted-foreground">
-                  Recibe actualizaciones sobre tus pólizas, pagos y anuncios importantes por correo.
+                  {t.pages.settings.emailNotificationsDesc}
                 </span>
               </Label>
-              <Switch id="emailNotifications" defaultChecked aria-label="Activar notificaciones por correo"/>
+              <Switch id="emailNotifications" defaultChecked aria-label={t.pages.settings.emailNotifications}/>
             </div>
             <div className="flex items-center justify-between space-x-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
               <Label htmlFor="smsNotifications" className="flex flex-col space-y-1">
-                <span>Alertas por SMS</span>
+                <span>{t.pages.settings.smsAlerts}</span>
                 <span className="font-normal leading-snug text-muted-foreground">
-                  Recibe alertas críticas y recordatorios por mensaje de texto (pueden aplicarse tarifas del operador).
+                  {t.pages.settings.smsAlertsDesc}
                 </span>
               </Label>
-              <Switch id="smsNotifications" aria-label="Activar alertas por SMS"/>
+              <Switch id="smsNotifications" aria-label={t.pages.settings.smsAlerts}/>
             </div>
              <div className="flex items-center justify-between space-x-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
               <Label htmlFor="newsletter" className="flex flex-col space-y-1">
-                <span>Actualizaciones Promocionales</span>
+                <span>{t.pages.settings.promoUpdates}</span>
                 <span className="font-normal leading-snug text-muted-foreground">
-                  Suscríbete a nuestro boletín para recibir actualizaciones de productos y ofertas especiales.
+                  {t.pages.settings.promoUpdatesDesc}
                 </span>
               </Label>
-              <Switch id="newsletter" defaultChecked aria-label="Activar actualizaciones promocionales"/>
+              <Switch id="newsletter" defaultChecked aria-label={t.pages.settings.promoUpdates}/>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary"/> Configuración de Seguridad</CardTitle>
-            <CardDescription>Gestiona las funciones de seguridad de tu cuenta.</CardDescription>
+            <CardTitle className="font-headline text-xl flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.security}</CardTitle>
+            <CardDescription>{t.pages.settings.securityDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
              <div className="flex items-center justify-between space-x-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
               <div className="flex flex-col space-y-1">
-                <span>Autenticación de Dos Factores (2FA)</span>
+                <span>{t.pages.settings.twoFactor}</span>
                 <span className="font-normal leading-snug text-muted-foreground">
-                  Mejora la seguridad de tu cuenta requiriendo una segunda forma de verificación.
+                  {t.pages.settings.twoFactorDesc}
                 </span>
               </div>
-              <Button variant="outline">Habilitar 2FA</Button>
+              <Button variant="outline">{t.pages.settings.enable2FA}</Button>
             </div>
              <div className="flex items-center justify-between space-x-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
               <div className="flex flex-col space-y-1">
-                <span>Historial de Inicio de Sesión</span>
+                <span>{t.pages.settings.loginHistory}</span>
                 <span className="font-normal leading-snug text-muted-foreground">
-                  Revisa la actividad reciente de inicio de sesión en tu cuenta.
+                  {t.pages.settings.loginHistoryDesc}
                 </span>
               </div>
-              <Button variant="link">Ver Historial</Button>
+              <Button variant="link">{t.pages.settings.viewHistory}</Button>
             </div>
           </CardContent>
         </Card>
         
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><Globe className="mr-2 h-5 w-5 text-primary"/> Idioma y Región</CardTitle>
-            <CardDescription>Elige tu idioma y configuración regional preferidos.</CardDescription>
+            <CardTitle className="font-headline text-xl flex items-center"><Globe className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.languageRegion}</CardTitle>
+            <CardDescription>{t.pages.settings.languageRegionDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between space-x-2 p-3 border rounded-md">
-              <Label htmlFor="language" className="font-normal">Idioma</Label>
-              {/* This would be a Select component in a real app */}
-              <Button variant="outline">Español (MX)</Button> 
+              <Label htmlFor="language" className="font-normal">{t.pages.settings.language}</Label>
+              <Button variant="outline">{t.pages.settings.languageValue}</Button> 
             </div>
              <div className="flex items-center justify-between space-x-2 p-3 border rounded-md">
-              <Label htmlFor="timezone" className="font-normal">Zona Horaria</Label>
-              <Button variant="outline">(GMT-06:00) Hora Central</Button>
+              <Label htmlFor="timezone" className="font-normal">{t.pages.settings.timezone}</Label>
+              <Button variant="outline">{t.pages.settings.timezoneValue}</Button>
             </div>
           </CardContent>
         </Card>
 
         <div className="text-right">
-            <Button className="bg-primary hover:bg-primary/90 text-lg px-6 py-5">Guardar Toda la Configuración</Button>
+            <Button className="bg-primary hover:bg-primary/90 text-lg px-6 py-5">{t.pages.settings.saveAll}</Button>
         </div>
       </div>
     </div>
