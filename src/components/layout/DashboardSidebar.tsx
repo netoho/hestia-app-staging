@@ -51,17 +51,17 @@ const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
 
   return (
     <SidebarMenuItem>
-      <Link href={item.href} asChild>
-        <SidebarMenuButton
-          isActive={isActive}
-          onClick={handleClick}
-          tooltip={item.label}
-          aria-current={isActive ? "page" : undefined}
-        >
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip={item.label}
+        aria-current={isActive ? "page" : undefined}
+      >
+        <Link href={item.href} onClick={handleClick}>
           {item.icon && <item.icon />}
           <span>{item.label}</span>
-        </SidebarMenuButton>
-      </Link>
+        </Link>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   );
 };
