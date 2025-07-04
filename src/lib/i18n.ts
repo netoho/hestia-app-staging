@@ -388,6 +388,34 @@ const es = {
                     phoneRequired: "El teléfono debe tener al menos 10 dígitos.",
                 },
             },
+            documents: {
+                title: "Documentos",
+                description: "Carga los documentos que se te piden para poder avanzar en el proceso.",
+                id: {
+                    title: "Identificación",
+                    description: "Sube aquí las fotos o documento del frente y vuelta de alguna identificación oficial vigente. Ej. INE o Pasaporte."
+                },
+                income: {
+                    title: "Comprobantes de Ingresos",
+                    description: "Carga los comprobantes necesarios para validar tus ingresos de los últimos 3 meses.",
+                    passwordQuestion: "¿Los documentos tienen contraseña?",
+                    passwordYes: "Sí",
+                    passwordNo: "No",
+                },
+                optional: {
+                    title: "Opcionales",
+                    description: "Puedes subir documentos que te ayuden a mejorar tu perfil. Ej. Cartas de empleado, comprobantes de liquidación de deuda, etc."
+                },
+                dropzone: {
+                    dragAndDrop: (count: number) => `Carga o arrastra hasta ${count} archivos aquí`,
+                    maxSize: (size: number) => `de máximo ${size}MB cada uno`
+                },
+                validation: {
+                    idRequired: "Se requiere al menos un documento de identificación.",
+                    incomeRequired: "Se requiere al menos un comprobante de ingresos.",
+                    passwordQuestionRequired: "Por favor, especifica si tus documentos tienen contraseña."
+                }
+            }
         },
         profile: {
             title: "Mi Perfil",

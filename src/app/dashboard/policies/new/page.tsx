@@ -6,6 +6,7 @@ import { PageTitle } from '@/components/shared/PageTitle';
 import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileForm';
 import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
 import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyReferencesForm';
+import { CreatePolicyDocumentsForm } from '@/components/forms/CreatePolicyDocumentsForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
 
@@ -39,28 +40,32 @@ export default function NewPolicyPage() {
       />
       
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <ol className="flex items-center w-full">
           {steps.map((step, index) => (
-            <div key={step.id} className="flex items-center">
+            <li
+              key={step.id}
+              className={`flex w-full items-center ${
+                index < steps.length - 1 ? "after:content-[''] after:w-full after:h-1 after:border-b after:border-border after:border-4 after:inline-block" : ""
+              } ${step.id < currentStep ? 'after:border-primary' : ''}`}
+            >
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                  step.id === currentStep
-                    ? 'bg-primary text-primary-foreground'
-                    : step.id < currentStep
-                    ? 'bg-primary/50 text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
+                className={`flex items-center justify-center w-10 h-10 rounded-full lg:h-12 lg:w-12 shrink-0 ${
+                  step.id <= currentStep ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                 }`}
               >
-                {step.id}
+                 <span className="font-bold">{step.id}</span>
               </div>
-              <p className={`ml-2 font-medium ${
-                  step.id === currentStep ? 'text-primary' : 'text-foreground'
-                }`}>{step.name}</p>
-              {index < steps.length - 1 && (
-                <div className="mx-4 h-px w-16 flex-1 bg-border"></div>
-              )}
-            </div>
+            </li>
           ))}
+        </ol>
+         <div className="mt-3 hidden md:flex justify-between">
+            {steps.map(step => (
+                 <div key={step.id} className="text-center w-40">
+                    <p className={`font-medium text-sm ${
+                        step.id === currentStep ? 'text-primary' : 'text-muted-foreground'
+                    }`}>{step.name}</p>
+                 </div>
+            ))}
         </div>
       </div>
       
@@ -69,7 +74,15 @@ export default function NewPolicyPage() {
           {currentStep === 1 && <CreatePolicyProfileForm onNext={handleNextStep} />}
           {currentStep === 2 && <CreatePolicyEmploymentForm onNext={handleNextStep} onBack={handlePrevStep} />}
           {currentStep === 3 && <CreatePolicyReferencesForm onNext={handleNextStep} onBack={handlePrevStep} />}
+          {currentStep === 4 && <CreatePolicyDocumentsForm onNext={handleNextStep} onBack={handlePrevStep} />}
           {/* Future steps will be rendered here */}
+          {currentStep === 5 && (
+            <div className="text-center p-8">
+                <h2 className="text-xl font-semibold">Payment Step</h2>
+                <p>Payment form will be implemented here.</p>
+                <Button onClick={handlePrevStep} variant="outline" className="mt-4">Back</Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
