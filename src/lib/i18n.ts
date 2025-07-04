@@ -1,4 +1,5 @@
 
+
 import type { Package, Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
@@ -6,7 +7,7 @@ import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2
 const es = {
     // Global & Reusable
     siteName: "Hestia",
-    companyLegalName: "Soluciones Hestia S.A. de C.V.",
+    companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
     contactEmail: "info@hestia.com",
     contactPhone: "+52 55 1234 5678",
     
@@ -27,6 +28,7 @@ const es = {
         contactSupport: "Contactar a Soporte",
         submit: "Enviar",
         next: "Siguiente",
+        back: "Atrás",
     },
 
     roles: {
@@ -307,6 +309,63 @@ const es = {
                     idRequired: "Se requiere un número de identificación (CURP o Pasaporte).",
                 }
             },
+            employment: {
+                title: "Situación Laboral",
+                description: "Completa los campos solicitados.",
+                statusLabel: "¿Cuál es tu situación laboral?",
+                statusPlaceholder: "Selecciona una opción",
+                statusOptions: {
+                    employed: "Empleado(a)",
+                    selfEmployed: "Autoempleado(a)/Freelance",
+                    student: "Estudiante",
+                    other: "Otro",
+                },
+                industryLabel: "Tipo de Industria",
+                industryPlaceholder: "Selecciona tu industria",
+                industryOptions: {
+                    tech: "Tecnología y comunicación",
+                    finance: "Finanzas y seguros",
+                    health: "Salud y asistencia social",
+                    retail: "Comercio al por menor",
+                    education: "Educación",
+                    construction: "Construcción",
+                    other: "Otra",
+                },
+                occupationLabel: "¿Cuál es tu ocupación?",
+                occupationPlaceholder: "ej. Desarrollador de Software",
+                companyNameLabel: "Nombre de la empresa",
+                companyNamePlaceholder: "ej. Hestia S.A. de C.V.",
+                positionLabel: "Puesto actual",
+                positionPlaceholder: "ej. Gerente de Producto",
+                companyWebsiteLabel: "Página web de la empresa (opcional)",
+                companyWebsitePlaceholder: "ej. www.hestia.com",
+                workAddressLabel: "Dirección actual de tu sitio de trabajo (opcional)",
+                workAddressPlaceholder: "ej. Av. Siempre Viva 742",
+                incomeSourceLabel: "Fuente de ingresos",
+                incomeSourcePlaceholder: "Selecciona tu fuente de ingresos",
+                incomeSourceOptions: {
+                    mixed: "Mixto (nómina + otros ingresos)",
+                    payroll: "Solo Nómina",
+                    freelance: "Solo Honorarios/Freelance",
+                },
+                monthlyIncomeLabel: "Ingreso mensual neto en pesos MXN",
+                monthlyIncomePlaceholder: "25000",
+                creditCheckLabel: "Autoriza la consulta de tu buró de crédito",
+                creditCheckText: (companyName: string) => `Autorizo expresamente a ${companyName}, para que lleve a cabo investigaciones sobre mi comportamiento crediticio en las Sociedades de Información Crediticia (SIC) que estime convenientes. Conozco la naturaleza y alcance.`,
+                creditCheckLink: "Ver más",
+                validation: {
+                    statusRequired: "La situación laboral es requerida.",
+                    industryRequired: "La industria es requerida.",
+                    occupationRequired: "La ocupación es requerida.",
+                    companyNameRequired: "El nombre de la empresa es requerido.",
+                    positionRequired: "El puesto es requerido.",
+                    incomeSourceRequired: "La fuente de ingresos es requerida.",
+                    monthlyIncomeRequired: "El ingreso mensual es requerido.",
+                    monthlyIncomeInvalid: "Debe ser un número válido.",
+                    creditCheckRequired: "Debes autorizar la consulta de buró de crédito.",
+                    websiteInvalid: "Por favor, introduce una URL válida.",
+                }
+            },
         },
         profile: {
             title: "Mi Perfil",
@@ -399,7 +458,7 @@ const es = {
             agreeToTermsPart2: " y la ",
             agreeToTermsPart3: ".",
             terms: "Términos y Condiciones",
-privacy: "Política de Privacidad",
+            privacy: "Política de Privacidad",
             registerSuccess: "Registro Exitoso (Simulado)",
             welcomeUser: (name: string) => `¡Bienvenido, ${name}! Por favor revisa tu correo para verificar tu cuenta.`,
             validation: {

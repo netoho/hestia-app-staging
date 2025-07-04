@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileForm';
+import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
 
@@ -17,8 +18,10 @@ const steps = [
 
 export default function NewPolicyPage() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({});
 
-  const handleNextStep = () => {
+  const handleNextStep = (data: any) => {
+    setFormData(prev => ({ ...prev, ...data }));
     setCurrentStep((prev) => (prev < steps.length ? prev + 1 : prev));
   };
 
@@ -63,6 +66,7 @@ export default function NewPolicyPage() {
       <Card className="shadow-lg">
         <CardContent className="p-6">
           {currentStep === 1 && <CreatePolicyProfileForm onNext={handleNextStep} />}
+          {currentStep === 2 && <CreatePolicyEmploymentForm onNext={handleNextStep} onBack={handlePrevStep} />}
           {/* Future steps will be rendered here */}
         </CardContent>
       </Card>
