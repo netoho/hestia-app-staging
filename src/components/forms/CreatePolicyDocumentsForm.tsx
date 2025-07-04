@@ -16,14 +16,15 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
+import { DocumentsSummaryModal } from '../modals/DocumentsSummaryModal';
 
 const MAX_FILE_SIZE_MB = 15;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const documentsSchema = z.object({
-  identification: z.array(z.any()).min(1, { message: t.pages.newPolicy.documents.validation.idRequired }),
-  proofOfIncome: z.array(z.any()).min(1, { message: t.pages.newPolicy.documents.validation.incomeRequired }),
-  optional: z.array(z.any()),
+  identification: z.array(z.instanceof(File)).min(1, { message: t.pages.newPolicy.documents.validation.idRequired }),
+  proofOfIncome: z.array(z.instanceof(File)).min(1, { message: t.pages.newPolicy.documents.validation.incomeRequired }),
+  optional: z.array(z.instanceof(File)),
   incomeDocsHavePassword: z.enum(['yes', 'no'], {
     required_error: t.pages.newPolicy.documents.validation.passwordQuestionRequired,
   }),
@@ -44,7 +45,7 @@ type UploadableFile = {
 };
 
 interface FileUploaderProps {
-  id: keyof DocumentsFormValues;
+  id: keyof Omit<DocumentsFormValues, 'incomeDocsHavePassword'>;
   title: string;
   description: string;
   maxFiles: number;
@@ -181,9 +182,19 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
     },
   });
 
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [summaryData, setSummaryData] = useState<DocumentsFormValues | null>(null);
+
   const onSubmit = (values: DocumentsFormValues) => {
-    console.log(values);
-    onNext(values);
+    setSummaryData(values);
+    setIsSummaryModalOpen(true);
+  };
+
+  const handleConfirmSubmit = () => {
+    if (summaryData) {
+      onNext(summaryData);
+    }
+    setIsSummaryModalOpen(false);
   };
 
   return (
@@ -261,6 +272,16 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
           </div>
         </form>
       </Form>
+       {summaryData && (
+        <DocumentsSummaryModal
+          isOpen={isSummaryModalOpen}
+          onClose={() => setIsSummaryModalOpen(false)}
+          onSubmit={handleConfirmSubmit}
+          identification={summaryData.identification}
+          proofOfIncome={summaryData.proofOfIncome}
+          optional={summaryData.optional}
+        />
+      )}
     </div>
   );
 }

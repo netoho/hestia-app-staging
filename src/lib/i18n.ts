@@ -414,6 +414,12 @@ const es = {
                     idRequired: "Se requiere al menos un documento de identificación.",
                     incomeRequired: "Se requiere al menos un comprobante de ingresos.",
                     passwordQuestionRequired: "Por favor, especifica si tus documentos tienen contraseña."
+                },
+                summary: {
+                    title: "Resumen de documentos",
+                    description: "Asegúrate de que subiste todos los documentos solicitados.",
+                    submit: "Enviar",
+                    uploadMore: "Subir más documentos",
                 }
             }
         },
