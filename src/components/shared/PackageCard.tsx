@@ -20,7 +20,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
         <CardDescription className="text-base h-16">{packageItem.description}</CardDescription>
         <p className="text-4xl font-bold text-foreground pt-2">
           {packageItem.price}
-          <span className="text-sm font-normal text-muted-foreground">/month</span>
+          <span className="text-sm font-normal text-muted-foreground">/mes</span>
         </p>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -38,7 +38,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
           "w-full text-lg py-6",
            packageItem.highlight ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-accent hover:bg-accent/90 text-accent-foreground"
            )}>
-          <Link href={packageItem.ctaLink}>{packageItem.ctaText || 'Learn More'}</Link>
+          <Link href={packageItem.ctaLink}>{packageItem.ctaText || 'Saber Más'}</Link>
         </Button>
       </CardFooter>
     </Card>

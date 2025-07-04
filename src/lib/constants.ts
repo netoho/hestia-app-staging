@@ -1,39 +1,39 @@
 import type { Package, Testimonial, NavItem } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch } from 'lucide-react';
 
-export const SITE_NAME = "HestiaGuard";
-export const COMPANY_LEGAL_NAME = "HestiaGuard Solutions S.A. de C.V."; // Example legal name
-export const CONTACT_EMAIL = "info@hestiaguard.com";
+export const SITE_NAME = "Hestia";
+export const COMPANY_LEGAL_NAME = "Soluciones Hestia S.A. de C.V.";
+export const CONTACT_EMAIL = "info@hestia.com";
 export const CONTACT_PHONE = "+52 55 1234 5678";
 
 
 export const PACKAGES_DATA: Package[] = [
   {
     id: 'basic',
-    name: 'Basic Shield',
+    name: 'Escudo Básico',
     price: '$49',
-    description: 'Essential investigation services to ensure tenant reliability.',
-    features: ['Tenant Background Check', 'Credit Report Summary', 'Eviction History Search'],
-    ctaText: 'Get Started',
+    description: 'Servicios esenciales de investigación para asegurar la fiabilidad del inquilino.',
+    features: ['Verificación de antecedentes del inquilino', 'Resumen de informe de crédito', 'Búsqueda de historial de desalojos'],
+    ctaText: 'Comenzar',
     ctaLink: '/register?package=basic',
   },
   {
     id: 'standard',
-    name: 'Standard Secure',
+    name: 'Seguro Estándar',
     price: '$99',
-    description: 'Comprehensive protection including lease support and initial guarantees.',
-    features: ['All Basic Shield Features', 'Customizable Lease Agreement Template', 'Rent Payment Guarantee (1 Month)', 'Basic Legal Consultation'],
-    ctaText: 'Choose Standard',
+    description: 'Protección integral que incluye soporte en el contrato y garantías iniciales.',
+    features: ['Todas las funciones de Escudo Básico', 'Plantilla de contrato de arrendamiento personalizable', 'Garantía de pago de renta (1 mes)', 'Consulta legal básica'],
+    ctaText: 'Elegir Estándar',
     ctaLink: '/register?package=standard',
     highlight: true,
   },
   {
     id: 'premium',
-    name: 'Premium Fortress',
+    name: 'Fortaleza Premium',
     price: '$199',
-    description: 'Ultimate peace of mind with full contract management and extensive coverage.',
-    features: ['All Standard Secure Features', 'Full Contract Lifecycle Management', 'Extended Rent Guarantee (3 Months)', 'Comprehensive Legal Assistance', 'Eviction Process Coverage'],
-    ctaText: 'Opt for Premium',
+    description: 'Tranquilidad total con gestión completa del contrato y cobertura extendida.',
+    features: ['Todas las funciones de Seguro Estándar', 'Gestión del ciclo de vida completo del contrato', 'Garantía de renta extendida (3 meses)', 'Asistencia legal integral', 'Cobertura del proceso de desalojo'],
+    ctaText: 'Optar por Premium',
     ctaLink: '/register?package=premium',
   },
 ];
@@ -42,116 +42,116 @@ export const TESTIMONIALS_DATA: Testimonial[] = [
   {
     id: 't1',
     name: 'Ana López',
-    role: 'Property Owner',
-    quote: "HestiaGuard revolutionized how I manage my rentals. Their Standard Secure package is a perfect balance of features and affordability. Highly recommended!",
+    role: 'Propietaria',
+    quote: "Hestia revolucionó cómo administro mis alquileres. Su paquete Seguro Estándar es un balance perfecto de funciones y precio. ¡Muy recomendado!",
     avatarUrl: 'https://placehold.co/100x100.png',
     dataAiHint: 'woman portrait',
   },
   {
     id: 't2',
     name: 'David Chen',
-    role: 'Renter',
-    quote: "Finding a new apartment was stressful, but HestiaGuard's process made me feel secure about my lease. The transparency is commendable.",
+    role: 'Inquilino',
+    quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.",
     avatarUrl: 'https://placehold.co/100x100.png',
     dataAiHint: 'man smiling',
   },
   {
     id: 't3',
     name: 'Sofia Müller',
-    role: 'Real Estate Advisor',
-    quote: "I always advise my clients to use HestiaGuard. It simplifies negotiations and provides robust protection, benefiting everyone involved.",
+    role: 'Asesora Inmobiliaria',
+    quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.",
     avatarUrl: 'https://placehold.co/100x100.png',
     dataAiHint: 'professional woman',
   },
 ];
 
 export const PUBLIC_NAVIATION_LINKS: NavItem[] = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/real-estate-advisors', label: 'For Advisors', icon: Users },
-  { href: '/property-owners', label: 'For Owners', icon: Building2 },
-  { href: '/about-us', label: 'About HestiaGuard', icon: Info },
-  { href: '/#packages', label: 'Packages', icon: Briefcase},
+  { href: '/', label: 'Inicio', icon: Home },
+  { href: '/real-estate-advisors', label: 'Para Asesores', icon: Users },
+  { href: '/property-owners', label: 'Para Propietarios', icon: Building2 },
+  { href: '/about-us', label: 'Sobre Hestia', icon: Info },
+  { href: '/#packages', label: 'Paquetes', icon: Briefcase},
 ];
 
 export const FOOTER_LINKS: NavItem[] = [
-  { href: '/terms-and-conditions', label: 'Terms & Conditions' },
-  { href: '/privacy-policy', label: 'Privacy Policy' },
-  { href: '/contact', label: 'Contact Us' },
-  { href: '/faq', label: 'FAQ' },
+  { href: '/terms-and-conditions', label: 'Términos y Condiciones' },
+  { href: '/privacy-policy', label: 'Política de Privacidad' },
+  { href: '/contact', label: 'Contáctanos' },
+  { href: '/faq', label: 'Preguntas Frecuentes' },
 ];
 
 export const OWNER_DASHBOARD_LINKS: NavItem[] = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, matchExact: true },
-  { href: '/dashboard/policies', label: 'My Policies', icon: FileText },
-  { href: '/dashboard/profile', label: 'Profile', icon: UserCircle },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, matchExact: true },
+  { href: '/dashboard/policies', label: 'Mis Pólizas', icon: FileText },
+  { href: '/dashboard/profile', label: 'Perfil', icon: UserCircle },
+  { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ];
 
 export const RENTER_DASHBOARD_LINKS: NavItem[] = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, matchExact: true },
-  { href: '/dashboard/my-policy', label: 'My Policy', icon: FileText },
-  { href: '/dashboard/profile', label: 'Profile', icon: UserCircle },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, matchExact: true },
+  { href: '/dashboard/my-policy', label: 'Mi Póliza', icon: FileText },
+  { href: '/dashboard/profile', label: 'Perfil', icon: UserCircle },
+  { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
 ];
 
 export const STAFF_DASHBOARD_LINKS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
-  { href: '/dashboard/users', label: 'Manage Users', icon: Users },
-  { href: '/dashboard/policies', label: 'Manage Policies', icon: FileText },
-  { href: '/dashboard/packages', label: 'Manage Packages', icon: PackageSearch },
-  { href: '/dashboard/profile', label: 'My Profile', icon: UserCircle },
-  { href: '/dashboard/system-settings', label: 'System Settings', icon: Settings },
+  { href: '/dashboard/users', label: 'Gestionar Usuarios', icon: Users },
+  { href: '/dashboard/policies', label: 'Gestionar Pólizas', icon: FileText },
+  { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
+  { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
+  { href: '/dashboard/system-settings', label: 'Config. del Sistema', icon: Settings },
 ];
 
 export const FAQ_DATA = [
   {
-    question: "What is HestiaGuard?",
-    answer: "HestiaGuard offers guarantee policy services for property rentals, providing security and peace of mind for property owners, renters, and real estate advisors."
+    question: "¿Qué es Hestia?",
+    answer: "Hestia ofrece servicios de pólizas de garantía para alquileres de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios."
   },
   {
-    question: "How do I sign up for a package?",
-    answer: "You can sign up by visiting our 'Packages' section on the website, choosing the package that best suits your needs, and clicking the 'Get Started' or similar button. This will guide you through the registration process."
+    question: "¿Cómo me registro en un paquete?",
+    answer: "Puedes registrarte visitando nuestra sección de 'Paquetes' en el sitio web, eligiendo el que mejor se adapte a tus necesidades y haciendo clic en el botón 'Comenzar' o similar. Esto te guiará a través del proceso de registro."
   },
   {
-    question: "What information is needed for a policy?",
-    answer: "For renters, personal identification, proof of income, and credit information are typically required. Property owners need to provide details about the property. Specific requirements may vary based on the package and local regulations."
+    question: "¿Qué información se necesita para una póliza?",
+    answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales."
   },
   {
-    question: "Can I upgrade my package?",
-    answer: "Yes, you can typically upgrade your package. Please contact our support team or check your dashboard for options on how to upgrade."
+    question: "¿Puedo cambiar mi paquete a uno superior?",
+    answer: "Sí, generalmente puedes mejorar tu paquete. Por favor, contacta a nuestro equipo de soporte o revisa tu panel de control para ver las opciones de actualización."
   },
   {
-    question: "Who pays for the policy?",
-    answer: "Payment responsibility can vary. Sometimes the property owner covers the cost, sometimes the renter, and often it's shared. This is usually agreed upon during the lease negotiation."
+    question: "¿Quién paga por la póliza?",
+    answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, y a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento."
   }
 ];
 
 export const HOW_IT_WORKS_STEPS = [
   {
     id: "1",
-    title: "Choose Your Package",
-    description: "Select from our range of packages tailored to your specific needs, whether you're an owner, renter, or advisor.",
+    title: "Elige tu Paquete",
+    description: "Selecciona entre nuestra gama de paquetes diseñados para tus necesidades específicas, ya seas propietario, inquilino o asesor.",
     icon: PackageSearch,
     dataAiHint: "select package"
   },
   {
     id: "2",
-    title: "Register & Provide Info",
-    description: "Sign up on our platform and fill in the necessary details. Owners list properties, renters provide personal information for screening.",
+    title: "Regístrate y Proporciona Info",
+    description: "Regístrate en nuestra plataforma y completa los detalles necesarios. Los propietarios listan propiedades, los inquilinos proporcionan información personal para la evaluación.",
     icon: UserPlus,
     dataAiHint: "user registration"
   },
   {
     id: "3",
-    title: "Verification & Approval",
-    description: "Our team processes the information, conducts necessary checks, and approves the policy application.",
+    title: "Verificación y Aprobación",
+    description: "Nuestro equipo procesa la información, realiza las verificaciones necesarias y aprueba la solicitud de la póliza.",
     icon: ShieldQuestion,
     dataAiHint: "security check"
   },
   {
     id: "4",
-    title: "Secure Your Rental",
-    description: "Once approved and payment is complete, your rental is secured with HestiaGuard's protection. Access your documents anytime.",
+    title: "Asegura tu Alquiler",
+    description: "Una vez aprobado y completado el pago, tu alquiler está asegurado con la protección de Hestia. Accede a tus documentos en cualquier momento.",
     icon: FileText,
     dataAiHint: "contract document"
   }

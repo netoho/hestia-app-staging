@@ -11,7 +11,7 @@ import Logo from '@/components/Logo';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   // In a real app, user data would come from an auth provider/session
-  const user = { name: "Demo User", email: "demo@example.com" };
+  const user = { name: "Usuario Demo", email: "demo@example.com" };
 
   return (
     <SidebarProvider defaultOpen>
@@ -28,13 +28,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search..."
+                  placeholder="Buscar..."
                   className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted/50 focus:bg-background"
                 />
               </form>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Bell className="h-5 w-5" />
-                <span className="sr-only">Toggle notifications</span>
+                <span className="sr-only">Ver notificaciones</span>
               </Button>
             </div>
           </header>
@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </main>
            <footer className="border-t bg-background/80 px-4 py-3 md:px-6 text-center md:text-left">
             <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
+              &copy; {new Date().getFullYear()} {SITE_NAME}. Todos los derechos reservados.
             </p>
           </footer>
         </SidebarInset>

@@ -14,26 +14,26 @@ export default function AboutUsPage() {
       <main className="flex-grow">
         <Section className="bg-primary/10 pt-24 pb-16">
           <PageTitle
-            title={`About ${SITE_NAME}`}
-            subtitle="Pioneering trust and security in the rental market."
+            title={`Sobre ${SITE_NAME}`}
+            subtitle="Pioneros en confianza y seguridad en el mercado de alquiler."
           />
         </Section>
 
         <Section>
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-headline font-semibold text-foreground mb-6">Our Story</h2>
+              <h2 className="text-3xl font-headline font-semibold text-foreground mb-6">Nuestra Historia</h2>
               <p className="text-lg text-muted-foreground mb-4">
-                {SITE_NAME} was founded with a clear mission: to revolutionize the rental experience by fostering trust and providing robust security for all parties involved. We saw the challenges faced by property owners, tenants, and real estate advisors – the uncertainties, the financial risks, and the complexities of rental agreements.
+                {SITE_NAME} fue fundada con una misión clara: revolucionar la experiencia de alquiler fomentando la confianza y proporcionando una seguridad sólida para todas las partes involucradas. Vimos los desafíos que enfrentan los propietarios, inquilinos y asesores inmobiliarios: las incertidumbres, los riesgos financieros y las complejidades de los contratos de alquiler.
               </p>
               <p className="text-lg text-muted-foreground">
-                Driven by a passion for innovation and a commitment to service, we developed a platform that offers comprehensive guarantee policies. Our goal is to make renting simpler, safer, and more accessible for everyone.
+                Impulsados por una pasión por la innovación y un compromiso con el servicio, desarrollamos una plataforma que ofrece pólizas de garantía integrales. Nuestro objetivo es hacer que el alquiler sea más simple, seguro y accesible para todos.
               </p>
             </div>
             <div>
               <Image
                 src="https://placehold.co/600x400.png"
-                alt="HestiaGuard team working together"
+                alt="Equipo de Hestia trabajando juntos"
                 width={600}
                 height={400}
                 className="rounded-xl shadow-xl"
@@ -44,13 +44,13 @@ export default function AboutUsPage() {
         </Section>
 
         <Section className="bg-muted/30">
-          <PageTitle title="Our Core Values" titleClassName="text-foreground" />
+          <PageTitle title="Nuestros Valores Fundamentales" titleClassName="text-foreground" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { icon: Shield, title: "Security", description: "Providing unwavering protection and peace of mind." },
-              { icon: Handshake, title: "Trust", description: "Building transparent and reliable relationships." },
-              { icon: Lightbulb, title: "Innovation", description: "Continuously improving our services and technology." },
-              { icon: Users, title: "Customer-Centricity", description: "Putting the needs of our clients first, always." },
+              { icon: Shield, title: "Seguridad", description: "Proporcionando protección inquebrantable y tranquilidad." },
+              { icon: Handshake, title: "Confianza", description: "Construyendo relaciones transparentes y fiables." },
+              { icon: Lightbulb, title: "Innovación", description: "Mejorando continuamente nuestros servicios y tecnología." },
+              { icon: Users, title: "Foco en el Cliente", description: "Poniendo siempre las necesidades de nuestros clientes primero." },
             ].map(value => (
               <Card key={value.title} className="text-center p-6 rounded-lg shadow-lg">
                 <value.icon className="h-12 w-12 text-primary mx-auto mb-4" />
@@ -64,16 +64,16 @@ export default function AboutUsPage() {
         <Section>
           <div className="text-center max-w-3xl mx-auto">
             <Target className="h-16 w-16 text-primary mx-auto mb-6" />
-            <h2 className="text-3xl font-headline font-semibold text-foreground mb-6">Our Mission</h2>
+            <h2 className="text-3xl font-headline font-semibold text-foreground mb-6">Nuestra Misión</h2>
             <p className="text-xl text-muted-foreground mb-4">
-              To be the leading provider of rental guarantee solutions, empowering individuals and businesses by creating a secure and transparent rental ecosystem. We strive to deliver exceptional value through innovative products, outstanding customer service, and a steadfast commitment to integrity.
+              Ser el proveedor líder de soluciones de garantía de alquiler, empoderando a individuos y empresas mediante la creación de un ecosistema de alquiler seguro y transparente. Nos esforzamos por ofrecer un valor excepcional a través de productos innovadores, un servicio al cliente sobresaliente y un compromiso firme con la integridad.
             </p>
           </div>
         </Section>
         
         {/* Optional: Team Section
         <Section className="bg-primary/5">
-          <PageTitle title="Meet Our Team" subtitle="The passionate individuals behind HestiaGuard."/>
+          <PageTitle title="Conoce a Nuestro Equipo" subtitle="Las personas apasionadas detrás de Hestia."/>
            Add team member cards here
         </Section>
         */}

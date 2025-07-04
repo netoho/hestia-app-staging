@@ -14,16 +14,16 @@ import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 const registerSchema = z.object({
-  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
+  fullName: z.string().min(2, { message: 'El nombre completo debe tener al menos 2 caracteres.' }),
+  email: z.string().email({ message: 'Dirección de correo electrónico inválida.' }),
+  password: z.string().min(8, { message: 'La contraseña debe tener al menos 8 caracteres.' }),
   confirmPassword: z.string(),
-  role: z.enum(['owner', 'renter'], { required_error: 'Please select a role.' }),
+  role: z.enum(['owner', 'renter'], { required_error: 'Por favor selecciona un rol.' }),
   agreedToTerms: z.boolean().refine(val => val === true, {
-    message: "You must agree to the terms and conditions."
+    message: "Debes aceptar los términos y condiciones."
   }),
 }).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match.",
+  message: "Las contraseñas no coinciden.",
   path: ['confirmPassword'],
 });
 
@@ -51,8 +51,8 @@ export function RegisterForm() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('Registration data:', values);
     toast({
-      title: 'Registration Successful (Mock)',
-      description: `Welcome, ${values.fullName}! Please check your email to verify your account.`,
+      title: 'Registro Exitoso (Simulado)',
+      description: `¡Bienvenido, ${values.fullName}! Por favor revisa tu correo para verificar tu cuenta.`,
     });
     // Example: router.push('/login')
     setIsLoading(false);
@@ -66,9 +66,9 @@ export function RegisterForm() {
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel>Nombre Completo</FormLabel>
               <FormControl>
-                <Input placeholder="John Doe" {...field} />
+                <Input placeholder="Juan Pérez" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -79,9 +79,9 @@ export function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email Address</FormLabel>
+              <FormLabel>Correo Electrónico</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="you@example.com" {...field} />
+                <Input type="email" placeholder="tu@ejemplo.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -92,7 +92,7 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Contraseña</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -105,7 +105,7 @@ export function RegisterForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>Confirmar Contraseña</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -118,16 +118,16 @@ export function RegisterForm() {
           name="role"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>I am a...</FormLabel>
+              <FormLabel>Soy un...</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select your role" />
+                    <SelectValue placeholder="Selecciona tu rol" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="owner">Property Owner</SelectItem>
-                  <SelectItem value="renter">Renter</SelectItem>
+                  <SelectItem value="owner">Propietario</SelectItem>
+                  <SelectItem value="renter">Inquilino</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -147,7 +147,7 @@ export function RegisterForm() {
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>
-                  I agree to the <Link href="/terms-and-conditions" className="text-primary hover:underline">Terms and Conditions</Link> and <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>.
+                  Acepto los <Link href="/terms-and-conditions" className="text-primary hover:underline">Términos y Condiciones</Link> y la <Link href="/privacy-policy" className="text-primary hover:underline">Política de Privacidad</Link>.
                 </FormLabel>
                 <FormMessage />
               </div>
@@ -155,7 +155,7 @@ export function RegisterForm() {
           )}
         />
         <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6" disabled={isLoading}>
-           {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Create Account'}
+           {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Crear Cuenta'}
         </Button>
       </form>
     </Form>

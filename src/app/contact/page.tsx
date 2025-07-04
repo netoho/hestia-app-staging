@@ -14,14 +14,14 @@ function ContactPageSkeleton() {
     <>
       <Section className="bg-primary/10 pt-24 pb-16">
         <PageTitle
-          title="Get in Touch"
-          subtitle="We're here to help. Reach out to us with any questions or inquiries."
+          title="Ponte en Contacto"
+          subtitle="Estamos aquí para ayudar. Contáctanos con cualquier pregunta o consulta."
         />
       </Section>
       <Section>
         <div className="grid md:grid-cols-2 gap-12">
           <div>
-            <h2 className="text-3xl font-headline font-semibold text-foreground mb-6">Contact Information</h2>
+            <h2 className="text-3xl font-headline font-semibold text-foreground mb-6">Información de Contacto</h2>
             <Skeleton className="h-6 w-3/4 mb-8" />
             <div className="space-y-6">
               {[1, 2, 3].map((i) => (
@@ -38,7 +38,7 @@ function ContactPageSkeleton() {
           </div>
           <div>
             <Card className="p-6 md:p-8 rounded-lg shadow-xl">
-              <h2 className="text-2xl font-headline font-semibold text-foreground mb-6">Send Us a Message</h2>
+              <h2 className="text-2xl font-headline font-semibold text-foreground mb-6">Envíanos un Mensaje</h2>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Skeleton className="h-10 w-full" />

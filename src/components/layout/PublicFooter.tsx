@@ -16,17 +16,17 @@ export default function PublicFooter() {
           <div>
             <Logo size="sm" className="mb-4"/>
             <p className="text-sm mb-4">
-              {SITE_NAME} offers comprehensive rental guarantee policies, providing peace of mind for property owners and tenants alike.
+              {SITE_NAME} ofrece pólizas de garantía de alquiler integrales, proporcionando tranquilidad tanto a propietarios como a inquilinos.
             </p>
             <div className="space-y-2 text-sm">
               <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {CONTACT_EMAIL}</p>
               <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> {CONTACT_PHONE}</p>
-              <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> 123 Secure St, Mexico City, MX</p>
+              <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Calle Segura 123, Ciudad de México, MX</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-headline font-semibold text-foreground mb-4">Quick Links</h3>
+            <h3 className="text-lg font-headline font-semibold text-foreground mb-4">Enlaces Rápidos</h3>
             <ul className="space-y-2">
               {FOOTER_LINKS.slice(0, Math.ceil(FOOTER_LINKS.length / 2)).map((item) => (
                 <li key={item.label}>
@@ -50,25 +50,25 @@ export default function PublicFooter() {
               ))}
                <li>
                   <Link href="/sitemap.xml" className="text-sm hover:text-primary transition-colors">
-                    Sitemap
+                    Mapa del Sitio
                   </Link>
                 </li>
             </ul>
           </div>
           
           <div>
-            <h3 className="text-lg font-headline font-semibold text-foreground mb-4">Newsletter</h3>
-            <p className="text-sm mb-3">Stay updated with our latest news and offers.</p>
+            <h3 className="text-lg font-headline font-semibold text-foreground mb-4">Boletín Informativo</h3>
+            <p className="text-sm mb-3">Mantente actualizado con nuestras últimas noticias y ofertas.</p>
             <NewsletterForm />
           </div>
         </div>
 
         <div className="border-t border-border pt-8 text-center md:flex md:justify-between">
           <p className="text-sm">
-            &copy; {currentYear} {COMPANY_LEGAL_NAME}. All rights reserved.
+            &copy; {currentYear} {COMPANY_LEGAL_NAME}. Todos los derechos reservados.
           </p>
           <p className="text-sm mt-2 md:mt-0">
-            Built with ❤️ in Mexico City.
+            Hecho con ❤️ en la Ciudad de México.
           </p>
         </div>
       </div>

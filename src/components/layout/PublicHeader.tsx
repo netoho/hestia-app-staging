@@ -51,16 +51,16 @@ export default function PublicHeader() {
           </nav>
           <div className="hidden md:flex items-center space-x-3">
             <Button variant="outline" asChild>
-              <Link href="/login">Login</Link>
+              <Link href="/login">Iniciar Sesión</Link>
             </Button>
             <Button variant="default" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Link href="/register">Register</Link>
+              <Link href="/register">Registrarse</Link>
             </Button>
           </div>
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Button variant="ghost" size="icon" aria-label="Abrir menú">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
@@ -69,7 +69,7 @@ export default function PublicHeader() {
                   <div className="flex justify-between items-center mb-8">
                     <Logo size="sm" />
                     <SheetClose asChild>
-                       <Button variant="ghost" size="icon" aria-label="Close menu">
+                       <Button variant="ghost" size="icon" aria-label="Cerrar menú">
                          <X className="h-6 w-6" />
                        </Button>
                     </SheetClose>
@@ -92,12 +92,12 @@ export default function PublicHeader() {
                   <div className="mt-auto space-y-3">
                      <SheetClose asChild>
                         <Button variant="outline" className="w-full" asChild>
-                          <Link href="/login">Login</Link>
+                          <Link href="/login">Iniciar Sesión</Link>
                         </Button>
                       </SheetClose>
                       <SheetClose asChild>
                         <Button variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                          <Link href="/register">Register</Link>
+                          <Link href="/register">Registrarse</Link>
                         </Button>
                       </SheetClose>
                   </div>

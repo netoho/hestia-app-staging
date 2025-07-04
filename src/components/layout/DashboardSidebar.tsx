@@ -35,8 +35,8 @@ import { useState, useEffect } from 'react';
 // Mock user for demonstration. Replace with actual auth context.
 const MOCK_USER: User = {
   id: '1',
-  name: 'Demo User',
-  email: 'demo@hestiaguard.com',
+  name: 'Usuario Demo',
+  email: 'demo@hestia.com',
   role: 'owner', // Change this to 'renter' or 'staff' to see different sidebars
   avatarUrl: 'https://placehold.co/100x100.png',
 };
@@ -123,20 +123,20 @@ export default function DashboardSidebar() {
             <DropdownMenuLabel>{MOCK_USER.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/profile"><UserCircle className="mr-2 h-4 w-4" /> Profile</Link>
+              <Link href="/dashboard/profile"><UserCircle className="mr-2 h-4 w-4" /> Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings"><Settings className="mr-2 h-4 w-4" /> Settings</Link>
+              <Link href="/dashboard/settings"><Settings className="mr-2 h-4 w-4" /> Configuración</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Bell className="mr-2 h-4 w-4" /> Notifications
+              <Bell className="mr-2 h-4 w-4" /> Notificaciones
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
               // onClick={() => console.log('Log out user')} // Replace with actual logout
             >
-              <LogOut className="mr-2 h-4 w-4" /> Log out
+              <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

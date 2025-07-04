@@ -20,8 +20,8 @@ export default function FAQPage() {
       <main className="flex-grow">
         <Section className="bg-primary/10 pt-24 pb-16">
           <PageTitle
-            title="Frequently Asked Questions"
-            subtitle={`Find answers to common questions about ${SITE_NAME} and our services.`}
+            title="Preguntas Frecuentes"
+            subtitle={`Encuentra respuestas a preguntas comunes sobre ${SITE_NAME} y nuestros servicios.`}
           />
         </Section>
 
@@ -46,13 +46,13 @@ export default function FAQPage() {
         </Section>
          <Section className="text-center bg-muted/30">
           <h2 className="text-2xl md:text-3xl font-headline font-bold text-foreground mb-4">
-            Still have questions?
+            ¿Todavía tienes preguntas?
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-6">
-            If you can't find the answer you're looking for, please don't hesitate to reach out to our support team.
+            Si no encuentras la respuesta que buscas, no dudes en contactar a nuestro equipo de soporte.
           </p>
           <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Link href="/contact">Contact Support</Link>
+            <Link href="/contact">Contactar a Soporte</Link>
           </Button>
         </Section>
       </main>

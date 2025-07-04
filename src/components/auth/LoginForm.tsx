@@ -14,8 +14,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  email: z.string().email({ message: 'Dirección de correo electrónico inválida.' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -40,8 +40,8 @@ export function LoginForm() {
     console.log('Login data:', values);
     
     toast({
-      title: 'Login Successful (Mock)',
-      description: `Welcome back, ${values.email}! Redirecting...`,
+      title: 'Inicio de Sesión Exitoso (Simulado)',
+      description: `¡Bienvenido de nuevo, ${values.email}! Redirigiendo...`,
     });
     
     router.push('/dashboard');
@@ -56,9 +56,9 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email Address</FormLabel>
+              <FormLabel>Correo Electrónico</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="you@example.com" {...field} />
+                <Input type="email" placeholder="tu@ejemplo.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -69,21 +69,21 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Contraseña</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
               <FormMessage />
                <div className="text-right mt-1">
                 <Button variant="link" size="sm" asChild className="p-0 h-auto">
-                  <Link href="/forgot-password">Forgot password?</Link>
+                  <Link href="/forgot-password">¿Olvidaste tu contraseña?</Link>
                 </Button>
               </div>
             </FormItem>
           )}
         />
         <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-lg py-6" disabled={isLoading}>
-          {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Login'}
+          {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Iniciar Sesión'}
         </Button>
       </form>
     </Form>

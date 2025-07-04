@@ -4,9 +4,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { SITE_NAME } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} - Property Rental Guarantees`,
-  description: 'Secure your rental agreements with HestiaGuard. Comprehensive guarantee policies for property owners and renters.',
-  keywords: ['rental guarantee', 'property insurance', 'tenant screening', 'landlord protection', 'hestiaguard'],
+  title: `${SITE_NAME} - Garantías de Alquiler de Propiedades`,
+  description: 'Asegura tus contratos de alquiler con Hestia. Pólizas de garantía integrales para propietarios e inquilinos.',
+  keywords: ['garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

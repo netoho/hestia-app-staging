@@ -5,13 +5,13 @@ import { LoginForm } from '@/components/auth/LoginForm';
 export default function LoginPage() {
   return (
     <AuthCard
-      title="Welcome Back!"
-      description="Log in to your HestiaGuard account."
+      title="¡Bienvenido de Nuevo!"
+      description="Inicia sesión en tu cuenta de Hestia."
       footerContent={
         <>
-          Don't have an account?{' '}
+          ¿No tienes una cuenta?{' '}
           <Link href="/register" className="font-medium text-primary hover:underline">
-            Sign up
+            Regístrate
           </Link>
         </>
       }

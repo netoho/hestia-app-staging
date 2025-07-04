@@ -19,9 +19,9 @@ export default function NewsletterForm() {
     <form className="flex gap-2">
       <Input
         type="email"
-        placeholder="Enter your email"
+        placeholder="Ingresa tu correo"
         className="bg-background"
-        aria-label="Email for newsletter"
+        aria-label="Correo para el boletín"
         disabled={!isClient}
       />
       <Button
@@ -30,7 +30,7 @@ export default function NewsletterForm() {
         className="bg-primary hover:bg-primary/90"
         disabled={!isClient}
       >
-        Subscribe
+        Suscribirse
       </Button>
     </form>
   );
