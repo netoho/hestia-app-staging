@@ -39,6 +39,8 @@ export function CreatePolicyProfileForm({ onNext }: CreatePolicyProfileFormProps
     resolver: zodResolver(profileSchema),
     defaultValues: {
       nationality: 'mexican',
+      curp: '',
+      passport: '',
     },
   });
 
