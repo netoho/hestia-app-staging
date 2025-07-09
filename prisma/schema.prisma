@@ -14,21 +14,44 @@ model User {
   id        String    @id @default(cuid())
   email     String    @unique
   name      String?
-  // Changed from Enum to String for SQLite compatibility
+  password  String
+  // Role: staff, broker, tenant, landlord
   role      String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  policies  Policy[]
+  
+  // Relations based on role
+  brokerPolicies   Policy[] @relation("BrokerPolicies")
+  tenantPolicies   Policy[] @relation("TenantPolicies")
+  landlordPolicies Policy[] @relation("LandlordPolicies")
 }
 
 model Policy {
   id              String   @id @default(cuid())
-  applicantId     String
-  applicant       User     @relation(fields: [applicantId], references: [id])
+  
+  // Users involved
+  brokerId        String
+  broker          User     @relation("BrokerPolicies", fields: [brokerId], references: [id])
+  tenantId        String
+  tenant          User     @relation("TenantPolicies", fields: [tenantId], references: [id])
+  landlordId      String?
+  landlord        User?    @relation("LandlordPolicies", fields: [landlordId], references: [id])
+  
+  // Property details
   propertyAddress String
-  // Changed from Enum to String for SQLite compatibility
-  status          String
+  propertyType    String // apartment, house, commercial, etc.
+  
+  // Policy details
+  status          String // pending, active, expired, cancelled
   premium         Float
+  startDate       DateTime
+  endDate         DateTime
+  payer           String // tenant or landlord
+  
+  // Additional policy data as JSON string
+  propertyData    String // JSON with details like sqft, bedrooms, etc.
+  coverageData    String // JSON with coverage details
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
