@@ -4,11 +4,11 @@ import { authenticateRequest, requireRole } from '@/lib/auth';
 import { z } from 'zod';
 
 const updatePolicySchema = z.object({
-  status: z.enum(['pending', 'active', 'expired', 'cancelled']).optional(),
+  status: z.string().optional(),
   premium: z.number().positive().optional(),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-  payer: z.enum(['tenant', 'landlord']).optional(),
+  payer: z.string().optional(),
   propertyData: z.object({
     sqft: z.number().optional(),
     bedrooms: z.number().optional(),

@@ -11,7 +11,7 @@ const createPolicySchema = z.object({
   premium: z.number().positive(),
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
-  payer: z.enum(['tenant', 'landlord']),
+  payer: z.string(),
   propertyData: z.object({
     sqft: z.number().optional(),
     bedrooms: z.number().optional(),
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       where.landlordId = auth.userId;
     }
     
-    if (status) {
+    if (status && status !== 'all') {
       where.status = status;
     }
     

@@ -20,7 +20,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: t.pages.register.validation.emailInvalid }),
   password: z.string().min(8, { message: t.pages.register.validation.passwordMin }),
   confirmPassword: z.string(),
-  role: z.enum(['owner', 'renter', 'broker', 'tenant', 'landlord'], { required_error: t.pages.register.validation.roleRequired }),
+  role: z.enum(['tenant', 'landlord', 'broker'], { required_error: t.pages.register.validation.roleRequired }),
   agreedToTerms: z.boolean().refine(val => val === true, {
     message: t.pages.register.validation.termsRequired,
   }),
@@ -52,15 +52,6 @@ export function RegisterForm() {
     setIsLoading(true);
     
     try {
-      // Map the role to match API expectations
-      const roleMap: Record<string, string> = {
-        'owner': 'landlord',
-        'renter': 'tenant',
-        'broker': 'broker',
-        'tenant': 'tenant',
-        'landlord': 'landlord'
-      };
-
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -70,7 +61,7 @@ export function RegisterForm() {
           name: values.fullName,
           email: values.email,
           password: values.password,
-          role: roleMap[values.role] || values.role,
+          role: values.role,
         }),
       });
 

@@ -23,7 +23,7 @@ async function main() {
       email: adminEmail,
       name: 'Super Admin',
       password: hashedPassword,
-      role: 'staff', // Using 'staff' instead of 'ADMIN' based on our schema
+      role: 'staff',
     },
   });
   console.log(`Created/found admin user: ${adminUser.name} with email ${adminUser.email}`);

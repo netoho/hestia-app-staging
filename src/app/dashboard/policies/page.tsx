@@ -18,14 +18,14 @@ import { TablePagination } from '@/components/shared/TablePagination';
 import { useTableState } from '@/hooks/use-table-state';
 import { useAuth } from '@/hooks/use-auth';
 
-const statusVariantMap: Record<PolicyStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const statusVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'secondary',
   active: 'default',
   expired: 'outline',
   cancelled: 'destructive',
 };
 
-const statusColorMap: Record<PolicyStatus, string> = {
+const statusColorMap: Record<string, string> = {
     pending: 'bg-yellow-500',
     active: 'bg-green-500',
     expired: 'bg-gray-500',
@@ -181,7 +181,7 @@ export default function PoliciesPage() {
                         <TableCell>
                             <Badge variant={statusVariantMap[policy.status] || 'default'} className="capitalize flex items-center gap-2">
                                 <span className={`h-2 w-2 rounded-full ${statusColorMap[policy.status] || 'bg-gray-500'}`}></span>
-                                {t.policyStatus[policy.status] || policy.status}
+                                {t.policyStatus[policy.status as PolicyStatus] || policy.status}
                             </Badge>
                         </TableCell>
                         <TableCell>${policy.premium.toLocaleString('es-MX')}</TableCell>

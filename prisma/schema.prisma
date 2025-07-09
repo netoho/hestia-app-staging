@@ -11,60 +11,46 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  password  String
-  // Role: staff, broker, tenant, landlord
-  role      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
-  // Relations based on role
-  brokerPolicies   Policy[] @relation("BrokerPolicies")
-  tenantPolicies   Policy[] @relation("TenantPolicies")
-  landlordPolicies Policy[] @relation("LandlordPolicies")
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  password         String
+  role             String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  brokerPolicies   Policy[]  @relation("BrokerPolicies")
+  tenantPolicies   Policy[]  @relation("TenantPolicies")
+  landlordPolicies Policy[]  @relation("LandlordPolicies")
 }
 
 model Policy {
-  id              String   @id @default(cuid())
-  
-  // Users involved
-  brokerId        String
-  broker          User     @relation("BrokerPolicies", fields: [brokerId], references: [id])
+  id              String    @id @default(cuid())
+  broker          User?     @relation("BrokerPolicies", fields: [brokerId], references: [id])
+  brokerId        String?
+  tenant          User      @relation("TenantPolicies", fields: [tenantId], references: [id])
   tenantId        String
-  tenant          User     @relation("TenantPolicies", fields: [tenantId], references: [id])
+  landlord        User?     @relation("LandlordPolicies", fields: [landlordId], references: [id])
   landlordId      String?
-  landlord        User?    @relation("LandlordPolicies", fields: [landlordId], references: [id])
-  
-  // Property details
   propertyAddress String
-  propertyType    String // apartment, house, commercial, etc.
-  
-  // Policy details
-  status          String // pending, active, expired, cancelled
+  propertyType    String
+  status          String
   premium         Float
   startDate       DateTime
   endDate         DateTime
-  payer           String // tenant or landlord
-  
-  // Additional policy data as JSON string
-  propertyData    String // JSON with details like sqft, bedrooms, etc.
-  coverageData    String // JSON with coverage details
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  payer           String
+  propertyData    String?
+  coverageData    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Package {
-  id          String   @id
+  id          String   @id @default(cuid())
   name        String
   price       Float
   description String
-  // Changed from Json to String for SQLite compatibility
-  // We will store features as a JSON string
   features    String
   ctaText     String?
   ctaLink     String
-  highlight   Boolean? @default(false)
+  highlight   Boolean?
 }

@@ -77,9 +77,12 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
       const method = isEditMode ? 'PUT' : 'POST';
       
       // For edit mode, only send password if it's provided
-      const payload = isEditMode 
-        ? { ...data, password: data.password || undefined }
-        : { ...data, password: data.password || 'password123' };
+      const payload: any = { ...data };
+      if (isEditMode) {
+        if (!payload.password) delete payload.password;
+      } else {
+        if (!payload.password) payload.password = 'password123';
+      }
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -88,7 +91,12 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
       // Add auth token for staff endpoints
       if (isEditMode && authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
+      } else if (!isEditMode && authToken) {
+        // Creating a user via staff API, not public registration
+        // This assumes a staff endpoint for user creation exists
+        // For now, we use the public registration endpoint which doesn't need auth
       }
+
 
       const response = await fetch(url, {
         method,
