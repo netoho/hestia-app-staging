@@ -12,6 +12,8 @@ import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: t.pages.register.validation.emailInvalid }),
@@ -35,20 +37,66 @@ export function LoginForm() {
 
   async function onSubmit(values: LoginFormValues) {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Login data:', values);
     
-    toast({
-      title: t.pages.login.loginSuccess,
-      description: t.pages.login.welcomeBackUser(values.email),
-    });
-    
-    router.push('/dashboard');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store the auth token and user data
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      
+      toast({
+        title: t.pages.login.loginSuccess,
+        description: t.pages.login.welcomeBackUser(data.user.name || values.email),
+      });
+      
+      // Redirect based on user role
+      if (data.user.role === 'staff') {
+        router.push('/dashboard/users');
+      } else {
+        router.push('/dashboard');
+      }
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to login. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <div className="space-y-4">
+      <Alert>
+        <InfoIcon className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Demo Credentials:</strong><br />
+          Email: admin@hestia.com<br />
+          Password: password123
+        </AlertDescription>
+      </Alert>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="email"
@@ -85,5 +133,6 @@ export function LoginForm() {
         </Button>
       </form>
     </Form>
+    </div>
   );
 }

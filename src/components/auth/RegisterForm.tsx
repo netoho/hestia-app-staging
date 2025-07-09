@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
 
 const registerSchema = z.object({
@@ -19,7 +20,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: t.pages.register.validation.emailInvalid }),
   password: z.string().min(8, { message: t.pages.register.validation.passwordMin }),
   confirmPassword: z.string(),
-  role: z.enum(['owner', 'renter'], { required_error: t.pages.register.validation.roleRequired }),
+  role: z.enum(['owner', 'renter', 'broker', 'tenant', 'landlord'], { required_error: t.pages.register.validation.roleRequired }),
   agreedToTerms: z.boolean().refine(val => val === true, {
     message: t.pages.register.validation.termsRequired,
   }),
@@ -32,6 +33,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<RegisterFormValues>({
@@ -48,13 +50,58 @@ export function RegisterForm() {
 
   async function onSubmit(values: RegisterFormValues) {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Registration data:', values);
-    toast({
-      title: t.pages.register.registerSuccess,
-      description: t.pages.register.welcomeUser(values.fullName),
-    });
-    setIsLoading(false);
+    
+    try {
+      // Map the role to match API expectations
+      const roleMap: Record<string, string> = {
+        'owner': 'landlord',
+        'renter': 'tenant',
+        'broker': 'broker',
+        'tenant': 'tenant',
+        'landlord': 'landlord'
+      };
+
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: values.fullName,
+          email: values.email,
+          password: values.password,
+          role: roleMap[values.role] || values.role,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Store the auth token and user data
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      
+      toast({
+        title: t.pages.register.registerSuccess,
+        description: t.pages.register.welcomeUser(values.fullName),
+      });
+      
+      // Redirect to dashboard
+      router.push('/dashboard');
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to register. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -125,8 +172,9 @@ export function RegisterForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="owner">{t.roles.owner}</SelectItem>
-                  <SelectItem value="renter">{t.roles.renter}</SelectItem>
+                  <SelectItem value="tenant">Tenant</SelectItem>
+                  <SelectItem value="landlord">Landlord</SelectItem>
+                  <SelectItem value="broker">Broker</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
