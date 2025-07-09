@@ -1,4 +1,5 @@
 
+
 export interface Package {
   id: string;
   name: string;
@@ -52,18 +53,24 @@ export interface HowItWorksStep {
   dataAiHint: string;
 }
 
-export type PolicyStatus = 'pending' | 'approved' | 'active' | 'rejected' | 'expired';
+export type PolicyStatus = 'pending' | 'active' | 'expired' | 'cancelled';
 
 export interface Policy {
   id: string;
-  applicant: {
-    name: string;
-    email: string;
-  };
+  broker: { id: string; name: string; email: string } | null;
+  tenant: { id: string; name: string; email: string } | null;
+  landlord: { id: string; name: string; email: string } | null;
   property: {
     address: string;
+    type: string;
+    data: any;
   };
+  coverage: any;
   status: PolicyStatus;
-  createdAt: string;
   premium: number;
+  startDate: string;
+  endDate: string;
+  payer: string;
+  createdAt: string;
+  updatedAt: string;
 }

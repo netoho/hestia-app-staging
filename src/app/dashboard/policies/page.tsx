@@ -13,22 +13,23 @@ import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import type { Policy, PolicyStatus } from '@/lib/types';
 import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
-
+import { TableFilters, FilterOption } from '@/components/shared/TableFilters';
+import { TablePagination } from '@/components/shared/TablePagination';
+import { useTableState } from '@/hooks/use-table-state';
+import { useAuth } from '@/hooks/use-auth';
 
 const statusVariantMap: Record<PolicyStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'secondary',
-  approved: 'default',
   active: 'default',
-  rejected: 'destructive',
   expired: 'outline',
+  cancelled: 'destructive',
 };
 
 const statusColorMap: Record<PolicyStatus, string> = {
     pending: 'bg-yellow-500',
-    approved: 'bg-blue-500',
     active: 'bg-green-500',
-    rejected: 'bg-red-500',
     expired: 'bg-gray-500',
+    cancelled: 'bg-red-500',
 };
 
 function PoliciesSkeleton() {
@@ -67,26 +68,47 @@ function PoliciesSkeleton() {
 
 export default function PoliciesPage() {
     const [policies, setPolicies] = useState<Policy[]>([]);
+    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { token } = useAuth();
+    
+    const tableState = useTableState({
+        initialState: { limit: 10 },
+    });
+
+    const statusOptions: FilterOption[] = [
+        { value: 'pending', label: 'Pending' },
+        { value: 'active', label: 'Active' },
+        { value: 'expired', label: 'Expired' },
+        { value: 'cancelled', label: 'Cancelled' },
+    ];
+
+    const fetchPolicies = async (queryString: string) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await fetch(`/api/policies?${queryString}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch policies');
+            }
+            const data = await response.json();
+            setPolicies(data.policies || []);
+            setPagination(data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        async function fetchPolicies() {
-            try {
-                const response = await fetch('/api/policies');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch policies');
-                }
-                const data = await response.json();
-                setPolicies(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setIsLoading(false);
-            }
+        if (token) {
+            fetchPolicies(tableState.queryString);
         }
-        fetchPolicies();
-    }, []);
+    }, [token, tableState.queryString]);
 
   return (
     <div>
@@ -94,11 +116,27 @@ export default function PoliciesPage() {
         title={t.pages.policies.title}
         subtitle={t.pages.policies.subtitle}
       />
+      <TableFilters
+        searchPlaceholder="Search by address or tenant..."
+        searchValue={tableState.state.search}
+        onSearchChange={tableState.setSearch}
+        selectFilters={[
+            {
+                key: 'status',
+                label: 'Status',
+                placeholder: 'Filter by status',
+                options: statusOptions,
+                value: tableState.state.filters.status || 'all',
+                onChange: (value) => tableState.setFilter('status', value),
+            },
+        ]}
+        onClear={tableState.clearFilters}
+      />
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>{t.pages.policies.cardTitle}</CardTitle>
-            <CardDescription>{!isLoading && !error && t.pages.policies.cardDescription(policies.length)}</CardDescription>
+            <CardDescription>{!isLoading && !error && t.pages.policies.cardDescription(pagination.total)}</CardDescription>
           </div>
           <Button asChild>
             <Link href="/dashboard/policies/new">
@@ -138,12 +176,12 @@ export default function PoliciesPage() {
                     {policies.map((policy) => (
                         <TableRow key={policy.id}>
                         <TableCell className="font-medium">{policy.id.substring(0, 8)}...</TableCell>
-                        <TableCell>{policy.applicant.name}</TableCell>
+                        <TableCell>{policy.tenant?.name || 'N/A'}</TableCell>
                         <TableCell>{policy.property.address}</TableCell>
                         <TableCell>
-                            <Badge variant={statusVariantMap[policy.status]} className="capitalize flex items-center gap-2">
-                                <span className={`h-2 w-2 rounded-full ${statusColorMap[policy.status]}`}></span>
-                                {t.policyStatus[policy.status]}
+                            <Badge variant={statusVariantMap[policy.status] || 'default'} className="capitalize flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${statusColorMap[policy.status] || 'bg-gray-500'}`}></span>
+                                {t.policyStatus[policy.status] || policy.status}
                             </Badge>
                         </TableCell>
                         <TableCell>${policy.premium.toLocaleString('es-MX')}</TableCell>
@@ -169,6 +207,14 @@ export default function PoliciesPage() {
                     ))}
                     </TableBody>
                 </Table>
+            )}
+            {!isLoading && !error && policies.length > 0 && (
+                <TablePagination
+                    pagination={pagination}
+                    onPageChange={tableState.setPage}
+                    onLimitChange={tableState.setLimit}
+                    isLoading={isLoading}
+                />
             )}
         </CardContent>
       </Card>
