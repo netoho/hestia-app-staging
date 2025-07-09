@@ -99,7 +99,7 @@ export function CreatePolicyEmploymentForm({ onNext, onBack }: CreatePolicyEmplo
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t.pages.newPolicy.employment.industryPlaceholder} />
-                      </Trigger>
+                      </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {Object.entries(t.pages.newPolicy.employment.industryOptions).map(([key, value]) => (
