@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  // Manually managed enum: "OWNER" | "RENTER" | "STAFF" | "ADMIN"
+  role      String   @default("RENTER")
+  policies  Policy[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Policy {
+  id              String   @id @default(cuid())
+  applicant       User     @relation(fields: [applicantId], references: [id])
+  applicantId     String
+  propertyAddress String
+  // Manually managed enum: "PENDING" | "APPROVED" | "ACTIVE" | "REJECTED" | "EXPIRED"
+  status          String   @default("PENDING")
+  premium         Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Note: Enums were removed because they are not supported by SQLite.
+// We are using String fields with application-level validation to enforce constraints.

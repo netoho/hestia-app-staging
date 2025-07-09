@@ -19,7 +19,7 @@ export interface Testimonial {
   dataAiHint: string;
 }
 
-export type UserRole = 'owner' | 'renter' | 'staff';
+export type UserRole = 'owner' | 'renter' | 'staff' | 'admin';
 
 export interface User {
   id: string;
@@ -27,6 +27,8 @@ export interface User {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface NavItem {

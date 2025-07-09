@@ -1,6 +1,6 @@
 
 
-import type { Package, Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus } from './types';
+import type { Package, Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
 
@@ -281,7 +281,36 @@ const es = {
                 view: "Ver detalles",
                 edit: "Editar",
                 cancel: "Cancelar Póliza",
-            }
+            },
+            noPoliciesFound: "No se encontraron pólizas. ¡Crea una para empezar!",
+            errorLoading: "Error al cargar las pólizas.",
+        },
+        users: {
+            title: "Gestión de Usuarios",
+            subtitle: "Administra todos los usuarios del sistema.",
+            cardTitle: "Todos los Usuarios",
+            cardDescription: (count: number) => `Hay ${count} usuarios registrados.`,
+            newUser: "Crear Usuario",
+            tableHeaders: {
+                name: "Nombre",
+                email: "Correo Electrónico",
+                role: "Rol",
+                createdAt: "Fecha de Registro",
+                actions: "Acciones",
+            },
+            actions: {
+                label: "Acciones",
+                edit: "Editar Usuario",
+                delete: "Eliminar Usuario",
+            },
+            noUsersFound: "No se encontraron usuarios.",
+            errorLoading: "Error al cargar los usuarios.",
+            roleLabels: {
+                admin: "Administrador",
+                staff: "Staff",
+                owner: "Propietario",
+                renter: "Inquilino",
+            } as Record<UserRole, string>,
         },
         newPolicy: {
             title: "Crear Nueva Póliza",
