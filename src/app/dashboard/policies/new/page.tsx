@@ -8,6 +8,7 @@ import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmplo
 import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyReferencesForm';
 import { CreatePolicyDocumentsForm } from '@/components/forms/CreatePolicyDocumentsForm';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { t } from '@/lib/i18n';
 
 const steps = [
