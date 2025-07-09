@@ -18,12 +18,35 @@ export async function GET(request: NextRequest) {
     // Get query parameters for filtering
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
+    const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
     // Build filter
-    const where = role ? { role } : {};
+    const where: any = {};
+    
+    if (role && role !== 'all') {
+      where.role = role;
+    }
+    
+    // PostgreSQL supports case-insensitive search with mode: 'insensitive'
+    if (search && search.trim()) {
+      where.OR = [
+        { 
+          name: { 
+            contains: search.trim(),
+            mode: 'insensitive'
+          } 
+        },
+        { 
+          email: { 
+            contains: search.trim(),
+            mode: 'insensitive'
+          } 
+        },
+      ];
+    }
     
     // Get users with pagination
     const [users, total] = await Promise.all([
