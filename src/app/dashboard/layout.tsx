@@ -2,8 +2,7 @@ import type { ReactNode } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import { Button } from '@/components/ui/button';
-import { Search, Bell } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Bell } from 'lucide-react';
 import { t } from '@/lib/i18n';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -18,14 +17,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="flex-1">
             </div>
             <div className="flex items-center gap-4">
-              <form className="relative hidden md:block">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder={t.layout.dashboardLayout.searchPlaceholder}
-                  className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted/50 focus:bg-background"
-                />
-              </form>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Bell className="h-5 w-5" />
                 <span className="sr-only">{t.layout.dashboardLayout.viewNotifications}</span>
