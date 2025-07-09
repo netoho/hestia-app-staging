@@ -13,8 +13,11 @@ import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserDialog } from '@/components/dialogs/UserDialog';
 import { DeleteUserDialog } from '@/components/dialogs/DeleteUserDialog';
+import { TableFilters, FilterOption } from '@/components/shared/TableFilters';
+import { TablePagination } from '@/components/shared/TablePagination';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useTableState } from '@/hooks/use-table-state';
 
 const roleVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   admin: 'destructive',
@@ -55,6 +58,7 @@ function UsersSkeleton() {
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
+    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -64,11 +68,31 @@ export default function UsersPage() {
     const { token } = useAuth();
     const { toast } = useToast();
 
-    const fetchUsers = async () => {
+    // Table state management
+    const tableState = useTableState({
+        initialState: { limit: 10 },
+        onStateChange: () => {
+            // This will be handled by the effect below
+        }
+    });
+
+    // Role filter options
+    const roleOptions: FilterOption[] = [
+        { value: 'staff', label: 'Staff' },
+        { value: 'broker', label: 'Broker' },
+        { value: 'tenant', label: 'Tenant' },
+        { value: 'landlord', label: 'Landlord' },
+    ];
+
+    const fetchUsers = async (queryString?: string) => {
         try {
             setIsLoading(true);
             setError(null);
-            const response = await fetch('/api/staff/users', {
+            const url = queryString 
+                ? `/api/staff/users?${queryString}` 
+                : '/api/staff/users';
+            
+            const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -78,6 +102,7 @@ export default function UsersPage() {
             }
             const data = await response.json();
             setUsers(data.users || []);
+            setPagination(data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred');
         } finally {
@@ -87,9 +112,9 @@ export default function UsersPage() {
 
     useEffect(() => {
         if (token) {
-            fetchUsers();
+            fetchUsers(tableState.queryString);
         }
-    }, [token]);
+    }, [token, tableState.queryString]);
 
     const handleCreateUser = () => {
         setSelectedUser(null);
@@ -107,7 +132,7 @@ export default function UsersPage() {
     };
 
     const handleSuccess = () => {
-        fetchUsers();
+        fetchUsers(tableState.queryString);
         toast({
             title: 'Success',
             description: 'User operation completed successfully.',
@@ -117,11 +142,33 @@ export default function UsersPage() {
     return (
         <div>
             <PageTitle title={t.pages.users.title} subtitle={t.pages.users.subtitle} />
+            
+            <TableFilters
+                searchPlaceholder="Search by name or email..."
+                searchValue={tableState.state.search}
+                onSearchChange={tableState.setSearch}
+                selectFilters={[
+                    {
+                        key: 'role',
+                        label: 'Roles',
+                        placeholder: 'Filter by role',
+                        options: roleOptions,
+                        value: tableState.state.filters.role || 'all',
+                        onChange: (value) => tableState.setFilter('role', value),
+                    },
+                ]}
+                onClear={tableState.clearFilters}
+            />
+            
             <Card className="shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>{t.pages.users.cardTitle}</CardTitle>
-                        <CardDescription>{!isLoading && !error && t.pages.users.cardDescription(users.length)}</CardDescription>
+                        <CardDescription>
+                            {!isLoading && !error && (
+                                `Showing ${users.length} of ${pagination.total} users`
+                            )}
+                        </CardDescription>
                     </div>
                      <Button onClick={handleCreateUser}>
                         <UserPlus className="mr-2 h-4 w-4" />
@@ -189,6 +236,15 @@ export default function UsersPage() {
                                 ))}
                             </TableBody>
                         </Table>
+                    )}
+                    
+                    {!isLoading && !error && users.length > 0 && (
+                        <TablePagination
+                            pagination={pagination}
+                            onPageChange={tableState.setPage}
+                            onLimitChange={tableState.setLimit}
+                            isLoading={isLoading}
+                        />
                     )}
                 </CardContent>
             </Card>
