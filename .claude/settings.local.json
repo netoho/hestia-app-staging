@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx prisma:*)",
       "Bash(npm install:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
