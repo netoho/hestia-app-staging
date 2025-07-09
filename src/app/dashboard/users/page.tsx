@@ -7,16 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, UserPlus } from 'lucide-react';
+import { MoreHorizontal, UserPlus, Pencil, Trash2 } from 'lucide-react';
 import type { User, UserRole } from '@/lib/types';
 import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserDialog } from '@/components/dialogs/UserDialog';
+import { DeleteUserDialog } from '@/components/dialogs/DeleteUserDialog';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
-const roleVariantMap: Record<UserRole, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const roleVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   admin: 'destructive',
   staff: 'secondary',
   owner: 'default',
   renter: 'outline',
+  broker: 'default',
+  tenant: 'outline',
+  landlord: 'secondary',
 };
 
 function UsersSkeleton() {
@@ -50,24 +57,62 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [userDialogOpen, setUserDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    
+    const { token } = useAuth();
+    const { toast } = useToast();
+
+    const fetchUsers = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const response = await fetch('/api/staff/users', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+            const data = await response.json();
+            setUsers(data.users || []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        async function fetchUsers() {
-            try {
-                const response = await fetch('/api/users');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch users');
-                }
-                const data = await response.json();
-                setUsers(data);
-            } catch (err) {
-                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setIsLoading(false);
-            }
+        if (token) {
+            fetchUsers();
         }
+    }, [token]);
+
+    const handleCreateUser = () => {
+        setSelectedUser(null);
+        setUserDialogOpen(true);
+    };
+
+    const handleEditUser = (user: User) => {
+        setSelectedUser(user);
+        setUserDialogOpen(true);
+    };
+
+    const handleDeleteUser = (user: User) => {
+        setSelectedUser(user);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleSuccess = () => {
         fetchUsers();
-    }, []);
+        toast({
+            title: 'Success',
+            description: 'User operation completed successfully.',
+        });
+    };
 
     return (
         <div>
@@ -78,7 +123,7 @@ export default function UsersPage() {
                         <CardTitle>{t.pages.users.cardTitle}</CardTitle>
                         <CardDescription>{!isLoading && !error && t.pages.users.cardDescription(users.length)}</CardDescription>
                     </div>
-                     <Button>
+                     <Button onClick={handleCreateUser}>
                         <UserPlus className="mr-2 h-4 w-4" />
                         {t.pages.users.newUser}
                     </Button>
@@ -112,8 +157,8 @@ export default function UsersPage() {
                                         <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant={roleVariantMap[user.role]} className="capitalize">
-                                                {t.pages.users.roleLabels[user.role]}
+                                            <Badge variant={roleVariantMap[user.role] || 'default'} className="capitalize">
+                                                {user.role}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>{new Date(user.createdAt!).toLocaleDateString('es-MX')}</TableCell>
@@ -126,8 +171,17 @@ export default function UsersPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>{t.pages.users.actions.edit}</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive">{t.pages.users.actions.delete}</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        {t.pages.users.actions.edit}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        className="text-destructive"
+                                                        onClick={() => handleDeleteUser(user)}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        {t.pages.users.actions.delete}
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
@@ -138,6 +192,22 @@ export default function UsersPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <UserDialog
+                open={userDialogOpen}
+                onOpenChange={setUserDialogOpen}
+                user={selectedUser}
+                onSuccess={handleSuccess}
+                authToken={token || undefined}
+            />
+
+            <DeleteUserDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                user={selectedUser}
+                onSuccess={handleSuccess}
+                authToken={token || undefined}
+            />
         </div>
     );
 }
