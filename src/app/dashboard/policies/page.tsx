@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -55,7 +56,7 @@ function PoliciesSkeleton() {
                         <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><TableCell /></TableCell>
+                        <TableCell />
                     </TableRow>
                 ))}
             </TableBody>
@@ -173,4 +174,3 @@ export default function PoliciesPage() {
       </Card>
     </div>
   );
-}
