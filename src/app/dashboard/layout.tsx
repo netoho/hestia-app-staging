@@ -10,7 +10,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-background w-full">
         <DashboardSidebar />
         <SidebarInset className="flex flex-col flex-1">
           <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
