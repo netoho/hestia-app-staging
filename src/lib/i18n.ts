@@ -35,6 +35,7 @@ const es = {
         owner: "Propietario",
         renter: "Inquilino",
         staff: "Staff de Hestia",
+        admin: "Administrador",
         advisor: "Asesor Inmobiliario",
     },
 
@@ -227,6 +228,7 @@ const es = {
             welcomeOwner: "¡Bienvenido, Propietario!",
             welcomeRenter: "¡Bienvenido, Inquilino!",
             welcomeStaff: "¡Bienvenido, Staff de Hestia!",
+            welcomeAdmin: "¡Bienvenido, Administrador!",
             loading: "Cargando contenido del panel...",
             ownerCards: {
                 activePolicies: "Pólizas Activas",

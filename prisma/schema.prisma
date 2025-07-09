@@ -1,28 +1,31 @@
-datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
-  role      String   // Changed from enum to String for SQLite compatibility
+  role      String   // Changed from Role enum to String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  policies  Policy[]
+  policies  Policy[] @relation("UserPolicies")
 }
 
 model Policy {
   id              String   @id @default(cuid())
   applicantId     String
-  applicant       User     @relation(fields: [applicantId], references: [id])
+  applicant       User     @relation("UserPolicies", fields: [applicantId], references: [id])
   propertyAddress String
-  status          String   // Changed from enum to String for SQLite compatibility
+  status          String   // Changed from PolicyStatus enum to String
   premium         Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

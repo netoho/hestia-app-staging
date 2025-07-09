@@ -31,9 +31,9 @@ import { useState, useEffect } from 'react';
 
 const MOCK_USER: User = {
   id: '1',
-  name: t.misc.demoUser,
-  email: 'demo@hestia.com',
-  role: 'owner', 
+  name: 'Admin User',
+  email: 'admin@hestia.com',
+  role: 'admin', 
   avatarUrl: 'https://placehold.co/100x100.png',
 };
 
@@ -78,7 +78,7 @@ export default function DashboardSidebar() {
     setUserRole(currentMockUserRole);
     if (currentMockUserRole === 'owner') setNavLinks(t.layout.dashboardSidebar.ownerLinks);
     else if (currentMockUserRole === 'renter') setNavLinks(t.layout.dashboardSidebar.renterLinks);
-    else if (currentMockUserRole === 'staff') setNavLinks(t.layout.dashboardSidebar.staffLinks);
+    else if (currentMockUserRole === 'staff' || currentMockUserRole === 'admin') setNavLinks(t.layout.dashboardSidebar.staffLinks);
   }, []);
 
 

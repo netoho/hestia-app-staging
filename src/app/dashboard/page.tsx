@@ -8,7 +8,7 @@ import { FileText, Users, Shield, DollarSign, Edit, PackageSearch, UserPlus, Lis
 import type { UserRole } from '@/lib/types';
 import { t } from '@/lib/i18n';
 
-const MOCK_USER_ROLE: UserRole = 'owner';
+const MOCK_USER_ROLE: UserRole = 'admin';
 
 export default function DashboardPage() {
   const userRole: UserRole = MOCK_USER_ROLE;
@@ -91,8 +91,8 @@ export default function DashboardPage() {
         </Card>
       </div>
     );
-  } else if (userRole === 'staff') {
-    welcomeMessage = t.pages.dashboard.welcomeStaff;
+  } else if (userRole === 'staff' || userRole === 'admin') {
+    welcomeMessage = userRole === 'admin' ? t.pages.dashboard.welcomeAdmin : t.pages.dashboard.welcomeStaff;
     roleSpecificContent = (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg rounded-lg">
