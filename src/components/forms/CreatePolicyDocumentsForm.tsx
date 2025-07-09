@@ -140,7 +140,7 @@ const FileUploader = ({ id, title, description, maxFiles, form }: FileUploaderPr
                     <div className="flex items-center gap-2 w-40 shrink-0 justify-end">
                        {f.progress === 'uploading' && <Progress value={(new Date().getSeconds() % 100) * (Math.random())} className="h-2 w-24" />}
                        {f.progress === 'completed' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-                       {f.progress === 'error' && <AlertCircle title={f.error} className="h-5 w-5 text-destructive" />}
+                       {f.progress === 'error' && <AlertCircle className="h-5 w-5 text-destructive" />}
                         <Button type="button" variant="ghost" size="icon" onClick={() => handleDelete(f.id)}>
                             <Trash2 className="h-4 w-4 text-destructive"/>
                         </Button>

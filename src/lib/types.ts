@@ -7,7 +7,7 @@ export interface Package {
   features: string[];
   ctaText?: string | null;
   ctaLink: string;
-  highlight?: boolean;
+  highlight?: boolean | null;
 }
 
 export interface Testimonial {
@@ -19,7 +19,7 @@ export interface Testimonial {
   dataAiHint: string;
 }
 
-export type UserRole = 'owner' | 'renter' | 'staff' | 'admin';
+export type UserRole = 'owner' | 'renter' | 'staff' | 'admin' | 'broker' | 'tenant' | 'landlord';
 
 export interface User {
   id: string;
