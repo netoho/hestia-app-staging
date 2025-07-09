@@ -20,7 +20,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
         <CardTitle className="font-headline text-2xl text-primary">{packageItem.name}</CardTitle>
         <CardDescription className="text-base h-16">{packageItem.description}</CardDescription>
         <p className="text-4xl font-bold text-foreground pt-2">
-          {packageItem.price}
+          ${packageItem.price}
           <span className="text-sm font-normal text-muted-foreground">{t.misc.perMonth}</span>
         </p>
       </CardHeader>

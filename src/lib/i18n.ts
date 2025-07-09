@@ -1,6 +1,7 @@
 
 
-import type { Package, Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
+
+import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
 
@@ -151,11 +152,6 @@ const es = {
             testimonialsSubtitle: "Escucha lo que nuestros clientes satisfechos tienen que decir sobre Hestia.",
             ctaTitle: "¿Listo para Experimentar Alquileres Seguros?",
             ctaSubtitle: "Únete a Hestia hoy y transforma tu experiencia de alquiler. Ya seas propietario, inquilino o asesor, tenemos una solución para ti.",
-            packages: [
-                { id: 'basic', name: 'Escudo Básico', price: '$49', description: 'Servicios esenciales de investigación para asegurar la fiabilidad del inquilino.', features: ['Verificación de antecedentes del inquilino', 'Resumen de informe de crédito', 'Búsqueda de historial de desalojos'], ctaText: 'Comenzar', ctaLink: '/register?package=basic' },
-                { id: 'standard', name: 'Seguro Estándar', price: '$99', description: 'Protección integral que incluye soporte en el contrato y garantías iniciales.', features: ['Todas las funciones de Escudo Básico', 'Plantilla de contrato de arrendamiento personalizable', 'Garantía de pago de renta (1 mes)', 'Consulta legal básica'], ctaText: 'Elegir Estándar', ctaLink: '/register?package=standard', highlight: true },
-                { id: 'premium', name: 'Fortaleza Premium', price: '$199', description: 'Tranquilidad total con gestión completa del contrato y cobertura extendida.', features: ['Todas las funciones de Seguro Estándar', 'Gestión del ciclo de vida completo del contrato', 'Garantía de renta extendida (3 meses)', 'Asistencia legal integral', 'Cobertura del proceso de desalojo'], ctaText: 'Optar por Premium', ctaLink: '/register?package=premium' },
-            ] as Package[],
             testimonials: [
                 { id: 't1', name: 'Ana López', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis alquileres. Su paquete Seguro Estándar es un balance perfecto de funciones y precio. ¡Muy recomendado!", avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'woman portrait' },
                 { id: 't2', name: 'David Chen', role: 'Inquilino', quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.", avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'man smiling' },

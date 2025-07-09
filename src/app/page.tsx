@@ -1,7 +1,6 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import PublicHeader from '@/components/layout/PublicHeader';
 import PublicFooter from '@/components/layout/PublicFooter';
 import { PackageCard } from '@/components/shared/PackageCard';
@@ -10,8 +9,25 @@ import { t } from '@/lib/i18n';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
 import { ArrowRight, CheckCircle, ShieldCheck } from 'lucide-react';
+import prisma from '@/lib/prisma';
+import type { Package } from '@/lib/types';
 
-export default function HomePage() {
+async function getPackages(): Promise<Package[]> {
+  try {
+    const packages = await prisma.package.findMany({
+      orderBy: { price: 'asc' }
+    });
+    // Prisma's JSON type can be `any`. We need to cast it.
+    return packages.map(p => ({ ...p, features: p.features as string[] }));
+  } catch (error) {
+    console.error("Failed to fetch packages from DB:", error);
+    return []; // Return empty array on error
+  }
+}
+
+export default async function HomePage() {
+  const packages = await getPackages();
+
   return (
     <div className="flex flex-col min-h-screen">
       <PublicHeader />
@@ -36,7 +52,7 @@ export default function HomePage() {
         </Section>
 
         {/* How It Works Section */}
-        <Section id="how-it-works" ariaLabelledby="how-it-works-title">
+        <Section id="how-it-works" aria-labelledby="how-it-works-title">
           <PageTitle title={t.pages.home.howItWorksTitle} subtitle={t.pages.home.howItWorksSubtitle} titleClassName="text-foreground" />
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {t.pages.home.howItWorksSteps.map((step) => (
@@ -52,17 +68,17 @@ export default function HomePage() {
         </Section>
         
         {/* Packages Section */}
-        <Section id="packages" ariaLabelledby="packages-title" className="bg-muted/30">
+        <Section id="packages" aria-labelledby="packages-title" className="bg-muted/30">
           <PageTitle title={t.pages.home.packagesTitle} subtitle={t.pages.home.packagesSubtitle} titleClassName="text-foreground" />
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {t.pages.home.packages.map((pkg) => (
+            {packages.map((pkg) => (
               <PackageCard key={pkg.id} packageItem={pkg} />
             ))}
           </div>
         </Section>
 
         {/* Benefits Section */}
-        <Section id="benefits" ariaLabelledby="benefits-title">
+        <Section id="benefits" aria-labelledby="benefits-title">
           <PageTitle title={t.pages.home.whyChooseTitle} subtitle={t.pages.home.whyChooseSubtitle} titleClassName="text-foreground" />
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <Card className="p-6 bg-card rounded-xl shadow-md">
@@ -84,7 +100,7 @@ export default function HomePage() {
         </Section>
 
         {/* Testimonials Section */}
-        <Section id="testimonials" ariaLabelledby="testimonials-title" className="bg-primary/5">
+        <Section id="testimonials" aria-labelledby="testimonials-title" className="bg-primary/5">
           <PageTitle title={t.pages.home.testimonialsTitle} subtitle={t.pages.home.testimonialsSubtitle} titleClassName="text-foreground" />
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {t.pages.home.testimonials.map((testimonial) => (

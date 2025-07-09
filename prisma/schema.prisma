@@ -1,6 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,22 +14,35 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  role      String   // Changed from Role enum to String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  policies  Policy[] @relation("UserPolicies")
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  role      String    @default("RENTER") // 'OWNER', 'RENTER', 'STAFF', 'ADMIN'
+  policies  Policy[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Policy {
   id              String   @id @default(cuid())
+  applicant       User     @relation(fields: [applicantId], references: [id])
   applicantId     String
-  applicant       User     @relation("UserPolicies", fields: [applicantId], references: [id])
   propertyAddress String
-  status          String   // Changed from PolicyStatus enum to String
+  status          String   @default("PENDING") // 'PENDING', 'APPROVED', 'ACTIVE', 'REJECTED', 'EXPIRED'
   premium         Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Package {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  description String
+  features    Json
+  ctaText     String?
+  ctaLink     String
+  highlight   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

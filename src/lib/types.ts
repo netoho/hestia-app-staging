@@ -2,10 +2,10 @@
 export interface Package {
   id: string;
   name: string;
-  price: string;
+  price: number;
   description: string;
   features: string[];
-  ctaText?: string;
+  ctaText?: string | null;
   ctaLink: string;
   highlight?: boolean;
 }
