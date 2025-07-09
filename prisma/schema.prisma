@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,32 +14,34 @@ model User {
   id        String    @id @default(cuid())
   email     String    @unique
   name      String?
-  role      String    @default("RENTER") // 'OWNER', 'RENTER', 'STAFF', 'ADMIN'
-  policies  Policy[]
+  // Changed from Enum to String for SQLite compatibility
+  role      String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  policies  Policy[]
 }
 
 model Policy {
   id              String   @id @default(cuid())
-  applicant       User     @relation(fields: [applicantId], references: [id])
   applicantId     String
+  applicant       User     @relation(fields: [applicantId], references: [id])
   propertyAddress String
-  status          String   @default("PENDING") // 'PENDING', 'APPROVED', 'ACTIVE', 'REJECTED', 'EXPIRED'
+  // Changed from Enum to String for SQLite compatibility
+  status          String
   premium         Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
 model Package {
-  id          String   @id @default(cuid())
+  id          String   @id
   name        String
   price       Float
   description String
-  features    Json
+  // Changed from Json to String for SQLite compatibility
+  // We will store features as a JSON string
+  features    String
   ctaText     String?
   ctaLink     String
-  highlight   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  highlight   Boolean? @default(false)
 }

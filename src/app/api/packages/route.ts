@@ -9,10 +9,10 @@ export async function GET() {
       },
     });
 
-    // The 'features' field is stored as JSON, Prisma automatically handles parsing
+    // The 'features' field is stored as a JSON string, so we need to parse it.
     const formattedPackages = packages.map(p => ({
       ...p,
-      features: p.features as string[], // Ensure TypeScript knows it's a string array
+      features: JSON.parse(p.features) as string[], // Parse the JSON string into an array
     }))
 
     return NextResponse.json(formattedPackages);

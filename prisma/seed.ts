@@ -33,7 +33,7 @@ async function main() {
         name: pkg.name,
         price: parseFloat(pkg.price.replace('$', '')),
         description: pkg.description,
-        features: pkg.features,
+        features: JSON.stringify(pkg.features), // Store features as a JSON string
         ctaText: pkg.ctaText,
         ctaLink: pkg.ctaLink,
         highlight: pkg.highlight,
@@ -43,7 +43,7 @@ async function main() {
         name: pkg.name,
         price: parseFloat(pkg.price.replace('$', '')),
         description: pkg.description,
-        features: pkg.features,
+        features: JSON.stringify(pkg.features), // Store features as a JSON string
         ctaText: pkg.ctaText,
         ctaLink: pkg.ctaLink,
         highlight: pkg.highlight,

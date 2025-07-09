@@ -17,8 +17,11 @@ async function getPackages(): Promise<Package[]> {
     const packages = await prisma.package.findMany({
       orderBy: { price: 'asc' }
     });
-    // Prisma's JSON type can be `any`. We need to cast it.
-    return packages.map(p => ({ ...p, features: p.features as string[] }));
+    // The 'features' field is stored as a JSON string, so we need to parse it.
+    return packages.map(p => ({ 
+      ...p,
+      features: JSON.parse(p.features) as string[]
+    }));
   } catch (error) {
     console.error("Failed to fetch packages from DB:", error);
     return []; // Return empty array on error
