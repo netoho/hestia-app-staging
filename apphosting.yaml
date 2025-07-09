@@ -6,7 +6,7 @@ runConfig:
   # more instances in response to increased traffic.
   maxInstances: 1
   secrets:
-    - secret: DATABASE_URL
+    - secret: postgresql://postgres.dscpjypjpihuxuzouuge:IzIBcB9G8WzEfjU@aws-0-us-east-1.pooler.supabase.com:5432/postgres
       environmentVariable: DATABASE_URL
-    - secret: JWT_SECRET
+    - secret: your-secret-key-change-in-production
       environmentVariable: JWT_SECRET
