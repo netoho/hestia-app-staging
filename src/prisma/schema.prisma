@@ -2,31 +2,58 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("RENTER")
-  policies  Policy[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  password         String
+  role             String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  brokerPolicies   Policy[]  @relation("BrokerPolicies")
+  tenantPolicies   Policy[]  @relation("TenantPolicies")
+  landlordPolicies Policy[]  @relation("LandlordPolicies")
 }
 
 model Policy {
-  id              String   @id @default(cuid())
-  applicantId     String
-  applicant       User     @relation(fields: [applicantId], references: [id])
-  propertyAddress String
-  premium         Float
-  status          String   @default("PENDING")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String    @id @default(cuid())
+  broker            User?     @relation("BrokerPolicies", fields: [brokerId], references: [id]))
+  brokerId          String?
+  tenant            User?     @relation("TenantPolicies", fields: [tenantId], references: [id]))
+  tenantId          String?
+  landlord          User?     @relation("LandlordPolicies", fields: [landlordId], references: [id]))
+  landlordId        String?
+  propertyAddress   String
+  propertyType      String
+  status            String    @default("pending")
+  premium           Float
+  startDate         DateTime
+  endDate           DateTime
+  payer             String
+  propertyData      String? // Stored as a JSON string
+  coverageData      String? // Stored as a JSON string
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Package {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  description String
+  features    String // Stored as a JSON string
+  ctaText     String?
+  ctaLink     String
+  highlight   Boolean?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
