@@ -3,33 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import PublicHeader from '@/components/layout/PublicHeader';
 import PublicFooter from '@/components/layout/PublicFooter';
-import { PackageCard } from '@/components/shared/PackageCard';
 import { TestimonialCard } from '@/components/shared/TestimonialCard';
 import { t } from '@/lib/i18n';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
 import { ArrowRight, CheckCircle, ShieldCheck } from 'lucide-react';
-import prisma from '@/lib/prisma';
-import type { Package } from '@/lib/types';
+import { PackagesSection } from '@/components/sections/PackagesSection';
 
-async function getPackages(): Promise<Package[]> {
-  try {
-    const packages = await prisma.package.findMany({
-      orderBy: { price: 'asc' }
-    });
-    // The 'features' field is stored as a JSON string, so we need to parse it.
-    return packages.map(p => ({ 
-      ...p,
-      features: JSON.parse(p.features) as string[]
-    }));
-  } catch (error) {
-    console.error("Failed to fetch packages from DB:", error);
-    return []; // Return empty array on error
-  }
-}
-
-export default async function HomePage() {
-  const packages = await getPackages();
+export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -71,14 +52,7 @@ export default async function HomePage() {
         </Section>
         
         {/* Packages Section */}
-        <Section id="packages" aria-labelledby="packages-title" className="bg-muted/30">
-          <PageTitle title={t.pages.home.packagesTitle} subtitle={t.pages.home.packagesSubtitle} titleClassName="text-foreground" />
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {packages.map((pkg) => (
-              <PackageCard key={pkg.id} packageItem={pkg} />
-            ))}
-          </div>
-        </Section>
+        <PackagesSection />
 
         {/* Benefits Section */}
         <Section id="benefits" aria-labelledby="benefits-title">
