@@ -439,7 +439,9 @@ export const updatePolicyStatus = async (
       where: { id },
       data: {
         status,
-        ...additionalData
+        ...(additionalData && Object.fromEntries(
+          Object.entries(additionalData).filter(([key]) => key !== 'initiatedBy')
+        ))
       },
       include: {
         documents: true,

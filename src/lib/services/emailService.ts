@@ -6,7 +6,7 @@ import { generatePolicyUrl } from '../utils/tokenUtils';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email configuration
-const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@hestia.com';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const COMPANY_NAME = 'Hestia';
 const SUPPORT_EMAIL = 'support@hestia.com';
 

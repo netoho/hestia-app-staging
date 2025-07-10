@@ -39,7 +39,7 @@ interface GetUsersResult {
 }
 
 // Mock data for emulator
-const mockUsers: User[] = [
+let mockUsers: User[] = [
   {
     id: 'mock-user-1',
     email: 'mock.user1@example.com',
