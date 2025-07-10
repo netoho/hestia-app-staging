@@ -51,3 +51,34 @@ export async function authenticateRequest(request: NextRequest): Promise<JWTPayl
 export function requireRole(userRole: string, requiredRoles: string[]): boolean {
   return requiredRoles.includes(userRole);
 }
+
+// Wrapper for easier use in API routes
+export interface AuthResult {
+  authenticated: boolean;
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    name?: string | null;
+  };
+}
+
+export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
+  try {
+    const payload = await authenticateRequest(request);
+    if (!payload) {
+      return { authenticated: false };
+    }
+    
+    return {
+      authenticated: true,
+      user: {
+        id: payload.userId,
+        email: payload.email,
+        role: payload.role
+      }
+    };
+  } catch (error) {
+    return { authenticated: false };
+  }
+}
