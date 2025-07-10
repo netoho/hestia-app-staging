@@ -187,7 +187,7 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
     return newUser;
   } else {
     console.log('Using real database for createUser');
-    const hashedPassword = userData.password ? await hashPassword(userData.password) : undefined;
+    const hashedPassword = userData.password ? await hashPassword(userData.password) : 'temp-password';
 
     const newUser = await prisma.user.create({
       data: {
@@ -199,5 +199,87 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
     });
 
     return newUser as User; // Cast to User for type compatibility
+  }
+};
+
+export const getUserById = async (id: string): Promise<User | null> => {
+  if (isEmulator()) {
+    console.log('Using mock data for getUserById');
+    return mockUsers.find(user => user.id === id) || null;
+  } else {
+    console.log('Using real database for getUserById');
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    }) as Promise<User | null>;
+  }
+};
+
+export const updateUser = async (id: string, data: Partial<CreateUserData>): Promise<User | null> => {
+  if (isEmulator()) {
+    console.log('Using mock data for updateUser');
+    const index = mockUsers.findIndex(user => user.id === id);
+    if (index === -1) return null;
+    
+    const updatedUser = {
+      ...mockUsers[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    mockUsers[index] = updatedUser;
+    return updatedUser;
+  } else {
+    console.log('Using real database for updateUser');
+    const hashedPassword = data.password ? await hashPassword(data.password) : undefined;
+    
+    const updateData: any = {
+      email: data.email,
+      name: data.name,
+      role: data.role
+    };
+    
+    if (hashedPassword) {
+      updateData.password = hashedPassword;
+    }
+    
+    return prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    }) as Promise<User>;
+  }
+};
+
+export const deleteUser = async (id: string): Promise<boolean> => {
+  if (isEmulator()) {
+    console.log('Using mock data for deleteUser');
+    const initialLength = mockUsers.length;
+    mockUsers = mockUsers.filter(user => user.id !== id);
+    return mockUsers.length < initialLength;
+  } else {
+    console.log('Using real database for deleteUser');
+    try {
+      await prisma.user.delete({
+        where: { id }
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
   }
 };

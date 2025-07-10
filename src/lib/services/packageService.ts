@@ -41,6 +41,14 @@ export const getPackages = async (): Promise<Package[]> => {
   } else {
     console.log('Not running in emulator, fetching packages from database.');
     const packages = await prisma.package.findMany();
-    return packages;
+    return packages.map(pkg => ({
+      id: pkg.id,
+      name: pkg.name,
+      price: pkg.price,
+      description: pkg.description,
+      features: JSON.parse(pkg.features || '[]'),
+      createdAt: new Date(), // Add these to match interface
+      updatedAt: new Date()
+    }));
   }
 };

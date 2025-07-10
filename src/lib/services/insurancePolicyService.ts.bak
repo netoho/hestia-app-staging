@@ -1,13 +1,24 @@
 import { PrismaClient } from '@prisma/client';
 import { isEmulator } from '../env-check';
-import prisma from '../prisma'; // Assuming you have a prisma client instance here
+import prisma from '../prisma';
 
-// Define a type for mock policy data to ensure consistency
-interface MockPolicy {
+// This service is for the OLD InsurancePolicy model
+// For the new policy application workflow, use policyApplicationService.ts
+
+interface MockInsurancePolicy {
   id: string;
-  userId: string;
-  policyType: string; // Adjust based on your schema
-  data: any; // Use a more specific type if possible based on your schema
+  brokerId: string | null;
+  tenantId: string;
+  landlordId: string | null;
+  propertyAddress: string;
+  propertyType: string;
+  status: string;
+  premium: number;
+  startDate: Date;
+  endDate: Date;
+  payer: string;
+  propertyData: string | null;
+  coverageData: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
