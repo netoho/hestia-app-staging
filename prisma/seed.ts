@@ -89,11 +89,11 @@ async function main() {
     console.log(`Created/updated package: ${pkg.name}`);
   }
 
-  // Seed sample policies
+  // Seed sample insurance policies (using the renamed model)
   const [staff, broker, tenant, landlord] = createdUsers;
   
-  console.log('Seeding policies...');
-  const policies = [
+  console.log('Seeding insurance policies...');
+  const insurancePolicies = [
     {
       brokerId: broker.id,
       tenantId: tenant.id,
@@ -142,11 +142,11 @@ async function main() {
     }
   ];
 
-  for (const policy of policies) {
-    const created = await prisma.policy.create({
-      data: policy
+  for (const insurancePolicy of insurancePolicies) {
+    const created = await prisma.insurancePolicy.create({
+      data: insurancePolicy
     });
-    console.log(`Created policy for property: ${created.propertyAddress}`);
+    console.log(`Created insurance policy for property: ${created.propertyAddress}`);
   }
 
   console.log('Seeding finished.');

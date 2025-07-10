@@ -18,12 +18,19 @@ model User {
   role             String
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  brokerPolicies   Policy[]  @relation("BrokerPolicies")
-  tenantPolicies   Policy[]  @relation("TenantPolicies")
-  landlordPolicies Policy[]  @relation("LandlordPolicies")
+  
+  // Relations for InsurancePolicy (legacy)
+  brokerInsurancePolicies   InsurancePolicy[]  @relation("BrokerPolicies")
+  tenantInsurancePolicies   InsurancePolicy[]  @relation("TenantPolicies")
+  landlordInsurancePolicies InsurancePolicy[]  @relation("LandlordPolicies")
+  
+  // Relations for new Policy workflow
+  initiatedPolicies Policy[]  @relation("InitiatedPolicies")
+  reviewedPolicies  Policy[]  @relation("ReviewedPolicies")
 }
 
-model Policy {
+// Renamed existing Policy to InsurancePolicy to avoid conflicts
+model InsurancePolicy {
   id              String    @id @default(cuid())
   broker          User?     @relation("BrokerPolicies", fields: [brokerId], references: [id])
   brokerId        String?
@@ -42,6 +49,94 @@ model Policy {
   coverageData    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// New Policy Application workflow models
+enum PolicyStatus {
+  DRAFT
+  SENT_TO_TENANT
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+}
+
+model Policy {
+  id              String         @id @default(cuid())
+  propertyId      String?
+  initiatedBy     String         // Staff user ID who created this
+  initiatedByUser User          @relation("InitiatedPolicies", fields: [initiatedBy], references: [id])
+  tenantEmail     String
+  tenantPhone     String?
+  
+  // Status tracking
+  status          PolicyStatus   @default(DRAFT)
+  currentStep     Int           @default(1) // Track wizard progress (1-5)
+  
+  // Tenant data (stored as JSON for flexibility)
+  profileData     Json?         // Step 1: nationality, CURP/passport
+  employmentData  Json?         // Step 2: employment, income details
+  referencesData  Json?         // Step 3: personal, work, landlord refs
+  documentsData   Json?         // Step 4: document metadata
+  
+  // Access control
+  accessToken     String        @unique
+  tokenExpiry     DateTime
+  
+  // Review process
+  submittedAt     DateTime?
+  reviewedBy      String?
+  reviewedByUser  User?         @relation("ReviewedPolicies", fields: [reviewedBy], references: [id])
+  reviewedAt      DateTime?
+  reviewNotes     String?       // Internal notes for staff
+  reviewReason    String?       // Reason shared with tenant
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  documents       PolicyDocument[]
+  activities      PolicyActivity[]
+  
+  @@index([accessToken])
+  @@index([tenantEmail])
+  @@index([status])
+}
+
+model PolicyDocument {
+  id            String    @id @default(cuid())
+  policyId      String
+  policy        Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  
+  category      String    // 'identification', 'income', 'optional'
+  fileName      String    // Stored file name
+  originalName  String    // Original uploaded name
+  fileSize      Int       // Size in bytes
+  mimeType      String
+  storageUrl    String    // Firebase Storage URL
+  
+  uploadedAt    DateTime  @default(now())
+  uploadedBy    String    // 'tenant' or user ID
+  
+  @@index([policyId, category])
+}
+
+model PolicyActivity {
+  id          String    @id @default(cuid())
+  policyId    String
+  policy      Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  
+  action      String    // 'created', 'sent', 'opened', 'step_completed', 'submitted', 'reviewed', etc.
+  details     Json?     // Additional context
+  performedBy String?   // User ID or 'tenant'
+  ipAddress   String?   // For tracking tenant actions
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([policyId])
+  @@index([createdAt])
 }
 
 model Package {
