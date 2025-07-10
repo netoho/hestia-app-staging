@@ -4,7 +4,9 @@
       "Bash(npx prisma:*)",
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)"
     ],
     "deny": []
   }
