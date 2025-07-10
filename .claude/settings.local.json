@@ -6,7 +6,8 @@
       "Bash(npm run:*)",
       "Bash(chmod:*)",
       "Bash(curl:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
