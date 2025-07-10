@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticateRequest, requireRole } from '@/lib/auth';
 import { z } from 'zod';
+import { getPolicyById, updatePolicy, deletePolicy } from '@/lib/services/policyService';
 
 const updatePolicySchema = z.object({
   status: z.string().optional(),
@@ -33,14 +34,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const policy = await prisma.policy.findUnique({
-      where: { id: params.id },
-      include: {
-        broker: { select: { id: true, name: true, email: true } },
-        tenant: { select: { id: true, name: true, email: true } },
-        landlord: { select: { id: true, name: true, email: true } }
-      }
-    });
+    const policy = await getPolicyById(params.id);
     
     if (!policy) {
       return NextResponse.json({ error: 'Policy not found' }, { status: 404 });
@@ -125,17 +119,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    // Prepare update data
-    const updateData: any = {};
-    if (status !== undefined) updateData.status = status;
-    if (premium !== undefined) updateData.premium = premium;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
-    if (endDate !== undefined) updateData.endDate = new Date(endDate);
-    if (payer !== undefined) updateData.payer = payer;
-    if (propertyData !== undefined) updateData.propertyData = JSON.stringify(propertyData);
-    if (coverageData !== undefined) updateData.coverageData = JSON.stringify(coverageData);
-    
-    const policy = await prisma.policy.update({
+    const policy = await updatePolicy(params.id, {
       where: { id: params.id },
       data: updateData,
       include: {
@@ -143,7 +127,15 @@ export async function PUT(
         tenant: { select: { id: true, name: true, email: true } },
         landlord: { select: { id: true, name: true, email: true } }
       }
-    });
+    }, {
+      status,
+      premium,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      payer,
+      propertyData,
+      coverageData,
+    }); // Pass update data directly
     
     return NextResponse.json({
       id: policy.id,
@@ -187,9 +179,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    await prisma.policy.delete({
-      where: { id: params.id }
-    });
+    await deletePolicy(params.id);
     
     return NextResponse.json({ message: 'Policy deleted successfully' });
     

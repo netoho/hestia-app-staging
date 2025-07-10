@@ -1,0 +1,100 @@
+import { PrismaClient } from '@prisma/client';
+import { isEmulator } from '../env-check';
+import prisma from '../prisma'; // Assuming you have a prisma client instance here
+
+// Define a type for mock policy data to ensure consistency
+interface MockPolicy {
+  id: string;
+  userId: string;
+  policyType: string; // Adjust based on your schema
+  data: any; // Use a more specific type if possible based on your schema
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Simple in-memory store for mock data
+let mockPolicies: MockPolicy[] = [];
+let nextMockId = 1;
+
+// Helper to generate mock policy data
+const generateMockPolicy = (data: any = {}): MockPolicy => ({
+  id: (nextMockId++).toString(),
+  userId: 'mock-user-id', // Replace with a sensible mock user ID
+  policyType: data.policyType || 'default',
+  data: data.data || {},
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
+export const getPolicies = async (params?: { userId?: string }): Promise<MockPolicy[]> => {
+  if (isEmulator()) {
+    console.log('Emulator mode: Fetching mock policies');
+    let filteredPolicies = mockPolicies;
+    if (params?.userId) {
+      filteredPolicies = mockPolicies.filter(p => p.userId === params.userId);
+    }
+    return filteredPolicies;
+  } else {
+    console.log('Real DB mode: Fetching policies from Prisma');
+    const where: any = {};
+    if (params?.userId) {
+      where.userId = params.userId;
+    }
+    return prisma.policy.findMany({ where });
+  }
+};
+
+export const getPolicyById = async (id: string): Promise<MockPolicy | null> => {
+  if (isEmulator()) {
+    console.log(`Emulator mode: Fetching mock policy with ID ${id}`);
+    return mockPolicies.find(policy => policy.id === id) || null;
+  } else {
+    console.log(`Real DB mode: Fetching policy with ID ${id} from Prisma`);
+    return prisma.policy.findUnique({ where: { id } });
+  }
+};
+
+export const createPolicy = async (data: Omit<MockPolicy, 'id' | 'createdAt' | 'updatedAt'>): Promise<MockPolicy> => {
+  if (isEmulator()) {
+    console.log('Emulator mode: Creating mock policy');
+    const newPolicy = generateMockPolicy(data);
+    mockPolicies.push(newPolicy);
+    return newPolicy;
+  } else {
+    console.log('Real DB mode: Creating policy in Prisma');
+    return prisma.policy.create({ data });
+  }
+};
+
+export const updatePolicy = async (id: string, data: Partial<Omit<MockPolicy, 'id' | 'createdAt'>>): Promise<MockPolicy | null> => {
+  if (isEmulator()) {
+    console.log(`Emulator mode: Updating mock policy with ID ${id}`);
+    const index = mockPolicies.findIndex(policy => policy.id === id);
+    if (index === -1) {
+      return null; // Policy not found
+    }
+    const updatedPolicy = { ...mockPolicies[index], ...data, updatedAt: new Date() };
+    mockPolicies[index] = updatedPolicy;
+    return updatedPolicy;
+  } else {
+    console.log(`Real DB mode: Updating policy with ID ${id} in Prisma`);
+    return prisma.policy.update({ where: { id }, data });
+  }
+};
+
+export const deletePolicy = async (id: string): Promise<MockPolicy | null> => {
+  if (isEmulator()) {
+    console.log(`Emulator mode: Deleting mock policy with ID ${id}`);
+    const initialLength = mockPolicies.length;
+    mockPolicies = mockPolicies.filter(policy => policy.id !== id);
+    if (mockPolicies.length === initialLength) {
+      return null; // Policy not found
+    }
+    // In a real scenario, you might return the deleted mock policy if needed
+    // For simplicity here, we'll just return a placeholder if successful
+    return { id, userId: '', policyType: '', data: {}, createdAt: new Date(), updatedAt: new Date() }; // Placeholder
+  } else {
+    console.log(`Real DB mode: Deleting policy with ID ${id} from Prisma`);
+    return prisma.policy.delete({ where: { id } });
+  }
+};

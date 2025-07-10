@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { authenticateRequest, requireRole } from '@/lib/auth';
 import { z } from 'zod';
+import { getPolicies, createPolicy } from '@/lib/services/policyService';
 
 const createPolicySchema = z.object({
   tenantId: z.string(),
@@ -54,54 +54,20 @@ export async function GET(request: NextRequest) {
     if (status && status !== 'all') {
       where.status = status;
     }
-    
+
     // Get policies with pagination
-    const [policies, total] = await Promise.all([
-      prisma.policy.findMany({
-        where,
-        include: {
-          broker: { select: { id: true, name: true, email: true } },
-          tenant: { select: { id: true, name: true, email: true } },
-          landlord: { select: { id: true, name: true, email: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.policy.count({ where })
-    ]);
-    
-    // Format policies
-    const formattedPolicies = policies.map(p => ({
-      id: p.id,
-      broker: p.broker,
-      tenant: p.tenant,
-      landlord: p.landlord,
-      property: {
-        address: p.propertyAddress,
-        type: p.propertyType,
-        data: JSON.parse(p.propertyData || '{}')
-      },
-      coverage: JSON.parse(p.coverageData || '{}'),
-      status: p.status,
-      premium: p.premium,
-      startDate: p.startDate,
-      endDate: p.endDate,
-      payer: p.payer,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt
-    }));
-    
+    const result = await getPolicies({ ...where, page, limit });
+
     return NextResponse.json({
-      policies: formattedPolicies,
-      pagination: {
+      policies: result.policies,
+      pagination: { // Assuming service returns pagination in this structure
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit)
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit)
       }
     });
-    
+
   } catch (error) {
     console.error("Failed to fetch policies:", error);
     return NextResponse.json({ error: 'Failed to fetch policies' }, { status: 500 });
@@ -144,40 +110,9 @@ export async function POST(request: NextRequest) {
       coverageData
     } = validation.data;
     
-    // Create policy
-    const policy = await prisma.policy.create({
-      data: {
-        brokerId: auth.userId,
-        tenantId,
-        landlordId,
-        propertyAddress,
-        propertyType,
-        premium,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        payer,
-        status: 'pending',
-        propertyData: JSON.stringify(propertyData || {}),
-        coverageData: JSON.stringify(coverageData || {})
-      },
-      include: {
-        broker: { select: { id: true, name: true, email: true } },
-        tenant: { select: { id: true, name: true, email: true } },
-        landlord: { select: { id: true, name: true, email: true } }
-      }
-    });
-    
-    return NextResponse.json({
-      id: policy.id,
-      broker: policy.broker,
-      tenant: policy.tenant,
-      landlord: policy.landlord,
-      property: {
-        address: policy.propertyAddress,
-        type: policy.propertyType,
-        data: JSON.parse(policy.propertyData)
-      },
-      coverage: JSON.parse(policy.coverageData),
+    // Create policy using the service
+    const policy = await createPolicy({
+      brokerId: auth.userId, // Broker creating the policy
       status: policy.status,
       premium: policy.premium,
       startDate: policy.startDate,
@@ -186,7 +121,9 @@ export async function POST(request: NextRequest) {
       createdAt: policy.createdAt,
       updatedAt: policy.updatedAt
     }, { status: 201 });
-    
+
+    return NextResponse.json(policy, { status: 201 });
+
   } catch (error) {
     console.error("Failed to create policy:", error);
     return NextResponse.json({ error: 'Failed to create policy' }, { status: 500 });

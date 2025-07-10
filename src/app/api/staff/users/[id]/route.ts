@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { authenticateRequest, requireRole, hashPassword } from '@/lib/auth';
 import { z } from 'zod';
+import { getUserById, updateUser, deleteUser } from '@/lib/services/userService';
 
 const updateUserSchema = z.object({
   email: z.string().email().optional(),
@@ -26,20 +26,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { id: params.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        brokerPolicies: { select: { id: true } },
-        tenantPolicies: { select: { id: true } },
-        landlordPolicies: { select: { id: true } }
-      }
-    });
+    const user = await getUserById(params.id);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -88,18 +75,7 @@ export async function PUT(
     if (role !== undefined) updateData.role = role;
     if (password !== undefined) updateData.password = await hashPassword(password);
     
-    const user = await prisma.user.update({
-      where: { id: params.id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
+    const user = await updateUser(params.id, updateData);
     
     return NextResponse.json(user);
     
@@ -130,9 +106,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
     
-    await prisma.user.delete({
-      where: { id: params.id }
-    });
+    await deleteUser(params.id);
     
     return NextResponse.json({ message: 'User deleted successfully' });
     
