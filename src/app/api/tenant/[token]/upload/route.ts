@@ -5,10 +5,10 @@ import { PolicyStatus } from '@prisma/client';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
 
     // Get policy by token
     const policy = await getPolicyByToken(token);
@@ -117,10 +117,10 @@ export async function POST(
 // DELETE endpoint to remove uploaded files
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('documentId');
 

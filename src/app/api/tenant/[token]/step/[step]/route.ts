@@ -56,10 +56,10 @@ const stepFields: Record<string, string> = {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { token: string; step: string } }
+  { params }: { params: Promise<{ token: string; step: string }> }
 ) {
   try {
-    const { token, step } = params;
+    const { token, step } = await params;
 
     // Validate step number
     if (!['1', '2', '3', '4'].includes(step)) {

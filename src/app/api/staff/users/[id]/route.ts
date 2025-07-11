@@ -12,9 +12,11 @@ const updateUserSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     // Authenticate request
     const auth = await authenticateRequest(request);
     if (!auth) {
@@ -26,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    const user = await getUserById(params.id);
+    const user = await getUserById(id);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -42,9 +44,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     // Authenticate request
     const auth = await authenticateRequest(request);
     if (!auth) {
@@ -75,7 +79,7 @@ export async function PUT(
     if (role !== undefined) updateData.role = role;
     if (password !== undefined) updateData.password = await hashPassword(password);
     
-    const user = await updateUser(params.id, updateData);
+    const user = await updateUser(id, updateData);
     
     return NextResponse.json(user);
     
@@ -87,9 +91,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     // Authenticate request
     const auth = await authenticateRequest(request);
     if (!auth) {
@@ -102,11 +108,11 @@ export async function DELETE(
     }
     
     // Prevent self-deletion
-    if (auth.userId === params.id) {
+    if (auth.userId === id) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
     
-    await deleteUser(params.id);
+    await deleteUser(id);
     
     return NextResponse.json({ message: 'User deleted successfully' });
     
