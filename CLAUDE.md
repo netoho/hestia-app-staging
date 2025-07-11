@@ -182,7 +182,272 @@ All user management, authentication, and table filtering functionality is workin
 - **Documentation**: Created `FIREBASE_SECRETS_SETUP.md` with setup instructions
 - **Status**: ✅ Complete
 
+#### 4. **Resend Invitation Implementation**
+- **Features**: Staff can resend policy invitations with customization options
+- **Components**: `ResendInvitationDialog` with tenant name, property address, and custom message fields
+- **API**: `/api/policies/[id]/resend` endpoint with validation and activity logging
+- **Integration**: Real Resend API with professional email templates
+- **Status**: ✅ Complete and working
+
+#### 5. **Multiple Email Provider Support**
+- **Providers**: Added support for both Resend and Mailgun
+- **Architecture**: Created `EmailProvider` abstraction layer for seamless switching
+- **Configuration**: Environment variable `EMAIL_PROVIDER` controls which service to use
+- **Features**:
+  - Automatic provider switching based on configuration
+  - Same email templates work with both providers
+  - Proper error handling and logging for each provider
+  - Development mode with email mocking
+  - Lazy initialization prevents build-time errors
+- **Documentation**: Created `EMAIL_PROVIDERS_SETUP.md` with configuration instructions
+- **Status**: ✅ Complete and working
+
+## Recent Session Summary (July 11, 2025)
+
+### ✅ Critical Bug Fixes - Tenant Workflow
+
+#### 1. **Fixed Next.js 15 Async Params Issue**
+- **Problem**: `Error: Route "/api/tenant/[token]" used params.token. params should be awaited before using its properties`
+- **Root Cause**: Next.js 15 requires async handling of dynamic route parameters
+- **Solution**: Updated all dynamic route handlers to use `Promise<{ token: string }>` and `await params`
+- **Files Fixed**:
+  - `/api/tenant/[token]/route.ts`
+  - `/api/tenant/[token]/step/[step]/route.ts`
+  - `/api/tenant/[token]/submit/route.ts`
+  - `/api/tenant/[token]/upload/route.ts`
+  - `/api/policies/[id]/resend/route.ts`
+  - `/api/staff/users/[id]/route.ts`
+- **Status**: ✅ Complete
+
+#### 2. **Fixed Policy Token Generation**
+- **Problem**: Missing `generateAccessToken` function causing policy creation to fail
+- **Root Cause**: Function name mismatch between import and usage
+- **Solution**: 
+  - Added proper import: `import { generateSecureToken, generateTokenExpiry } from '../utils/tokenUtils'`
+  - Fixed function calls: `generateAccessToken()` → `generateSecureToken()`
+  - Removed duplicate local function definitions
+- **Impact**: Policies now generate valid access tokens and expiry dates
+- **Status**: ✅ Complete
+
+#### 3. **Fixed Email Provider Build Issues**
+- **Problem**: Resend client initialization during build time even when using Mailgun
+- **Root Cause**: Eager initialization of email providers at module load
+- **Solution**: Implemented lazy initialization for both email providers
+- **Benefits**:
+  - Prevents build-time errors when switching providers
+  - Maintains support for both `EMAIL_PROVIDER="resend"` and `EMAIL_PROVIDER="mailgun"`
+  - Only initializes the provider that's actually being used
+- **Status**: ✅ Complete
+
+#### 4. **Fixed Duplicate Function Definition**
+- **Problem**: `generateTokenExpiry` defined both locally and imported, causing naming conflict
+- **Solution**: Removed local duplicate functions, using imported utilities exclusively
+- **Impact**: Ensures consistent token generation across the application
+- **Status**: ✅ Complete
+
+#### 5. **Verified Step Saving Functionality**
+- **Investigation**: Step saving logic was already correct
+- **Issue**: Previous token/auth problems were preventing wizard from working
+- **Result**: Now that tokens are properly generated and async params fixed, wizard saves steps correctly
+- **Status**: ✅ Complete and working
+
 ### Key Technical Decisions
 - Chose single fetch over interval refresh for package data to reduce server load
 - Used client component for packages section to enable dynamic updates without full page rebuild
 - Properly configured Firebase secrets using Google Secret Manager for security
+- Implemented provider abstraction for email services to support multiple vendors
+- Maintained consistent email templates across different providers
+- Updated to Next.js 15 async params pattern for future compatibility
+- Implemented lazy initialization for third-party services to prevent build-time errors
+
+### Current System Status
+The complete policy workflow is now fully functional:
+
+✅ **Staff Workflow:**
+- Create policy applications and send invitations
+- Resend invitations with customization options
+- View policy progress and manage applications
+- Switch between Resend and Mailgun email providers
+
+✅ **Tenant Workflow:**
+- Access applications via secure email links
+- Complete multi-step wizard with data persistence
+- Upload required documents
+- Submit applications for review
+
+✅ **Email Integration:**
+- Professional HTML email templates
+- Support for both Resend and Mailgun providers
+- Real email delivery with proper authentication
+- Development mode with email mocking
+
+✅ **Technical Infrastructure:**
+- PostgreSQL database with comprehensive schema
+- JWT-based authentication and authorization
+- Mock/live data switching for development
+- Activity logging and audit trails
+- File upload with Firebase Storage
+- Responsive UI with error handling
+
+## Policy Workflow Implementation (July 10, 2025)
+
+### Phase 1: Database & Core Models ✅ Complete
+
+#### 1. **Database Schema Updates**
+- **Status**: ✅ Complete
+- **Changes**:
+  - Renamed existing `Policy` model to `InsurancePolicy` to avoid conflicts
+  - Created new `Policy` model for tenant application workflow
+  - Added `PolicyDocument` model for file uploads
+  - Added `PolicyActivity` model for audit trail
+  - Implemented `PolicyStatus` enum with workflow states
+- **Note**: Used `--force-reset` for initial migration (data was cleared)
+
+#### 2. **Policy Service Implementation**
+- **Status**: ✅ Complete
+- **Created**: `/src/lib/services/policyApplicationService.ts`
+- **Features**:
+  - Full CRUD operations for policies
+  - Mock/live data switching based on Firebase emulator
+  - Token-based policy access
+  - Activity tracking
+  - Status workflow management
+
+#### 3. **Supporting Utilities**
+- **Token Utils**: `/src/lib/utils/tokenUtils.ts`
+  - Secure token generation
+  - URL generation for tenant access
+  - Token expiry validation
+- **Type Definitions**: `/src/lib/types/policy.ts`
+  - TypeScript interfaces for all form data
+  - Step constants and helpers
+  - Status display utilities
+
+### Policy Data Structure
+Based on existing form components:
+1. **Profile**: Nationality, CURP/Passport
+2. **Employment**: Job details, income, credit check consent
+3. **References**: Personal (required), work/landlord (optional)
+4. **Documents**: ID, income proof, optional docs
+
+### Next Phase: Email Integration & File Storage
+Ready to implement:
+- Resend email service
+- Firebase Storage configuration
+- File upload endpoints
+
+### Phase 2: Email Integration & File Storage ✅ Complete
+
+#### 1. **Email Service (Resend)**
+- **Status**: ✅ Complete
+- **Created**: `/src/lib/services/emailService.ts`
+- **Features**:
+  - Policy invitation emails with secure links
+  - Submission confirmation emails
+  - Status update emails (approved/denied)
+  - Mock email sending in emulator mode
+- **Templates**: Professional HTML/text email templates
+
+#### 2. **File Upload Service**
+- **Status**: ✅ Complete
+- **Created**: `/src/lib/services/fileUploadService.ts`
+- **Configuration**: `/src/lib/firebase-admin.ts`
+- **Features**:
+  - File validation (size, type, security)
+  - Firebase Storage integration
+  - Mock storage for emulator
+  - Document management (upload, delete, list)
+  - Category-based organization
+
+#### 3. **API Endpoints Created**
+
+**Staff Endpoints:**
+- `POST /api/policies/initiate` - Create policy and send invitation
+- `GET /api/policies` - List policies with filters
+
+**Tenant Endpoints (token-based):**
+- `GET /api/tenant/:token` - Get policy details
+- `PUT /api/tenant/:token/step/:step` - Save wizard step data
+- `POST /api/tenant/:token/upload` - Upload documents
+- `DELETE /api/tenant/:token/upload` - Delete documents
+- `POST /api/tenant/:token/submit` - Submit application
+
+### Environment Variables Added
+```env
+# Email Configuration (Resend)
+RESEND_API_KEY="your-resend-api-key"
+EMAIL_FROM="noreply@yourdomain.com"
+
+# App URL for generating links
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Firebase Storage Configuration
+FIREBASE_STORAGE_BUCKET="your-project.appspot.com"
+```
+
+### Next Phase: UI Implementation
+Ready to build:
+- Staff dashboard components for policy management
+- Tenant wizard interface
+- File upload UI components
+
+### Phase 2.5: Bug Fixes & TypeScript Cleanup ✅ Complete
+
+#### Issues Fixed:
+- **Auth Export Error**: Added `verifyAuth` wrapper function to auth.ts
+- **TypeScript Errors**: Fixed import/export mismatches across services
+- **Old Policy Model**: Renamed conflicting files (policyService.ts → insurancePolicyService.ts.bak)
+- **Missing User Methods**: Added `getUserById`, `updateUser`, `deleteUser` to userService
+- **Type Mismatches**: Fixed Prisma relation types and return types
+- **Seed Data**: Updated to use `InsurancePolicy` model instead of `Policy`
+
+#### Status:
+- ✅ TypeScript compilation passes
+- ✅ All API routes compile correctly  
+- ✅ Mock/live data switching works
+- ⚠️ Firebase credentials needed for file upload (expected in development)
+
+### Ready for Phase 3: UI Implementation
+The backend is now fully functional and ready for frontend integration.
+
+### Phase 3: UI Implementation ✅ Complete
+
+#### 1. **Staff Dashboard Components**
+- **Status**: ✅ Complete
+- **Components Created**:
+  - `PolicyInitiateDialog` - Form to create new policy applications
+  - `PolicyTable` - List/table with filters, pagination, and actions
+  - Updated `/dashboard/policies` page to use new components
+
+#### 2. **Tenant Wizard Interface** 
+- **Status**: ✅ Complete
+- **Components Created**:
+  - `/policy/[token]` - Public tenant access page
+  - `PolicyWizard` - Step-by-step wizard component
+  - `PolicyReviewStep` - Application review and submission
+  - Integration with existing form components:
+    - `CreatePolicyProfileForm`
+    - `CreatePolicyEmploymentForm` 
+    - `CreatePolicyReferencesForm`
+    - `CreatePolicyDocumentsForm`
+
+#### 3. **Key Features Implemented**:
+- **Step Navigation**: Visual progress indicator with clickable steps
+- **Data Persistence**: Auto-saves progress after each step
+- **Status Management**: Different UI states based on application status
+- **Responsive Design**: Works on mobile and desktop
+- **Error Handling**: Toast notifications for user feedback
+- **Token Security**: Secure access via unique tokens
+
+### System Now Provides:
+1. **Staff Workflow**: Create policies and send invitations
+2. **Tenant Workflow**: Complete applications via secure links
+3. **Progress Tracking**: Visual indicators and status management
+4. **Document Management**: File upload integration (ready for Firebase)
+5. **Email Integration**: Automated notifications (ready for Resend)
+
+### Next: File Upload UI Components
+The file upload functionality is integrated but could be enhanced with:
+- Drag & drop interface improvements
+- File preview capabilities
+- Upload progress indicators
