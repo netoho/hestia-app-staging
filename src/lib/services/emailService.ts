@@ -1,14 +1,97 @@
 import { Resend } from 'resend';
+import Mailgun from 'mailgun.js';
 import { isEmulator } from '../env-check';
 import { generatePolicyUrl } from '../utils/tokenUtils';
 
-// Initialize Resend with API key from environment
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-// Email configuration
+// Email provider configuration
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'; // 'resend' or 'mailgun'
 const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const COMPANY_NAME = 'Hestia';
 const SUPPORT_EMAIL = 'support@hestia.com';
+
+// Initialize email providers
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const mailgun = new Mailgun(require('form-data'));
+const mg = process.env.MAILGUN_API_KEY ? mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY,
+}) : null;
+
+// Email provider interface
+interface EmailData {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+// Email provider abstraction
+class EmailProvider {
+  static async sendEmail(data: EmailData): Promise<boolean> {
+    if (isEmulator()) {
+      console.log('Emulator mode: Mock sending email');
+      console.log('Provider:', EMAIL_PROVIDER);
+      console.log('To:', data.to);
+      console.log('Subject:', data.subject);
+      return true;
+    }
+
+    try {
+      switch (EMAIL_PROVIDER) {
+        case 'mailgun':
+          return await this.sendWithMailgun(data);
+        case 'resend':
+        default:
+          return await this.sendWithResend(data);
+      }
+    } catch (error) {
+      console.error(`Failed to send email via ${EMAIL_PROVIDER}:`, error);
+      return false;
+    }
+  }
+
+  private static async sendWithResend(data: EmailData): Promise<boolean> {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured');
+      return false;
+    }
+
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      text: data.text
+    });
+
+    console.log('Email sent via Resend:', result);
+    return true;
+  }
+
+  private static async sendWithMailgun(data: EmailData): Promise<boolean> {
+    if (!process.env.MAILGUN_API_KEY || !process.env.MAILGUN_DOMAIN) {
+      console.error('MAILGUN_API_KEY or MAILGUN_DOMAIN not configured');
+      return false;
+    }
+
+    if (!mg) {
+      console.error('Mailgun client not initialized');
+      return false;
+    }
+
+    const result = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+      from: FROM_EMAIL,
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      text: data.text
+    });
+
+    console.log('Email sent via Mailgun:', result);
+    return true;
+  }
+}
 
 // Type definitions
 export interface PolicyInvitationData {
@@ -288,80 +371,31 @@ Questions? Contact us at ${SUPPORT_EMAIL}
 
 // Email service functions
 export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<boolean> => {
-  if (isEmulator()) {
-    console.log('Emulator mode: Mock sending policy invitation email');
-    console.log('To:', data.tenantEmail);
-    console.log('Token:', data.accessToken);
-    console.log('Expires:', data.expiryDate);
-    return true;
-  }
-
-  try {
-    const template = policyInvitationTemplate(data);
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: data.tenantEmail,
-      subject: template.subject,
-      html: template.html,
-      text: template.text
-    });
-
-    console.log('Policy invitation email sent:', result);
-    return true;
-  } catch (error) {
-    console.error('Failed to send policy invitation email:', error);
-    return false;
-  }
+  const template = policyInvitationTemplate(data);
+  return await EmailProvider.sendEmail({
+    to: data.tenantEmail,
+    subject: template.subject,
+    html: template.html,
+    text: template.text
+  });
 };
 
 export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionData): Promise<boolean> => {
-  if (isEmulator()) {
-    console.log('Emulator mode: Mock sending submission confirmation email');
-    console.log('To:', data.tenantEmail);
-    console.log('Policy ID:', data.policyId);
-    return true;
-  }
-
-  try {
-    const template = policySubmissionTemplate(data);
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: data.tenantEmail,
-      subject: template.subject,
-      html: template.html,
-      text: template.text
-    });
-
-    console.log('Submission confirmation email sent:', result);
-    return true;
-  } catch (error) {
-    console.error('Failed to send submission confirmation email:', error);
-    return false;
-  }
+  const template = policySubmissionTemplate(data);
+  return await EmailProvider.sendEmail({
+    to: data.tenantEmail,
+    subject: template.subject,
+    html: template.html,
+    text: template.text
+  });
 };
 
 export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Promise<boolean> => {
-  if (isEmulator()) {
-    console.log('Emulator mode: Mock sending status update email');
-    console.log('To:', data.tenantEmail);
-    console.log('Status:', data.status);
-    return true;
-  }
-
-  try {
-    const template = policyStatusUpdateTemplate(data);
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: data.tenantEmail,
-      subject: template.subject,
-      html: template.html,
-      text: template.text
-    });
-
-    console.log('Status update email sent:', result);
-    return true;
-  } catch (error) {
-    console.error('Failed to send status update email:', error);
-    return false;
-  }
+  const template = policyStatusUpdateTemplate(data);
+  return await EmailProvider.sendEmail({
+    to: data.tenantEmail,
+    subject: template.subject,
+    html: template.html,
+    text: template.text
+  });
 };
