@@ -9,14 +9,9 @@ const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const COMPANY_NAME = 'Hestia';
 const SUPPORT_EMAIL = 'support@hestia.com';
 
-// Initialize email providers
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const mailgun = new Mailgun(require('form-data'));
-const mg = process.env.MAILGUN_API_KEY ? mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY,
-}) : null;
+// Email provider clients (initialized lazily)
+let resendClient: Resend | null = null;
+let mailgunClient: any = null;
 
 // Email provider interface
 interface EmailData {
@@ -57,7 +52,12 @@ class EmailProvider {
       return false;
     }
 
-    const result = await resend.emails.send({
+    // Initialize Resend client lazily
+    if (!resendClient) {
+      resendClient = new Resend(process.env.RESEND_API_KEY);
+    }
+
+    const result = await resendClient.emails.send({
       from: FROM_EMAIL,
       to: data.to,
       subject: data.subject,
@@ -75,12 +75,16 @@ class EmailProvider {
       return false;
     }
 
-    if (!mg) {
-      console.error('Mailgun client not initialized');
-      return false;
+    // Initialize Mailgun client lazily
+    if (!mailgunClient) {
+      const mailgun = new Mailgun(require('form-data'));
+      mailgunClient = mailgun.client({
+        username: 'api',
+        key: process.env.MAILGUN_API_KEY,
+      });
     }
 
-    const result = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+    const result = await mailgunClient.messages.create(process.env.MAILGUN_DOMAIN, {
       from: FROM_EMAIL,
       to: data.to,
       subject: data.subject,

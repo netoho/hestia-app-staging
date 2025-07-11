@@ -2,6 +2,7 @@ import { isEmulator } from '../env-check';
 import prisma from '../prisma';
 import { Policy, PolicyStatus, PolicyDocument, PolicyActivity, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { generateSecureToken, generateTokenExpiry } from '../utils/tokenUtils';
 
 // Type definitions
 export interface CreatePolicyData {
@@ -129,14 +130,7 @@ const mockPolicies: PolicyWithRelations[] = [
 
 let mockNextId = 3;
 
-// Helper functions
-const generateAccessToken = (): string => {
-  return randomUUID();
-};
-
-const generateTokenExpiry = (): Date => {
-  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-};
+// Helper functions (now using imported utilities)
 
 // Service functions
 export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRelations> => {
@@ -154,7 +148,7 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       employmentData: null,
       referencesData: null,
       documentsData: null,
-      accessToken: generateAccessToken(),
+      accessToken: generateSecureToken(),
       tokenExpiry: generateTokenExpiry(),
       submittedAt: null,
       reviewedBy: null,
@@ -192,7 +186,7 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
         initiatedBy: data.initiatedBy,
         tenantEmail: data.tenantEmail,
         tenantPhone: data.tenantPhone,
-        accessToken: generateAccessToken(),
+        accessToken: generateSecureToken(),
         tokenExpiry: generateTokenExpiry(),
         activities: {
           create: {
