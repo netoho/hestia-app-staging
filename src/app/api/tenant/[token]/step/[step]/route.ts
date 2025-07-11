@@ -102,9 +102,15 @@ export async function PUT(
 
     // Update policy data
     const fieldName = stepFields[step];
+    const stepNumber = parseInt(step);
+    
+    // When a step is completed, advance to the next step
+    // For step 4 (last data collection step), stay at 4 since step 5 is review
+    const nextStep = stepNumber < 4 ? stepNumber + 1 : stepNumber;
+    
     const updateData: any = {
       [fieldName]: validation.data,
-      currentStep: Math.max(parseInt(step), policy.currentStep),
+      currentStep: Math.max(nextStep, policy.currentStep),
       status: PolicyStatus.IN_PROGRESS
     };
 

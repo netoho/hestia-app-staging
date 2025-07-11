@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -29,8 +29,8 @@ interface PolicyWizardProps {
   onUpdate: () => void;
 }
 
-const stepTitles = {
-  1: 'Personal Information',
+const stepTitles: Record<number, string> = {
+  1: 'Profile Information',
   2: 'Employment Details',
   3: 'References',
   4: 'Documents Upload',
@@ -40,10 +40,22 @@ const stepTitles = {
 export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   const [currentStep, setCurrentStep] = useState(Math.max(1, policy.currentStep));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const { toast } = useToast();
+
+  // Update currentStep when policy changes, but not when we're navigating
+  useEffect(() => {
+    if (!isNavigating) {
+      // Always sync with the policy's currentStep when not navigating
+      // This ensures we're always on the correct step
+      setCurrentStep(Math.max(1, policy.currentStep));
+    }
+  }, [policy.currentStep, isNavigating]);
 
   const handleStepComplete = async (stepData: any) => {
     try {
+      setIsNavigating(true);
+      
       const response = await fetch(`/api/tenant/${token}/step/${currentStep}`, {
         method: 'PUT',
         headers: {
@@ -59,12 +71,9 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
 
       const result = await response.json();
       
-      // Move to next step
-      if (currentStep < 5) {
-        setCurrentStep(currentStep + 1);
-      }
-      
-      onUpdate();
+      // Update parent to refresh policy data
+      // The backend has already advanced the currentStep
+      await onUpdate();
       
       toast({
         title: 'Progress Saved',
@@ -77,6 +86,9 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
         description: error instanceof Error ? error.message : 'Failed to save progress',
         variant: 'destructive',
       });
+    } finally {
+      // Reset navigation flag after a delay
+      setTimeout(() => setIsNavigating(false), 300);
     }
   };
 
@@ -95,16 +107,16 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
         throw new Error(error.error || 'Failed to submit application');
       }
 
-      onUpdate();
+      await onUpdate();
       
       toast({
         title: 'Application Submitted!',
-        description: 'Your application has been submitted successfully. You will receive an email confirmation shortly.',
+        description: 'Your rental application has been submitted successfully.',
       });
     } catch (error) {
       console.error('Error submitting application:', error);
       toast({
-        title: 'Submission Error',
+        title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to submit application',
         variant: 'destructive',
       });
@@ -115,7 +127,17 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
 
   const handleBack = () => {
     if (currentStep > 1) {
+      setIsNavigating(true);
       setCurrentStep(currentStep - 1);
+      setTimeout(() => setIsNavigating(false), 300);
+    }
+  };
+
+  const handleStepClick = (step: number) => {
+    if (isStepAccessible(step)) {
+      setIsNavigating(true);
+      setCurrentStep(step);
+      setTimeout(() => setIsNavigating(false), 300);
     }
   };
 
@@ -155,6 +177,8 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
       case 4:
         return (
           <CreatePolicyDocumentsForm
+            token={token}
+            policyId={policy.id}
             onNext={handleStepComplete}
             onBack={handleBack}
           />
@@ -163,8 +187,8 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
         return (
           <PolicyReviewStep
             policy={policy}
-            onBack={handleBack}
             onSubmit={handleSubmitApplication}
+            onBack={handleBack}
             isSubmitting={isSubmitting}
           />
         );
@@ -177,11 +201,8 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
     <div className="space-y-6">
       {/* Step Navigation */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Application Steps</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
             {[1, 2, 3, 4, 5].map((step) => {
               const status = getStepStatus(step);
               const accessible = isStepAccessible(step);
@@ -192,7 +213,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
                   className={`flex items-center gap-2 cursor-pointer transition-colors ${
                     accessible ? 'hover:text-primary' : 'cursor-not-allowed opacity-50'
                   }`}
-                  onClick={() => accessible && setCurrentStep(step)}
+                  onClick={() => handleStepClick(step)}
                 >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-colors ${
@@ -209,23 +230,14 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
                       step
                     )}
                   </div>
-                  <div className="text-sm">
-                    <div className={`font-medium ${status === 'current' ? 'text-primary' : ''}`}>
-                      {stepTitles[step as keyof typeof stepTitles]}
-                    </div>
-                    <Badge
-                      variant={
-                        status === 'completed'
-                          ? 'default'
-                          : status === 'current'
-                          ? 'default'
-                          : 'secondary'
-                      }
-                      className="text-xs"
-                    >
-                      {status === 'completed' ? 'Complete' : status === 'current' ? 'Active' : 'Pending'}
-                    </Badge>
-                  </div>
+                  
+                  {step < 5 && (
+                    <div
+                      className={`hidden md:block w-24 h-0.5 ${
+                        step < currentStep ? 'bg-green-500' : 'bg-muted'
+                      }`}
+                    />
+                  )}
                 </div>
               );
             })}
