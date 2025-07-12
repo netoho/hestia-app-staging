@@ -54,7 +54,7 @@ export function requireRole(userRole: string, requiredRoles: string[]): boolean 
 
 // Wrapper for easier use in API routes
 export interface AuthResult {
-  authenticated: boolean;
+  success: boolean;
   user?: {
     id: string;
     email: string;
@@ -67,11 +67,11 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
   try {
     const payload = await authenticateRequest(request);
     if (!payload) {
-      return { authenticated: false };
+      return { success: false };
     }
     
     return {
-      authenticated: true,
+      success: true,
       user: {
         id: payload.userId,
         email: payload.email,
@@ -79,6 +79,6 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
       }
     };
   } catch (error) {
-    return { authenticated: false };
+    return { success: false };
   }
 }
