@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, MoreHorizontal, Eye, Mail, FileText, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { PolicyStatus } from '@prisma/client';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
 import { useToast } from '@/hooks/use-toast';
@@ -88,6 +89,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
 
   const { toast } = useToast();
   const { token } = useAuth();
+  const router = useRouter();
 
   const fetchPolicies = async () => {
     if (!token) return;
@@ -167,6 +169,10 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
       return 'Complete';
     }
     return `Step ${currentStep}/4`;
+  };
+
+  const handleViewDetails = (policy: PolicyWithRelations) => {
+    router.push(`/dashboard/policies/${policy.id}`);
   };
 
   const handleResendInvitation = (policy: PolicyWithRelations) => {
@@ -299,7 +305,9 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleViewDetails(policy)}
+                              >
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
@@ -311,10 +319,6 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                                   Resend Invitation
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem>
-                                <FileText className="h-4 w-4 mr-2" />
-                                View Documents
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
