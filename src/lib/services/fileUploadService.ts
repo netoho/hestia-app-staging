@@ -275,6 +275,38 @@ export const getPolicyDocuments = async (policyId: string): Promise<PolicyDocume
   }
 };
 
+// Generate a signed download URL for a file
+export const getSignedDownloadUrl = async (fileName: string, expiresInSeconds: number = 300): Promise<string> => {
+  if (isEmulator()) {
+    // For emulator, return a mock URL
+    return `http://localhost:9199/v0/b/demo-bucket/o/${encodeURIComponent(fileName)}?alt=media&token=mock-token`;
+  } else {
+    console.log(fileName, expiresInSeconds)
+    try {
+      const bucket = storage.bucket();
+      const file = bucket.file(fileName);
+      
+      // Check if file exists
+      const [exists] = await file.exists();
+      if (!exists) {
+        throw new Error('File not found in storage');
+      }
+
+      // Generate signed URL with short expiration
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + (expiresInSeconds * 1000),
+        responseDisposition: 'attachment', // Force download
+      });
+
+      return signedUrl;
+    } catch (error) {
+      console.error('Error generating signed download URL:', error);
+      throw new Error('Failed to generate download URL');
+    }
+  }
+};
+
 // Validate all required documents are uploaded
 export const validatePolicyDocuments = async (policyId: string): Promise<{
   valid: boolean;
