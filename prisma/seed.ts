@@ -149,6 +149,68 @@ async function main() {
     console.log(`Created insurance policy for property: ${created.propertyAddress}`);
   }
 
+  // Seed sample policy applications (new Policy model)
+  console.log('Seeding policy applications...');
+  const samplePolicies = [
+    {
+      initiatedBy: staff.id,
+      tenantEmail: 'tenant@example.com',
+      tenantPhone: '+1234567890',
+      status: 'SUBMITTED',
+      currentStep: 4,
+      profileData: {
+        nationality: 'mexican',
+        curp: 'AAAA000000AAAA00'
+      },
+      employmentData: {
+        employmentStatus: 'employed',
+        industry: 'Technology',
+        companyName: 'Tech Corp',
+        position: 'Software Engineer',
+        monthlyIncome: 50000,
+        creditCheckConsent: true
+      },
+      referencesData: {
+        personalReferenceName: 'John Doe',
+        personalReferencePhone: '+1234567891'
+      },
+      documentsData: {
+        identificationCount: 1,
+        incomeCount: 2,
+        optionalCount: 0,
+        incomeDocsHavePassword: 'no'
+      },
+      accessToken: 'sample-token-123',
+      tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+    }
+  ];
+
+  for (const policy of samplePolicies) {
+    const created = await prisma.policy.create({
+      data: policy
+    });
+    console.log(`Created policy application for tenant: ${created.tenantEmail}`);
+    
+    // Add some sample activities
+    await prisma.policyActivity.create({
+      data: {
+        policyId: created.id,
+        action: 'created',
+        details: { initiatedBy: staff.email },
+        performedBy: staff.id
+      }
+    });
+    
+    await prisma.policyActivity.create({
+      data: {
+        policyId: created.id,
+        action: 'submitted',
+        details: { step: 4 },
+        performedBy: 'tenant'
+      }
+    });
+  }
+
   console.log('Seeding finished.');
 }
 
