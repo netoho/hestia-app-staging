@@ -74,6 +74,13 @@ export default function TenantPolicyPage() {
     return (currentStep / 4) * 100;
   };
 
+  const isApplicationComplete = (status: PolicyStatus) => {
+    return status === PolicyStatus.SUBMITTED || 
+           status === PolicyStatus.UNDER_REVIEW || 
+           status === PolicyStatus.APPROVED || 
+           status === PolicyStatus.DENIED;
+  };
+
   const getStatusIcon = (status: PolicyStatus) => {
     switch (status) {
       case PolicyStatus.APPROVED:
@@ -210,36 +217,96 @@ export default function TenantPolicyPage() {
             onUpdate={fetchPolicy}
           />
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Application Summary</CardTitle>
-              <CardDescription>
-                Your application has been submitted and is being processed.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Submitted Information:</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <strong>Email:</strong> {policy.tenantEmail}
+          <div className="space-y-6">
+            {/* Submission Success Message */}
+            {isApplicationComplete(policy.status) && (
+              <Card className="border-green-200 bg-green-50">
+                <CardHeader className="text-center">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <CardTitle className="text-green-800">
+                    ¡Solicitud Enviada Exitosamente!
+                  </CardTitle>
+                  <CardDescription className="text-green-700">
+                    Tu solicitud de póliza ha sido enviada y está siendo procesada por nuestro equipo.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="space-y-2 text-sm text-green-700">
+                    <p>📧 Te notificaremos por email sobre el estado de tu solicitud</p>
+                    <p>⏱️ El tiempo de procesamiento es típicamente de 1-2 días hábiles</p>
+                    <p>📞 Si tienes preguntas, contacta a tu agente inmobiliario</p>
                   </div>
-                  <div>
-                    <strong>Documents:</strong> {policy.documents.length} files uploaded
-                  </div>
-                  <div>
-                    <strong>Profile:</strong> {policy.profileData ? 'Complete' : 'Incomplete'}
-                  </div>
-                  <div>
-                    <strong>Employment:</strong> {policy.employmentData ? 'Complete' : 'Incomplete'}
-                  </div>
-                  <div>
-                    <strong>References:</strong> {policy.referencesData ? 'Complete' : 'Incomplete'}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Application Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Resumen de Solicitud</CardTitle>
+                <CardDescription>
+                  {policy.status === PolicyStatus.SUBMITTED 
+                    ? "Tu solicitud ha sido enviada y está siendo revisada."
+                    : policy.status === PolicyStatus.UNDER_REVIEW
+                    ? "Tu solicitud está actualmente bajo revisión."
+                    : policy.status === PolicyStatus.APPROVED
+                    ? "¡Felicidades! Tu solicitud ha sido aprobada."
+                    : "Tu solicitud ha sido revisada. Contacta a tu agente para más información."
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="font-medium mb-3">Información Enviada:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${policy.profileData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Información Personal: {policy.profileData ? 'Completa' : 'Incompleta'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${policy.employmentData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Información Laboral: {policy.employmentData ? 'Completa' : 'Incompleta'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${policy.referencesData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Referencias: {policy.referencesData ? 'Completas' : 'Incompletas'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${policy.documents.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Documentos: {policy.documents.length} archivos subidos</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+
+                {policy.documents.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-3">Documentos Subidos:</h3>
+                    <div className="space-y-2">
+                      {policy.documents.map((doc) => (
+                        <div key={doc.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                          <FileText className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm font-medium">{doc.originalName}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {doc.category === 'identification' ? 'Identificación' : 
+                             doc.category === 'income' ? 'Ingresos' : 'Opcional'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    <p><strong>Email:</strong> {policy.tenantEmail}</p>
+                    {policy.status === PolicyStatus.SUBMITTED && (
+                      <p><strong>Enviado:</strong> {new Date().toLocaleDateString('es-MX')}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
