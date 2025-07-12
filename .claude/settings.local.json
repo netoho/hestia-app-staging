@@ -10,7 +10,8 @@
       "Bash(mv:*)",
       "Bash(npx tsc:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
