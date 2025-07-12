@@ -18,7 +18,8 @@ import {
   CheckCircle, 
   XCircle,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { PolicyStatus } from '@prisma/client';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
@@ -81,6 +82,7 @@ export default function PolicyDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { token } = useAuth();
@@ -173,6 +175,8 @@ export default function PolicyDetailsPage() {
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'document_uploaded':
         return <FileText className="h-4 w-4 text-purple-500" />;
+      case 'document_downloaded':
+        return <Download className="h-4 w-4 text-blue-500" />;
       case 'submitted':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'approved':
@@ -196,6 +200,8 @@ export default function PolicyDetailsPage() {
         return `Paso ${activity.details?.step || ''} completado`;
       case 'document_uploaded':
         return `Documento subido: ${activity.details?.fileName || 'archivo'}`;
+      case 'document_downloaded':
+        return `Documento descargado: ${activity.details?.fileName || 'archivo'}`;
       case 'submitted':
         return 'Solicitud enviada para revisión';
       case 'approved':
@@ -242,6 +248,56 @@ export default function PolicyDetailsPage() {
       });
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleDownloadDocument = async (documentId: string, fileName: string) => {
+    if (!token || !policy) return;
+    
+    setDownloadingDoc(documentId);
+    try {
+      const response = await fetch(`/api/policies/${policy.id}/documents/${documentId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed - please refresh the page');
+        }
+        if (response.status === 403) {
+          throw new Error('You do not have permission to download this file');
+        }
+        if (response.status === 404) {
+          throw new Error('Document not found');
+        }
+        throw new Error('Failed to generate download link');
+      }
+
+      const data = await response.json();
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = data.downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: 'Download Started',
+        description: `${fileName} is being downloaded`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'Failed to download file',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingDoc(null);
     }
   };
 
@@ -547,10 +603,24 @@ export default function PolicyDetailsPage() {
                             </p>
                           </div>
                         </div>
-                        <Badge variant="outline">
-                          {doc.category === 'identification' ? 'ID' : 
-                           doc.category === 'income' ? 'Income' : 'Optional'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">
+                            {doc.category === 'identification' ? 'ID' : 
+                             doc.category === 'income' ? 'Income' : 'Optional'}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadDocument(doc.id, doc.originalName)}
+                            disabled={downloadingDoc === doc.id}
+                          >
+                            {downloadingDoc === doc.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
