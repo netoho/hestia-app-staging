@@ -102,12 +102,16 @@ export default function PolicyDetailsPage() {
         if (response.status === 404) {
           throw new Error('Policy not found');
         }
+        if (response.status === 401) {
+          throw new Error('Authentication failed - please refresh the page');
+        }
         throw new Error('Failed to load policy details');
       }
 
       const data = await response.json();
       setPolicy(data);
     } catch (err) {
+      console.error('Policy fetch error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -119,6 +123,13 @@ export default function PolicyDetailsPage() {
       fetchPolicy();
     }
   }, [token, policyId]);
+
+  // Also try to fetch when token becomes available
+  useEffect(() => {
+    if (token && policyId && !policy && !loading) {
+      fetchPolicy();
+    }
+  }, [token]);
 
   const getStatusBadgeVariant = (status: PolicyStatus) => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
