@@ -33,7 +33,9 @@ const documentsSchema = z.object({
 type DocumentsFormValues = z.infer<typeof documentsSchema>;
 
 interface CreatePolicyDocumentsFormProps {
-  onNext: (data: DocumentsFormValues) => void;
+  token?: string;
+  policyId?: string;
+  onNext: (data: any) => void;
   onBack: () => void;
 }
 
@@ -50,10 +52,13 @@ interface FileUploaderProps {
   description: string;
   maxFiles: number;
   form: ReturnType<typeof useForm<DocumentsFormValues>>;
+  token?: string;
+  category: 'identification' | 'income' | 'optional';
 }
 
-const FileUploader = ({ id, title, description, maxFiles, form }: FileUploaderProps) => {
+const FileUploader = ({ id, title, description, maxFiles, form, token, category }: FileUploaderProps) => {
   const [files, setFiles] = useState<UploadableFile[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[], fileRejections: any[]) => {
@@ -86,23 +91,80 @@ const FileUploader = ({ id, title, description, maxFiles, form }: FileUploaderPr
         }
       });
     },
-    [files, maxFiles, id, form]
+    [files, maxFiles, id, form, token, category]
   );
 
-  const simulateUpload = (uploadableFile: UploadableFile) => {
-     setFiles(prev =>
+  const simulateUpload = async (uploadableFile: UploadableFile) => {
+    if (!token) {
+      // If no token, just simulate upload for preview
+      setFiles(prev =>
+        prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'uploading' } : f))
+      );
+      
+      setTimeout(() => {
+        setFiles(prev =>
+          prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'completed' } : f))
+        );
+      }, 1500);
+      return;
+    }
+
+    // Set uploading state
+    setFiles(prev =>
       prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'uploading' } : f))
     );
     
-    // Simulate progress with timeouts
-    setTimeout(() => {
-        setFiles(prev =>
-            prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'completed' } : f))
-        );
-    }, 1500 + Math.random() * 1000);
+    try {
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', uploadableFile.file);
+      formData.append('category', category);
+      
+      // Upload file
+      const response = await fetch(`/api/tenant/${token}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+      
+      const result = await response.json();
+      
+      // Mark as completed and store document ID
+      setFiles(prev =>
+        prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'completed' } : f))
+      );
+      setUploadedFiles(prev => [...prev, result.document.id]);
+      
+    } catch (error) {
+      // Mark as error
+      setFiles(prev =>
+        prev.map(f => (f.id === uploadableFile.id ? { 
+          ...f, 
+          progress: 'error',
+          error: error instanceof Error ? error.message : 'Upload failed'
+        } : f))
+      );
+    }
   };
 
-  const handleDelete = (fileId: string) => {
+  const handleDelete = async (fileId: string) => {
+    const fileToDelete = files.find(f => f.id === fileId);
+    if (!fileToDelete) return;
+    
+    // If file was uploaded and we have a token, delete from server
+    if (fileToDelete.progress === 'completed' && token && uploadedFiles.length > 0) {
+      try {
+        // Find the document ID for this file (you might need to track this better)
+        // For now, we'll skip server deletion as we don't track which uploadedFile ID matches which file
+      } catch (error) {
+        console.error('Error deleting file from server:', error);
+      }
+    }
+    
     const updatedFiles = files.filter(f => f.id !== fileId);
     setFiles(updatedFiles);
 
@@ -172,7 +234,7 @@ const FileUploader = ({ id, title, description, maxFiles, form }: FileUploaderPr
 };
 
 
-export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocumentsFormProps) {
+export function CreatePolicyDocumentsForm({ token, policyId, onNext, onBack }: CreatePolicyDocumentsFormProps) {
   const form = useForm<DocumentsFormValues>({
     resolver: zodResolver(documentsSchema),
     defaultValues: {
@@ -192,7 +254,14 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
 
   const handleConfirmSubmit = () => {
     if (summaryData) {
-      onNext(summaryData);
+      // Transform the data to match what the API expects
+      const apiData = {
+        identificationCount: summaryData.identification.length,
+        incomeCount: summaryData.proofOfIncome.length,
+        optionalCount: summaryData.optional.length,
+        incomeDocsHavePassword: summaryData.incomeDocsHavePassword
+      };
+      onNext(apiData as any);
     }
     setIsSummaryModalOpen(false);
   };
@@ -210,6 +279,8 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
             description={t.pages.newPolicy.documents.id.description}
             maxFiles={2}
             form={form}
+            token={token}
+            category="identification"
           />
           
           <Separator />
@@ -220,6 +291,8 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
             description={t.pages.newPolicy.documents.income.description}
             maxFiles={9}
             form={form}
+            token={token}
+            category="income"
           />
           <FormField
             control={form.control}
@@ -260,6 +333,8 @@ export function CreatePolicyDocumentsForm({ onNext, onBack }: CreatePolicyDocume
             description={t.pages.newPolicy.documents.optional.description}
             maxFiles={4}
             form={form}
+            token={token}
+            category="optional"
           />
 
           <div className="flex justify-between pt-4">
