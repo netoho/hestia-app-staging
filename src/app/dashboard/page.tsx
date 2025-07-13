@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText, Users, Shield, DollarSign, Edit, PackageSearch, UserPlus, ListChecks } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
-import { t } from '@/lib/i18n';
-
-const MOCK_USER_ROLE: UserRole = 'admin';
+import { t } from '@/lib/i18n'; // Assuming t is for translations and is correctly imported
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  const userRole: UserRole = MOCK_USER_ROLE;
+  const { isAuthenticated, user, isLoading } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated after loading
+  if (!isLoading && !isAuthenticated) {
+    router.push('/login');
+  }
 
   let welcomeMessage = t.pages.dashboard.welcomeBack;
   let roleSpecificContent = null;
@@ -19,7 +25,7 @@ export default function DashboardPage() {
   if (userRole === 'owner') {
     welcomeMessage = t.pages.dashboard.welcomeOwner;
     roleSpecificContent = (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Add padding or margin here if needed */}
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t.pages.dashboard.ownerCards.activePolicies}</CardTitle>
@@ -94,7 +100,7 @@ export default function DashboardPage() {
   } else if (userRole === 'staff' || userRole === 'admin') {
     welcomeMessage = userRole === 'admin' ? t.pages.dashboard.welcomeAdmin : t.pages.dashboard.welcomeStaff;
     roleSpecificContent = (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Add padding or margin here if needed */}
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t.pages.dashboard.staffCards.totalUsers}</CardTitle>
@@ -137,10 +143,15 @@ export default function DashboardPage() {
     );
   }
 
+   if (isLoading || !isAuthenticated) {
+     // Render loading state or null while authentication status is being determined
+     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+   }
+
   return (
     <div>
       <PageTitle title={welcomeMessage} className="mb-8" />
-      {roleSpecificContent || <p>{t.pages.dashboard.loading}</p>}
+      {roleSpecificContent}
     </div>
   );
 }

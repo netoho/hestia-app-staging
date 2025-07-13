@@ -11,6 +11,7 @@ import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import type { Package } from '@/lib/types';
 import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth';
 
 function PackagesSkeleton() {
     return (
@@ -43,13 +44,19 @@ export default function PackagesPage() {
     const [packages, setPackages] = useState<Package[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { isAuthenticated, token, isLoading: isAuthLoading } = useAuth();
 
     useEffect(() => {
         async function fetchPackages() {
+            if (!token) {
+                setIsLoading(false);
+                return;
+            }
             try {
-                const response = await fetch('/api/packages');
+                const response = await fetch('/api/packages', {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                });
                 if (!response.ok) {
-                    throw new Error('Failed to fetch packages');
                 }
                 const data = await response.json();
                 setPackages(data);
@@ -58,7 +65,7 @@ export default function PackagesPage() {
             } finally {
                 setIsLoading(false);
             }
-        }
+        };
         fetchPackages();
     }, []);
 
@@ -80,7 +87,7 @@ export default function PackagesPage() {
           </Button>
         </CardHeader>
         <CardContent>
-            {isLoading ? (
+            {(isLoading || isAuthLoading) ? (
                 <PackagesSkeleton />
             ) : error ? (
                  <div className="text-center py-10 text-destructive">

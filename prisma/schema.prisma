@@ -21,6 +21,8 @@ model User {
   image         String?
   password      String?
   role          String          @default("tenant")
+  phone         String?
+  address       String?
   accounts      Account[]
   sessions      Session[]
   createdAt     DateTime        @default(now())
