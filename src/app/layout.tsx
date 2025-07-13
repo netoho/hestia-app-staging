@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { t } from '@/lib/i18n';
@@ -23,6 +24,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         {children}
+        <SpeedInsights />
         <Toaster />
       </body>
     </html>
