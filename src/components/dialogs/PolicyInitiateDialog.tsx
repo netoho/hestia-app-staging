@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,6 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { t } from '@/lib/i18n';
 
 const policyInitiateSchema = z.object({
   tenantEmail: z.string().email('Invalid email address'),
@@ -73,16 +75,16 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to initiate policy');
+        throw new Error(error.error || t.pages.policies.initiateDialog.errors.failedToInitiate);
       }
 
       const result = await response.json();
 
       toast({
-        title: 'Policy Initiated Successfully',
+        title: t.pages.policies.initiateDialog.success.title,
         description: result.emailSent 
-          ? `Invitation sent to ${values.tenantEmail}` 
-          : `Policy created but email failed. Please resend manually.`,
+          ? t.pages.policies.initiateDialog.success.descriptionSent(values.tenantEmail)
+          : t.pages.policies.initiateDialog.success.descriptionFailed,
         variant: result.emailSent ? 'default' : 'destructive',
       });
 
@@ -92,8 +94,8 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
     } catch (error) {
       console.error('Policy initiation error:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to initiate policy',
+        title: t.misc.error,
+        description: error instanceof Error ? error.message : t.pages.policies.initiateDialog.errors.failedToInitiate,
         variant: 'destructive',
       });
     } finally {
@@ -106,14 +108,14 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
-          Initiate Policy
+          {t.pages.policies.initiateDialog.trigger}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Initiate New Policy Application</DialogTitle>
+          <DialogTitle>{t.pages.policies.initiateDialog.title}</DialogTitle>
           <DialogDescription>
-            Create a new policy application and send an invitation email to the tenant.
+            {t.pages.policies.initiateDialog.description}
           </DialogDescription>
         </DialogHeader>
         
@@ -125,11 +127,11 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
                 name="tenantEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tenant Email *</FormLabel>
+                    <FormLabel>{t.pages.policies.initiateDialog.form.tenantEmailLabel} *</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="tenant@example.com"
+                        placeholder={t.pages.policies.initiateDialog.form.tenantEmailPlaceholder}
                         {...field}
                       />
                     </FormControl>
@@ -143,11 +145,11 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
                 name="tenantPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tenant Phone</FormLabel>
+                    <FormLabel>{t.pages.policies.initiateDialog.form.tenantPhoneLabel}</FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder="+1 (555) 123-4567"
+                        placeholder={t.pages.policies.initiateDialog.form.tenantPhonePlaceholder}
                         {...field}
                       />
                     </FormControl>
@@ -162,10 +164,10 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
               name="tenantName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tenant Name</FormLabel>
+                  <FormLabel>{t.pages.policies.initiateDialog.form.tenantNameLabel}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Full name (optional)"
+                      placeholder={t.pages.policies.initiateDialog.form.tenantNamePlaceholder}
                       {...field}
                     />
                   </FormControl>
@@ -175,17 +177,17 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
             />
 
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-foreground">Property Information (Optional)</h3>
+              <h3 className="text-sm font-medium text-foreground">{t.pages.policies.initiateDialog.form.propertyInfoTitle}</h3>
               
               <FormField
                 control={form.control}
                 name="propertyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Property ID</FormLabel>
+                    <FormLabel>{t.pages.policies.initiateDialog.form.propertyIdLabel}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Internal property reference"
+                        placeholder={t.pages.policies.initiateDialog.form.propertyIdPlaceholder}
                         {...field}
                       />
                     </FormControl>
@@ -199,10 +201,10 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
                 name="propertyAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Property Address</FormLabel>
+                    <FormLabel>{t.pages.policies.initiateDialog.form.propertyAddressLabel}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="123 Main St, City, State, ZIP"
+                        placeholder={t.pages.policies.initiateDialog.form.propertyAddressPlaceholder}
                         className="resize-none"
                         rows={3}
                         {...field}
@@ -221,18 +223,18 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
                 onClick={() => setOpen(false)}
                 disabled={isLoading}
               >
-                Cancel
+                {t.actions.cancel}
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
+                    {t.pages.policies.initiateDialog.form.creatingButton}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Create & Send Invitation
+                    {t.pages.policies.initiateDialog.form.createButton}
                   </>
                 )}
               </Button>

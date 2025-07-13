@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,6 +34,7 @@ import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { ResendInvitationDialog } from '@/components/dialogs/ResendInvitationDialog';
+import { t } from '@/lib/i18n';
 
 interface PolicyWithRelations {
   id: string;
@@ -110,7 +112,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch policies');
+        throw new Error(t.pages.policies.errorFetching);
       }
 
       const data = await response.json();
@@ -123,8 +125,8 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     } catch (error) {
       console.error('Error fetching policies:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load policies',
+        title: t.misc.error,
+        description: t.pages.policies.errorLoading,
         variant: 'destructive',
       });
     } finally {
@@ -157,7 +159,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('es-MX', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -166,9 +168,9 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
 
   const getProgressText = (currentStep: number, status: PolicyStatus) => {
     if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED || status === PolicyStatus.DENIED) {
-      return 'Complete';
+      return t.pages.policies.progressComplete;
     }
-    return `Step ${currentStep}/4`;
+    return t.pages.policies.progressStep(currentStep);
   };
 
   const handleViewDetails = (policy: PolicyWithRelations) => {
@@ -193,9 +195,9 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Policy Applications</CardTitle>
+        <CardTitle>{t.pages.policies.table.title}</CardTitle>
         <CardDescription>
-          Manage and track policy applications from tenants
+          {t.pages.policies.table.description}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -205,7 +207,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search by tenant email..."
+                placeholder={t.pages.policies.table.searchPlaceholder}
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="pl-10"
@@ -217,10 +219,10 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             onValueChange={(value) => handleFilterChange('status', value)}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder={t.pages.policies.table.filterPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">{t.pages.policies.table.allStatuses}</SelectItem>
               {Object.entries(POLICY_STATUS_DISPLAY).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
                   {label}
@@ -234,7 +236,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Loading policies...</span>
+            <span className="ml-2">{t.pages.policies.table.loading}</span>
           </div>
         ) : (
           <>
@@ -242,12 +244,12 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tenant</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Initiated By</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Documents</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.tenant}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.status}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.progress}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.initiatedBy}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.created}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.documents}</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -255,7 +257,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                   {policies.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No policies found
+                        {t.pages.policies.table.noPoliciesFound}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -273,7 +275,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                         </TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(policy.status)}>
-                            {POLICY_STATUS_DISPLAY[policy.status]}
+                            {POLICY_STATUS_DISPLAY[policy.status as keyof typeof POLICY_STATUS_DISPLAY] || policy.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -309,14 +311,14 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                                 onClick={() => handleViewDetails(policy)}
                               >
                                 <Eye className="h-4 w-4 mr-2" />
-                                View Details
+                                {t.pages.policies.table.actions.viewDetails}
                               </DropdownMenuItem>
                               {canResendInvitation(policy.status) && (
                                 <DropdownMenuItem
                                   onClick={() => handleResendInvitation(policy)}
                                 >
                                   <Mail className="h-4 w-4 mr-2" />
-                                  Resend Invitation
+                                  {t.pages.policies.table.actions.resend}
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -333,9 +335,11 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             {pagination.totalPages > 1 && (
               <div className="flex justify-between items-center mt-4">
                 <div className="text-sm text-muted-foreground">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                  {pagination.total} policies
+                  {t.pages.policies.table.pagination.showing(
+                    ((pagination.page - 1) * pagination.limit) + 1,
+                    Math.min(pagination.page * pagination.limit, pagination.total),
+                    pagination.total
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -344,7 +348,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                     disabled={pagination.page === 1}
                     onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                   >
-                    Previous
+                    {t.pages.policies.table.pagination.previous}
                   </Button>
                   <Button
                     variant="outline"
@@ -352,7 +356,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                     disabled={pagination.page === pagination.totalPages}
                     onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                   >
-                    Next
+                    {t.pages.policies.table.pagination.next}
                   </Button>
                 </div>
               </div>

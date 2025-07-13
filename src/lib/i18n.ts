@@ -1,6 +1,7 @@
 
 
 
+
 import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
@@ -44,6 +45,7 @@ const es = {
         perMonth: "/mes",
         loading: "Cargando...",
         demoUser: "Usuario Demo",
+        error: "Error",
     },
 
     policyStatus: {
@@ -259,29 +261,66 @@ const es = {
             }
         },
         policies: {
-            title: "Gestión de Pólizas",
-            subtitle: "Consulta, filtra y gestiona todas las pólizas del sistema.",
-            cardTitle: "Todas las Pólizas",
-            cardDescription: (count: number) => `Actualmente hay ${count} pólizas en el sistema.`,
-            newPolicy: "Crear Nueva Póliza",
-            toggleMenu: "Abrir menú de acciones",
-            tableHeaders: {
-                policyId: "Póliza",
-                applicant: "Solicitante",
-                property: "Propiedad",
-                status: "Estatus",
-                premium: "Prima",
-                createdAt: "Fecha Creación",
-                actions: "Acciones",
+            title: "Solicitudes de Póliza",
+            subtitle: "Gestiona las solicitudes de póliza de los inquilinos y sigue su progreso.",
+            errorFetching: "Error al obtener las pólizas",
+            errorLoading: "No se pudieron cargar las pólizas",
+            progressComplete: "Completo",
+            progressStep: (step: number) => `Paso ${step}/4`,
+            initiateDialog: {
+                trigger: "Iniciar Póliza",
+                title: "Iniciar Nueva Solicitud de Póliza",
+                description: "Crea una nueva solicitud de póliza y envía un correo de invitación al inquilino.",
+                form: {
+                    tenantEmailLabel: "Email del Inquilino",
+                    tenantEmailPlaceholder: "inquilino@ejemplo.com",
+                    tenantPhoneLabel: "Teléfono del Inquilino",
+                    tenantPhonePlaceholder: "+52 55 1234 5678",
+                    tenantNameLabel: "Nombre del Inquilino",
+                    tenantNamePlaceholder: "Nombre completo (opcional)",
+                    propertyInfoTitle: "Información de la Propiedad (Opcional)",
+                    propertyIdLabel: "ID de la Propiedad",
+                    propertyIdPlaceholder: "Referencia interna de la propiedad",
+                    propertyAddressLabel: "Dirección de la Propiedad",
+                    propertyAddressPlaceholder: "Calle Principal 123, Ciudad, Estado, CP",
+                    createButton: "Crear y Enviar Invitación",
+                    creatingButton: "Creando...",
+                },
+                success: {
+                    title: "Póliza Iniciada Exitosamente",
+                    descriptionSent: (email: string) => `Invitación enviada a ${email}`,
+                    descriptionFailed: "Póliza creada pero el envío de correo falló. Por favor, reenvía manualmente.",
+                },
+                errors: {
+                    failedToInitiate: "No se pudo iniciar la póliza",
+                }
             },
-            actions: {
-                label: "Acciones",
-                view: "Ver detalles",
-                edit: "Editar",
-                cancel: "Cancelar Póliza",
+            table: {
+                title: "Solicitudes de Póliza",
+                description: "Gestiona y da seguimiento a las solicitudes de póliza de los inquilinos",
+                searchPlaceholder: "Buscar por email del inquilino...",
+                filterPlaceholder: "Filtrar por estado",
+                allStatuses: "Todos los Estados",
+                loading: "Cargando pólizas...",
+                noPoliciesFound: "No se encontraron pólizas",
+                headers: {
+                    tenant: "Inquilino",
+                    status: "Estado",
+                    progress: "Progreso",
+                    initiatedBy: "Iniciada Por",
+                    created: "Creada",
+                    documents: "Documentos",
+                },
+                actions: {
+                    viewDetails: "Ver Detalles",
+                    resend: "Reenviar Invitación",
+                },
+                pagination: {
+                    showing: (start: number, end: number, total: number) => `Mostrando ${start} a ${end} de ${total} pólizas`,
+                    previous: "Anterior",
+                    next: "Siguiente",
+                }
             },
-            noPoliciesFound: "No se encontraron pólizas. ¡Crea una para empezar!",
-            errorLoading: "Error al cargar las pólizas.",
         },
         users: {
             title: "Gestión de Usuarios",
