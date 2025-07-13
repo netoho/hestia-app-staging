@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateRequest, requireRole, hashPassword } from '@/lib/auth';
+import { verifyAuth, requireRole, hashPassword } from '@/lib/auth';
 import { z } from 'zod';
 import { getUserById, updateUser, deleteUser } from '@/lib/services/userService';
 
 const updateUserSchema = z.object({
-  email: z.string().email().optional(),
   name: z.string().optional(),
   role: z.enum(['broker', 'tenant', 'landlord', 'staff']).optional(),
   password: z.string().min(6).optional()
@@ -17,14 +16,12 @@ export async function GET(
   try {
     const { id } = await params;
     
-    // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Check if user has staff role
-    if (!requireRole(auth.role, ['staff'])) {
+    if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
@@ -49,14 +46,12 @@ export async function PUT(
   try {
     const { id } = await params;
     
-    // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Check if user has staff role
-    if (!requireRole(auth.role, ['staff'])) {
+    if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
@@ -70,11 +65,9 @@ export async function PUT(
       );
     }
     
-    const { email, name, role, password } = validation.data;
+    const { name, role, password } = validation.data;
     
-    // Prepare update data
     const updateData: any = {};
-    if (email !== undefined) updateData.email = email;
     if (name !== undefined) updateData.name = name;
     if (role !== undefined) updateData.role = role;
     if (password !== undefined) updateData.password = await hashPassword(password);
@@ -96,19 +89,16 @@ export async function DELETE(
   try {
     const { id } = await params;
     
-    // Authenticate request
-    const auth = await authenticateRequest(request);
-    if (!auth) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Check if user has staff role
-    if (!requireRole(auth.role, ['staff'])) {
+    if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
-    // Prevent self-deletion
-    if (auth.userId === id) {
+    if (authResult.user.id === id) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
     

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -58,45 +58,45 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
-      role: (user?.role as any) || 'tenant',
-      password: '',
-    },
   });
 
   const isEditMode = !!user;
+
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name || '',
+        email: user.email || '',
+        role: (user.role as any) || 'tenant',
+        password: '',
+      });
+    } else {
+      form.reset({
+        name: '',
+        email: '',
+        role: 'tenant',
+        password: '',
+      });
+    }
+  }, [user, open, form]);
 
   const onSubmit = async (data: UserFormData) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const url = isEditMode ? `/api/staff/users/${user.id}` : '/api/auth/register';
+      const url = isEditMode ? `/api/staff/users/${user.id}` : '/api/staff/users';
       const method = isEditMode ? 'PUT' : 'POST';
       
-      // For edit mode, only send password if it's provided
       const payload: any = { ...data };
       if (isEditMode) {
         if (!payload.password) delete payload.password;
-      } else {
-        if (!payload.password) payload.password = 'password123';
       }
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
       };
-
-      // Add auth token for staff endpoints
-      if (isEditMode && authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      } else if (!isEditMode && authToken) {
-        // Creating a user via staff API, not public registration
-        // This assumes a staff endpoint for user creation exists
-        // For now, we use the public registration endpoint which doesn't need auth
-      }
-
 
       const response = await fetch(url, {
         method,
@@ -111,8 +111,6 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
 
       onSuccess();
       onOpenChange(false);
-      form.reset();
-      setShowPasswordReset(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -241,11 +239,11 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password (optional)</FormLabel>
+                    <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input 
                         type="password" 
-                        placeholder="Leave blank for default (password123)" 
+                        placeholder="Enter password" 
                         {...field} 
                       />
                     </FormControl>

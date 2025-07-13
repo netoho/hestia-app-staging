@@ -1,65 +1,20 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
-interface AuthState {
-  token: string | null;
-  user: any | null;
-}
-
+// This is a new custom hook that uses next-auth's useSession
 export function useAuth() {
-  const [auth, setAuth] = useState<AuthState>({ token: null, user: null });
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    // Check localStorage for existing auth
-    const storedToken = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('authUser');
-    
-    if (storedToken && storedUser) {
-      setAuth({
-        token: storedToken,
-        user: JSON.parse(storedUser),
-      });
-    } else {
-      // For demo purposes, we'll auto-login as staff
-      // Remove this in production
-      const demoLogin = async () => {
-        try {
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: 'admin@hestia.com',
-              password: 'password123'
-            })
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setAuth({ token: data.token, user: data.user });
-            localStorage.setItem('authToken', data.token);
-            localStorage.setItem('authUser', JSON.stringify(data.user));
-          }
-        } catch (error) {
-          console.error('Demo login failed:', error);
-        }
-      };
-      
-      demoLogin();
-    }
-  }, []);
+  const user = session?.user;
+  const isLoading = status === 'loading';
 
-  const login = (token: string, user: any) => {
-    setAuth({ token, user });
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('authUser', JSON.stringify(user));
-  };
+  // The 'token' is not directly available in the client session object for security reasons.
+  // API calls from the client should use the session which is handled by NextAuth.js.
+  // If you need a JWT for external APIs, you'd typically get it from a backend endpoint.
+  // For simplicity, we'll return null for the token here.
+  const token = null; 
 
-  const logout = () => {
-    setAuth({ token: null, user: null });
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
-  };
-
-  return { ...auth, login, logout };
+  return { user, token, isLoading, isAuthenticated: status === 'authenticated' };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { NavItem, User, UserRole } from '@/lib/types';
+import type { NavItem, UserRole } from '@/lib/types';
 import {
   Sidebar,
   SidebarContent,
@@ -26,17 +26,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from 'react';
+import { signOut, Session } from 'next-auth/react';
+import { DefaultUser } from 'next-auth';
 
-const MOCK_USER: User = {
-  id: '1',
-  name: 'Admin User',
-  email: 'admin@hestia.com',
-  role: 'admin', 
-  avatarUrl: 'https://placehold.co/100x100.png',
-};
-
+interface DashboardSidebarProps {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string | null;
+  }
+}
 
 const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
   const pathname = usePathname();
@@ -67,20 +69,22 @@ const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
 };
 
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar({ user }: DashboardSidebarProps) {
   const { isMobile } = useSidebar();
-  const [userRole, setUserRole] = useState<UserRole>('owner');
-  const [navLinks, setNavLinks] = useState<NavItem[]>(t.layout.dashboardSidebar.ownerLinks);
+  const [navLinks, setNavLinks] = useState<NavItem[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const currentMockUserRole = MOCK_USER.role;
-    setUserRole(currentMockUserRole);
-    if (currentMockUserRole === 'owner') setNavLinks(t.layout.dashboardSidebar.ownerLinks);
-    else if (currentMockUserRole === 'renter') setNavLinks(t.layout.dashboardSidebar.renterLinks);
-    else if (currentMockUserRole === 'staff' || currentMockUserRole === 'admin') setNavLinks(t.layout.dashboardSidebar.staffLinks);
-  }, []);
+    const userRole = user.role as UserRole;
+    if (userRole === 'owner') setNavLinks(t.layout.dashboardSidebar.ownerLinks);
+    else if (userRole === 'renter' || userRole === 'tenant') setNavLinks(t.layout.dashboardSidebar.renterLinks);
+    else if (userRole === 'staff' || userRole === 'admin') setNavLinks(t.layout.dashboardSidebar.staffLinks);
+    else setNavLinks(t.layout.dashboardSidebar.renterLinks); // Default for safety
+  }, [user.role]);
 
+  const handleLogout = async () => {
+    await signOut({ redirect: true, callbackUrl: '/login' });
+  };
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
@@ -104,18 +108,18 @@ export default function DashboardSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start h-auto p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-10">
               <Avatar className="h-8 w-8 mr-2 group-data-[collapsible=icon]:mr-0">
-                <AvatarImage src={MOCK_USER.avatarUrl} alt={MOCK_USER.name} data-ai-hint="user avatar" />
-                <AvatarFallback>{MOCK_USER.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={user.image || 'https://placehold.co/100x100.png'} alt={user.name || 'User'} data-ai-hint="user avatar" />
+                <AvatarFallback>{user.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
               </Avatar>
               <div className="group-data-[collapsible=icon]:hidden text-left">
-                <p className="text-sm font-medium text-sidebar-foreground">{MOCK_USER.name}</p>
-                <p className="text-xs text-sidebar-foreground/70">{MOCK_USER.email}</p>
+                <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
+                <p className="text-xs text-sidebar-foreground/70">{user.email}</p>
               </div>
                <ChevronDown className="ml-auto h-4 w-4 text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56 mb-2 ml-1">
-            <DropdownMenuLabel>{MOCK_USER.name}</DropdownMenuLabel>
+            <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
               <UserCircle className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.profile}
@@ -129,6 +133,7 @@ export default function DashboardSidebar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.logout}
             </DropdownMenuItem>

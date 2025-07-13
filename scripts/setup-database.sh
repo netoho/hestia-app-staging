@@ -1,14 +1,22 @@
 #!/bin/bash
 
-# Database setup script for Hestia App with Supabase
+# Database setup script for Hestia App
 
 echo "🚀 Setting up Hestia App database..."
+
+# Check if .env file exists
+if [ ! -f .env ]; then
+    echo "⚠️ .env file not found. Please create one from .env.example."
+    exit 1
+fi
+
+# Load environment variables from .env file
+export $(grep -v '^#' .env | xargs)
 
 # Check if DATABASE_URL is set
 if [ -z "$DATABASE_URL" ]; then
     echo "❌ DATABASE_URL is not set in your .env file"
-    echo "Please add your Supabase database URL to .env file"
-    echo "Example: DATABASE_URL=\"postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres\""
+    echo "Please add your database URL to .env file"
     exit 1
 fi
 

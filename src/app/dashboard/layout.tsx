@@ -4,14 +4,23 @@ import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import { Button } from '@/components/ui/button';
 import { Bell } from 'lucide-react';
 import { t } from '@/lib/i18n';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth/auth-config';
+import { redirect } from 'next/navigation';
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const user = { name: t.misc.demoUser, email: "demo@example.com" };
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  const user = session.user;
 
   return (
     <SidebarProvider defaultOpen>
       <div className="flex min-h-screen bg-background w-full">
-        <DashboardSidebar />
+        <DashboardSidebar user={user} />
         <SidebarInset className="flex flex-col flex-1">
           <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4 md:px-6 shadow-sm">
             <div className="flex-1">

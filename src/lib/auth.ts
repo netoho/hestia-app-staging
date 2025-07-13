@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from './auth/auth-config';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = '7d';
@@ -9,6 +11,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
+  name?: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -19,6 +22,8 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
+// Note: This JWT implementation is now secondary to NextAuth.js
+// It can still be used for other purposes if needed.
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
@@ -37,11 +42,24 @@ export function getTokenFromRequest(request: NextRequest): string | null {
   return token;
 }
 
+// This function is for securing API routes.
+// It uses NextAuth's session management.
 export async function authenticateRequest(request: NextRequest): Promise<JWTPayload | null> {
+  const session = await getServerSession(authOptions);
+
+  if (session && session.user) {
+    return {
+      userId: session.user.id,
+      email: session.user.email!,
+      role: session.user.role as string,
+      name: session.user.name || undefined
+    };
+  }
+
+  // Fallback to JWT for non-session based auth if needed
   try {
     const token = getTokenFromRequest(request);
     if (!token) return null;
-    
     return verifyToken(token);
   } catch (error) {
     return null;
@@ -75,7 +93,8 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
       user: {
         id: payload.userId,
         email: payload.email,
-        role: payload.role
+        role: payload.role,
+        name: payload.name
       }
     };
   } catch (error) {

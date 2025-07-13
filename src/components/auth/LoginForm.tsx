@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
+import { signIn } from 'next-auth/react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: t.pages.register.validation.emailInvalid }),
@@ -38,49 +39,26 @@ export function LoginForm() {
   async function onSubmit(values: LoginFormValues) {
     setIsLoading(true);
     
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-      });
+    const result = await signIn('credentials', {
+      redirect: false,
+      email: values.email,
+      password: values.password,
+    });
 
-      const data = await response.json();
+    setIsLoading(false);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Store the auth token and user data
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('authUser', JSON.stringify(data.user));
-      
+    if (result?.error) {
       toast({
-        title: t.pages.login.loginSuccess,
-        description: t.pages.login.welcomeBackUser(data.user.name || values.email),
-      });
-      
-      // Redirect based on user role
-      if (data.user.role === 'staff') {
-        router.push('/dashboard/users');
-      } else {
-        router.push('/dashboard');
-      }
-      
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to login. Please try again.',
+        title: 'Error de inicio de sesión',
+        description: 'Credenciales inválidas. Por favor, inténtalo de nuevo.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+    } else if (result?.ok) {
+      toast({
+        title: 'Inicio de sesión exitoso',
+        description: `¡Bienvenido de nuevo!`,
+      });
+      router.push('/dashboard');
     }
   }
 
