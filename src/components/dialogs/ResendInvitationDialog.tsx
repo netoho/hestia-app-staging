@@ -25,7 +25,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { PolicyStatus } from '@prisma/client';
 
 const resendInvitationSchema = z.object({
@@ -55,7 +54,6 @@ export function ResendInvitationDialog({
 }: ResendInvitationDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { token } = useAuth();
 
   const form = useForm<ResendInvitationFormValues>({
     resolver: zodResolver(resendInvitationSchema),
@@ -67,15 +65,12 @@ export function ResendInvitationDialog({
   });
 
   const onSubmit = async (values: ResendInvitationFormValues) => {
-    if (!token) return;
-
     setIsLoading(true);
     try {
       const response = await fetch(`/api/policies/${policy.id}/resend`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(values),
       });

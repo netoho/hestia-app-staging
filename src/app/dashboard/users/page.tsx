@@ -65,7 +65,7 @@ export default function UsersPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     
-    const { token } = useAuth();
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
 
     // Table state management
@@ -92,13 +92,11 @@ export default function UsersPage() {
                 ? `/api/staff/users?${queryString}` 
                 : '/api/staff/users';
             
-            const response = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+            const response = await fetch(url);
+
             if (!response.ok) {
-                throw new Error('Failed to fetch users');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch users');
             }
             const data = await response.json();
             setUsers(data.users || []);
@@ -111,10 +109,10 @@ export default function UsersPage() {
     };
 
     useEffect(() => {
-        if (token) {
+        if (isAuthenticated) {
             fetchUsers(tableState.queryString);
         }
-    }, [token, tableState.queryString]);
+    }, [isAuthenticated, tableState.queryString]);
 
     const handleCreateUser = () => {
         setSelectedUser(null);
@@ -176,7 +174,7 @@ export default function UsersPage() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? (
+                    {(isLoading || isAuthLoading) ? (
                         <UsersSkeleton />
                     ) : error ? (
                         <div className="text-center py-10 text-destructive">
@@ -238,7 +236,7 @@ export default function UsersPage() {
                         </Table>
                     )}
                     
-                    {!isLoading && !error && users.length > 0 && (
+                    {!(isLoading || isAuthLoading) && !error && users.length > 0 && (
                         <TablePagination
                             pagination={pagination}
                             onPageChange={tableState.setPage}
@@ -254,7 +252,6 @@ export default function UsersPage() {
                 onOpenChange={setUserDialogOpen}
                 user={selectedUser}
                 onSuccess={handleSuccess}
-                authToken={token || undefined}
             />
 
             <DeleteUserDialog
@@ -262,7 +259,6 @@ export default function UsersPage() {
                 onOpenChange={setDeleteDialogOpen}
                 user={selectedUser}
                 onSuccess={handleSuccess}
-                authToken={token || undefined}
             />
         </div>
     );

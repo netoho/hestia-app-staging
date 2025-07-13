@@ -48,7 +48,6 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { token } = useAuth();
 
   const form = useForm<PolicyInitiateFormValues>({
     resolver: zodResolver(policyInitiateSchema),
@@ -68,7 +67,6 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(values),
       });
