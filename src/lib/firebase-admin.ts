@@ -30,15 +30,6 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(serviceAccountData),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'hestiaguard.appspot.com'
       });
-
-
-      console.log('Firebase Admin initialized with environment variables');
-      console.log(process.env.FIREBASE_PRIVATE_KEY)
-      console.log(process.env.FIREBASE_STORAGE_BUCKET)
-      console.log(process.env.FIREBASE_PROJECT_ID)
-      console.log(process.env.FIREBASE_CLIENT_EMAIL)
-      console.log(process.env.FIREBASE_PRIVATE_KEY)
-
     }
     
     console.log('Firebase Admin initialized successfully');
