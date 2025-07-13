@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { ResendInvitationDialog } from '@/components/dialogs/ResendInvitationDialog';
 import { t } from '@/lib/i18n';
+import { TablePagination } from './TablePagination';
 
 interface PolicyWithRelations {
   id: string;
@@ -84,17 +85,17 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     page: 1,
     limit: 10,
     total: 0,
-    totalPages: 0,
+    totalPages: 1,
   });
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyWithRelations | null>(null);
 
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
 
   const fetchPolicies = async () => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     
     setLoading(true);
     try {
@@ -105,11 +106,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
         ...(filters.search && { search: filters.search }),
       });
 
-      const response = await fetch(`/api/policies?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(`/api/policies?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(t.pages.policies.errorFetching);
@@ -117,11 +114,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
 
       const data = await response.json();
       setPolicies(data.policies);
-      setPagination(prev => ({
-        ...prev,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
-      }));
+      setPagination(data.pagination);
     } catch (error) {
       console.error('Error fetching policies:', error);
       toast({
@@ -135,10 +128,10 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
   };
 
   useEffect(() => {
-    if (token) {
+    if (isAuthenticated) {
       fetchPolicies();
     }
-  }, [pagination.page, pagination.limit, filters, refreshTrigger, token]);
+  }, [pagination.page, pagination.limit, filters, refreshTrigger, isAuthenticated]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -184,7 +177,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
 
   const handleResendSuccess = () => {
     // Optionally refresh the policy list
-    // fetchPolicies();
+    fetchPolicies();
   };
 
   const canResendInvitation = (status: PolicyStatus) => {
@@ -218,7 +211,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             value={filters.status}
             onValueChange={(value) => handleFilterChange('status', value)}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder={t.pages.policies.table.filterPlaceholder} />
             </SelectTrigger>
             <SelectContent>
@@ -233,7 +226,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
         </div>
 
         {/* Table */}
-        {loading ? (
+        {(loading || isAuthLoading) ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-6 w-6 animate-spin" />
             <span className="ml-2">{t.pages.policies.table.loading}</span>
@@ -285,7 +278,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {policy.initiatedByUser.name || policy.initiatedByUser.email}
+                            {policy.initiatedByUser?.name || policy.initiatedByUser?.email}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -302,7 +295,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -332,34 +325,13 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             </div>
 
             {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex justify-between items-center mt-4">
-                <div className="text-sm text-muted-foreground">
-                  {t.pages.policies.table.pagination.showing(
-                    ((pagination.page - 1) * pagination.limit) + 1,
-                    Math.min(pagination.page * pagination.limit, pagination.total),
-                    pagination.total
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === 1}
-                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  >
-                    {t.pages.policies.table.pagination.previous}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === pagination.totalPages}
-                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  >
-                    {t.pages.policies.table.pagination.next}
-                  </Button>
-                </div>
-              </div>
+            {policies.length > 0 && pagination.totalPages > 1 && (
+              <TablePagination
+                pagination={pagination}
+                onPageChange={(page) => setPagination(p => ({ ...p, page }))}
+                onLimitChange={(limit) => setPagination({ page: 1, limit, total: 0, totalPages: 1 })}
+                isLoading={loading}
+              />
             )}
           </>
         )}

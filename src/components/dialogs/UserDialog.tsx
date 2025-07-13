@@ -48,10 +48,9 @@ interface UserDialogProps {
   onOpenChange: (open: boolean) => void;
   user?: User | null;
   onSuccess: () => void;
-  authToken?: string;
 }
 
-export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: UserDialogProps) {
+export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -63,20 +62,24 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
   const isEditMode = !!user;
 
   useEffect(() => {
-    if (user) {
-      form.reset({
-        name: user.name || '',
-        email: user.email || '',
-        role: (user.role as any) || 'tenant',
-        password: '',
-      });
-    } else {
-      form.reset({
-        name: '',
-        email: '',
-        role: 'tenant',
-        password: '',
-      });
+    if (open) {
+      setError(null);
+      setShowPasswordReset(false);
+      if (user) {
+        form.reset({
+          name: user.name || '',
+          email: user.email || '',
+          role: (user.role as any) || 'tenant',
+          password: '',
+        });
+      } else {
+        form.reset({
+          name: '',
+          email: '',
+          role: 'tenant',
+          password: '',
+        });
+      }
     }
   }, [user, open, form]);
 
@@ -85,7 +88,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
     setError(null);
 
     try {
-      const url = isEditMode ? `/api/staff/users/${user.id}` : '/api/staff/users';
+      const url = isEditMode ? `/api/staff/users/${user?.id}` : '/api/staff/users';
       const method = isEditMode ? 'PUT' : 'POST';
       
       const payload: any = { ...data };
@@ -93,14 +96,11 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
         if (!payload.password) delete payload.password;
       }
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      };
-
       const response = await fetch(url, {
         method,
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
       });
 
@@ -135,7 +135,6 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({ password: newPassword }),
       });
@@ -162,7 +161,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
           <DialogTitle>{isEditMode ? 'Edit User' : 'Create New User'}</DialogTitle>
           <DialogDescription>
             {isEditMode 
-              ? 'Update user information or reset their password.'
+              ? 'Update user information.'
               : 'Add a new user to the system.'}
           </DialogDescription>
         </DialogHeader>
@@ -253,69 +252,11 @@ export function UserDialog({ open, onOpenChange, user, onSuccess, authToken }: U
               />
             )}
 
-            {isEditMode && (
-              <>
-                <Separator className="my-4" />
-                
-                {!showPasswordReset ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setShowPasswordReset(true)}
-                  >
-                    Reset Password
-                  </Button>
-                ) : (
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>New Password</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Enter new password" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowPasswordReset(false);
-                          form.setValue('password', '');
-                        }}
-                        disabled={isLoading}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handlePasswordReset}
-                        disabled={isLoading}
-                      >
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Reset Password
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading || showPasswordReset}>
+              <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditMode ? 'Update User' : 'Create User'}
               </Button>

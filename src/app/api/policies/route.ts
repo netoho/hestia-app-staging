@@ -2,20 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { getPolicies } from '@/lib/services/policyApplicationService';
 import { PolicyStatus } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-config';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user has permission (staff or admin only)
-    if (!['staff', 'admin'].includes(authResult.user.role)) {
+    if (!['staff', 'admin'].includes(session.user.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Only staff and admin can view policies' },
         { status: 403 }

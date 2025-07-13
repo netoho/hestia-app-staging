@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth, requireRole, hashPassword } from '@/lib/auth';
+import { requireRole, hashPassword } from '@/lib/auth';
 import { getUsers, createUser } from '@/lib/services/userService';
 import { z } from 'zod';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-config';
+import prisma from '@/lib/prisma';
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -12,12 +15,12 @@ const createUserSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
-    if (!authResult.success || !authResult.user) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
+    if (!requireRole(session.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -56,12 +59,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
-    if (!authResult.success || !authResult.user) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
+    if (!requireRole(session.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
