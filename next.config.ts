@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: ['https://*.cloudworkstations.dev'],
-  productionBrowserSourceMaps: true
+  // productionBrowserSourceMaps: true
 };
 
 export default nextConfig;
