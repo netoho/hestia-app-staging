@@ -123,16 +123,16 @@ export default function ProfilePage() {
       setConfirmNewPassword('');
 
       toast({
-        title: 'Profile Updated',\
-        description: 'Your profile has been successfully updated.',\
+        title: 'Profile Updated',
+        description: 'Your profile has been successfully updated.',
       });
     } catch (err) {
       console.error('Error saving profile:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       toast({
-        title: 'Error',\
-        description: err instanceof Error ? err.message : 'Failed to update profile',\
-        variant: 'destructive',\
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to update profile',
+        variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
@@ -141,49 +141,49 @@ export default function ProfilePage() {
 
   if (loading || isAuthLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">\
-        <div className="text-center">\
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />\
-          <p className="text-muted-foreground">Loading profile...</p>\
-        </div>\
-      </div>\
-    );\
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return (\
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">\
-        <Card className="w-full max-w-md">\
-          <CardHeader className="text-center">\
-            <CardTitle className="text-red-600">Error Loading Profile</CardTitle>\
-            <CardDescription>{error}</CardDescription>\
-          </CardHeader>\
-          <CardContent>\
-            <Button onClick={() => window.location.reload()} className="w-full">\
-              Retry\
-            </Button>\
-          </CardContent>\
-        </Card>\
-      </div>\
-    );\
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-red-600">Error Loading Profile</CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
-    return (\
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">\
-            <Card className="w-full max-w-md">\
-                <CardHeader className="text-center">\
-                    <CardTitle>Access Denied</CardTitle>\
-                    <CardDescription>Please log in to view your profile.</CardDescription>\
-                </CardHeader>\
-                <CardContent>\
-                    <Button onClick={() => window.location.href = '/login'} className="w-full">\
-                        Go to Login\
-                    </Button>\
-                </CardContent>\
-            </Card>\
-        </div>\
-    );\
+    return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                    <CardTitle>Access Denied</CardTitle>
+                    <CardDescription>Please log in to view your profile.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => window.location.href = '/login'} className="w-full">
+                        Go to Login
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    );
   }
 
   return (
@@ -220,7 +220,7 @@ export default function ProfilePage() {
               <CardDescription>{t.pages.profile.editSubtitle}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form onSubmit={handleSubmit} className="space-y-6">\
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">{t.pages.profile.fullName}</Label>
@@ -264,10 +264,10 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {error && (\
-                  <div className="text-destructive text-sm mt-4">{error}</div>\
-                )}\
-                <div className="flex justify-end space-x-3 mt-4">\
+                {error && (
+                  <div className="text-destructive text-sm mt-4">{error}</div>
+                )}
+                <div className="flex justify-end space-x-3 mt-4">
                   <Button type="button" variant="outline" onClick={() => fetchProfile()} disabled={isSaving}>
                     {t.actions.cancel}
                   </Button>
@@ -276,7 +276,7 @@ export default function ProfilePage() {
                     {t.actions.saveChanges}
                   </Button>
                 </div>
-              </form>\
+              </form>
             </CardContent>
           </Card>
         </div>
