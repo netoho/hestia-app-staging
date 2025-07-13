@@ -281,7 +281,6 @@ export const getSignedDownloadUrl = async (fileName: string, expiresInSeconds: n
     // For emulator, return a mock URL
     return `http://localhost:9199/v0/b/demo-bucket/o/${encodeURIComponent(fileName)}?alt=media&token=mock-token`;
   } else {
-    console.log(fileName, expiresInSeconds)
     try {
       const bucket = storage.bucket();
       const file = bucket.file(fileName);
