@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, Send, Loader2, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { t } from '@/lib/i18n';
 
 interface PolicyReviewStepProps {
   policy: {
@@ -35,9 +36,9 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-2">Review Your Application</h2>
+        <h2 className="text-2xl font-bold mb-2">{t.wizard.review.title}</h2>
         <p className="text-muted-foreground">
-          Please review all the information below before submitting your application.
+          {t.wizard.review.description}
         </p>
       </div>
 
@@ -51,8 +52,8 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
           )}
           <AlertDescription className={isComplete && hasRequiredDocuments ? "text-green-800" : "text-orange-800"}>
             {isComplete && hasRequiredDocuments 
-              ? "Your application is complete and ready to submit!"
-              : "Please complete all required sections before submitting."
+              ? t.wizard.review.completeStatus
+              : t.wizard.review.incompleteStatus
             }
           </AlertDescription>
         </div>
@@ -67,31 +68,31 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-500" />
             )}
-            Personal Information
+            {t.wizard.review.personalInfo}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {policy.profileData ? (
             <div className="space-y-3">
               <div>
-                <span className="font-medium">Nationality:</span>{" "}
+                <span className="font-medium">{t.wizard.review.nationality}</span>{" "}
                 <Badge variant="outline">
-                  {policy.profileData.nationality === 'mexican' ? 'Mexican' : 'Foreign'}
+                  {policy.profileData.nationality === 'mexican' ? t.wizard.review.mexican : t.wizard.review.foreign}
                 </Badge>
               </div>
               {policy.profileData.curp && (
                 <div>
-                  <span className="font-medium">CURP:</span> {policy.profileData.curp}
+                  <span className="font-medium">{t.wizard.review.curp}</span> {policy.profileData.curp}
                 </div>
               )}
               {policy.profileData.passport && (
                 <div>
-                  <span className="font-medium">Passport:</span> {policy.profileData.passport}
+                  <span className="font-medium">{t.wizard.review.passport}</span> {policy.profileData.passport}
                 </div>
               )}
             </div>
           ) : (
-            <p className="text-muted-foreground italic">Not completed</p>
+            <p className="text-muted-foreground italic">{t.wizard.review.notCompleted}</p>
           )}
         </CardContent>
       </Card>
@@ -105,7 +106,7 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-500" />
             )}
-            Employment Information
+            {t.wizard.review.employmentInfo}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -113,22 +114,22 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="font-medium">Employment Status:</span> {policy.employmentData.employmentStatus}
+                  <span className="font-medium">{t.wizard.review.employmentStatus}</span> {policy.employmentData.employmentStatus}
                 </div>
                 <div>
-                  <span className="font-medium">Industry:</span> {policy.employmentData.industry}
+                  <span className="font-medium">{t.wizard.review.industry}</span> {policy.employmentData.industry}
                 </div>
                 <div>
-                  <span className="font-medium">Occupation:</span> {policy.employmentData.occupation}
+                  <span className="font-medium">{t.wizard.review.occupation}</span> {policy.employmentData.occupation}
                 </div>
                 <div>
-                  <span className="font-medium">Company:</span> {policy.employmentData.companyName}
+                  <span className="font-medium">{t.wizard.review.company}</span> {policy.employmentData.companyName}
                 </div>
                 <div>
-                  <span className="font-medium">Position:</span> {policy.employmentData.position}
+                  <span className="font-medium">{t.wizard.review.position}</span> {policy.employmentData.position}
                 </div>
                 <div>
-                  <span className="font-medium">Monthly Income:</span>{" "}
+                  <span className="font-medium">{t.wizard.review.monthlyIncome}</span>{" "}
                   <span className="text-green-600 font-semibold">
                     {formatCurrency(policy.employmentData.monthlyIncome)}
                   </span>
@@ -136,23 +137,23 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
               </div>
               {policy.employmentData.companyWebsite && (
                 <div>
-                  <span className="font-medium">Company Website:</span> {policy.employmentData.companyWebsite}
+                  <span className="font-medium">{t.wizard.review.companyWebsite}</span> {policy.employmentData.companyWebsite}
                 </div>
               )}
               {policy.employmentData.workAddress && (
                 <div>
-                  <span className="font-medium">Work Address:</span> {policy.employmentData.workAddress}
+                  <span className="font-medium">{t.wizard.review.workAddress}</span> {policy.employmentData.workAddress}
                 </div>
               )}
               <div>
-                <span className="font-medium">Credit Check Consent:</span>{" "}
+                <span className="font-medium">{t.wizard.review.creditCheckConsent}</span>{" "}
                 <Badge variant={policy.employmentData.creditCheckConsent ? "default" : "destructive"}>
-                  {policy.employmentData.creditCheckConsent ? "Granted" : "Not Granted"}
+                  {policy.employmentData.creditCheckConsent ? t.wizard.review.granted : t.wizard.review.notGranted}
                 </Badge>
               </div>
             </div>
           ) : (
-            <p className="text-muted-foreground italic">Not completed</p>
+            <p className="text-muted-foreground italic">{t.wizard.review.notCompleted}</p>
           )}
         </CardContent>
       </Card>
@@ -166,17 +167,17 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-500" />
             )}
-            References
+            {t.wizard.review.references}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {policy.referencesData ? (
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">Personal Reference (Required)</h4>
+                <h4 className="font-medium mb-2">{t.wizard.review.personalReference}</h4>
                 <div className="pl-4 space-y-1">
-                  <div><span className="font-medium">Name:</span> {policy.referencesData.personalReferenceName}</div>
-                  <div><span className="font-medium">Phone:</span> {policy.referencesData.personalReferencePhone}</div>
+                  <div><span className="font-medium">{t.wizard.review.name}</span> {policy.referencesData.personalReferenceName}</div>
+                  <div><span className="font-medium">{t.wizard.review.phone}</span> {policy.referencesData.personalReferencePhone}</div>
                 </div>
               </div>
               
@@ -184,11 +185,11 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
                 <>
                   <Separator />
                   <div>
-                    <h4 className="font-medium mb-2">Additional References</h4>
+                    <h4 className="font-medium mb-2">{t.wizard.review.additionalReferences}</h4>
                     <div className="pl-4 space-y-3">
                       {policy.referencesData.workReferenceName && (
                         <div>
-                          <div className="font-medium text-sm">Work Reference:</div>
+                          <div className="font-medium text-sm">{t.wizard.review.workReference}</div>
                           <div className="text-sm">
                             {policy.referencesData.workReferenceName} - {policy.referencesData.workReferencePhone}
                           </div>
@@ -196,7 +197,7 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
                       )}
                       {policy.referencesData.landlordReferenceName && (
                         <div>
-                          <div className="font-medium text-sm">Landlord Reference:</div>
+                          <div className="font-medium text-sm">{t.wizard.review.landlordReference}</div>
                           <div className="text-sm">
                             {policy.referencesData.landlordReferenceName} - {policy.referencesData.landlordReferencePhone}
                           </div>
@@ -208,7 +209,7 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
               )}
             </div>
           ) : (
-            <p className="text-muted-foreground italic">Not completed</p>
+            <p className="text-muted-foreground italic">{t.wizard.review.notCompleted}</p>
           )}
         </CardContent>
       </Card>
@@ -222,7 +223,7 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
             ) : (
               <AlertCircle className="h-5 w-5 text-orange-500" />
             )}
-            Documents
+            {t.wizard.review.documents}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -231,37 +232,37 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  <span className="font-medium">Identification:</span>
+                  <span className="font-medium">{t.wizard.review.identification}</span>
                   <Badge variant={policy.documentsData.identificationCount > 0 ? "default" : "outline"}>
-                    {policy.documentsData.identificationCount} files
+                    {policy.documentsData.identificationCount} {t.wizard.review.files}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  <span className="font-medium">Income Proof:</span>
+                  <span className="font-medium">{t.wizard.review.incomeProof}</span>
                   <Badge variant={policy.documentsData.incomeCount > 0 ? "default" : "outline"}>
-                    {policy.documentsData.incomeCount} files
+                    {policy.documentsData.incomeCount} {t.wizard.review.files}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  <span className="font-medium">Optional:</span>
+                  <span className="font-medium">{t.wizard.review.optional}</span>
                   <Badge variant="outline">
-                    {policy.documentsData.optionalCount} files
+                    {policy.documentsData.optionalCount} {t.wizard.review.files}
                   </Badge>
                 </div>
               </div>
               {policy.documentsData.incomeDocsHavePassword && (
                 <div>
-                  <span className="font-medium">Income documents password protected:</span>{" "}
+                  <span className="font-medium">{t.wizard.review.incomePasswordProtected}</span>{" "}
                   <Badge variant={policy.documentsData.incomeDocsHavePassword === 'yes' ? "destructive" : "default"}>
-                    {policy.documentsData.incomeDocsHavePassword === 'yes' ? 'Yes' : 'No'}
+                    {policy.documentsData.incomeDocsHavePassword === 'yes' ? t.wizard.review.yes : t.wizard.review.no}
                   </Badge>
                 </div>
               )}
             </div>
           ) : (
-            <p className="text-muted-foreground italic">No documents uploaded</p>
+            <p className="text-muted-foreground italic">{t.wizard.review.noDocuments}</p>
           )}
         </CardContent>
       </Card>
@@ -269,16 +270,16 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
       {/* Submission */}
       <Card className="border-2 border-primary">
         <CardHeader>
-          <CardTitle>Ready to Submit?</CardTitle>
+          <CardTitle>{t.wizard.review.readyToSubmit}</CardTitle>
           <CardDescription>
-            By submitting this application, you confirm that all information provided is accurate and complete.
+            {t.wizard.review.readyToSubmitDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center">
             <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
               <ChevronLeft className="h-4 w-4 mr-2" />
-              Back to Documents
+              {t.wizard.review.backToDocuments}
             </Button>
             <Button 
               onClick={onSubmit} 
@@ -288,12 +289,12 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
+                  {t.wizard.messages.submitting}
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Submit Application
+                  {t.wizard.review.submitApplication}
                 </>
               )}
             </Button>

@@ -14,6 +14,7 @@ import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyRefer
 import { CreatePolicyDocumentsForm } from '@/components/forms/CreatePolicyDocumentsForm';
 import { PolicyReviewStep } from '@/components/tenant/PolicyReviewStep';
 import { useToast } from '@/hooks/use-toast';
+import { t } from '@/lib/i18n';
 
 interface PolicyWizardProps {
   token: string;
@@ -30,27 +31,27 @@ interface PolicyWizardProps {
 }
 
 const stepTitles: Record<number, string> = {
-  1: 'Profile Information',
-  2: 'Employment Details',
-  3: 'References',
-  4: 'Documents Upload',
-  5: 'Review & Submit'
+  1: t.wizard.stepTitles[1],
+  2: t.wizard.stepTitles[2],
+  3: t.wizard.stepTitles[3],
+  4: t.wizard.stepTitles[4],
+  5: t.wizard.stepTitles[5]
 };
 
 export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   const [currentStep, setCurrentStep] = useState(Math.max(1, policy.currentStep));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [userNavigatedStep, setUserNavigatedStep] = useState<number | null>(null);
   const { toast } = useToast();
 
-  // Update currentStep when policy changes, but not when we're navigating
+  // Update currentStep when policy changes, but respect user navigation
   useEffect(() => {
-    if (!isNavigating) {
-      // Always sync with the policy's currentStep when not navigating
-      // This ensures we're always on the correct step
+    if (!isNavigating && userNavigatedStep === null) {
+      // Only sync with policy's currentStep if user hasn't manually navigated
       setCurrentStep(Math.max(1, policy.currentStep));
     }
-  }, [policy.currentStep, isNavigating]);
+  }, [policy.currentStep, isNavigating, userNavigatedStep]);
 
   const handleStepComplete = async (stepData: any) => {
     try {
@@ -71,19 +72,22 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
 
       const result = await response.json();
       
+      // Clear user navigation since we're moving forward through completion
+      setUserNavigatedStep(null);
+      
       // Update parent to refresh policy data
       // The backend has already advanced the currentStep
       await onUpdate();
       
       toast({
-        title: 'Progress Saved',
-        description: `Step ${currentStep} completed successfully.`,
+        title: t.wizard.messages.progressSaved,
+        description: t.wizard.messages.stepCompleted(currentStep),
       });
     } catch (error) {
       console.error('Error saving step:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save progress',
+        title: t.misc.error,
+        description: error instanceof Error ? error.message : t.wizard.messages.failedToSave,
         variant: 'destructive',
       });
     } finally {
@@ -107,17 +111,20 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
         throw new Error(error.error || 'Failed to submit application');
       }
 
+      toast({
+        title: t.wizard.messages.applicationSubmitted,
+        description: t.wizard.messages.applicationSubmittedDescription,
+      });
+
+      // Update parent policy state - this will cause the parent to switch 
+      // from wizard view to summary view automatically
       await onUpdate();
       
-      toast({
-        title: 'Application Submitted!',
-        description: 'Your rental application has been submitted successfully.',
-      });
     } catch (error) {
       console.error('Error submitting application:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to submit application',
+        title: t.misc.error,
+        description: error instanceof Error ? error.message : t.wizard.messages.failedToSubmit,
         variant: 'destructive',
       });
     } finally {
@@ -127,8 +134,10 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
 
   const handleBack = () => {
     if (currentStep > 1) {
+      const newStep = currentStep - 1;
       setIsNavigating(true);
-      setCurrentStep(currentStep - 1);
+      setCurrentStep(newStep);
+      setUserNavigatedStep(newStep); // Mark that user manually navigated
       setTimeout(() => setIsNavigating(false), 300);
     }
   };
@@ -137,13 +146,15 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
     if (isStepAccessible(step)) {
       setIsNavigating(true);
       setCurrentStep(step);
+      setUserNavigatedStep(step); // Mark that user manually navigated
       setTimeout(() => setIsNavigating(false), 300);
     }
   };
 
   const getStepStatus = (step: number) => {
-    if (step < currentStep) return 'completed';
-    if (step === currentStep) return 'current';
+    // Status is based on policy progress, not current view
+    if (step < policy.currentStep) return 'completed';
+    if (step === currentStep) return 'current'; // Current view step
     return 'upcoming';
   };
 
@@ -157,12 +168,14 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
       case 1:
         return (
           <CreatePolicyProfileForm 
+            initialData={policy.profileData}
             onNext={handleStepComplete}
           />
         );
       case 2:
         return (
           <CreatePolicyEmploymentForm
+            initialData={policy.employmentData}
             onNext={handleStepComplete}
             onBack={handleBack}
           />
@@ -170,6 +183,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
       case 3:
         return (
           <CreatePolicyReferencesForm
+            initialData={policy.referencesData}
             onNext={handleStepComplete}
             onBack={handleBack}
           />
@@ -179,6 +193,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
           <CreatePolicyDocumentsForm
             token={token}
             policyId={policy.id}
+            initialData={policy.documentsData}
             onNext={handleStepComplete}
             onBack={handleBack}
           />
@@ -247,8 +262,8 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
           <div className="mt-6">
             <Progress value={(currentStep / 5) * 100} className="h-2" />
             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>Step {currentStep} of 5</span>
-              <span>{Math.round((currentStep / 5) * 100)}% Complete</span>
+              <span>{t.wizard.progress.step} {currentStep} {t.wizard.progress.of} 5</span>
+              <span>{Math.round((currentStep / 5) * 100)}% {t.wizard.progress.complete}</span>
             </div>
           </div>
         </CardContent>

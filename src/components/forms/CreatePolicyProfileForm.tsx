@@ -30,17 +30,18 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface CreatePolicyProfileFormProps {
   onNext: (data: ProfileFormValues) => void;
+  initialData?: ProfileFormValues;
 }
 
-export function CreatePolicyProfileForm({ onNext }: CreatePolicyProfileFormProps) {
-  const [nationality, setNationality] = useState<'mexican' | 'foreign'>('mexican');
+export function CreatePolicyProfileForm({ onNext, initialData }: CreatePolicyProfileFormProps) {
+  const [nationality, setNationality] = useState<'mexican' | 'foreign'>(initialData?.nationality || 'mexican');
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      nationality: 'mexican',
-      curp: '',
-      passport: '',
+      nationality: initialData?.nationality || 'mexican',
+      curp: initialData?.curp || '',
+      passport: initialData?.passport || '',
     },
   });
 

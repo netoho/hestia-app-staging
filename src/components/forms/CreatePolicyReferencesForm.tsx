@@ -27,18 +27,19 @@ type ReferencesFormValues = z.infer<typeof referencesSchema>;
 interface CreatePolicyReferencesFormProps {
   onNext: (data: ReferencesFormValues) => void;
   onBack: () => void;
+  initialData?: ReferencesFormValues;
 }
 
-export function CreatePolicyReferencesForm({ onNext, onBack }: CreatePolicyReferencesFormProps) {
+export function CreatePolicyReferencesForm({ onNext, onBack, initialData }: CreatePolicyReferencesFormProps) {
   const form = useForm<ReferencesFormValues>({
     resolver: zodResolver(referencesSchema),
     defaultValues: {
-      personalReferenceName: '',
-      personalReferencePhone: '',
-      workReferenceName: '',
-      workReferencePhone: '',
-      landlordReferenceName: '',
-      landlordReferencePhone: '',
+      personalReferenceName: initialData?.personalReferenceName || '',
+      personalReferencePhone: initialData?.personalReferencePhone || '',
+      workReferenceName: initialData?.workReferenceName || '',
+      workReferencePhone: initialData?.workReferencePhone || '',
+      landlordReferenceName: initialData?.landlordReferenceName || '',
+      landlordReferencePhone: initialData?.landlordReferencePhone || '',
     },
   });
 

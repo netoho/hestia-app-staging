@@ -37,6 +37,7 @@ interface CreatePolicyDocumentsFormProps {
   policyId?: string;
   onNext: (data: any) => void;
   onBack: () => void;
+  initialData?: any; // Contains document counts and password info
 }
 
 type UploadableFile = {
@@ -234,13 +235,14 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
 };
 
 
-export function CreatePolicyDocumentsForm({ token, policyId, onNext, onBack }: CreatePolicyDocumentsFormProps) {
+export function CreatePolicyDocumentsForm({ token, policyId, onNext, onBack, initialData }: CreatePolicyDocumentsFormProps) {
   const form = useForm<DocumentsFormValues>({
     resolver: zodResolver(documentsSchema),
     defaultValues: {
         identification: [],
         proofOfIncome: [],
         optional: [],
+        incomeDocsHavePassword: initialData?.incomeDocsHavePassword || 'no',
     },
   });
 

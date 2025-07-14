@@ -34,22 +34,23 @@ type EmploymentFormValues = z.infer<typeof employmentSchema>;
 interface CreatePolicyEmploymentFormProps {
   onNext: (data: EmploymentFormValues) => void;
   onBack: () => void;
+  initialData?: EmploymentFormValues;
 }
 
-export function CreatePolicyEmploymentForm({ onNext, onBack }: CreatePolicyEmploymentFormProps) {
+export function CreatePolicyEmploymentForm({ onNext, onBack, initialData }: CreatePolicyEmploymentFormProps) {
   const form = useForm<EmploymentFormValues>({
     resolver: zodResolver(employmentSchema),
     defaultValues: {
-      employmentStatus: undefined,
-      industry: undefined,
-      occupation: '',
-      companyName: '',
-      position: '',
-      companyWebsite: '',
-      workAddress: '',
-      incomeSource: undefined,
-      monthlyIncome: undefined,
-      creditCheckConsent: false,
+      employmentStatus: initialData?.employmentStatus || undefined,
+      industry: initialData?.industry || undefined,
+      occupation: initialData?.occupation || '',
+      companyName: initialData?.companyName || '',
+      position: initialData?.position || '',
+      companyWebsite: initialData?.companyWebsite || '',
+      workAddress: initialData?.workAddress || '',
+      incomeSource: initialData?.incomeSource || undefined,
+      monthlyIncome: initialData?.monthlyIncome || undefined,
+      creditCheckConsent: initialData?.creditCheckConsent || false,
     },
   });
 
