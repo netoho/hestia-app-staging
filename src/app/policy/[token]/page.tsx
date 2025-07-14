@@ -71,11 +71,25 @@ export default function TenantPolicyPage() {
   }, [token]);
 
   const getStepProgress = (currentStep: number, status: PolicyStatus) => {
-    if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED || status === PolicyStatus.DENIED) {
+    if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED || status === PolicyStatus.DENIED || status === PolicyStatus.UNDER_REVIEW) {
       return 100;
     }
+
     return (currentStep / 4) * 100;
   };
+
+  const getStepProgressMessage = (currentStep: number, status: PolicyStatus) => {
+    if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED) {
+      return `100% Complete`
+    }
+
+
+    if (status === PolicyStatus.UNDER_REVIEW || status === PolicyStatus.DENIED) {
+      return ``
+    }
+
+    return `${Math.round(getStepProgress(currentStep, status))}% Complete`
+  }
 
   const isApplicationComplete = (status: PolicyStatus) => {
     return status === PolicyStatus.SUBMITTED || 
@@ -194,7 +208,7 @@ export default function TenantPolicyPage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">{t.wizard.header.applicationProgress}</span>
                 <span className="text-sm text-muted-foreground">
-                  {Math.round(getStepProgress(policy.currentStep, policy.status))}% Complete
+                  {getStepProgressMessage(policy.currentStep, policy.status)}
                 </span>
               </div>
               <Progress 
