@@ -127,7 +127,8 @@ const es = {
                 { href: '/dashboard/policies', label: 'Gestionar Pólizas', icon: FileText },
                 { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
                 { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
-                { href: '/dashboard/system-settings', label: 'Config. del Sistema', icon: Settings },
+                // { href: '/dashboard/system-settings', label: 'Config. del Sistema', icon: Settings },
+                { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
             ] as NavItem[],
             userMenu: {
                 profile: "Perfil",
