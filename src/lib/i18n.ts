@@ -49,12 +49,17 @@ const es = {
     },
 
     policyStatus: {
-        pending: 'Pendiente',
+        draft: 'Borrador',
+        sent_to_tenant: 'Enviada a Inquilin@',
+        in_progress: 'En Proceso',
+        submitted: 'Completada por Inquilin@',
+        under_review: 'En Revisión',
         approved: 'Aprobada',
-        active: 'Activa',
-        rejected: 'Rechazada',
-        expired: 'Expirada',
+        denied: 'Rechazada',
     } as Record<PolicyStatus, string>,
+
+
+
 
 
     // Layout Components
@@ -133,8 +138,128 @@ const es = {
         },
     },
 
+    // Polizy Wizard
+    wizard: {
+        stepTitles: {
+            1: "Información del Perfil",
+            2: "Detalles de Empleo", 
+            3: "Referencias",
+            4: "Carga de Documentos",
+            5: "Revisión y Envío"
+        },
+        progress: {
+            step: "Paso",
+            of: "de",
+            complete: "Completado"
+        },
+        messages: {
+            progressSaved: "Progreso Guardado",
+            stepCompleted: (step: number) => `Paso ${step} completado exitosamente.`,
+            applicationSubmitted: "¡Solicitud Enviada!",
+            applicationSubmittedDescription: "Tu solicitud de alquiler ha sido enviada exitosamente.",
+            submitting: "Enviando...",
+            loadingApplication: "Cargando tu solicitud...",
+            accessError: "Error de Acceso",
+            accessErrorDescription: "Si continúas experimentando problemas, contacta a tu agente para asistencia.",
+            policyNotFound: "Póliza No Encontrada",
+            policyNotFoundDescription: "La solicitud de póliza solicitada no se pudo encontrar.",
+            invalidLink: "Enlace inválido o expirado. Contacta a tu agente para una nueva invitación.",
+            failedToLoad: "Error al cargar la solicitud de póliza",
+            unexpectedError: "Ocurrió un error inesperado",
+            failedToSave: "Error al guardar el progreso",
+            failedToSubmit: "Error al enviar la solicitud"
+        },
+        status: {
+            welcome: "¡Bienvenido! Por favor completa el formulario de solicitud a continuación.",
+            inProgress: "Tu solicitud está en progreso. Continúa donde lo dejaste.",
+            submitted: "¡Solicitud enviada exitosamente! Revisaremos tu información y te contactaremos pronto.",
+            underReview: "Tu solicitud está actualmente bajo revisión. Te notificaremos de nuestra decisión pronto.",
+            approved: "¡Felicidades! Tu solicitud ha sido aprobada.",
+            denied: "Tu solicitud ha sido revisada. Contactanos para más información.",
+            unknown: "Estado de solicitud desconocido.",
+            submittedTitle: "¡Solicitud Enviada Exitosamente!",
+            submittedDescription: "Tu solicitud de póliza ha sido enviada y está siendo procesada por nuestro equipo.",
+            notifications: [
+                "📧 Te notificaremos por email sobre el estado de tu solicitud",
+                "⏱️ El tiempo de procesamiento es típicamente de 1-2 días hábiles", 
+                "📞 Si tienes preguntas, contacta a tu agente inmobiliario"
+            ]
+        },
+        review: {
+            title: "Revisa tu Solicitud",
+            description: "Por favor revisa toda la información antes de enviar tu solicitud.",
+            completeStatus: "¡Tu solicitud está completa y lista para enviar!",
+            incompleteStatus: "Por favor completa todas las secciones requeridas antes de enviar.",
+            personalInfo: "Información Personal",
+            employmentInfo: "Información de Empleo",
+            references: "Referencias",
+            documents: "Documentos", 
+            readyToSubmit: "¿Listo para Enviar?",
+            readyToSubmitDescription: "Al enviar esta solicitud, confirmas que toda la información proporcionada es exacta y completa.",
+            backToDocuments: "Volver a Documentos",
+            submitApplication: "Enviar Solicitud",
+            notCompleted: "No completado",
+            nationality: "Nacionalidad:",
+            mexican: "Mexicano",
+            foreign: "Extranjero",
+            curp: "CURP:",
+            passport: "Pasaporte:",
+            employmentStatus: "Estado de Empleo:",
+            industry: "Industria:",
+            occupation: "Ocupación:",
+            company: "Empresa:",
+            position: "Puesto:",
+            monthlyIncome: "Ingreso Mensual:",
+            companyWebsite: "Sitio Web de la Empresa:",
+            workAddress: "Dirección de Trabajo:",
+            creditCheckConsent: "Consentimiento de Revisión Crediticia:",
+            granted: "Otorgado",
+            notGranted: "No Otorgado",
+            personalReference: "Referencia Personal (Requerida)",
+            additionalReferences: "Referencias Adicionales",
+            workReference: "Referencia Laboral:",
+            landlordReference: "Referencia de Propietario:",
+            name: "Nombre:",
+            phone: "Teléfono:",
+            identification: "Identificación:",
+            incomeProof: "Comprobante de Ingresos:",
+            optional: "Opcional:",
+            files: "archivos",
+            incomePasswordProtected: "Documentos de ingresos protegidos por contraseña:",
+            yes: "Sí",
+            no: "No",
+            noDocuments: "No se han subido documentos"
+        },
+        header: {
+            title: "Solicitud de Póliza Hestia",
+            description: "Completa tu solicitud de alquiler a continuación",
+            applicationProgress: "Progreso de Solicitud"
+        },
+        summary: {
+            title: "Resumen de Solicitud",
+            submitted: "Tu solicitud ha sido enviada y está siendo revisada.",
+            underReview: "Tu solicitud está actualmente bajo revisión.",
+            approved: "¡Felicidades! Tu solicitud ha sido aprobada.", 
+            denied: "Tu solicitud ha sido revisada. Contacta a tu agente para más información.",
+            informationSent: "Información Enviada:",
+            personalInfo: "Información Personal:",
+            employmentInfo: "Información Laboral:",
+            references: "Referencias:",
+            documents: "Documentos:",
+            complete: "Completa",
+            incomplete: "Incompleta",
+            uploaded: "archivos subidos",
+            uploadedDocuments: "Documentos Subidos:",
+            identification: "Identificación",
+            income: "Ingresos",
+            email: "Email:",
+            sent: "Enviado:"
+        }
+    },
+
     // Pages
     pages: {
+
         home: {
             heroTitle: "Asegura tu Tranquilidad con Hestia",
             heroSubtitle: "Pólizas de garantía de alquiler integrales para propietarios, inquilinos y asesores inmobiliarios. Navega el mercado de alquiler con confianza.",
@@ -535,123 +660,6 @@ const es = {
             timezone: "Zona Horaria",
             timezoneValue: "(GMT-06:00) Hora Central",
             saveAll: "Guardar Toda la Configuración",
-        },
-        wizard: {
-            stepTitles: {
-                1: "Información del Perfil",
-                2: "Detalles de Empleo", 
-                3: "Referencias",
-                4: "Carga de Documentos",
-                5: "Revisión y Envío"
-            },
-            progress: {
-                step: "Paso",
-                of: "de",
-                complete: "Completado"
-            },
-            messages: {
-                progressSaved: "Progreso Guardado",
-                stepCompleted: (step: number) => `Paso ${step} completado exitosamente.`,
-                applicationSubmitted: "¡Solicitud Enviada!",
-                applicationSubmittedDescription: "Tu solicitud de alquiler ha sido enviada exitosamente.",
-                submitting: "Enviando...",
-                loadingApplication: "Cargando tu solicitud...",
-                accessError: "Error de Acceso",
-                accessErrorDescription: "Si continúas experimentando problemas, contacta a tu agente para asistencia.",
-                policyNotFound: "Póliza No Encontrada",
-                policyNotFoundDescription: "La solicitud de póliza solicitada no se pudo encontrar.",
-                invalidLink: "Enlace inválido o expirado. Contacta a tu agente para una nueva invitación.",
-                failedToLoad: "Error al cargar la solicitud de póliza",
-                unexpectedError: "Ocurrió un error inesperado",
-                failedToSave: "Error al guardar el progreso",
-                failedToSubmit: "Error al enviar la solicitud"
-            },
-            status: {
-                welcome: "¡Bienvenido! Por favor completa el formulario de solicitud a continuación.",
-                inProgress: "Tu solicitud está en progreso. Continúa donde lo dejaste.",
-                submitted: "¡Solicitud enviada exitosamente! Revisaremos tu información y te contactaremos pronto.",
-                underReview: "Tu solicitud está actualmente bajo revisión. Te notificaremos de nuestra decisión pronto.",
-                approved: "¡Felicidades! Tu solicitud ha sido aprobada.",
-                denied: "Tu solicitud ha sido revisada. Contactanos para más información.",
-                unknown: "Estado de solicitud desconocido.",
-                submittedTitle: "¡Solicitud Enviada Exitosamente!",
-                submittedDescription: "Tu solicitud de póliza ha sido enviada y está siendo procesada por nuestro equipo.",
-                notifications: [
-                    "📧 Te notificaremos por email sobre el estado de tu solicitud",
-                    "⏱️ El tiempo de procesamiento es típicamente de 1-2 días hábiles", 
-                    "📞 Si tienes preguntas, contacta a tu agente inmobiliario"
-                ]
-            },
-            review: {
-                title: "Revisa tu Solicitud",
-                description: "Por favor revisa toda la información antes de enviar tu solicitud.",
-                completeStatus: "¡Tu solicitud está completa y lista para enviar!",
-                incompleteStatus: "Por favor completa todas las secciones requeridas antes de enviar.",
-                personalInfo: "Información Personal",
-                employmentInfo: "Información de Empleo",
-                references: "Referencias",
-                documents: "Documentos", 
-                readyToSubmit: "¿Listo para Enviar?",
-                readyToSubmitDescription: "Al enviar esta solicitud, confirmas que toda la información proporcionada es exacta y completa.",
-                backToDocuments: "Volver a Documentos",
-                submitApplication: "Enviar Solicitud",
-                notCompleted: "No completado",
-                nationality: "Nacionalidad:",
-                mexican: "Mexicano",
-                foreign: "Extranjero",
-                curp: "CURP:",
-                passport: "Pasaporte:",
-                employmentStatus: "Estado de Empleo:",
-                industry: "Industria:",
-                occupation: "Ocupación:",
-                company: "Empresa:",
-                position: "Puesto:",
-                monthlyIncome: "Ingreso Mensual:",
-                companyWebsite: "Sitio Web de la Empresa:",
-                workAddress: "Dirección de Trabajo:",
-                creditCheckConsent: "Consentimiento de Revisión Crediticia:",
-                granted: "Otorgado",
-                notGranted: "No Otorgado",
-                personalReference: "Referencia Personal (Requerida)",
-                additionalReferences: "Referencias Adicionales",
-                workReference: "Referencia Laboral:",
-                landlordReference: "Referencia de Propietario:",
-                name: "Nombre:",
-                phone: "Teléfono:",
-                identification: "Identificación:",
-                incomeProof: "Comprobante de Ingresos:",
-                optional: "Opcional:",
-                files: "archivos",
-                incomePasswordProtected: "Documentos de ingresos protegidos por contraseña:",
-                yes: "Sí",
-                no: "No",
-                noDocuments: "No se han subido documentos"
-            },
-            header: {
-                title: "Solicitud de Póliza Hestia",
-                description: "Completa tu solicitud de alquiler a continuación",
-                applicationProgress: "Progreso de Solicitud"
-            },
-            summary: {
-                title: "Resumen de Solicitud",
-                submitted: "Tu solicitud ha sido enviada y está siendo revisada.",
-                underReview: "Tu solicitud está actualmente bajo revisión.",
-                approved: "¡Felicidades! Tu solicitud ha sido aprobada.", 
-                denied: "Tu solicitud ha sido revisada. Contacta a tu agente para más información.",
-                informationSent: "Información Enviada:",
-                personalInfo: "Información Personal:",
-                employmentInfo: "Información Laboral:",
-                references: "Referencias:",
-                documents: "Documentos:",
-                complete: "Completa",
-                incomplete: "Incompleta",
-                uploaded: "archivos subidos",
-                uploadedDocuments: "Documentos Subidos:",
-                identification: "Identificación",
-                income: "Ingresos",
-                email: "Email:",
-                sent: "Enviado:"
-            }
         },
         faq: {
             title: "Preguntas Frecuentes",

@@ -53,7 +53,7 @@ export interface HowItWorksStep {
   dataAiHint: string;
 }
 
-export type PolicyStatus = 'pending' | 'active' | 'expired' | 'cancelled';
+export type PolicyStatus = 'draft' | 'sent_to_tenant' | 'in_progress' | 'submitted' | 'under_review' | 'approved' | 'denied';
 
 export interface Policy {
   id: string;
