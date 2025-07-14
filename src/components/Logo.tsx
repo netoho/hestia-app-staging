@@ -17,7 +17,7 @@ const Logo = ({ size = 'md', className, iconOnly = false }: LogoProps) => {
   return (
     <Link href="/" className={cn('flex items-center gap-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm', className)}>
       <Image 
-        src="https://www.hestiaplp.com.mx/hosted/images/76/80c5d626334aecb3dc6617bc6208ef/logo-hestia-azul-2.png" 
+        src="/images/logo-hestia-azul-top.png" 
         alt={`${t.siteName} Logo`} 
         width={width} 
         height={height}

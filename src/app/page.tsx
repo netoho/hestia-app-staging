@@ -20,7 +20,7 @@ export default function HomePage() {
         {/* Hero Section */}
         <Section className="bg-gradient-to-br from-primary/10 via-background to-background pt-24 md:pt-32 pb-16 md:pb-24 text-center">
             <Image 
-              src="/logo-shield.png" 
+              src="/images/logo-shield.png" 
               alt="Hestia Logo Shield"
               width={96}
               height={96}
