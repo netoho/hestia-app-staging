@@ -9,6 +9,7 @@ import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
 import { ArrowRight, CheckCircle, ShieldCheck } from 'lucide-react';
 import { PackagesSection } from '@/components/sections/PackagesSection';
+import Image from 'next/image';
 
 export default function HomePage() {
 
@@ -18,7 +19,14 @@ export default function HomePage() {
       <main className="flex-grow">
         {/* Hero Section */}
         <Section className="bg-gradient-to-br from-primary/10 via-background to-background pt-24 md:pt-32 pb-16 md:pb-24 text-center">
-            <ShieldCheck className="mx-auto h-24 w-24 text-primary mb-6" />
+            <Image 
+              src="https://www.hestiaplp.com.mx/hosted/images/12/beb18ccd0545c1ad8e8ac1923ce67c/logos-hes-prinicipal.png" 
+              alt="Hestia Logo Shield"
+              width={96}
+              height={96}
+              className="mx-auto mb-6"
+              data-ai-hint="logo shield"
+            />
             <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary mb-6">
               {t.pages.home.heroTitle}
             </h1>
