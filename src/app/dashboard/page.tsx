@@ -22,7 +22,7 @@ export default function DashboardPage() {
   let welcomeMessage = t.pages.dashboard.welcomeBack;
   let roleSpecificContent = null;
 
-  if (userRole === 'owner') {
+  if (user?.role === 'owner') {
     welcomeMessage = t.pages.dashboard.welcomeOwner;
     roleSpecificContent = (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Add padding or margin here if needed */}
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         </Card>
       </div>
     );
-  } else if (userRole === 'renter') {
+  } else if (user?.role === 'renter') {
     welcomeMessage = t.pages.dashboard.welcomeRenter;
     roleSpecificContent = (
       <div className="grid gap-6 md:grid-cols-2">
@@ -97,8 +97,8 @@ export default function DashboardPage() {
         </Card>
       </div>
     );
-  } else if (userRole === 'staff' || userRole === 'admin') {
-    welcomeMessage = userRole === 'admin' ? t.pages.dashboard.welcomeAdmin : t.pages.dashboard.welcomeStaff;
+  } else if (user?.role === 'staff' || user?.role === 'admin') {
+    welcomeMessage = user?.role === 'admin' ? t.pages.dashboard.welcomeAdmin : t.pages.dashboard.welcomeStaff;
     roleSpecificContent = (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Add padding or margin here if needed */}
         <Card className="shadow-lg rounded-lg">

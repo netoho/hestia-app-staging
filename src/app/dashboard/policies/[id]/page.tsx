@@ -85,19 +85,18 @@ export default function PolicyDetailsPage() {
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
 
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const fetchPolicy = async () => {
-    if (!token) return;
+    if (!isAuthenticated || !user) return;
     
     setLoading(true);
     setError(null);
     
     try {
       const response = await fetch(`/api/policies/${policyId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        method: 'GET',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -121,17 +120,17 @@ export default function PolicyDetailsPage() {
   };
 
   useEffect(() => {
-    if (token && policyId) {
+    if (isAuthenticated && user && policyId) {
       fetchPolicy();
     }
-  }, [token, policyId]);
+  }, [isAuthenticated, user, policyId]);
 
-  // Also try to fetch when token becomes available
+  // Also try to fetch when authentication becomes available
   useEffect(() => {
-    if (token && policyId && !policy && !loading) {
+    if (isAuthenticated && user && policyId && !policy && !loading) {
       fetchPolicy();
     }
-  }, [token]);
+  }, [isAuthenticated, user]);
 
   const getStatusBadgeVariant = (status: PolicyStatus) => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -214,16 +213,16 @@ export default function PolicyDetailsPage() {
   };
 
   const updatePolicyStatus = async (newStatus: PolicyStatus, reason?: string) => {
-    if (!token || !policy) return;
+    if (!isAuthenticated || !user || !policy) return;
     
     setUpdatingStatus(true);
     try {
       const response = await fetch(`/api/policies/${policy.id}/status`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           status: newStatus,
           reason: reason,
@@ -252,14 +251,13 @@ export default function PolicyDetailsPage() {
   };
 
   const handleDownloadDocument = async (documentId: string, fileName: string) => {
-    if (!token || !policy) return;
+    if (!isAuthenticated || !user || !policy) return;
     
     setDownloadingDoc(documentId);
     try {
       const response = await fetch(`/api/policies/${policy.id}/documents/${documentId}/download`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        method: 'GET',
+        credentials: 'include',
       });
 
       if (!response.ok) {

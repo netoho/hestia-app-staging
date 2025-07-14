@@ -44,17 +44,18 @@ export default function PackagesPage() {
     const [packages, setPackages] = useState<Package[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { isAuthenticated, token, isLoading: isAuthLoading } = useAuth();
+    const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
 
     useEffect(() => {
         async function fetchPackages() {
-            if (!token) {
+            if (!isAuthenticated || !user) {
                 setIsLoading(false);
                 return;
             }
             try {
                 const response = await fetch('/api/packages', {
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    method: 'GET',
+                    credentials: 'include',
                 });
                 if (!response.ok) {
                 }
@@ -67,7 +68,7 @@ export default function PackagesPage() {
             }
         };
         fetchPackages();
-    }, []);
+    }, [isAuthenticated, user]);
 
   return (
     <div>

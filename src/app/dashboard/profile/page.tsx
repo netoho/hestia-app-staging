@@ -41,7 +41,7 @@ export default function ProfilePage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   const fetchProfile = async () => {
-    if (!isAuthenticated || !user?.token) {
+    if (!isAuthenticated || !user) {
       setLoading(false);
       return;
     }
@@ -50,9 +50,8 @@ export default function ProfilePage() {
     setError(null);
     try {
       const res = await fetch('/api/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-        },
+        method: 'GET',
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -74,12 +73,12 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && user?.token) {
+    if (isAuthenticated && user) {
       fetchProfile();
     } else if (!isAuthLoading && !isAuthenticated) {
         setLoading(false); // User is not authenticated, stop loading
     }
-  }, [isAuthenticated, user?.token, isAuthLoading]);
+  }, [isAuthenticated, user, isAuthLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +96,8 @@ export default function ProfilePage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: fullName,
           email: email,

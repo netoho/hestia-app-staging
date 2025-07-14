@@ -1,17 +1,17 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const authResult = await verifyAuth(req);
 
-  if (!authResult.success) {
+  if (!authResult.success || !authResult.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { userId } = authResult;
+  const userId = authResult.user.id;
 
   try {
     const user = await prisma.user.findUnique({
@@ -38,14 +38,14 @@ export async function GET(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   const authResult = await verifyAuth(req);
 
-  if (!authResult.success) {
+  if (!authResult.success || !authResult.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { userId } = authResult;
+  const userId = authResult.user.id;
   const body = await req.json();
   const { name, email, phone, address, currentPassword, newPassword } = body;
 
