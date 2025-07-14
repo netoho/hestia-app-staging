@@ -105,13 +105,27 @@ export async function PUT(
     const stepNumber = parseInt(step);
     
     // When a step is completed, advance to the next step
-    // For step 4 (last data collection step), stay at 4 since step 5 is review
-    const nextStep = stepNumber < 4 ? stepNumber + 1 : stepNumber;
+    // Step 4 (documents) advances to step 5 (review), but stays IN_PROGRESS
+    // Only the actual submission API should change status to SUBMITTED
+    const nextStep = stepNumber + 1;
+    const nextStatus = PolicyStatus.IN_PROGRESS; // Always stay IN_PROGRESS until actual submission
+    
+    // Determine the correct currentStep to advance to:
+    // - If editing a previous step, go to the next sequential step (stepNumber + 1)
+    // - If at current progress, advance normally but cap at current progress + 1
+    let newCurrentStep: number;
+    if (stepNumber < policy.currentStep) {
+      // User is editing a previous step, advance sequentially
+      newCurrentStep = stepNumber + 1;
+    } else {
+      // User is at current progress, advance normally
+      newCurrentStep = Math.max(nextStep, policy.currentStep);
+    }
     
     const updateData: any = {
       [fieldName]: validation.data,
-      currentStep: Math.max(nextStep, policy.currentStep),
-      status: PolicyStatus.IN_PROGRESS
+      currentStep: newCurrentStep,
+      status: nextStatus
     };
 
     const updatedPolicy = await prisma.policy.update({
