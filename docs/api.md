@@ -255,22 +255,22 @@ These endpoints require the user to have a "staff" role.
 The following test users are created by the seed script:
 
 - **Staff Admin**
-  - Email: admin@hestia.com
+  - Email: admin@hestiaplp.com.mx
   - Password: password123
   - Role: staff
 
 - **Broker**
-  - Email: broker@hestia.com
+  - Email: broker@hestiaplp.com.mx
   - Password: password123
   - Role: broker
 
 - **Tenant**
-  - Email: tenant@hestia.com
+  - Email: tenant@hestiaplp.com.mx
   - Password: password123
   - Role: tenant
 
 - **Landlord**
-  - Email: landlord@hestia.com
+  - Email: landlord@hestiaplp.com.mx
   - Password: password123
   - Role: landlord
 

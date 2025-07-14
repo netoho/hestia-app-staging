@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.hestiaplp.com.mx',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
   allowedDevOrigins: ['https://*.cloudworkstations.dev'],

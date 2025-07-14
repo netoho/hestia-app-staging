@@ -51,28 +51,28 @@ export default function DemoLoginPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Button
-              onClick={() => handleLogin('admin@hestia.com', 'password123')}
+              onClick={() => handleLogin('admin@hestiaplp.com.mx', 'password123')}
               disabled={isLoading}
               variant="outline"
             >
               Login as Staff Admin
             </Button>
             <Button
-              onClick={() => handleLogin('broker@hestia.com', 'password123')}
+              onClick={() => handleLogin('broker@hestiaplp.com.mx', 'password123')}
               disabled={isLoading}
               variant="outline"
             >
               Login as Broker
             </Button>
             <Button
-              onClick={() => handleLogin('tenant@hestia.com', 'password123')}
+              onClick={() => handleLogin('tenant@hestiaplp.com.mx', 'password123')}
               disabled={isLoading}
               variant="outline"
             >
               Login as Tenant
             </Button>
             <Button
-              onClick={() => handleLogin('landlord@hestia.com', 'password123')}
+              onClick={() => handleLogin('landlord@hestiaplp.com.mx', 'password123')}
               disabled={isLoading}
               variant="outline"
             >

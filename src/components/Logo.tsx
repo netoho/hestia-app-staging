@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShieldHalf } from 'lucide-react'; 
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -10,17 +11,19 @@ interface LogoProps {
 }
 
 const Logo = ({ size = 'md', className, iconOnly = false }: LogoProps) => {
-  const textSizeClass = size === 'sm' ? 'text-xl' : size === 'md' ? 'text-2xl' : 'text-3xl';
-  const iconSizeClass = size === 'sm' ? 'h-5 w-5' : size === 'md' ? 'h-6 w-6' : 'h-8 w-8';
+  const height = size === 'sm' ? 32 : size === 'md' ? 40 : 48;
+  const width = height * 3.5; // Approximate aspect ratio
 
   return (
     <Link href="/" className={cn('flex items-center gap-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm', className)}>
-      <ShieldHalf className={cn(iconSizeClass, 'text-primary group-hover:text-accent transition-colors')} aria-hidden="true" />
-      {!iconOnly && (
-        <span className={cn('font-headline font-bold', textSizeClass, 'text-primary group-hover:text-accent transition-colors')}>
-          {t.siteName}
-        </span>
-      )}
+      <Image 
+        src="https://www.hestiaplp.com.mx/hosted/images/76/80c5d626334aecb3dc6617bc6208ef/logo-hestia-azul-2.png" 
+        alt={`${t.siteName} Logo`} 
+        width={width} 
+        height={height}
+        style={{ height: `${height}px`, width: 'auto' }}
+        priority
+      />
       <span className="sr-only">{t.siteName} Home</span>
     </Link>
   );

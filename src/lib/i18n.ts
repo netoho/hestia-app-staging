@@ -2,6 +2,7 @@
 
 
 
+
 import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
@@ -10,7 +11,7 @@ const es = {
     // Global & Reusable
     siteName: "Hestia",
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
-    contactEmail: "info@hestia.com",
+    contactEmail: "info@hestiaplp.com.mx",
     contactPhone: "+52 55 1234 5678",
     
     actions: {
@@ -530,7 +531,7 @@ const es = {
                 positionLabel: "Puesto actual",
                 positionPlaceholder: "ej. Gerente de Producto",
                 companyWebsiteLabel: "Página web de la empresa (opcional)",
-                companyWebsitePlaceholder: "ej. www.hestia.com",
+                companyWebsitePlaceholder: "ej. www.hestiaplp.com.mx",
                 workAddressLabel: "Dirección actual de tu sitio de trabajo (opcional)",
                 workAddressPlaceholder: "ej. Av. Siempre Viva 742",
                 incomeSourceLabel: "Fuente de ingresos",

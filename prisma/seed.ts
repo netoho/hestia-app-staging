@@ -15,7 +15,7 @@ async function main() {
   // Seed Admin User with hashed password
   const hashedPassword = await bcrypt.hash('password123', 10);
   
-  const adminEmail = 'admin@hestia.com';
+  const adminEmail = 'admin@hestiaplp.com.mx';
   const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {},
@@ -31,19 +31,19 @@ async function main() {
   // Seed additional test users
   const testUsers = [
     {
-      email: 'broker@hestia.com',
+      email: 'broker@hestiaplp.com.mx',
       name: 'John Broker',
       password: hashedPassword,
       role: 'broker'
     },
     {
-      email: 'tenant@hestia.com',
+      email: 'tenant@hestiaplp.com.mx',
       name: 'Alice Tenant',
       password: hashedPassword,
       role: 'tenant'
     },
     {
-      email: 'landlord@hestia.com',
+      email: 'landlord@hestiaplp.com.mx',
       name: 'Bob Landlord',
       password: hashedPassword,
       role: 'landlord'
