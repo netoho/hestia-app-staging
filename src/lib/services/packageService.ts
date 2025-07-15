@@ -8,6 +8,9 @@ interface Package {
   price: number;
   description: string;
   features: string[];
+  ctaText: string;
+  ctaLink: string;
+  highlight: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +22,9 @@ const mockPackages: Package[] = [
     price: 100,
     description: 'A basic package for testing.',
     features: ['Feature A', 'Feature B'],
+    ctaText: 'Learn More',
+    ctaLink: '/register?package=basic',
+    highlight: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -28,6 +34,9 @@ const mockPackages: Package[] = [
     price: 500,
     description: 'A professional package with more features.',
     features: ['Feature A', 'Feature B', 'Feature C', 'Feature D'],
+    ctaText: 'Learn More',
+    ctaLink: '/register?package=basic',
+    highlight: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -46,9 +55,11 @@ export const getPackages = async (): Promise<Package[]> => {
       name: pkg.name,
       price: pkg.price,
       description: pkg.description,
-      features: JSON.parse(pkg.features || '[]'),
-      createdAt: new Date(), // Add these to match interface
-      updatedAt: new Date()
-    }));
-  }
+      features: JSON.parse(pkg.features),
+      ctaText: pkg.ctaText,
+      ctaLink: pkg.ctaLink,
+      highlight: pkg.highlight,
+      createdAt: pkg.createdAt,
+      updatedAt: pkg.updatedAt,
+    }))
 };

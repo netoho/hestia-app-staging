@@ -77,9 +77,9 @@ model Package {
   price       Float
   description String
   features    String // Stored as a JSON string
-  ctaText     String?
+  ctaText     String
   ctaLink     String
-  highlight   Boolean?
+  highlight   Boolean
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
