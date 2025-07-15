@@ -4,7 +4,7 @@ import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2
 
 const es = {
     // Global & Reusable
-    siteName: "Hestia",
+    siteName: "HestiaGuard",
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
     contactEmail: "info@hestiaplp.com.mx",
     contactPhone: "+52 55 1234 5678",
@@ -716,7 +716,7 @@ const es = {
             roleOptions: {
                 tenant: "Inquilino",
                 landlord: "Propietario",
-                broker: "Asesor Inmobiliario"
+                broker: "Asesor"
             }
         },
         terms: {
