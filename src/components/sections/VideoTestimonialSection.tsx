@@ -24,6 +24,7 @@ export function VideoTestimonialSection() {
         subtitle={t.pages.home.videoTestimonialSubtitle}
         titleClassName="text-primary-foreground"
         subtitleClassName="text-primary-foreground/80"
+        className="text-center"
       />
       
       <div className="max-w-4xl mx-auto">
