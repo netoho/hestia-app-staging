@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.hestiaplp.com.mx',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
