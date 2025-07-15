@@ -115,3 +115,10 @@
     font-family: 'PT Sans', sans-serif;
   }
 }
+
+@layer utilities {
+  .parallax-bg {
+    perspective: 1px;
+    transform-style: preserve-3d;
+  }
+}

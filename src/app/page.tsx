@@ -19,13 +19,13 @@ export default function HomePage() {
       <PublicHeader />
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative bg-background text-primary-foreground pt-24 md:pt-32 pb-16 md:pb-24">
-            <div className="absolute inset-0">
+        <section className="relative bg-background text-primary-foreground pt-24 md:pt-32 pb-16 md:pb-24 overflow-hidden parallax-bg">
+            <div className="absolute inset-0 -z-10">
               <Image
                 src="https://placehold.co/1920x1080.png"
                 alt="Happy couple securing their rental agreement"
                 fill
-                className="object-cover"
+                className="object-cover fixed"
                 data-ai-hint="happy couple"
                 priority
               />
