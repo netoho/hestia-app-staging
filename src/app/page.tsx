@@ -10,6 +10,7 @@ import { Section } from '@/components/shared/Section';
 import { ArrowRight, CheckCircle, ShieldCheck } from 'lucide-react';
 import { PackagesSection } from '@/components/sections/PackagesSection';
 import Image from 'next/image';
+import Logo from '@/components/Logo';
 
 export default function HomePage() {
 
@@ -18,31 +19,43 @@ export default function HomePage() {
       <PublicHeader />
       <main className="flex-grow">
         {/* Hero Section */}
-        <Section className="bg-primary pt-24 md:pt-32 pb-16 md:pb-24 text-center">
-            <Image 
-              src="https://placehold.co/150x150.png" 
-              alt="Professional legal services for rental guarantees"
-              width={128}
-              height={128}
-              className="mx-auto mb-8 rounded-full border-4 border-primary-foreground/50 shadow-lg"
-              data-ai-hint="professional lawyer"
-              priority
-            />
-            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary-foreground mb-6">
-              {t.pages.home.heroTitle}
-            </h1>
-            <p className="text-xl md:text-2xl text-primary-foreground/80 max-w-3xl mx-auto mb-10">
-              {t.pages.home.heroSubtitle}
-            </p>
-            <div className="space-x-4">
-              <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-7 rounded-lg">
-                <Link href="/#packages">{t.actions.explorePackages} <ArrowRight className="ml-2 h-5 w-5" /></Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8 py-7 rounded-lg border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/10">
-                <Link href="/contact">{t.actions.requestInfo}</Link>
-              </Button>
+        <section className="relative bg-background text-primary-foreground pt-24 md:pt-32 pb-16 md:pb-24">
+            <div className="absolute inset-0">
+              <Image
+                src="https://placehold.co/1920x1080.png"
+                alt="Happy couple securing their rental agreement"
+                fill
+                className="object-cover"
+                data-ai-hint="happy couple"
+                priority
+              />
+              <div className="absolute inset-0 bg-primary/80 backdrop-brightness-75" />
             </div>
-        </Section>
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div className="text-left">
+                  <Logo size="lg" className="mb-8" />
+                  <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary-foreground mb-6">
+                    {t.pages.home.heroTitle}
+                  </h1>
+                  <p className="text-xl md:text-2xl text-primary-foreground/80 max-w-xl mb-10">
+                    {t.pages.home.heroSubtitle}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-7 rounded-lg">
+                      <Link href="/#packages">{t.actions.explorePackages} <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg" className="text-lg px-8 py-7 rounded-lg border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/10">
+                      <Link href="/contact">{t.actions.requestInfo}</Link>
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  {/* This column is intentionally empty to let the background image show */}
+                </div>
+              </div>
+            </div>
+        </section>
 
         {/* How It Works Section */}
         <Section id="how-it-works" aria-labelledby="how-it-works-title">
