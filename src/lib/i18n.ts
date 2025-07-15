@@ -1,8 +1,3 @@
-
-
-
-
-
 import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
@@ -702,7 +697,7 @@ const es = {
             passwordPlaceholder: "••••••••",
             confirmPassword: "Confirmar Contraseña",
             role: "Soy un...",
-            selectRole: "Selecciona tu rol",
+            selectRole: "Soy un...",
             agreeToTermsPart1: "Acepto los ",
             agreeToTermsPart2: " y la ",
             agreeToTermsPart3: ".",
@@ -718,6 +713,11 @@ const es = {
                 termsRequired: "Debes aceptar los términos y condiciones.",
                 passwordsNoMatch: "Las contraseñas no coinciden.",
             },
+            roleOptions: {
+                tenant: "Inquilino",
+                landlord: "Propietario",
+                broker: "Asesor Inmobiliario"
+            }
         },
         terms: {
             title: "Términos y Condiciones",

@@ -163,9 +163,9 @@ export function RegisterForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="tenant">Tenant</SelectItem>
-                  <SelectItem value="landlord">Landlord</SelectItem>
-                  <SelectItem value="broker">Broker</SelectItem>
+                  <SelectItem value="tenant">{t.pages.register.roleOptions.tenant}</SelectItem>
+                  <SelectItem value="landlord">{t.pages.register.roleOptions.landlord}</SelectItem>
+                  <SelectItem value="broker">{t.pages.register.roleOptions.broker}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
