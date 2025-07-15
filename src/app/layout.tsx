@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { t } from '@/lib/i18n';
 import AuthProvider from '@/components/auth/AuthProvider';
+import ChatwootWidget from '@/components/ChatwootWidget';
 
 export const metadata: Metadata = {
   title: t.layout.root.metaTitle,
@@ -26,6 +27,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <Toaster />
+          <ChatwootWidget />
         </AuthProvider>
       </body>
     </html>
