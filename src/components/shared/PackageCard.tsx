@@ -39,7 +39,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
           "w-full text-lg py-6",
            packageItem.highlight ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-accent hover:bg-accent/90 text-accent-foreground"
            )}>
-          {/* <Link href={packageItem.ctaLink}>{packageItem.ctaText ?? t.actions.learnMore}</Link> */}
+          <Link href={packageItem.ctaLink}>{packageItem.ctaText ?? t.actions.learnMore}</Link>
         </Button>
       </CardFooter>
     </Card>
