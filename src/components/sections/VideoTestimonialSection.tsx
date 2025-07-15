@@ -27,7 +27,7 @@ export function VideoTestimonialSection() {
       />
       
       <div className="max-w-4xl mx-auto">
-        <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-2xl ring-4 ring-accent/50">
+        <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-2xl">
           {selectedVideoId ? (
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${selectedVideoId}?rel=0&showinfo=0&autoplay=0`}
