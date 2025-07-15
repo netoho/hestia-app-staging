@@ -1,10 +1,11 @@
+
 import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
 
 const es = {
     // Global & Reusable
-    siteName: "HestiaGuard",
+    siteName: "Hestia",
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
     contactEmail: "info@hestiaplp.com.mx",
     contactPhone: "+52 55 1234 5678",

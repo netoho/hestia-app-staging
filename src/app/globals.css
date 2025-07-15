@@ -1,10 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 40 56% 93%; /* #F5F5DC - Desaturated Beige */
+    --background: 220 20% 90%; /* #dde2e9 - Light Bluish Gray */
     --foreground: 216 25% 25%; /* Dark Blue-Gray for text */
 
     --card: 0 0% 100%;       /* White */
