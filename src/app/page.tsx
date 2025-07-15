@@ -20,12 +20,12 @@ export default function HomePage() {
         {/* Hero Section */}
         <Section className="bg-gradient-to-br from-primary/10 via-background to-background pt-24 md:pt-32 pb-16 md:pb-24 text-center">
             <Image 
-              src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxsYXd5ZXJzfGVufDB8fHx8MTc1MjUzNzYwMHww&ixlib=rb-4.1.0&q=80&w=1080" 
+              src="/images/logo-shield.png" 
               alt="Hestia Logo Shield"
               width={96}
               height={96}
-              className="mx-auto mb-6 rounded-full"
-              data-ai-hint="lawyers"
+              className="mx-auto mb-6"
+              data-ai-hint="logo shield"
               priority
             />
             <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary mb-6">
