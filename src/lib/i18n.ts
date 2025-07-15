@@ -278,9 +278,9 @@ const es = {
             ctaTitle: "¿Listo para Experimentar Alquileres Seguros?",
             ctaSubtitle: "Únete a Hestia hoy y transforma tu experiencia de alquiler. Ya seas propietario, inquilino o asesor, tenemos una solución para ti.",
             testimonials: [
-                { id: 't1', name: 'Ana López', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis alquileres. Su paquete Seguro Estándar es un balance perfecto de funciones y precio. ¡Muy recomendado!", avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'woman portrait' },
-                { id: 't2', name: 'David Chen', role: 'Inquilino', quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.", avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'man smiling' },
-                { id: 't3', name: 'Sofia Müller', role: 'Asesora Inmobiliaria', quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.", avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'professional woman' },
+                { id: 't1', name: 'Jazmin Garnelo', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis rentas. Su paquetes son el balance perfecto de protección y precio. ¡Súper recomendado!", avatarUrl: '/images/testimonials/yazmin.png', dataAiHint: 'woman portrait' },
+                { id: 't2', name: 'Michelle Arregui', role: 'Inquilino', quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.", avatarUrl: '/images/testimonials/michelle.png', dataAiHint: 'man smiling' },
+                { id: 't3', name: 'Karim Goudiaby', role: 'Asesora Inmobiliaria', quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.", avatarUrl: '/images/testimonials/karim.png', dataAiHint: 'professional woman' },
             ] as Testimonial[],
             howItWorksSteps: [
                 { id: "1", title: "Elige tu Paquete", description: "Selecciona entre nuestra gama de paquetes diseñados para tus necesidades específicas, ya seas propietario, inquilino o asesor.", icon: PackageSearch, dataAiHint: "select package" },
