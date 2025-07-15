@@ -18,27 +18,27 @@ export default function HomePage() {
       <PublicHeader />
       <main className="flex-grow">
         {/* Hero Section */}
-        <Section className="bg-gradient-to-br from-primary/10 via-background to-background pt-24 md:pt-32 pb-16 md:pb-24 text-center">
+        <Section className="bg-primary pt-24 md:pt-32 pb-16 md:pb-24 text-center">
             <Image 
-              src="/images/logo-shield.png" 
-              alt="Hestia Logo Shield"
-              width={96}
-              height={96}
-              className="mx-auto mb-6"
-              data-ai-hint="logo shield"
+              src="https://placehold.co/150x150.png" 
+              alt="Professional legal services for rental guarantees"
+              width={128}
+              height={128}
+              className="mx-auto mb-8 rounded-full border-4 border-primary-foreground/50 shadow-lg"
+              data-ai-hint="professional lawyer"
               priority
             />
-            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary mb-6">
+            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary-foreground mb-6">
               {t.pages.home.heroTitle}
             </h1>
-            <p className="text-xl md:text-2xl text-foreground/80 max-w-3xl mx-auto mb-10">
+            <p className="text-xl md:text-2xl text-primary-foreground/80 max-w-3xl mx-auto mb-10">
               {t.pages.home.heroSubtitle}
             </p>
             <div className="space-x-4">
               <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-7 rounded-lg">
                 <Link href="/#packages">{t.actions.explorePackages} <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8 py-7 rounded-lg">
+              <Button asChild variant="outline" size="lg" className="text-lg px-8 py-7 rounded-lg border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/10">
                 <Link href="/contact">{t.actions.requestInfo}</Link>
               </Button>
             </div>
