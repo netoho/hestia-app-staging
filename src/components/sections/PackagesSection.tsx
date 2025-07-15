@@ -58,7 +58,7 @@ export function PackagesSection() {
   return (
     <Section id="packages" aria-labelledby="packages-title" className="bg-muted/30">
       <PageTitle title={t.pages.home.packagesTitle} subtitle={t.pages.home.packagesSubtitle} titleClassName="text-foreground" />
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
         {packages.toSorted((a, b) => a.price - b.price).map((pkg) => (
           <PackageCard key={pkg.id} packageItem={pkg} />
         ))}
