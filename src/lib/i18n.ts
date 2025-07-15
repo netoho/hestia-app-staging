@@ -263,6 +263,8 @@ const es = {
             heroSubtitle: "Pólizas de garantía de alquiler integrales para propietarios, inquilinos y asesores inmobiliarios. Navega el mercado de alquiler con confianza.",
             howItWorksTitle: "Cómo Funciona Hestia",
             howItWorksSubtitle: "Un proceso simple y transparente para tu seguridad de alquiler.",
+            videoTestimonialTitle: "Escucha a Nuestros Clientes",
+            videoTestimonialSubtitle: "Descubre de primera mano cómo Hestia ha marcado la diferencia.",
             packagesTitle: "Nuestros Paquetes de Protección",
             packagesSubtitle: "Elige el nivel de seguridad adecuado para ti.",
             whyChooseTitle: "¿Por Qué Elegir Hestia?",
@@ -277,6 +279,14 @@ const es = {
             testimonialsSubtitle: "Escucha lo que nuestros clientes satisfechos tienen que decir sobre Hestia.",
             ctaTitle: "¿Listo para Experimentar Alquileres Seguros?",
             ctaSubtitle: "Únete a Hestia hoy y transforma tu experiencia de alquiler. Ya seas propietario, inquilino o asesor, tenemos una solución para ti.",
+            videoTestimonials: [
+                { videoId: "dQw4w9WgXcQ", author: "Cliente Satisfecho 1" },
+                { videoId: "o-YBDTqX_ZU", author: "Cliente Satisfecho 2" },
+                { videoId: "d1YBv2mWll0", author: "Cliente Satisfecho 3" },
+                { videoId: "L_LUpnjgPso", author: "Cliente Satisfecho 4" },
+                { videoId: "M5V_2ZoxwV8", author: "Cliente Satisfecho 5" },
+                { videoId: "8_8o_T62a4A", author: "Cliente Satisfecho 6" },
+            ],
             testimonials: [
                 { id: 't1', name: 'Jazmin Garnelo', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis rentas. Su paquetes son el balance perfecto de protección y precio. ¡Súper recomendado!", avatarUrl: '/images/testimonials/yazmin.png', dataAiHint: 'woman portrait' },
                 { id: 't2', name: 'Michelle Arregui', role: 'Inquilino', quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.", avatarUrl: '/images/testimonials/michelle.png', dataAiHint: 'man smiling' },

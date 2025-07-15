@@ -11,6 +11,7 @@ import { HowItWorksSection } from '@/components/sections/HowItWorksSection';
 import { BenefitsSection } from '@/components/sections/BenefitsSection';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 import { CtaSection } from '@/components/sections/CtaSection';
+import { VideoTestimonialSection } from '@/components/sections/VideoTestimonialSection';
 
 export default function HomePage() {
 
@@ -59,6 +60,9 @@ export default function HomePage() {
         {/* How It Works Section */}
         <HowItWorksSection />
         
+        {/* Video Testimonial Section */}
+        <VideoTestimonialSection />
+
         {/* Packages Section */}
         <PackagesSection />
 
