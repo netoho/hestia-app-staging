@@ -62,4 +62,5 @@ export const getPackages = async (): Promise<Package[]> => {
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
     }))
+  }
 };
