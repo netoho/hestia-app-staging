@@ -3,7 +3,7 @@ import PublicFooter from '@/components/layout/PublicFooter';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Image from 'next/image';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 import { Target } from 'lucide-react';
 import { t } from '@/lib/i18n';
 
@@ -31,13 +31,12 @@ export default function AboutUsPage() {
               </p>
             </div>
             <div>
-              <Image
-                src="https://placehold.co/600x400.png"
-                alt={t.pages.aboutUs.imageAlt}
+              <VideoPlayer
+                videoId={t.pages.aboutUs.videoId}
+                title="Property Owners Benefits Video"
                 width={600}
                 height={400}
                 className="rounded-xl shadow-xl"
-                data-ai-hint="team collaboration"
               />
             </div>
           </div>

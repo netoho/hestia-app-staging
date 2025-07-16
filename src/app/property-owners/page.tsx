@@ -4,8 +4,8 @@ import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 import Link from 'next/link';
-import Image from 'next/image';
 import { t } from '@/lib/i18n';
 import { FileText, CheckSquare, DollarSign } from 'lucide-react';
 
@@ -29,13 +29,12 @@ export default function PropertyOwnersPage() {
         <Section>
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1">
-               <Image
-                src="https://placehold.co/600x400.png"
-                alt={t.pages.propertyOwners.imageAlt}
+              <VideoPlayer
+                videoId={t.pages.propertyOwners.videoId}
+                title="Property Owners Benefits Video"
                 width={600}
                 height={400}
                 className="rounded-xl shadow-xl"
-                data-ai-hint="property owner"
               />
             </div>
             <div className="order-1 md:order-2">

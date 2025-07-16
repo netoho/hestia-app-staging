@@ -303,6 +303,7 @@ const es = {
             pageTitle: "Sobre Hestia",
             pageSubtitle: "Pioneros en confianza y seguridad en el mercado de alquiler.",
             ourStory: "Nuestra Historia",
+            videoId: "v2Rz_QA5y1M",
             storyParagraph1: "Hestia fue fundada con una misión clara: revolucionar la experiencia de alquiler fomentando la confianza y proporcionando una seguridad sólida para todas las partes involucradas. Vimos los desafíos que enfrentan los propietarios, inquilinos y asesores inmobiliarios: las incertidumbres, los riesgos financieros y las complejidades de los contratos de alquiler.",
             storyParagraph2: "Impulsados por una pasión por la innovación y un compromiso con el servicio, desarrollamos una plataforma que ofrece pólizas de garantía integrales. Nuestro objetivo es hacer que el alquiler sea más simple, seguro y accesible para todos.",
             imageAlt: "Equipo de Hestia trabajando juntos",
@@ -452,6 +453,91 @@ const es = {
                     showing: (start: number, end: number, total: number) => `Mostrando ${start} a ${end} de ${total} pólizas`,
                     previous: "Anterior",
                     next: "Siguiente",
+                }
+            },
+            details: {
+                title: "Detalles de Póliza",
+                subtitle: "Gestiona y revisa los detalles de la solicitud de póliza",
+                backToPolicies: "Volver a Pólizas",
+                loading: "Cargando detalles de la póliza...",
+                errorLoading: "Error Cargando Póliza",
+                policyNotFound: "Póliza No Encontrada",
+                policyNotFoundDesc: "La póliza solicitada no se pudo encontrar.",
+                quickInfo: {
+                    tenantEmail: "Email del Inquilino",
+                    created: "Creada",
+                    documents: "Documentos",
+                    files: "archivos"
+                },
+                reviewActions: {
+                    title: "Acciones de Revisión",
+                    description: "Cambia el estado de esta solicitud de póliza",
+                    approve: "Aprobar",
+                    deny: "Denegar",
+                    markUnderReview: "Marcar En Revisión"
+                },
+                tabs: {
+                    details: "Datos de Solicitud",
+                    activity: "Registro de Actividad"
+                },
+                sections: {
+                    personalInfo: "Información Personal",
+                    employmentInfo: "Información de Empleo",
+                    references: "Referencias",
+                    uploadedDocuments: "Documentos Subidos"
+                },
+                fields: {
+                    nationality: "Nacionalidad",
+                    mexican: "Mexicana",
+                    foreign: "Extranjera",
+                    curp: "CURP",
+                    passport: "Pasaporte",
+                    employmentStatus: "Estado de Empleo",
+                    industry: "Industria",
+                    company: "Empresa",
+                    position: "Puesto",
+                    monthlyIncome: "Ingreso Mensual",
+                    creditCheckConsent: "Consentimiento de Revisión Crediticia",
+                    yes: "Sí",
+                    no: "No"
+                },
+                references: {
+                    personalReference: "Referencia Personal",
+                    workReference: "Referencia Laboral",
+                    landlordReference: "Referencia de Propietario",
+                    name: "Nombre",
+                    phone: "Teléfono"
+                },
+                documents: {
+                    category: {
+                        identification: "Identificación",
+                        income: "Ingresos",
+                        optional: "Opcional"
+                    },
+                    uploaded: "Subido"
+                },
+                activity: {
+                    title: "Línea de Tiempo de Actividad",
+                    description: "Historial completo de acciones tomadas en esta solicitud de póliza",
+                    performedBy: {
+                        tenant: "Realizado por inquilino",
+                        staff: "Realizado por staff",
+                        system: "Acción del sistema"
+                    }
+                },
+                toast: {
+                    statusUpdated: "Estado Actualizado",
+                    statusChangedTo: (status: string) => `Estado de póliza cambiado a ${status}`,
+                    error: "Error",
+                    failedToUpdate: "Error al actualizar el estado",
+                    downloadStarted: "Descarga Iniciada",
+                    downloadFailed: "Descarga Falló",
+                    isBeingDownloaded: (fileName: string) => `${fileName} se está descargando`,
+                    authFailed: "Autenticación falló - por favor actualiza la página",
+                    noPermission: "No tienes permiso para descargar este archivo",
+                    documentNotFound: "Documento no encontrado",
+                    failedToGenerate: "Error al generar enlace de descarga",
+                    failedToDownload: "Error al descargar archivo"
                 }
             },
         },
@@ -640,7 +726,19 @@ const es = {
             changePassword: "Cambiar Contraseña",
             currentPassword: "Contraseña Actual",
             newPassword: "Nueva Contraseña",
+            confirmNewPassword: "Confirmar Nueva Contraseña",
             passwordPlaceholder: "••••••••",
+            loading: "Cargando perfil...",
+            errorLoading: "Error Cargando Perfil",
+            retry: "Reintentar",
+            accessDenied: "Acceso Denegado",
+            accessDeniedDesc: "Por favor inicia sesión para ver tu perfil.",
+            goToLogin: "Ir al Login",
+            failedToFetch: "Error al cargar el perfil",
+            passwordMismatch: "La nueva contraseña y la confirmación no coinciden.",
+            profileUpdated: "Perfil Actualizado",
+            profileUpdatedDesc: "Tu perfil ha sido actualizado exitosamente.",
+            failedToUpdate: "Error al actualizar el perfil",
         },
         settings: {
             title: "Configuración de Cuenta",
@@ -758,6 +856,7 @@ const es = {
             viewPackages: "Ver Nuestros Paquetes",
             imageAlt: "Propietario feliz revisando documentos",
             sectionTitle: "Asegure sus Ingresos por Alquiler y su Propiedad",
+            videoId: "v2Rz_QA5y1M",
             sectionText: "Ser propietario de inmuebles de alquiler conlleva desafíos. Hestia está aquí para mitigar sus riesgos, desde impagos de inquilinos hasta daños a la propiedad. Nuestras pólizas integrales están diseñadas para proteger su inversión.",
             benefitsList: [
                 { icon: DollarSign, text: "Renta Garantizada: Asegure un flujo de caja constante incluso con impagos." },
@@ -784,6 +883,7 @@ const es = {
             becomePartner: "Conviértase en Socio",
             imageAlt: "Asesores inmobiliarios colaborando",
             whyChooseTitle: "Por Qué los Asesores Eligen Hestia",
+            videoId: "v2Rz_QA5y1M",
             whyChooseText: "Como asesor inmobiliario, su reputación se basa en la confianza y en colocaciones exitosas. Hestia proporciona las herramientas y la seguridad para mejorar su oferta de servicios, convirtiéndolo en un socio indispensable tanto para propietarios como para inquilinos.",
             benefitsList: [
               { icon: Zap, text: "Cierres de Tratos Más Rápidos: Nuestro proceso ágil reduce la fricción." },
