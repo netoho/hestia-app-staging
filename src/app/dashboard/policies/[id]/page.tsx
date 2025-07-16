@@ -19,7 +19,8 @@ import {
   XCircle,
   Loader2,
   AlertCircle,
-  Download
+  Download,
+  FileDown
 } from 'lucide-react';
 import { PolicyStatus } from '@prisma/client';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
@@ -84,6 +85,7 @@ export default function PolicyDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -251,6 +253,58 @@ export default function PolicyDetailsPage() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!isAuthenticated || !user || !policy) return;
+    
+    setDownloadingPDF(true);
+    try {
+      const response = await fetch(`/api/policies/${policy.id}/pdf`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(t.pages.policies.details.toast.authFailed);
+        }
+        if (response.status === 403) {
+          throw new Error(t.pages.policies.details.toast.noPermission);
+        }
+        if (response.status === 404) {
+          throw new Error(t.pages.policies.details.policyNotFound);
+        }
+        throw new Error('Error al generar el documento PDF');
+      }
+
+      const htmlContent = await response.text();
+      
+      // Create a blob and download link
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `solicitud-arrendamiento-${policy.id}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: t.pages.policies.details.toast.pdfGenerated,
+        description: t.pages.policies.details.toast.pdfGeneratedDesc,
+      });
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast({
+        title: t.pages.policies.details.toast.downloadFailed,
+        description: error instanceof Error ? error.message : 'Error al generar el documento',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
+
   const handleDownloadDocument = async (documentId: string, fileName: string) => {
     if (!isAuthenticated || !user || !policy) return;
     
@@ -372,6 +426,19 @@ export default function PolicyDetailsPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={downloadingPDF}
+                variant="outline"
+                size="sm"
+              >
+                {downloadingPDF ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4 mr-2" />
+                )}
+                {t.pages.policies.details.downloadPDF}
+              </Button>
               <Badge variant={getStatusBadgeVariant(policy.status)} className="text-sm">
                 {POLICY_STATUS_DISPLAY[policy.status]}
               </Badge>
