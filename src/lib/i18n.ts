@@ -476,6 +476,7 @@ const es = {
                     deny: "Denegar",
                     markUnderReview: "Marcar En Revisión"
                 },
+                downloadPDF: "Descargar PDF",
                 tabs: {
                     details: "Datos de Solicitud",
                     activity: "Registro de Actividad"
@@ -537,7 +538,9 @@ const es = {
                     noPermission: "No tienes permiso para descargar este archivo",
                     documentNotFound: "Documento no encontrado",
                     failedToGenerate: "Error al generar enlace de descarga",
-                    failedToDownload: "Error al descargar archivo"
+                    failedToDownload: "Error al descargar archivo",
+                    pdfGenerated: "Documento Generado",
+                    pdfGeneratedDesc: "El documento de póliza se ha descargado exitosamente. Puede imprimirlo o convertirlo a PDF."
                 }
             },
         },
