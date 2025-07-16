@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { t } from '@/lib/i18n';
 
 interface PolicyDetails {
   id: string;
@@ -101,12 +102,12 @@ export default function PolicyDetailsPage() {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('Policy not found');
+          throw new Error(t.pages.policies.details.policyNotFound);
         }
         if (response.status === 401) {
-          throw new Error('Authentication failed - please refresh the page');
+          throw new Error(t.pages.policies.details.toast.authFailed);
         }
-        throw new Error('Failed to load policy details');
+        throw new Error(t.pages.policies.details.errorLoading);
       }
 
       const data = await response.json();
@@ -235,14 +236,14 @@ export default function PolicyDetailsPage() {
 
       await fetchPolicy();
       toast({
-        title: 'Status Updated',
-        description: `Policy status changed to ${POLICY_STATUS_DISPLAY[newStatus]}`,
+        title: t.pages.policies.details.toast.statusUpdated,
+        description: t.pages.policies.details.toast.statusChangedTo(POLICY_STATUS_DISPLAY[newStatus]),
       });
     } catch (error) {
       console.error('Error updating policy status:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update status',
+        title: t.pages.policies.details.toast.error,
+        description: error instanceof Error ? error.message : t.pages.policies.details.toast.failedToUpdate,
         variant: 'destructive',
       });
     } finally {
@@ -262,15 +263,15 @@ export default function PolicyDetailsPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Authentication failed - please refresh the page');
+          throw new Error(t.pages.policies.details.toast.authFailed);
         }
         if (response.status === 403) {
-          throw new Error('You do not have permission to download this file');
+          throw new Error(t.pages.policies.details.toast.noPermission);
         }
         if (response.status === 404) {
-          throw new Error('Document not found');
+          throw new Error(t.pages.policies.details.toast.documentNotFound);
         }
-        throw new Error('Failed to generate download link');
+        throw new Error(t.pages.policies.details.toast.failedToGenerate);
       }
 
       const data = await response.json();
@@ -284,14 +285,14 @@ export default function PolicyDetailsPage() {
       document.body.removeChild(link);
 
       toast({
-        title: 'Download Started',
-        description: `${fileName} is being downloaded`,
+        title: t.pages.policies.details.toast.downloadStarted,
+        description: t.pages.policies.details.toast.isBeingDownloaded(fileName),
       });
     } catch (error) {
       console.error('Download error:', error);
       toast({
-        title: 'Download Failed',
-        description: error instanceof Error ? error.message : 'Failed to download file',
+        title: t.pages.policies.details.toast.downloadFailed,
+        description: error instanceof Error ? error.message : t.pages.policies.details.toast.failedToDownload,
         variant: 'destructive',
       });
     } finally {
@@ -304,7 +305,7 @@ export default function PolicyDetailsPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading policy details...</p>
+          <p className="text-muted-foreground">{t.pages.policies.details.loading}</p>
         </div>
       </div>
     );
@@ -316,12 +317,12 @@ export default function PolicyDetailsPage() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <CardTitle className="text-red-600">Error Loading Policy</CardTitle>
+            <CardTitle className="text-red-600">{t.pages.policies.details.errorLoading}</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/dashboard/policies')} className="w-full">
-              Back to Policies
+              {t.pages.policies.details.backToPolicies}
             </Button>
           </CardContent>
         </Card>
@@ -334,14 +335,14 @@ export default function PolicyDetailsPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle>Policy Not Found</CardTitle>
+            <CardTitle>{t.pages.policies.details.policyNotFound}</CardTitle>
             <CardDescription>
-              The requested policy could not be found.
+              {t.pages.policies.details.policyNotFoundDesc}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/dashboard/policies')} className="w-full">
-              Back to Policies
+              {t.pages.policies.details.backToPolicies}
             </Button>
           </CardContent>
         </Card>
@@ -360,14 +361,14 @@ export default function PolicyDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Policies
+            {t.pages.policies.details.backToPolicies}
           </Button>
           
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Policy Details</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{t.pages.policies.details.title}</h1>
               <p className="text-muted-foreground">
-                Manage and review policy application details
+                {t.pages.policies.details.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -383,16 +384,16 @@ export default function PolicyDetailsPage() {
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Tenant Email</p>
+                <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.tenantEmail}</p>
                 <p className="font-medium">{policy.tenantEmail}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Created</p>
+                <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.created}</p>
                 <p className="font-medium">{formatDate(policy.createdAt)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Documents</p>
-                <p className="font-medium">{policy.documents.length} files</p>
+                <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.documents}</p>
+                <p className="font-medium">{policy.documents.length} {t.pages.policies.details.quickInfo.files}</p>
               </div>
             </div>
           </CardContent>
@@ -402,9 +403,9 @@ export default function PolicyDetailsPage() {
         {(policy.status === PolicyStatus.SUBMITTED || policy.status === PolicyStatus.UNDER_REVIEW) && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Review Actions</CardTitle>
+              <CardTitle>{t.pages.policies.details.reviewActions.title}</CardTitle>
               <CardDescription>
-                Change the status of this policy application
+                {t.pages.policies.details.reviewActions.description}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -415,7 +416,7 @@ export default function PolicyDetailsPage() {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
+                  {t.pages.policies.details.reviewActions.approve}
                 </Button>
                 <Button
                   onClick={() => updatePolicyStatus(PolicyStatus.DENIED, 'Additional review required')}
@@ -423,7 +424,7 @@ export default function PolicyDetailsPage() {
                   variant="destructive"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  Deny
+                  {t.pages.policies.details.reviewActions.deny}
                 </Button>
                 <Button
                   onClick={() => updatePolicyStatus(PolicyStatus.UNDER_REVIEW)}
@@ -431,7 +432,7 @@ export default function PolicyDetailsPage() {
                   variant="outline"
                 >
                   <Clock className="h-4 w-4 mr-2" />
-                  Mark Under Review
+                  {t.pages.policies.details.reviewActions.markUnderReview}
                 </Button>
               </div>
             </CardContent>
@@ -441,8 +442,8 @@ export default function PolicyDetailsPage() {
         {/* Main Content Tabs */}
         <Tabs defaultValue="details" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="details">Application Data</TabsTrigger>
-            <TabsTrigger value="activity">Activity Log</TabsTrigger>
+            <TabsTrigger value="details">{t.pages.policies.details.tabs.details}</TabsTrigger>
+            <TabsTrigger value="activity">{t.pages.policies.details.tabs.activity}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-6">
@@ -452,24 +453,24 @@ export default function PolicyDetailsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
-                    Personal Information
+                    {t.pages.policies.details.sections.personalInfo}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Nationality</p>
-                      <p className="font-medium">{policy.profileData.nationality === 'mexican' ? 'Mexicana' : 'Extranjera'}</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.nationality}</p>
+                      <p className="font-medium">{policy.profileData.nationality === 'mexican' ? t.pages.policies.details.fields.mexican : t.pages.policies.details.fields.foreign}</p>
                     </div>
                     {policy.profileData.curp && (
                       <div>
-                        <p className="text-sm text-muted-foreground">CURP</p>
+                        <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.curp}</p>
                         <p className="font-medium">{policy.profileData.curp}</p>
                       </div>
                     )}
                     {policy.profileData.passport && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Passport</p>
+                        <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.passport}</p>
                         <p className="font-medium">{policy.profileData.passport}</p>
                       </div>
                     )}
@@ -484,34 +485,34 @@ export default function PolicyDetailsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />
-                    Employment Information
+                    {t.pages.policies.details.sections.employmentInfo}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Employment Status</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.employmentStatus}</p>
                       <p className="font-medium">{policy.employmentData.employmentStatus}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Industry</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.industry}</p>
                       <p className="font-medium">{policy.employmentData.industry}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Company</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.company}</p>
                       <p className="font-medium">{policy.employmentData.companyName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Position</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.position}</p>
                       <p className="font-medium">{policy.employmentData.position}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Monthly Income</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.monthlyIncome}</p>
                       <p className="font-medium">${policy.employmentData.monthlyIncome?.toLocaleString()} MXN</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Credit Check Consent</p>
-                      <p className="font-medium">{policy.employmentData.creditCheckConsent ? 'Yes' : 'No'}</p>
+                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.creditCheckConsent}</p>
+                      <p className="font-medium">{policy.employmentData.creditCheckConsent ? t.pages.policies.details.fields.yes : t.pages.policies.details.fields.no}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -524,20 +525,20 @@ export default function PolicyDetailsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    References
+                    {t.pages.policies.details.sections.references}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-medium mb-2">Personal Reference</h4>
+                      <h4 className="font-medium mb-2">{t.pages.policies.details.references.personalReference}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Name</p>
+                          <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.name}</p>
                           <p className="font-medium">{policy.referencesData.personalReferenceName}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Phone</p>
+                          <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.phone}</p>
                           <p className="font-medium">{policy.referencesData.personalReferencePhone}</p>
                         </div>
                       </div>
@@ -545,14 +546,14 @@ export default function PolicyDetailsPage() {
                     
                     {policy.referencesData.workReferenceName && (
                       <div>
-                        <h4 className="font-medium mb-2">Work Reference</h4>
+                        <h4 className="font-medium mb-2">{t.pages.policies.details.references.workReference}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Name</p>
+                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.name}</p>
                             <p className="font-medium">{policy.referencesData.workReferenceName}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Phone</p>
+                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.phone}</p>
                             <p className="font-medium">{policy.referencesData.workReferencePhone}</p>
                           </div>
                         </div>
@@ -561,14 +562,14 @@ export default function PolicyDetailsPage() {
                     
                     {policy.referencesData.landlordReferenceName && (
                       <div>
-                        <h4 className="font-medium mb-2">Landlord Reference</h4>
+                        <h4 className="font-medium mb-2">{t.pages.policies.details.references.landlordReference}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Name</p>
+                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.name}</p>
                             <p className="font-medium">{policy.referencesData.landlordReferenceName}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Phone</p>
+                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.phone}</p>
                             <p className="font-medium">{policy.referencesData.landlordReferencePhone}</p>
                           </div>
                         </div>
@@ -585,7 +586,7 @@ export default function PolicyDetailsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Uploaded Documents
+                    {t.pages.policies.details.sections.uploadedDocuments}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -597,14 +598,14 @@ export default function PolicyDetailsPage() {
                           <div>
                             <p className="font-medium">{doc.originalName}</p>
                             <p className="text-sm text-muted-foreground">
-                              {formatFileSize(doc.fileSize)} • Uploaded {formatDistanceToNow(new Date(doc.uploadedAt), { addSuffix: true, locale: es })}
+                              {formatFileSize(doc.fileSize)} • {t.pages.policies.details.documents.uploaded} {formatDistanceToNow(new Date(doc.uploadedAt), { addSuffix: true, locale: es })}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">
-                            {doc.category === 'identification' ? 'ID' : 
-                             doc.category === 'income' ? 'Income' : 'Optional'}
+                            {doc.category === 'identification' ? t.pages.policies.details.documents.category.identification : 
+                             doc.category === 'income' ? t.pages.policies.details.documents.category.income : t.pages.policies.details.documents.category.optional}
                           </Badge>
                           <Button
                             size="sm"
@@ -630,9 +631,9 @@ export default function PolicyDetailsPage() {
           <TabsContent value="activity">
             <Card>
               <CardHeader>
-                <CardTitle>Activity Timeline</CardTitle>
+                <CardTitle>{t.pages.policies.details.activity.title}</CardTitle>
                 <CardDescription>
-                  Complete history of actions taken on this policy application
+                  {t.pages.policies.details.activity.description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -653,8 +654,8 @@ export default function PolicyDetailsPage() {
                           </p>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {activity.performedBy === 'tenant' ? 'Performed by tenant' : 
-                           activity.performedBy ? `Performed by staff` : 'System action'}
+                          {activity.performedBy === 'tenant' ? t.pages.policies.details.activity.performedBy.tenant : 
+                           activity.performedBy ? t.pages.policies.details.activity.performedBy.staff : t.pages.policies.details.activity.performedBy.system}
                         </p>
                         {activity.details && (
                           <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
