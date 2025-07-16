@@ -708,4 +708,19 @@ export class DemoORM {
     demoDb.policyActivities.push(newActivity);
     return newActivity;
   }
+
+  static async findManyDocuments(where?: any) {
+    if (!useDemoDatabase()) throw new Error('Demo ORM used outside demo mode');
+    
+    if (!where) return demoDb.policyDocuments;
+    
+    return demoDb.policyDocuments.filter(doc => {
+      for (const [key, value] of Object.entries(where)) {
+        if (doc[key as keyof typeof doc] !== value) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
 }
