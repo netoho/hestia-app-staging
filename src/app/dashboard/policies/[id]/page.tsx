@@ -22,7 +22,7 @@ import {
   Download,
   FileDown
 } from 'lucide-react';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -34,7 +34,7 @@ interface PolicyDetails {
   id: string;
   tenantEmail: string;
   tenantPhone?: string;
-  status: PolicyStatus;
+  status: PolicyStatusType;
   currentStep: number;
   profileData?: any;
   employmentData?: any;
@@ -135,7 +135,7 @@ export default function PolicyDetailsPage() {
     }
   }, [isAuthenticated, user]);
 
-  const getStatusBadgeVariant = (status: PolicyStatus) => {
+  const getStatusBadgeVariant = (status: PolicyStatusType) => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       gray: 'secondary',
       blue: 'default',
@@ -215,7 +215,7 @@ export default function PolicyDetailsPage() {
     }
   };
 
-  const updatePolicyStatus = async (newStatus: PolicyStatus, reason?: string) => {
+  const updatePolicyStatus = async (newStatus: PolicyStatusType, reason?: string) => {
     if (!isAuthenticated || !user || !policy) return;
     
     setUpdatingStatus(true);

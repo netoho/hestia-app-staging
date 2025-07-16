@@ -1,13 +1,19 @@
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
+import prisma from '@/lib/prisma';
+
+// Conditionally import PrismaAdapter
+let adapter: any;
+if (!isDemoMode() && prisma) {
+  const { PrismaAdapter } = require('@auth/prisma-adapter');
+  adapter = PrismaAdapter(prisma);
+}
 
 export const authOptions: AuthOptions = {
   // Only use PrismaAdapter in production mode
-  ...(isDemoMode() ? {} : { adapter: PrismaAdapter(prisma) }),
+  ...(adapter ? { adapter } : {}),
   providers: [
     CredentialsProvider({
       name: 'credentials',

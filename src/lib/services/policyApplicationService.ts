@@ -1,6 +1,6 @@
 import { isMockEnabled } from '../env-check';
 import prisma from '../prisma';
-import { Policy, PolicyStatus, PolicyDocument, PolicyActivity, Prisma } from '@prisma/client';
+import { Policy, PolicyStatus, PolicyStatusType, PolicyDocument, PolicyActivity, Prisma } from '@/lib/prisma-types';
 import { randomUUID } from 'crypto';
 import { generateSecureToken, generateTokenExpiry } from '../utils/tokenUtils';
 import { MockDataService } from './mockDataService';
@@ -29,7 +29,7 @@ export interface PolicyWithRelations extends Policy {
 }
 
 interface GetPoliciesOptions {
-  status?: PolicyStatus | 'all';
+  status?: PolicyStatusType | 'all';
   search?: string;
   page?: number;
   limit?: number;
@@ -399,7 +399,7 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
 
 export const updatePolicyStatus = async (
   id: string,
-  status: PolicyStatus,
+  status: PolicyStatusType,
   performedBy: string,
   additionalData?: Partial<Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<PolicyWithRelations | null> => {

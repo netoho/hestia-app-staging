@@ -8,14 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STATUS_DISPLAY, POLICY_STEPS } from '@/lib/types/policy';
 import { PolicyWizard } from '@/components/tenant/PolicyWizard';
 import { t } from '@/lib/i18n';
 
 interface PolicyData {
   id: string;
-  status: PolicyStatus;
+  status: PolicyStatusType;
   currentStep: number;
   tenantEmail: string;
   profileData?: any;
@@ -70,7 +70,7 @@ export default function TenantPolicyPage() {
     }
   }, [token]);
 
-  const getStepProgress = (currentStep: number, status: PolicyStatus) => {
+  const getStepProgress = (currentStep: number, status: PolicyStatusType) => {
     if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED || status === PolicyStatus.DENIED || status === PolicyStatus.UNDER_REVIEW) {
       return 100;
     }
@@ -78,7 +78,7 @@ export default function TenantPolicyPage() {
     return (currentStep / 4) * 100;
   };
 
-  const getStepProgressMessage = (currentStep: number, status: PolicyStatus) => {
+  const getStepProgressMessage = (currentStep: number, status: PolicyStatusType) => {
     if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED) {
       return `100% Complete`
     }
@@ -91,14 +91,14 @@ export default function TenantPolicyPage() {
     return `${Math.round(getStepProgress(currentStep, status))}% Complete`
   }
 
-  const isApplicationComplete = (status: PolicyStatus) => {
+  const isApplicationComplete = (status: PolicyStatusType) => {
     return status === PolicyStatus.SUBMITTED || 
            status === PolicyStatus.UNDER_REVIEW || 
            status === PolicyStatus.APPROVED || 
            status === PolicyStatus.DENIED;
   };
 
-  const getStatusIcon = (status: PolicyStatus) => {
+  const getStatusIcon = (status: PolicyStatusType) => {
     switch (status) {
       case PolicyStatus.APPROVED:
         return <CheckCircle className="h-5 w-5 text-green-500" />;
@@ -112,7 +112,7 @@ export default function TenantPolicyPage() {
     }
   };
 
-  const getStatusMessage = (status: PolicyStatus) => {
+  const getStatusMessage = (status: PolicyStatusType) => {
     switch (status) {
       case PolicyStatus.SENT_TO_TENANT:
         return t.wizard.status.welcome;
@@ -131,7 +131,7 @@ export default function TenantPolicyPage() {
     }
   };
 
-  const canEdit = (status: PolicyStatus) => {
+  const canEdit = (status: PolicyStatusType) => {
     return status === PolicyStatus.SENT_TO_TENANT || status === PolicyStatus.IN_PROGRESS;
   };
 

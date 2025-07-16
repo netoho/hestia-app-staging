@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPolicyByToken, addPolicyActivity } from '@/lib/services/policyApplicationService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus } from '@/lib/prisma-types';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 

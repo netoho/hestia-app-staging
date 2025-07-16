@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { User, Package, InsurancePolicy, Policy, PolicyStatus } from '@prisma/client';
+import { User, Package, InsurancePolicy, Policy, PolicyStatus } from '@/lib/prisma-types';
 
 // Mock users from seed data
 const hashedPassword = bcrypt.hashSync('password123', 10);

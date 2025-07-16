@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, ChevronLeft, ChevronRight, Upload, Send } from 'lucide-react';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STEPS } from '@/lib/types/policy';
 import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileForm';
 import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
@@ -20,7 +20,7 @@ interface PolicyWizardProps {
   token: string;
   policy: {
     id: string;
-    status: PolicyStatus;
+    status: PolicyStatusType;
     currentStep: number;
     profileData?: any;
     employmentData?: any;

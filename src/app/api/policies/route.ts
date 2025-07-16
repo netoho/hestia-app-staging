@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { getPolicies } from '@/lib/services/policyApplicationService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
 import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') as PolicyStatus | 'all' | null;
+    const status = searchParams.get('status') as PolicyStatusType | 'all' | null;
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');

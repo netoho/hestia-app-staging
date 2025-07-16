@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPolicyByToken, updatePolicyStatus, addPolicyActivity } from '@/lib/services/policyApplicationService';
 import { validatePolicyDocuments } from '@/lib/services/fileUploadService';
 import { sendPolicySubmissionConfirmation } from '@/lib/services/emailService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus } from '@/lib/prisma-types';
 
 export async function POST(
   request: NextRequest,

@@ -29,7 +29,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, MoreHorizontal, Eye, Mail, FileText, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -41,7 +41,7 @@ interface PolicyWithRelations {
   id: string;
   tenantEmail: string;
   tenantPhone?: string | null;
-  status: PolicyStatus;
+  status: PolicyStatusType;
   currentStep: number;
   createdAt: string;
   updatedAt: string;
@@ -138,7 +138,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const getStatusBadgeVariant = (status: PolicyStatus) => {
+  const getStatusBadgeVariant = (status: PolicyStatusType) => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       gray: 'secondary',
       blue: 'default',
@@ -159,7 +159,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     });
   };
 
-  const getProgressText = (currentStep: number, status: PolicyStatus) => {
+  const getProgressText = (currentStep: number, status: PolicyStatusType) => {
     if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED || status === PolicyStatus.DENIED) {
       return t.pages.policies.progressComplete;
     }
@@ -180,8 +180,8 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     fetchPolicies();
   };
 
-  const canResendInvitation = (status: PolicyStatus) => {
-    const resendableStatuses: PolicyStatus[] = [PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
+  const canResendInvitation = (status: PolicyStatusType) => {
+    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
     return resendableStatuses.includes(status);
   };
 

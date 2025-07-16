@@ -1,7 +1,7 @@
 import { storage } from '../firebase-admin';
 import { isEmulator } from '../env-check';
 import prisma from '../prisma';
-import { PolicyDocument } from '@prisma/client';
+import { PolicyDocument } from '@/lib/prisma-types';
 import { Readable } from 'stream';
 import crypto from 'crypto';
 

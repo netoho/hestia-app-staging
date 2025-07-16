@@ -7,7 +7,7 @@
  */
 
 import bcrypt from 'bcryptjs';
-import { User, Package, InsurancePolicy, Policy, PolicyStatus } from '@prisma/client';
+import { User, Package, InsurancePolicy, Policy, PolicyStatus } from '@/lib/prisma-types';
 import { isDemoMode } from '../env-check';
 
 // Export both isDemoMode and DemoORM for convenience

@@ -1,15 +1,25 @@
-import { PrismaClient } from '@prisma/client';
+import { isDemoMode } from './env-check';
 
-const prismaClientSingleton = () => {
-  return new PrismaClient();
-};
+let prisma: any;
 
-declare global {
-  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+if (!isDemoMode()) {
+  // Only import Prisma when not in demo mode
+  const { PrismaClient } = require('@prisma/client');
+  
+  const prismaClientSingleton = () => {
+    return new PrismaClient();
+  };
+
+  declare global {
+    var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+  }
+
+  prisma = globalThis.prisma ?? prismaClientSingleton();
+
+  if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
+} else {
+  // In demo mode, return null - services should use DemoORM instead
+  prisma = null;
 }
 
-const prisma = globalThis.prisma ?? prismaClientSingleton();
-
 export default prisma;
-
-if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
