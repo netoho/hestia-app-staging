@@ -55,7 +55,7 @@ export default function ProfilePage() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to fetch profile');
+        throw new Error(t.pages.profile.failedToFetch);
       }
 
       const data: UserProfile = await res.json();
@@ -86,7 +86,7 @@ export default function ProfilePage() {
     setError(null);
 
     if (newPassword && newPassword !== confirmNewPassword) {
-      setError('New password and confirmation do not match.');
+      setError(t.pages.profile.passwordMismatch);
       setIsSaving(false);
       return;
     }
@@ -110,7 +110,7 @@ export default function ProfilePage() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to update profile');
+        throw new Error(errorData.error || t.pages.profile.failedToUpdate);
       }
 
       const updatedProfile: UserProfile = await res.json();
@@ -122,15 +122,15 @@ export default function ProfilePage() {
       setConfirmNewPassword('');
 
       toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been successfully updated.',
+        title: t.pages.profile.profileUpdated,
+        description: t.pages.profile.profileUpdatedDesc,
       });
     } catch (err) {
       console.error('Error saving profile:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       toast({
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to update profile',
+        title: t.misc.error,
+        description: err instanceof Error ? err.message : t.pages.profile.failedToUpdate,
         variant: 'destructive',
       });
     } finally {
@@ -143,7 +143,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading profile...</p>
+          <p className="text-muted-foreground">{t.pages.profile.loading}</p>
         </div>
       </div>
     );
@@ -154,12 +154,12 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Error Loading Profile</CardTitle>
+            <CardTitle className="text-red-600">{t.pages.profile.errorLoading}</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => window.location.reload()} className="w-full">
-              Retry
+              {t.pages.profile.retry}
             </Button>
           </CardContent>
         </Card>
@@ -172,12 +172,12 @@ export default function ProfilePage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <CardTitle>Access Denied</CardTitle>
-                    <CardDescription>Please log in to view your profile.</CardDescription>
+                    <CardTitle>{t.pages.profile.accessDenied}</CardTitle>
+                    <CardDescription>{t.pages.profile.accessDeniedDesc}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={() => window.location.href = '/login'} className="w-full">
-                        Go to Login
+                        {t.pages.profile.goToLogin}
                     </Button>
                 </CardContent>
             </Card>
@@ -257,8 +257,8 @@ export default function ProfilePage() {
                           <Input id="newPassword" type="password" placeholder={t.pages.profile.passwordPlaceholder} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                       </div>
                       <div className="space-y-2">
-                          <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
-                          <Input id="confirmNewPassword" type="password" placeholder="••••••••" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
+                          <Label htmlFor="confirmNewPassword">{t.pages.profile.confirmNewPassword}</Label>
+                          <Input id="confirmNewPassword" type="password" placeholder={t.pages.profile.passwordPlaceholder} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
                       </div>
                   </div>
                 </div>
