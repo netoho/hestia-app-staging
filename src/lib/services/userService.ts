@@ -1,6 +1,7 @@
-import { isEmulator } from '../env-check';
+import { isMockEnabled } from '../env-check';
 import prisma from '../prisma'; // Assuming your Prisma client is exported from this file
 import { hashPassword } from '../auth'; // Assuming password hashing utility
+import { MockDataService } from './mockDataService';
 
 interface GetUsersOptions {
   role?: string;
@@ -38,58 +39,18 @@ interface GetUsersResult {
   pagination: Pagination;
 }
 
-// Mock data for emulator
-let mockUsers: User[] = [
-  {
-    id: 'mock-user-1',
-    email: 'mock.user1@example.com',
-    name: 'Mock User One',
-    role: 'user',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 'mock-user-2',
-    email: 'mock.user2@example.com',
-    name: 'Mock User Two',
-    role: 'staff',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 'mock-user-3',
-    email: 'mock.user3@example.com',
-    name: 'Mock User Three',
-    role: 'user',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 'mock-user-4',
-    email: 'mock.user4@example.com',
-    name: 'Mock User Four',
-    role: 'user',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 'mock-user-5',
-    email: 'mock.user5@example.com',
-    name: 'Mock User Five',
-    role: 'staff',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+// We'll use the mock data from MockDataService instead of local mock data
 
 
 export const getUsers = async (options: GetUsersOptions = {}): Promise<GetUsersResult> => {
   const { role, search, page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
 
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log('Using mock data for getUsers');
 
+    // Get mock users from centralized service
+    const mockUsers = await MockDataService.getUsers();
     let filteredUsers = mockUsers;
 
     if (role && role !== 'all') {
@@ -173,7 +134,7 @@ export const getUsers = async (options: GetUsersOptions = {}): Promise<GetUsersR
 };
 
 export const createUser = async (userData: CreateUserData): Promise<User> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log('Using mock data for createUser');
     const newUser: User = {
       id: `mock-user-${mockUsers.length + 1}`,
@@ -203,7 +164,7 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log('Using mock data for getUserById');
     return mockUsers.find(user => user.id === id) || null;
   } else {
@@ -223,7 +184,7 @@ export const getUserById = async (id: string): Promise<User | null> => {
 };
 
 export const updateUser = async (id: string, data: Partial<CreateUserData>): Promise<User | null> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log('Using mock data for updateUser');
     const index = mockUsers.findIndex(user => user.id === id);
     if (index === -1) return null;
@@ -265,7 +226,7 @@ export const updateUser = async (id: string, data: Partial<CreateUserData>): Pro
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log('Using mock data for deleteUser');
     const initialLength = mockUsers.length;
     mockUsers = mockUsers.filter(user => user.id !== id);

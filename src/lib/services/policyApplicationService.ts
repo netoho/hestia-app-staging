@@ -1,8 +1,9 @@
-import { isEmulator } from '../env-check';
+import { isMockEnabled } from '../env-check';
 import prisma from '../prisma';
 import { Policy, PolicyStatus, PolicyDocument, PolicyActivity, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { generateSecureToken, generateTokenExpiry } from '../utils/tokenUtils';
+import { MockDataService } from './mockDataService';
 
 // Type definitions
 export interface CreatePolicyData {
@@ -134,7 +135,7 @@ let mockNextId = 3;
 
 // Service functions
 export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRelations> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log('Emulator mode: Creating mock policy');
     const newPolicy: PolicyWithRelations = {
       id: `mock-policy-${mockNextId++}`,
@@ -225,10 +226,12 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
   const { status, search, page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
 
-  if (isEmulator()) {
-    console.log('Emulator mode: Fetching mock policies');
+  if (isMockEnabled()) {
+    console.log('Mock mode: Fetching mock policies from seed data');
     
-    let filteredPolicies = [...mockPolicies];
+    // Get mock policies from centralized service
+    const mockPoliciesData = await MockDataService.getPolicies();
+    let filteredPolicies = [...mockPoliciesData];
     
     // Filter by status
     if (status && status !== 'all') {
@@ -317,7 +320,7 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
 };
 
 export const getPolicyById = async (id: string): Promise<PolicyWithRelations | null> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log(`Emulator mode: Fetching mock policy ${id}`);
     return mockPolicies.find(p => p.id === id) || null;
   } else {
@@ -349,7 +352,7 @@ export const getPolicyById = async (id: string): Promise<PolicyWithRelations | n
 };
 
 export const getPolicyByToken = async (token: string): Promise<PolicyWithRelations | null> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log(`Emulator mode: Fetching mock policy by token`);
     const policy = mockPolicies.find(p => p.accessToken === token);
     
@@ -400,7 +403,7 @@ export const updatePolicyStatus = async (
   performedBy: string,
   additionalData?: Partial<Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<PolicyWithRelations | null> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log(`Emulator mode: Updating policy ${id} status to ${status}`);
     const index = mockPolicies.findIndex(p => p.id === id);
     
@@ -504,7 +507,7 @@ export const addPolicyActivity = async (
   details?: any,
   ipAddress?: string
 ): Promise<PolicyActivity | null> => {
-  if (isEmulator()) {
+  if (isMockEnabled()) {
     console.log(`Emulator mode: Adding activity to policy ${policyId}`);
     const policy = mockPolicies.find(p => p.id === policyId);
     
