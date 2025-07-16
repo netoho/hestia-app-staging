@@ -3,9 +3,11 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 
 export const authOptions: AuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // Only use PrismaAdapter in production mode
+  ...(isDemoMode() ? {} : { adapter: PrismaAdapter(prisma) }),
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -18,9 +20,17 @@ export const authOptions: AuthOptions = {
           return null;
         }
         
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
+        let user;
+        
+        if (isDemoMode()) {
+          // Use demo database
+          user = await DemoORM.findUniqueUser({ email: credentials.email });
+        } else {
+          // Use real database
+          user = await prisma.user.findUnique({
+            where: { email: credentials.email }
+          });
+        }
         
         if (!user || !user.password) {
           return null;
@@ -50,8 +60,8 @@ export const authOptions: AuthOptions = {
     // })
   ],
   session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    strategy: 'jwt', // JWT sessions work perfectly in demo mode
+    maxAge: isDemoMode() ? 24 * 60 * 60 : 30 * 24 * 60 * 60, // 1 day in demo, 30 days in production
   },
   callbacks: {
     async jwt({ token, user }) {

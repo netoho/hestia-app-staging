@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
 import prisma from '@/lib/prisma';
+import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -37,7 +38,13 @@ export async function POST(request: NextRequest) {
     const { email, name, password, role } = validation.data;
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    let existingUser;
+    if (isDemoMode()) {
+      existingUser = await DemoORM.findUniqueUser({ email });
+    } else {
+      existingUser = await prisma.user.findUnique({ where: { email } });
+    }
+    
     if (existingUser) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }

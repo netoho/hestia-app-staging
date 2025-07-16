@@ -4,6 +4,7 @@ import { getPolicies } from '@/lib/services/policyApplicationService';
 import { PolicyStatus } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
+import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,12 +37,51 @@ export async function GET(request: NextRequest) {
     }
 
     // Get policies
-    const result = await getPolicies({
-      status: status || undefined,
-      search: search || undefined,
-      page,
-      limit
-    });
+    let result;
+    
+    if (isDemoMode()) {
+      // Use demo database
+      const where: any = {};
+      if (status && status !== 'all') {
+        where.status = status;
+      }
+      if (search) {
+        where.tenantEmail = { contains: search };
+      }
+      
+      const skip = (page - 1) * limit;
+      const [policies, total] = await Promise.all([
+        DemoORM.findManyPolicies(where, {
+          skip,
+          take: limit,
+          include: {
+            initiatedByUser: true,
+            reviewedByUser: true,
+            documents: true,
+            activities: true,
+          }
+        }),
+        DemoORM.countPolicies(where)
+      ]);
+      
+      result = {
+        policies,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } else {
+      // Use real database
+      result = await getPolicies({
+        status: status || undefined,
+        search: search || undefined,
+        page,
+        limit
+      });
+    }
 
     return NextResponse.json(result);
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { isDemoMode } from '@/lib/env-check';
+import { DemoORM } from '@/lib/services/demoDatabase';
 
 export async function GET(
   request: NextRequest,
@@ -19,50 +21,68 @@ export async function GET(
     }
 
     // Get policy with all related data
-    const policy = await prisma.policy.findUnique({
-      where: { id },
-      include: {
-        initiatedByUser: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          }
-        },
-        reviewedByUser: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          }
-        },
-        documents: {
-          select: {
-            id: true,
-            category: true,
-            originalName: true,
-            fileSize: true,
-            uploadedAt: true,
-          },
-          orderBy: {
-            uploadedAt: 'desc'
-          }
-        },
-        activities: {
-          select: {
-            id: true,
-            action: true,
-            details: true,
-            performedBy: true,
-            ipAddress: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: 'desc'
+    let policy;
+    
+    if (isDemoMode()) {
+      // Use demo database
+      policy = await DemoORM.findUniquePolicy(
+        { id },
+        {
+          include: {
+            initiatedByUser: true,
+            reviewedByUser: true,
+            documents: true,
+            activities: true,
           }
         }
-      }
-    });
+      );
+    } else {
+      // Use real database
+      policy = await prisma.policy.findUnique({
+        where: { id },
+        include: {
+          initiatedByUser: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            }
+          },
+          reviewedByUser: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            }
+          },
+          documents: {
+            select: {
+              id: true,
+              category: true,
+              originalName: true,
+              fileSize: true,
+              uploadedAt: true,
+            },
+            orderBy: {
+              uploadedAt: 'desc'
+            }
+          },
+          activities: {
+            select: {
+              id: true,
+              action: true,
+              details: true,
+              performedBy: true,
+              ipAddress: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
+        }
+      });
+    }
 
     if (!policy) {
       return NextResponse.json(
@@ -101,37 +121,36 @@ export async function PUT(
     const body = await request.json();
     const { status, reviewNotes, reviewReason } = body;
 
-    // Update policy
-    const updatedPolicy = await prisma.policy.update({
-      where: { id },
-      data: {
-        status,
-        reviewedBy: authResult.user.id,
-        reviewedAt: new Date(),
-        ...(reviewNotes && { reviewNotes }),
-        ...(reviewReason && { reviewReason }),
-      },
-      include: {
-        initiatedByUser: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          }
+    let updatedPolicy;
+
+    if (isDemoMode()) {
+      // Demo mode - update persists in memory
+      updatedPolicy = await DemoORM.updatePolicy(
+        { id },
+        {
+          status,
+          reviewedBy: authResult.user.id,
+          reviewedAt: new Date(),
+          ...(reviewNotes && { reviewNotes }),
+          ...(reviewReason && { reviewReason }),
         },
-        reviewedByUser: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
+        {
+          include: {
+            initiatedByUser: true,
+            reviewedByUser: true,
           }
         }
-      }
-    });
+      );
 
-    // Log activity
-    await prisma.policyActivity.create({
-      data: {
+      if (!updatedPolicy) {
+        return NextResponse.json(
+          { error: 'Policy not found' },
+          { status: 404 }
+        );
+      }
+
+      // Log activity in demo database
+      await DemoORM.createPolicyActivity({
         policyId: id,
         action: status.toLowerCase(),
         details: {
@@ -142,8 +161,52 @@ export async function PUT(
         },
         performedBy: authResult.user.id,
         ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
-      }
-    });
+      });
+    } else {
+      // Real database update
+      updatedPolicy = await prisma.policy.update({
+        where: { id },
+        data: {
+          status,
+          reviewedBy: authResult.user.id,
+          reviewedAt: new Date(),
+          ...(reviewNotes && { reviewNotes }),
+          ...(reviewReason && { reviewReason }),
+        },
+        include: {
+          initiatedByUser: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            }
+          },
+          reviewedByUser: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            }
+          }
+        }
+      });
+
+      // Log activity (only in real mode)
+      await prisma.policyActivity.create({
+        data: {
+          policyId: id,
+          action: status.toLowerCase(),
+          details: {
+            status,
+            reviewNotes,
+            reviewReason,
+            reviewedBy: authResult.user.email,
+          },
+          performedBy: authResult.user.id,
+          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        }
+      });
+    }
 
     return NextResponse.json(updatedPolicy);
 

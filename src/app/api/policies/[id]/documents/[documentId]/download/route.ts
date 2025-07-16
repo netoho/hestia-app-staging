@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { getSignedDownloadUrl } from '@/lib/services/fileUploadService';
 import prisma from '@/lib/prisma';
+import { isDemoMode } from '@/lib/env-check';
+import { DemoORM } from '@/lib/services/demoDatabase';
 
 export async function GET(
   request: NextRequest,
@@ -28,20 +30,31 @@ export async function GET(
     }
 
     // Verify that the document belongs to the specified policy
-    const document = await prisma.policyDocument.findFirst({
-      where: {
-        id: documentId,
-        policyId: id,
-      },
-      include: {
-        policy: {
-          select: {
-            id: true,
-            tenantEmail: true,
+    let document;
+    
+    if (isDemoMode()) {
+      // Use demo database
+      document = await DemoORM.findFirstPolicyDocument(
+        { id: documentId, policyId: id },
+        { include: { policy: true } }
+      );
+    } else {
+      // Use real database
+      document = await prisma.policyDocument.findFirst({
+        where: {
+          id: documentId,
+          policyId: id,
+        },
+        include: {
+          policy: {
+            select: {
+              id: true,
+              tenantEmail: true,
+            }
           }
         }
-      }
-    });
+      });
+    }
 
     if (!document) {
       return NextResponse.json(

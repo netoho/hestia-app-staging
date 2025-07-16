@@ -64,14 +64,16 @@ export function LoginForm() {
 
   return (
     <div className="space-y-4">
-      <Alert>
-        <InfoIcon className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Demo Credentials:</strong><br />
-          Email: admin@hestia.com<br />
-          Password: password123
-        </AlertDescription>
-      </Alert>
+      {process.env.NODE_ENV === 'development' && (
+        <Alert>
+          <InfoIcon className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Demo Credentials:</strong><br />
+            Email: admin@hestiaplp.com.mx<br />
+            Password: password123
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
