@@ -10,7 +10,6 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate",
     "db:seed": "prisma db seed",
     "db:setup": "./scripts/setup-database.sh",
     "db:reset": "prisma db push --force-reset && npm run db:seed"
