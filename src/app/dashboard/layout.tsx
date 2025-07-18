@@ -7,15 +7,29 @@ import { t } from '@/lib/i18n';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth-config';
 import { redirect } from 'next/navigation';
+import { isDemoMode } from '@/lib/env-check';
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const session = await getServerSession(authOptions);
+  let session;
+  let user;
 
-  if (!session) {
-    redirect('/login');
+  if (isDemoMode()) {
+    // In demo mode, create a mock session with super admin user
+    user = {
+      id: 'demo-admin-id',
+      email: 'admin@hestiaplp.com.mx',
+      name: 'Super Admin',
+      role: 'staff'
+    };
+  } else {
+    session = await getServerSession(authOptions);
+
+    if (!session) {
+      redirect('/login');
+    }
+
+    user = session.user;
   }
-
-  const user = session.user;
 
   return (
     <SidebarProvider defaultOpen>
