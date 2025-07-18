@@ -76,6 +76,7 @@ const es = {
             ] as NavItem[],
             login: "Iniciar Sesión",
             register: "Registrarse",
+            gotoDashboard: "Ir al Dashboard",
             openMenu: "Abrir menú",
             closeMenu: "Cerrar menú",
         },
