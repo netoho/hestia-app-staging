@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "db:seed": "prisma db seed",
+    "dev": "bun run next dev --turbopack -p 9002",
+    "genkit:dev": "bun run genkit start -- tsx src/ai/dev.ts",
+    "genkit:watch": "bun run genkit start -- tsx --watch src/ai/dev.ts",
+    "build": "bun run next build",
+    "start": "bun run next start",
+    "lint": "bun run next lint",
+    "typecheck": "bun run tsc --noEmit",
+    "db:seed": "bun run prisma db seed",
     "db:setup": "./scripts/setup-database.sh",
-    "db:reset": "prisma db push --force-reset && npm run db:seed"
+    "db:reset": "bun run prisma db push --force-reset && npm run db:seed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
