@@ -71,7 +71,7 @@ export function LoginForm() {
         <Alert>
           <InfoIcon className="h-4 w-4" />
           <AlertDescription>
-            <strong>isDemoMode: {isDemoMode() ? 'TRUE': 'FALSE'}</strong>
+            <strong>isDemoMode: {isDemoMode() ? 'TRUE': 'FALSE'}</strong><br />
             <strong>Demo Credentials:</strong><br />
             Email: admin@hestiaplp.com.mx<br />
             Password: password123
