@@ -47,6 +47,10 @@ interface PolicyWithRelations {
   updatedAt: string;
   submittedAt?: string | null;
   reviewedAt?: string | null;
+  packageId?: string | null;
+  packageName?: string | null;
+  price?: number | null;
+  paymentStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   initiatedByUser: {
     id: string;
     email: string;
@@ -80,6 +84,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
   const [filters, setFilters] = useState({
     status: 'all',
     search: '',
+    paymentStatus: 'all',
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -104,6 +109,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
         limit: pagination.limit.toString(),
         ...(filters.status !== 'all' && { status: filters.status }),
         ...(filters.search && { search: filters.search }),
+        ...(filters.paymentStatus !== 'all' && { paymentStatus: filters.paymentStatus }),
       });
 
       const response = await fetch(`/api/policies?${params.toString()}`);
@@ -149,6 +155,36 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
       red: 'destructive',
     };
     return colorMap[POLICY_STATUS_COLORS[status]] || 'default';
+  };
+
+  const getPaymentStatusBadgeVariant = (paymentStatus: string) => {
+    const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      PENDING: 'outline',
+      PROCESSING: 'secondary',
+      COMPLETED: 'default',
+      FAILED: 'destructive',
+      REFUNDED: 'secondary',
+    };
+    return variantMap[paymentStatus] || 'outline';
+  };
+
+  const getPaymentStatusDisplay = (paymentStatus: string) => {
+    const displayMap: Record<string, string> = {
+      PENDING: t.pages.policies.table.paymentStatus.pending,
+      PROCESSING: t.pages.policies.table.paymentStatus.processing,
+      COMPLETED: t.pages.policies.table.paymentStatus.completed,
+      FAILED: t.pages.policies.table.paymentStatus.failed,
+      REFUNDED: t.pages.policies.table.paymentStatus.refunded,
+    };
+    return displayMap[paymentStatus] || paymentStatus;
+  };
+
+  const formatPrice = (price: number | null) => {
+    if (!price) return '-';
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(price);
   };
 
   const formatDate = (dateString: string) => {
@@ -211,7 +247,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             value={filters.status}
             onValueChange={(value) => handleFilterChange('status', value)}
           >
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder={t.pages.policies.table.filterPlaceholder} />
             </SelectTrigger>
             <SelectContent>
@@ -221,6 +257,22 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                   {label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.paymentStatus}
+            onValueChange={(value) => handleFilterChange('paymentStatus', value)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder={t.pages.policies.table.paymentFilterPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t.pages.policies.table.allPaymentStatuses}</SelectItem>
+              <SelectItem value="PENDING">{t.pages.policies.table.paymentStatus.pending}</SelectItem>
+              <SelectItem value="PROCESSING">{t.pages.policies.table.paymentStatus.processing}</SelectItem>
+              <SelectItem value="COMPLETED">{t.pages.policies.table.paymentStatus.completed}</SelectItem>
+              <SelectItem value="FAILED">{t.pages.policies.table.paymentStatus.failed}</SelectItem>
+              <SelectItem value="REFUNDED">{t.pages.policies.table.paymentStatus.refunded}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -239,6 +291,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                   <TableRow>
                     <TableHead>{t.pages.policies.table.headers.tenant}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.status}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.payment}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.progress}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.initiatedBy}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.created}</TableHead>
@@ -249,7 +302,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                 <TableBody>
                   {policies.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         {t.pages.policies.table.noPoliciesFound}
                       </TableCell>
                     </TableRow>
@@ -270,6 +323,18 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                           <Badge variant={getStatusBadgeVariant(policy.status)}>
                             {POLICY_STATUS_DISPLAY[policy.status as keyof typeof POLICY_STATUS_DISPLAY] || policy.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Badge variant={getPaymentStatusBadgeVariant(policy.paymentStatus)}>
+                              {getPaymentStatusDisplay(policy.paymentStatus)}
+                            </Badge>
+                            {policy.price && (
+                              <div className="text-xs text-muted-foreground">
+                                {formatPrice(policy.price)}
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
