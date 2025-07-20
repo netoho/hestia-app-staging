@@ -11,7 +11,9 @@ const initiatePolicySchema = z.object({
   tenantPhone: z.string().optional(),
   tenantName: z.string().optional(),
   propertyId: z.string().optional(),
-  propertyAddress: z.string().optional()
+  propertyAddress: z.string().optional(),
+  packageId: z.string().min(1, 'Package is required'),
+  price: z.number().min(0, 'Price must be positive')
 });
 
 export async function POST(request: NextRequest) {
@@ -44,14 +46,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tenantEmail, tenantPhone, tenantName, propertyId, propertyAddress } = validation.data;
+    const { tenantEmail, tenantPhone, tenantName, propertyId, propertyAddress, packageId, price } = validation.data;
+
+    // Fetch package details to get the package name
+    const packages = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/packages`);
+    const packagesData = await packages.json();
+    const selectedPackage = packagesData.find((pkg: any) => pkg.id === packageId);
+    const packageName = selectedPackage?.name || 'Unknown Package';
 
     // Create the policy
     const policy = await createPolicy({
       propertyId,
       initiatedBy: authResult.user.id,
       tenantEmail,
-      tenantPhone
+      tenantPhone,
+      packageId,
+      packageName,
+      price
     });
 
     // Send invitation email
