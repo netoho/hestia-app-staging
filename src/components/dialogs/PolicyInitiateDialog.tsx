@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,10 +21,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Plus, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -36,6 +44,8 @@ const policyInitiateSchema = z.object({
   tenantName: z.string().optional(),
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
+  packageId: z.string().min(1, 'Please select a package'),
+  price: z.coerce.number().min(0, 'Price must be a positive number'),
 });
 
 type PolicyInitiateFormValues = z.infer<typeof policyInitiateSchema>;
@@ -47,6 +57,8 @@ interface PolicyInitiateDialogProps {
 export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<PolicyInitiateFormValues>({
@@ -57,8 +69,48 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
       tenantName: '',
       propertyId: '',
       propertyAddress: '',
+      packageId: '',
+      price: 0,
     },
   });
+
+  // Fetch packages when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchPackages();
+    }
+  }, [open]);
+
+  // Update price when package selection changes
+  const selectedPackageId = form.watch('packageId');
+  useEffect(() => {
+    if (selectedPackageId && packages.length > 0) {
+      const selectedPackage = packages.find(p => p.id === selectedPackageId);
+      if (selectedPackage) {
+        form.setValue('price', selectedPackage.price);
+      }
+    }
+  }, [selectedPackageId, packages, form]);
+
+  const fetchPackages = async () => {
+    setLoadingPackages(true);
+    try {
+      const response = await fetch('/api/packages');
+      if (response.ok) {
+        const data = await response.json();
+        setPackages(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch packages:', error);
+      toast({
+        title: t.misc.error,
+        description: t.pages.policies.initiateDialog.errors.failedToLoadPackages,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
 
   const onSubmit = async (values: PolicyInitiateFormValues) => {
     setIsLoading(true);
@@ -208,6 +260,61 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground">{t.pages.policies.initiateDialog.form.paymentInfoTitle}</h3>
+              
+              <FormField
+                control={form.control}
+                name="packageId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.pages.policies.initiateDialog.form.packageLabel} *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingPackages}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingPackages ? t.pages.policies.initiateDialog.form.loadingPackages : t.pages.policies.initiateDialog.form.selectPackagePlaceholder} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {packages.map((pkg) => (
+                          <SelectItem key={pkg.id} value={pkg.id}>
+                            {pkg.name} - ${pkg.price} MXN
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {t.pages.policies.initiateDialog.form.packageDescription}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.pages.policies.initiateDialog.form.priceLabel} *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder={t.pages.policies.initiateDialog.form.pricePlaceholder}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t.pages.policies.initiateDialog.form.priceDescription}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
