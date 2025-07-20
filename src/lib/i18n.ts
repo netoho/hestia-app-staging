@@ -144,7 +144,8 @@ const es = {
             2: "Detalles de Empleo", 
             3: "Referencias",
             4: "Carga de Documentos",
-            5: "Revisión y Envío"
+            5: "Pago",
+            6: "Revisión y Envío"
         },
         progress: {
             step: "Paso",
@@ -196,6 +197,7 @@ const es = {
             readyToSubmit: "¿Listo para Enviar?",
             readyToSubmitDescription: "Al enviar esta solicitud, confirmas que toda la información proporcionada es exacta y completa.",
             backToDocuments: "Volver a Documentos",
+            backToPayment: "Volver a Pago",
             submitApplication: "Enviar Solicitud",
             notCompleted: "No completado",
             nationality: "Nacionalidad:",
@@ -228,6 +230,39 @@ const es = {
             yes: "Sí",
             no: "No",
             noDocuments: "No se han subido documentos"
+        },
+        payment: {
+            title: "Pago Requerido",
+            description: "Completa el pago para continuar con tu solicitud de póliza.",
+            package: "Paquete de Garantía",
+            packageDescription: "Paquete seleccionado para esta póliza",
+            oneTimePayment: "Pago único",
+            currentStatus: "Estado actual",
+            paymentHistory: "Historial de Pagos",
+            method: "Método",
+            paymentFor: "Pago para",
+            payNow: "Pagar Ahora",
+            processing: "Procesando...",
+            continueToReview: "Continuar a Revisión",
+            backToDocuments: "Volver a Documentos",
+            status: {
+                pending: "Pendiente",
+                processing: "Procesando",
+                completed: "Completado",
+                failed: "Fallido",
+                refunded: "Reembolsado"
+            },
+            messages: {
+                paymentRequired: "Pago Requerido",
+                paymentRequiredDescription: "Debes completar el pago antes de continuar a la revisión final.",
+                paymentCompleted: "¡Pago completado exitosamente! Puedes continuar con la revisión final de tu solicitud.",
+                paymentFailed: "El pago anterior falló. Por favor intenta nuevamente o contacta soporte si el problema persiste.",
+                paymentPending: "Tu pago está siendo procesado. Por favor espera un momento.",
+                noPriceSet: "No se ha establecido un precio para esta póliza. Contacta a tu agente.",
+                paymentCreationFailed: "Error al crear el pago. Por favor intenta nuevamente.",
+                paymentCreated: "Pago Creado",
+                paymentCreatedDescription: "Serás redirigido a la página de pago segura."
+            }
         },
         header: {
             title: "Solicitud de Póliza Hestia",
@@ -418,6 +453,14 @@ const es = {
                     propertyIdPlaceholder: "Referencia interna de la propiedad",
                     propertyAddressLabel: "Dirección de la Propiedad",
                     propertyAddressPlaceholder: "Calle Principal 123, Ciudad, Estado, CP",
+                    paymentInfoTitle: "Información de Pago",
+                    packageLabel: "Paquete",
+                    loadingPackages: "Cargando paquetes...",
+                    selectPackagePlaceholder: "Selecciona un paquete",
+                    packageDescription: "Selecciona el paquete de garantía para esta póliza",
+                    priceLabel: "Precio (MXN)",
+                    pricePlaceholder: "0.00",
+                    priceDescription: "Puedes ajustar el precio si fue negociado",
                     createButton: "Crear y Enviar Invitación",
                     creatingButton: "Creando...",
                 },
@@ -428,6 +471,7 @@ const es = {
                 },
                 errors: {
                     failedToInitiate: "No se pudo iniciar la póliza",
+                    failedToLoadPackages: "Error al cargar los paquetes",
                 }
             },
             table: {
@@ -435,12 +479,22 @@ const es = {
                 description: "Gestiona y da seguimiento a las solicitudes de póliza de los inquilinos",
                 searchPlaceholder: "Buscar por email del inquilino...",
                 filterPlaceholder: "Filtrar por estado",
+                paymentFilterPlaceholder: "Filtrar por pago",
                 allStatuses: "Todos los Estados",
+                allPaymentStatuses: "Todos los Pagos",
                 loading: "Cargando pólizas...",
                 noPoliciesFound: "No se encontraron pólizas",
+                paymentStatus: {
+                    pending: "Pendiente",
+                    processing: "Procesando",
+                    completed: "Pagado",
+                    failed: "Fallido",
+                    refunded: "Reembolsado",
+                },
                 headers: {
                     tenant: "Inquilino",
                     status: "Estado",
+                    payment: "Pago",
                     progress: "Progreso",
                     initiatedBy: "Iniciada Por",
                     created: "Creada",
@@ -525,6 +579,22 @@ const es = {
                         tenant: "Realizado por inquilino",
                         staff: "Realizado por staff",
                         system: "Acción del sistema"
+                    }
+                },
+                payment: {
+                    title: "Información de Pago",
+                    package: "Paquete",
+                    price: "Precio",
+                    paymentStatus: "Estado de Pago",
+                    oneTimePayment: "Pago único",
+                    noPackageSelected: "Sin paquete seleccionado",
+                    noPaymentStatus: "Sin estado de pago",
+                    status: {
+                        pending: "Pendiente",
+                        processing: "Procesando",
+                        completed: "Completado",
+                        failed: "Fallido",
+                        refunded: "Reembolsado"
                     }
                 },
                 toast: {
