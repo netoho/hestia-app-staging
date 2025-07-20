@@ -1,4 +1,5 @@
 import { isMockEnabled } from '../env-check';
+import { DemoORM } from './demoDatabase';
 import prisma from '../prisma';
 import { Policy, PolicyStatus, PolicyStatusType, PolicyDocument, PolicyActivity, Prisma } from '@/lib/prisma-types';
 import { randomUUID } from 'crypto';
@@ -11,6 +12,9 @@ export interface CreatePolicyData {
   initiatedBy: string;
   tenantEmail: string;
   tenantPhone?: string;
+  packageId?: string;
+  packageName?: string;
+  price?: number;
 }
 
 export interface PolicyWithRelations extends Policy {
@@ -30,6 +34,7 @@ export interface PolicyWithRelations extends Policy {
 
 interface GetPoliciesOptions {
   status?: PolicyStatusType | 'all';
+  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all';
   search?: string;
   page?: number;
   limit?: number;
@@ -83,6 +88,10 @@ const mockPolicies: PolicyWithRelations[] = [
     reviewedAt: null,
     reviewNotes: null,
     reviewReason: null,
+    packageId: 'premium',
+    packageName: 'Escudo Premium',
+    price: 99,
+    paymentStatus: 'COMPLETED' as any,
     createdAt: new Date(),
     updatedAt: new Date(),
     documents: [],
@@ -116,6 +125,10 @@ const mockPolicies: PolicyWithRelations[] = [
     reviewedAt: null,
     reviewNotes: null,
     reviewReason: null,
+    packageId: 'basic',
+    packageName: 'Escudo Básico',
+    price: 49,
+    paymentStatus: 'PENDING' as any,
     createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
     updatedAt: new Date(),
     documents: [],
@@ -156,6 +169,10 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       reviewedAt: null,
       reviewNotes: null,
       reviewReason: null,
+      packageId: data.packageId || null,
+      packageName: data.packageName || null,
+      price: data.price || null,
+      paymentStatus: 'PENDING' as any, // Will be properly typed after regenerating types
       createdAt: new Date(),
       updatedAt: new Date(),
       documents: [],
@@ -187,6 +204,9 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
         initiatedBy: data.initiatedBy,
         tenantEmail: data.tenantEmail,
         tenantPhone: data.tenantPhone,
+        packageId: data.packageId,
+        packageName: data.packageName,
+        price: data.price,
         accessToken: generateSecureToken(),
         tokenExpiry: generateTokenExpiry(),
         activities: {
@@ -223,7 +243,7 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
 };
 
 export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<GetPoliciesResult> => {
-  const { status, search, page = 1, limit = 10 } = options;
+  const { status, paymentStatus, search, page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
 
   if (isMockEnabled()) {
@@ -236,6 +256,11 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
     // Filter by status
     if (status && status !== 'all') {
       filteredPolicies = filteredPolicies.filter(p => p.status === status);
+    }
+    
+    // Filter by payment status
+    if (paymentStatus && paymentStatus !== 'all') {
+      filteredPolicies = filteredPolicies.filter(p => (p as any).paymentStatus === paymentStatus);
     }
     
     // Filter by search (email)
@@ -268,6 +293,10 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
     
     if (status && status !== 'all') {
       where.status = status;
+    }
+    
+    if (paymentStatus && paymentStatus !== 'all') {
+      where.paymentStatus = paymentStatus as any;
     }
     
     if (search && search.trim()) {
@@ -353,15 +382,18 @@ export const getPolicyById = async (id: string): Promise<PolicyWithRelations | n
 
 export const getPolicyByToken = async (token: string): Promise<PolicyWithRelations | null> => {
   if (isMockEnabled()) {
-    console.log(`Emulator mode: Fetching mock policy by token`);
-    const policy = mockPolicies.find(p => p.accessToken === token);
-    
-    // Check token expiry
-    if (policy && policy.tokenExpiry < new Date()) {
-      return null; // Token expired
-    }
-    
-    return policy || null;
+    console.log(`Demo mode: Fetching policy by token`);
+    return await DemoORM.findUniquePolicy(
+      { accessToken: token },
+      {
+        include: {
+          initiatedByUser: true,
+          reviewedByUser: true,
+          documents: true,
+          activities: true,
+        }
+      }
+    );
   } else {
     console.log(`Real DB mode: Fetching policy by token`);
     const policy = await prisma.policy.findUnique({
