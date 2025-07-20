@@ -13,7 +13,7 @@
     "db:seed": "bun run prisma db seed",
     "db:setup": "./scripts/setup-database.sh",
     "db:reset": "bun run prisma db push --force-reset && bun run db:seed",
-    "postinstall": "bun run prisma generate"
+    "postinstall": "bun run prisma generate --no-engine"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
