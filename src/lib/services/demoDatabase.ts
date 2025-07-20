@@ -212,7 +212,7 @@ class DemoDatabase {
         packageId: 'standard',
         packageName: 'Seguro Estándar',
         price: 99,
-        paymentStatus: 'PENDING' as any,
+        paymentStatus: 'COMPLETED' as any,
         createdAt: new Date('2024-01-10'),
         updatedAt: new Date('2024-01-12'),
       },
