@@ -36,6 +36,7 @@ class DemoDatabase {
   public insurancePolicies: InsurancePolicy[] = [];
   public policyDocuments: any[] = [];
   public policyActivities: any[] = [];
+  public payments: any[] = [];
   
   private constructor() {
     this.initializeData();
@@ -166,8 +167,54 @@ class DemoDatabase {
         accessToken: 'demo-token-123',
         tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
         submittedAt: new Date('2024-01-15'),
+        packageId: 'premium',
+        packageName: 'Fortaleza Premium',
+        price: 199,
+        paymentStatus: 'COMPLETED' as any,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-01-15'),
+      },
+      {
+        id: 'demo-policy-2',
+        initiatedBy: 'demo-admin-id',
+        reviewedBy: null,
+        reviewedAt: null,
+        tenantEmail: 'tenant2@example.com',
+        tenantPhone: '+1234567892',
+        propertyId: null,
+        status: 'IN_PROGRESS' as PolicyStatus,
+        currentStep: 5, // At payment step
+        profileData: {
+          nationality: 'foreign',
+          passport: 'AB1234567'
+        },
+        employmentData: {
+          employmentStatus: 'employed',
+          industry: 'Finance',
+          companyName: 'Banking Corp',
+          position: 'Financial Analyst',
+          monthlyIncome: 35000,
+          creditCheckConsent: true
+        },
+        referencesData: {
+          personalReferenceName: 'Jane Smith',
+          personalReferencePhone: '+1234567893'
+        },
+        documentsData: {
+          identificationCount: 1,
+          incomeCount: 1,
+          optionalCount: 1,
+          incomeDocsHavePassword: 'no'
+        },
+        accessToken: 'demo-token-456',
+        tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        submittedAt: null,
+        packageId: 'standard',
+        packageName: 'Seguro Estándar',
+        price: 99,
+        paymentStatus: 'PENDING' as any,
+        createdAt: new Date('2024-01-10'),
+        updatedAt: new Date('2024-01-12'),
       },
     ];
 
@@ -317,12 +364,55 @@ class DemoDatabase {
       insurancePolicies: this.insurancePolicies,
       policyDocuments: this.policyDocuments,
       policyActivities: this.policyActivities,
+      payments: this.payments,
     };
+  }
+
+  // Payment methods
+  public createPayment(data: any) {
+    const newPayment = {
+      id: generateId('payment'),
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.payments.push(newPayment);
+    return newPayment;
+  }
+
+  public updatePaymentByStripeId(stripeId: string, data: any) {
+    const payment = this.payments.find(p => 
+      p.stripeIntentId === stripeId || p.stripeSessionId === stripeId
+    );
+    if (!payment) return null;
+    
+    Object.assign(payment, data, { updatedAt: new Date() });
+    return payment;
+  }
+
+  public updatePayment(id: string, data: any) {
+    const payment = this.payments.find(p => p.id === id);
+    if (!payment) return null;
+    
+    Object.assign(payment, data, { updatedAt: new Date() });
+    return payment;
+  }
+
+  public getPaymentsByPolicyId(policyId: string) {
+    return this.payments.filter(p => p.policyId === policyId);
   }
 }
 
 // Export singleton instance
 export const demoDb = DemoDatabase.getInstance();
+
+// Export a simplified interface for payment service
+export const demoDatabase = {
+  createPayment: (data: any) => demoDb.createPayment(data),
+  updatePaymentByStripeId: (stripeId: string, data: any) => demoDb.updatePaymentByStripeId(stripeId, data),
+  updatePayment: (id: string, data: any) => demoDb.updatePayment(id, data),
+  getPaymentsByPolicyId: (policyId: string) => demoDb.getPaymentsByPolicyId(policyId),
+};
 
 // Helper function to check if we should use demo database
 export const useDemoDatabase = (): boolean => {
@@ -467,6 +557,9 @@ export class DemoORM {
     
     if (where?.status) {
       results = results.filter(p => p.status === where.status);
+    }
+    if (where?.paymentStatus) {
+      results = results.filter(p => (p as any).paymentStatus === where.paymentStatus);
     }
     if (where?.tenantEmail?.contains) {
       const searchTerm = where.tenantEmail.contains.toLowerCase();
@@ -652,6 +745,9 @@ export class DemoORM {
     
     if (where.status) {
       results = results.filter(p => p.status === where.status);
+    }
+    if (where.paymentStatus) {
+      results = results.filter(p => (p as any).paymentStatus === where.paymentStatus);
     }
     if (where.tenantEmail?.contains) {
       const searchTerm = where.tenantEmail.contains.toLowerCase();
