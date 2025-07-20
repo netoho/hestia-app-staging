@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') as PolicyStatusType | 'all' | null;
+    const paymentStatus = searchParams.get('paymentStatus') as 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all' | null;
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -42,6 +43,9 @@ export async function GET(request: NextRequest) {
       const where: any = {};
       if (status && status !== 'all') {
         where.status = status;
+      }
+      if (paymentStatus && paymentStatus !== 'all') {
+        where.paymentStatus = paymentStatus;
       }
       if (search) {
         where.tenantEmail = { contains: search };
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest) {
       // Use real database
       result = await getPolicies({
         status: status || undefined,
+        paymentStatus: paymentStatus || undefined,
         search: search || undefined,
         page,
         limit
