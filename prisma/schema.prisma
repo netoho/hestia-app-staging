@@ -125,11 +125,17 @@ model Policy {
   reviewedAt     DateTime?
   reviewNotes    String?
   reviewReason   String?
+  // Payment related fields
+  packageId      String?     // Reference to the selected package
+  packageName    String?     // Store package name for history
+  price          Float?      // Negotiated price (can differ from package price)
+  paymentStatus  PaymentStatus @default(PENDING)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   documents PolicyDocument[]
   activities PolicyActivity[]
+  payments  Payment[]
   
   initiatedByUser User @relation("InitiatedByUser", fields: [initiatedBy], references: [id])
   reviewedByUser  User? @relation("ReviewedByUser", fields: [reviewedBy], references: [id])
@@ -162,6 +168,30 @@ model PolicyActivity {
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
+model Payment {
+  id                String        @id @default(cuid())
+  policyId          String
+  amount            Float
+  currency          String        @default("MXN")
+  status            PaymentStatus @default(PENDING)
+  method            PaymentMethod?
+  // Stripe specific fields
+  stripeIntentId    String?       @unique
+  stripeSessionId   String?       @unique
+  stripeCustomerId  String?
+  // Additional payment details
+  description       String?
+  metadata          Json?
+  errorMessage      String?
+  paidAt            DateTime?
+  refundedAt        DateTime?
+  refundAmount      Float?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
 
 enum PolicyStatus {
   DRAFT
@@ -171,4 +201,18 @@ enum PolicyStatus {
   UNDER_REVIEW
   APPROVED
   DENIED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  CASH
 }
