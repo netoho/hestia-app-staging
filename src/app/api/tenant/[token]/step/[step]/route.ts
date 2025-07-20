@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPolicyByToken, addPolicyActivity } from '@/lib/services/policyApplicationService';
+import { getPolicyByToken, addPolicyActivity, updatePolicyData } from '@/lib/services/policyApplicationService';
 import { PolicyStatus } from '@/lib/prisma-types';
+import { isDemoMode } from '@/lib/env-check';
+import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -62,7 +64,7 @@ export async function PUT(
     const { token, step } = await params;
 
     // Validate step number
-    if (!['1', '2', '3', '4'].includes(step)) {
+    if (!['1', '2', '3', '4', '5', '6'].includes(step)) {
       return NextResponse.json(
         { error: 'Invalid step number' },
         { status: 400 }
@@ -88,7 +90,60 @@ export async function PUT(
       );
     }
 
-    // Parse and validate request body
+    const stepNumber = parseInt(step);
+    
+    // For steps 5 (payment) and 6 (review), we don't save form data
+    if (step === '5' || step === '6') {
+      // Step 5 (payment) - just advance the step, payment is handled separately
+      // Step 6 (review) - just advance the step, this is the final step before submission
+      
+      // For step 6 (review), check if payment is completed
+      if (step === '6' && policy.paymentStatus !== 'COMPLETED') {
+        return NextResponse.json(
+          { error: 'Payment must be completed before proceeding to review' },
+          { status: 400 }
+        );
+      }
+      
+      const nextStep = stepNumber + 1;
+      const newCurrentStep = Math.max(nextStep, policy.currentStep);
+      
+      let updatedPolicy;
+      if (isDemoMode()) {
+        updatedPolicy = await DemoORM.updatePolicy(
+          { id: policy.id },
+          {
+            currentStep: newCurrentStep,
+            status: PolicyStatus.IN_PROGRESS
+          }
+        );
+      } else {
+        updatedPolicy = await prisma.policy.update({
+          where: { id: policy.id },
+          data: {
+            currentStep: newCurrentStep,
+            status: PolicyStatus.IN_PROGRESS
+          }
+        });
+      }
+
+      // Log activity
+      await addPolicyActivity(
+        policy.id,
+        `step_${step}_completed`,
+        'tenant',
+        { step },
+        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+      );
+
+      return NextResponse.json({
+        success: true,
+        currentStep: updatedPolicy.currentStep,
+        status: updatedPolicy.status
+      });
+    }
+
+    // For steps 1-4, validate and save form data
     const body = await request.json();
     const schema = stepSchemas[step];
     const validation = schema.safeParse(body);
@@ -102,10 +157,9 @@ export async function PUT(
 
     // Update policy data
     const fieldName = stepFields[step];
-    const stepNumber = parseInt(step);
     
     // When a step is completed, advance to the next step
-    // Step 4 (documents) advances to step 5 (review), but stays IN_PROGRESS
+    // Steps 1-4 save form data and advance to next step
     // Only the actual submission API should change status to SUBMITTED
     const nextStep = stepNumber + 1;
     const nextStatus = PolicyStatus.IN_PROGRESS; // Always stay IN_PROGRESS until actual submission
@@ -128,10 +182,18 @@ export async function PUT(
       status: nextStatus
     };
 
-    const updatedPolicy = await prisma.policy.update({
-      where: { id: policy.id },
-      data: updateData
-    });
+    let updatedPolicy;
+    if (isDemoMode()) {
+      updatedPolicy = await DemoORM.updatePolicy(
+        { id: policy.id },
+        updateData
+      );
+    } else {
+      updatedPolicy = await prisma.policy.update({
+        where: { id: policy.id },
+        data: updateData
+      });
+    }
 
     // Log activity
     await addPolicyActivity(
