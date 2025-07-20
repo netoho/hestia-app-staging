@@ -72,6 +72,10 @@ export interface Policy {
   reviewedAt?: Date | null;
   reviewNotes?: string | null;
   reviewReason?: string | null;
+  packageId?: string | null;
+  packageName?: string | null;
+  price?: number | null;
+  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | null;
   createdAt: Date;
   updatedAt: Date;
   documents?: PolicyDocument[];
