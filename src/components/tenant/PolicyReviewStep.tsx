@@ -279,7 +279,7 @@ export function PolicyReviewStep({ policy, onBack, onSubmit, isSubmitting }: Pol
           <div className="flex justify-between items-center">
             <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
               <ChevronLeft className="h-4 w-4 mr-2" />
-              {t.wizard.review.backToDocuments}
+              {t.wizard.review.backToPayment}
             </Button>
             <Button 
               onClick={onSubmit} 

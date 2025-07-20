@@ -12,6 +12,7 @@ import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileF
 import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
 import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyReferencesForm';
 import { CreatePolicyDocumentsForm } from '@/components/forms/CreatePolicyDocumentsForm';
+import { PolicyPaymentStep } from '@/components/tenant/PolicyPaymentStep';
 import { PolicyReviewStep } from '@/components/tenant/PolicyReviewStep';
 import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
@@ -26,6 +27,9 @@ interface PolicyWizardProps {
     employmentData?: any;
     referencesData?: any;
     documentsData?: any;
+    packageName?: string | null;
+    price?: number | null;
+    paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   };
   onUpdate: () => void;
 }
@@ -35,7 +39,8 @@ const stepTitles: Record<number, string> = {
   2: t.wizard.stepTitles[2],
   3: t.wizard.stepTitles[3],
   4: t.wizard.stepTitles[4],
-  5: t.wizard.stepTitles[5]
+  5: t.wizard.stepTitles[5],
+  6: t.wizard.stepTitles[6]
 };
 
 export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
@@ -200,6 +205,15 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
         );
       case 5:
         return (
+          <PolicyPaymentStep
+            token={token}
+            policy={policy}
+            onNext={handleStepComplete}
+            onBack={handleBack}
+          />
+        );
+      case 6:
+        return (
           <PolicyReviewStep
             policy={policy}
             onSubmit={handleSubmitApplication}
@@ -218,7 +232,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
-            {[1, 2, 3, 4, 5].map((step) => {
+            {[1, 2, 3, 4, 5, 6].map((step) => {
               const status = getStepStatus(step);
               const accessible = isStepAccessible(step);
               
@@ -246,7 +260,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
                     )}
                   </div>
                   
-                  {step < 5 && (
+                  {step < 6 && (
                     <div
                       className={`hidden md:block w-24 h-0.5 ${
                         step < currentStep ? 'bg-green-500' : 'bg-muted'
@@ -260,10 +274,10 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
           
           {/* Progress Bar */}
           <div className="mt-6">
-            <Progress value={(currentStep / 5) * 100} className="h-2" />
+            <Progress value={(currentStep / 6) * 100} className="h-2" />
             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>{t.wizard.progress.step} {currentStep} {t.wizard.progress.of} 5</span>
-              <span>{Math.round((currentStep / 5) * 100)}% {t.wizard.progress.complete}</span>
+              <span>{t.wizard.progress.step} {currentStep} {t.wizard.progress.of} 6</span>
+              <span>{Math.round((currentStep / 6) * 100)}% {t.wizard.progress.complete}</span>
             </div>
           </div>
         </CardContent>
