@@ -49,7 +49,8 @@ export const POLICY_STEPS = {
   EMPLOYMENT: 2,
   REFERENCES: 3,
   DOCUMENTS: 4,
-  REVIEW: 5
+  PAYMENT: 5,
+  REVIEW: 6
 } as const;
 
 export const POLICY_STEP_NAMES = {
@@ -57,7 +58,8 @@ export const POLICY_STEP_NAMES = {
   2: 'employment',
   3: 'references',
   4: 'documents',
-  5: 'review'
+  5: 'payment',
+  6: 'review'
 } as const;
 
 // Status display helpers
