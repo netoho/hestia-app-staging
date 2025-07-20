@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PaymentService } from '@/lib/services/paymentService';
+import { PaymentService, mapStripePaymentMethodToEnum } from '@/lib/services/paymentService';
 import { addPolicyActivity } from '@/lib/services/policyApplicationService';
 
 export async function POST(request: NextRequest) {
