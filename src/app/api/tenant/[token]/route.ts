@@ -44,6 +44,10 @@ export async function GET(
       employmentData: policy.employmentData,
       referencesData: policy.referencesData,
       documentsData: policy.documentsData,
+      packageId: policy.packageId,
+      packageName: policy.packageName,
+      price: policy.price,
+      paymentStatus: policy.paymentStatus,
       documents: policy.documents.map(doc => ({
         id: doc.id,
         category: doc.category,
