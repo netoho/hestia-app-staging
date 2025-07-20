@@ -12,7 +12,8 @@
     "typecheck": "bun run tsc --noEmit",
     "db:seed": "bun run prisma db seed",
     "db:setup": "./scripts/setup-database.sh",
-    "db:reset": "bun run prisma db push --force-reset && bun run db:seed"
+    "db:reset": "bun run prisma db push --force-reset && bun run db:seed",
+    "postinstall": "bun run prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
