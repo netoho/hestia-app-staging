@@ -7,6 +7,7 @@ import { isDemoMode } from './env-check';
 export type UserRole = 'admin' | 'staff' | 'owner' | 'renter';
 export type PolicyStatusType = 'DRAFT' | 'SENT_TO_TENANT' | 'IN_PROGRESS' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'DENIED';
 export type DocumentCategory = 'identification' | 'income_proof' | 'employment_letter' | 'bank_statements' | 'references' | 'other';
+export type PaymentMethodType = 'CARD' | 'BANK_TRANSFER' | 'CASH';
 
 // PolicyStatus will be defined later after checking for Prisma client
 
@@ -137,6 +138,13 @@ export const PolicyStatus = PrismaExports.PolicyStatus || {
   UNDER_REVIEW: 'UNDER_REVIEW' as PolicyStatusType,
   APPROVED: 'APPROVED' as PolicyStatusType,
   DENIED: 'DENIED' as PolicyStatusType,
+} as const;
+
+// PaymentMethod enum object for accessing values like PaymentMethod.CARD
+export const PaymentMethod = PrismaExports.PaymentMethod || {
+  CARD: 'CARD' as PaymentMethodType,
+  BANK_TRANSFER: 'BANK_TRANSFER' as PaymentMethodType,
+  CASH: 'CASH' as PaymentMethodType,
 } as const;
 
 // For components that import specific types, provide them from either source
