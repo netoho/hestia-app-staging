@@ -1,4 +1,5 @@
-import { PaymentStatus, PaymentMethod } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
+import { PaymentMethod, PaymentMethodType } from '@/lib/prisma-types';
 import prisma from '@/lib/prisma';
 import { isDemoMode } from '@/lib/env-check';
 import { demoDatabase } from './demoDatabase';
@@ -8,6 +9,24 @@ import Stripe from 'stripe';
 let stripe: Stripe | null = null;
 
 // Initialize Stripe only when needed
+// Helper function to map Stripe payment methods to our enum
+export function mapStripePaymentMethodToEnum(stripeMethod?: string): PaymentMethodType {
+  if (!stripeMethod) return 'CARD';
+  
+  switch (stripeMethod.toLowerCase()) {
+    case 'card':
+      return 'CARD';
+    case 'bank_transfer':
+    case 'ach_debit':
+    case 'sepa_debit':
+      return 'BANK_TRANSFER';
+    case 'cash':
+      return 'CASH';
+    default:
+      return 'CARD'; // Default fallback
+  }
+}
+
 async function getStripe(): Promise<Stripe> {
   if (!stripe && !isDemoMode()) {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -255,16 +274,22 @@ export class PaymentService {
     stripeObjectId: string,
     status: PaymentStatus,
     additionalData?: {
-      method?: PaymentMethod;
+      method?: PaymentMethodType | string;
       paidAt?: Date;
       errorMessage?: string;
       stripeCustomerId?: string;
     }
   ) {
     if (isDemoMode()) {
+      // Map payment method for demo mode as well
+      const mappedAdditionalData = additionalData ? {
+        ...additionalData,
+        method: additionalData.method ? mapStripePaymentMethodToEnum(additionalData.method as string) : undefined,
+      } : {};
+      
       return demoDatabase.updatePaymentByStripeId(stripeObjectId, {
         status,
-        ...additionalData,
+        ...mappedAdditionalData,
       });
     }
 
@@ -282,12 +307,18 @@ export class PaymentService {
       throw new Error(`Payment not found for Stripe ID: ${stripeObjectId}`);
     }
 
+    // Map payment method if provided
+    const mappedAdditionalData = additionalData ? {
+      ...additionalData,
+      method: additionalData.method ? mapStripePaymentMethodToEnum(additionalData.method as string) : undefined,
+    } : {};
+
     // Update payment record
     const updatedPayment = await prisma.payment.update({
       where: { id: payment.id },
       data: {
         status,
-        ...additionalData,
+        ...mappedAdditionalData,
       },
     });
 
