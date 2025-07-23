@@ -62,7 +62,7 @@ export function PolicyPaymentStep({ token, policy, onNext, onBack }: PolicyPayme
     }
   };
 
-  const formatPrice = (price: number | null, currency = 'MXN') => {
+  const formatPrice = (price: number | null | undefined, currency = 'MXN') => {
     if (!price) return '-';
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',

@@ -26,7 +26,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
       </CardHeader>
       <CardContent className="flex-grow">
         <ul className="space-y-2">
-          {packageItem.features.map((feature, index) => (
+          {packageItem.features.map((feature: string, index: number) => (
             <li key={index} className="flex items-start">
               <CheckCircle2 className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
               <span className="text-sm text-foreground/90">{feature}</span>

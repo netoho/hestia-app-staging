@@ -208,7 +208,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
           <PolicyPaymentStep
             token={token}
             policy={policy}
-            onNext={handleStepComplete}
+            onNext={() => handleStepComplete({})}
             onBack={handleBack}
           />
         );

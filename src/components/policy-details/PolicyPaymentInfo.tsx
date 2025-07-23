@@ -6,9 +6,9 @@ import { CreditCard, Package } from 'lucide-react';
 import { t } from '@/lib/i18n';
 
 interface PolicyPaymentInfoProps {
-  packageId?: string | null;
-  packageName?: string | null;
-  price?: number | null;
+  packageId?: string | null | undefined;
+  packageName?: string | null | undefined;
+  price?: number | null | undefined;
   paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
 }
 
@@ -23,7 +23,7 @@ export function PolicyPaymentInfo({
     return null;
   }
 
-  const formatPrice = (price: number | null) => {
+  const formatPrice = (price: number | null | undefined) => {
     if (!price) return '-';
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -42,7 +42,7 @@ export function PolicyPaymentInfo({
     return statusMap[status] || { label: status, variant: 'outline' as const };
   };
 
-  const getPackageDisplay = (packageName: string | null, packageId: string | null) => {
+  const getPackageDisplay = (packageName: string | null | undefined, packageId: string | null | undefined) => {
     if (packageName) return packageName;
     if (packageId) {
       // Map package IDs to display names as fallback
