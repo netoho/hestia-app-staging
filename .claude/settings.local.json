@@ -24,7 +24,8 @@
       "Bash(NODE_ENV=test node -e \"require(''./tests/setup/globalSetup.js'')()\")",
       "Bash(bun install:*)",
       "Bash(NODE_ENV=test npx vitest run --config=vitest.config.ts \"tenant-workflow\" -t \"GET|PUT.*step\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(bun run test:api tenant-workflow -t \"should submit policy successfully\")"
     ],
     "deny": []
   }
