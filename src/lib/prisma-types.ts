@@ -9,6 +9,8 @@ export type PolicyStatusType = 'DRAFT' | 'INVESTIGATION_PENDING' | 'INVESTIGATIO
 export type DocumentCategory = 'identification' | 'income_proof' | 'employment_letter' | 'bank_statements' | 'references' | 'other';
 export type PaymentMethodType = 'CARD' | 'BANK_TRANSFER' | 'CASH' | 'STRIPE' | 'MANUAL';
 export type PaymentStatusType = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'PARTIAL';
+export type NationalityType = 'MEXICAN' | 'FOREIGN';
+export type DocPasswordStatusType = 'YES' | 'NO';
 
 // PolicyStatus will be defined later after checking for Prisma client
 
@@ -71,11 +73,6 @@ export interface Policy {
   tenantName?: string | null;
   status: PolicyStatusType;
   currentStep: number;
-  profileData?: any;
-  employmentData?: any;
-  referencesData?: any;
-  documentsData?: any;
-  guarantorData?: any;
   accessToken: string;
   tokenExpiry: Date;
   submittedAt?: Date | null;
@@ -105,7 +102,14 @@ export interface Policy {
   createdAt: Date;
   updatedAt: Date;
   
-  // Relations
+  // Relations to structured data models
+  profileData?: TenantProfile | null;
+  employmentData?: TenantEmployment | null;
+  referencesData?: TenantReferences | null;
+  documentsData?: TenantDocuments | null;
+  guarantorData?: TenantGuarantor | null;
+  
+  // Other relations
   documents?: PolicyDocument[];
   activities?: PolicyActivity[];
   investigation?: Investigation;
@@ -114,6 +118,79 @@ export interface Policy {
   payments?: Payment[];
   initiatedByUser?: User;
   reviewedByUser?: User;
+}
+
+// Tenant Profile Information
+export interface TenantProfile {
+  id: string;
+  policyId: string;
+  nationality: NationalityType;
+  curp?: string | null;      // For Mexican nationals
+  passport?: string | null;  // For foreign nationals
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+// Tenant Employment Information
+export interface TenantEmployment {
+  id: string;
+  policyId: string;
+  employmentStatus: string;  // employed, self-employed, unemployed, student, retired
+  industry: string;
+  occupation: string;
+  companyName: string;
+  position: string;
+  companyWebsite?: string | null;
+  workAddress?: string | null;
+  incomeSource: string;      // salary, business, freelance, benefits, other
+  monthlyIncome: number;
+  creditCheckConsent: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+// Tenant References Information
+export interface TenantReferences {
+  id: string;
+  policyId: string;
+  personalReferenceName: string;
+  personalReferencePhone: string;
+  workReferenceName?: string | null;
+  workReferencePhone?: string | null;
+  landlordReferenceName?: string | null;
+  landlordReferencePhone?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+// Tenant Documents Information
+export interface TenantDocuments {
+  id: string;
+  policyId: string;
+  identificationCount: number;
+  incomeCount: number;
+  optionalCount: number;
+  incomeDocsHavePassword: DocPasswordStatusType;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+// Tenant Guarantor Information
+export interface TenantGuarantor {
+  id: string;
+  policyId: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  relationship: string;      // parent, sibling, friend, colleague, other
+  address?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
 }
 
 export interface PolicyDocument {
@@ -280,6 +357,18 @@ export const PaymentStatus = PrismaExports.PaymentStatus || {
   FAILED: 'FAILED' as PaymentStatusType,
   REFUNDED: 'REFUNDED' as PaymentStatusType,
   PARTIAL: 'PARTIAL' as PaymentStatusType,
+} as const;
+
+// NationalityType enum object for accessing values like NationalityType.MEXICAN
+export const NationalityType = PrismaExports.NationalityType || {
+  MEXICAN: 'MEXICAN' as NationalityType,
+  FOREIGN: 'FOREIGN' as NationalityType,
+} as const;
+
+// DocPasswordStatus enum object for accessing values like DocPasswordStatus.YES
+export const DocPasswordStatus = PrismaExports.DocPasswordStatus || {
+  YES: 'YES' as DocPasswordStatusType,
+  NO: 'NO' as DocPasswordStatusType,
 } as const;
 
 // For components that import specific types, provide them from either source

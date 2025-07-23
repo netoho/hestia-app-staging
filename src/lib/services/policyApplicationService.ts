@@ -495,7 +495,13 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
             email: true,
             name: true
           }
-        }
+        },
+        // Include new structured data models
+        profileData: true,
+        employmentData: true,
+        referencesData: true,
+        documentsData: true,
+        guarantorData: true
       }
     });
     
