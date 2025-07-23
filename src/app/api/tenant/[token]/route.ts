@@ -46,7 +46,7 @@ export async function GET(
       documentsData: policy.documentsData,
       packageId: policy.packageId,
       packageName: policy.packageName,
-      price: policy.price,
+      price: policy.totalPrice,
       paymentStatus: policy.paymentStatus,
       documents: policy.documents.map(doc => ({
         id: doc.id,
