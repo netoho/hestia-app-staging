@@ -13,6 +13,12 @@
     "db:seed": "bun run prisma db seed",
     "db:setup": "./scripts/setup-database.sh",
     "db:reset": "bun run prisma db push --force-reset && bun run db:seed",
+    "test": "cross-env NODE_ENV=test vitest run",
+    "test:watch": "cross-env NODE_ENV=test vitest",
+    "test:coverage": "cross-env NODE_ENV=test vitest run --coverage",
+    "test:debug": "cross-env NODE_ENV=test vitest run --reporter=verbose",
+    "test:api": "cross-env NODE_ENV=test vitest run api",
+    "test:components": "cross-env NODE_ENV=test vitest run --config=vitest.components.config.ts",
     "postinstall": "bun run prisma generate --no-engine"
   },
   "prisma": {
@@ -73,6 +79,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
@@ -80,11 +88,18 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/stripe": "^8.0.417",
+    "@types/supertest": "^6.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "cross-env": "^7.0.3",
     "genkit-cli": "^1.8.0",
+    "jsdom": "^25.0.1",
     "postcss": "^8",
     "prisma": "^5.17.0",
+    "supertest": "^7.1.4",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.16.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.8"
   }
 }
