@@ -161,7 +161,7 @@ async function main() {
   });
   console.log('Created/updated system configuration');
 
-  // Seed sample policy applications (new Policy model)
+  // Seed sample policy applications (new Policy model with structured data)
   console.log('Seeding policy applications...');
   const samplePolicies = [
     {
@@ -171,34 +171,7 @@ async function main() {
       tenantName: 'Maria Rodriguez',
       propertyAddress: 'Av. Reforma 123, Roma Norte, CDMX', 
       status: 'ACTIVE' as any,
-      currentStep: 6,
-      profileData: {
-        nationality: 'mexican',
-        curp: 'AAAA000000AAAA00'
-      },
-      employmentData: {
-        employmentStatus: 'employed',
-        industry: 'Technology',
-        companyName: 'Tech Corp',
-        position: 'Software Engineer',
-        monthlyIncome: 50000,
-        creditCheckConsent: true
-      },
-      referencesData: {
-        personalReferenceName: 'John Doe',
-        personalReferencePhone: '+1234567891'
-      },
-      documentsData: {
-        identificationCount: 1,
-        incomeCount: 2,
-        optionalCount: 0,
-        incomeDocsHavePassword: 'no'
-      },
-      guarantorData: {
-        name: 'Carlos Rodriguez',
-        phone: '+1234567894',
-        relationship: 'Father'
-      },
+      currentStep: 7,
       accessToken: 'sample-token-123',
       tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       submittedAt: new Date('2024-01-15'),
@@ -224,28 +197,6 @@ async function main() {
       propertyAddress: 'Insurgentes Sur 456, Del Valle, CDMX',
       status: 'INVESTIGATION_IN_PROGRESS' as any,
       currentStep: 4,
-      profileData: {
-        nationality: 'foreign',
-        passport: 'AB1234567'
-      },
-      employmentData: {
-        employmentStatus: 'employed',
-        industry: 'Finance',
-        companyName: 'Banking Corp',
-        position: 'Financial Analyst',
-        monthlyIncome: 35000,
-        creditCheckConsent: true
-      },
-      referencesData: {
-        personalReferenceName: 'Jane Smith',
-        personalReferencePhone: '+1234567893'
-      },
-      documentsData: {
-        identificationCount: 1,
-        incomeCount: 1,
-        optionalCount: 1,
-        incomeDocsHavePassword: 'no'
-      },
       accessToken: 'sample-token-456',
       tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       submittedAt: new Date('2024-01-12'),
@@ -266,6 +217,107 @@ async function main() {
     });
     createdPolicies.push(created);
     console.log(`Created policy application for tenant: ${created.tenantEmail}`);
+
+    // Create structured data for each policy
+    if (policy.tenantEmail === 'tenant@example.com') {
+      // Create profile data for first policy
+      await prisma.tenantProfile.create({
+        data: {
+          policyId: created.id,
+          nationality: 'MEXICAN',
+          curp: 'AAAA000000AAAA00'
+        }
+      });
+
+      // Create employment data
+      await prisma.tenantEmployment.create({
+        data: {
+          policyId: created.id,
+          employmentStatus: 'employed',
+          industry: 'Technology',
+          occupation: 'Software Engineer',
+          companyName: 'Tech Corp',
+          position: 'Software Engineer',
+          incomeSource: 'salary',
+          monthlyIncome: 50000,
+          creditCheckConsent: true
+        }
+      });
+
+      // Create references data
+      await prisma.tenantReferences.create({
+        data: {
+          policyId: created.id,
+          personalReferenceName: 'John Doe',
+          personalReferencePhone: '+1234567891'
+        }
+      });
+
+      // Create documents data
+      await prisma.tenantDocuments.create({
+        data: {
+          policyId: created.id,
+          identificationCount: 1,
+          incomeCount: 2,
+          optionalCount: 0,
+          incomeDocsHavePassword: 'NO'
+        }
+      });
+
+      // Create guarantor data
+      await prisma.tenantGuarantor.create({
+        data: {
+          policyId: created.id,
+          name: 'Carlos Rodriguez',
+          phone: '+1234567894',
+          relationship: 'parent'
+        }
+      });
+    } else if (policy.tenantEmail === 'tenant2@example.com') {
+      // Create profile data for second policy
+      await prisma.tenantProfile.create({
+        data: {
+          policyId: created.id,
+          nationality: 'FOREIGN',
+          passport: 'AB1234567'
+        }
+      });
+
+      // Create employment data
+      await prisma.tenantEmployment.create({
+        data: {
+          policyId: created.id,
+          employmentStatus: 'employed',
+          industry: 'Finance',
+          occupation: 'Financial Analyst',
+          companyName: 'Banking Corp',
+          position: 'Financial Analyst',
+          incomeSource: 'salary',
+          monthlyIncome: 35000,
+          creditCheckConsent: true
+        }
+      });
+
+      // Create references data
+      await prisma.tenantReferences.create({
+        data: {
+          policyId: created.id,
+          personalReferenceName: 'Jane Smith',
+          personalReferencePhone: '+1234567893'
+        }
+      });
+
+      // Create documents data
+      await prisma.tenantDocuments.create({
+        data: {
+          policyId: created.id,
+          identificationCount: 1,
+          incomeCount: 1,
+          optionalCount: 1,
+          incomeDocsHavePassword: 'NO'
+        }
+      });
+    }
     
     // Add some sample activities
     await prisma.policyActivity.create({

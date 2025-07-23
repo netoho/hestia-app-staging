@@ -123,11 +123,6 @@ model Policy {
   tenantName     String?
   status         PolicyStatus @default(DRAFT)
   currentStep    Int         @default(1)
-  profileData    Json?
-  employmentData Json?
-  referencesData Json?
-  documentsData  Json?
-  guarantorData  Json?       // New field for guarantor information
   accessToken    String      @unique
   tokenExpiry    DateTime
   submittedAt    DateTime?
@@ -157,6 +152,13 @@ model Policy {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  // Relations to structured data models
+  profileData    TenantProfile?
+  employmentData TenantEmployment?
+  referencesData TenantReferences?
+  documentsData  TenantDocuments?
+  guarantorData  TenantGuarantor?
+
   documents PolicyDocument[]
   activities PolicyActivity[]
   payments  Payment[]
@@ -166,6 +168,89 @@ model Policy {
   
   initiatedByUser User @relation("InitiatedByUser", fields: [initiatedBy], references: [id])
   reviewedByUser  User? @relation("ReviewedByUser", fields: [reviewedBy], references: [id])
+}
+
+// Tenant Profile Information
+model TenantProfile {
+  id          String   @id @default(cuid())
+  policyId    String   @unique
+  nationality NationalityType
+  curp        String?  // For Mexican nationals
+  passport    String?  // For foreign nationals
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Employment Information
+model TenantEmployment {
+  id                String   @id @default(cuid())
+  policyId          String   @unique
+  employmentStatus  String   // employed, self-employed, unemployed, student, retired
+  industry          String
+  occupation        String
+  companyName       String
+  position          String
+  companyWebsite    String?
+  workAddress       String?
+  incomeSource      String   // salary, business, freelance, benefits, other
+  monthlyIncome     Float
+  creditCheckConsent Boolean
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant References Information
+model TenantReferences {
+  id                      String   @id @default(cuid())
+  policyId                String   @unique
+  personalReferenceName   String
+  personalReferencePhone  String
+  workReferenceName       String?
+  workReferencePhone      String?
+  landlordReferenceName   String?
+  landlordReferencePhone  String?
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  policy                  Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Documents Information
+model TenantDocuments {
+  id                     String   @id @default(cuid())
+  policyId               String   @unique
+  identificationCount    Int      @default(0)
+  incomeCount           Int      @default(0)
+  optionalCount         Int      @default(0)
+  incomeDocsHavePassword DocPasswordStatus @default(NO)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  policy                Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Guarantor Information
+model TenantGuarantor {
+  id           String   @id @default(cuid())
+  policyId     String   @unique
+  name         String
+  phone        String
+  email        String?
+  relationship String   // parent, sibling, friend, colleague, other
+  address      String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  policy       Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
 model PolicyDocument {
@@ -329,4 +414,14 @@ enum PaymentMethod {
   CASH
   STRIPE
   MANUAL
+}
+
+enum NationalityType {
+  MEXICAN
+  FOREIGN
+}
+
+enum DocPasswordStatus {
+  YES
+  NO
 }
