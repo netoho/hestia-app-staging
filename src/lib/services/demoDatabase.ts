@@ -7,7 +7,7 @@
  */
 
 import bcrypt from 'bcryptjs';
-import { User, Package, InsurancePolicy, Policy, PolicyStatus } from '@/lib/prisma-types';
+import { User, Package, InsurancePolicy, Policy, PolicyStatusType, Investigation, Contract, Incident, Payment, SystemConfig } from '@/lib/prisma-types';
 import { isDemoMode } from '../env-check';
 
 // Export both isDemoMode and DemoORM for convenience
@@ -19,6 +19,11 @@ let nextPolicyId = 1000;
 let nextDocumentId = 1000;
 let nextActivityId = 1000;
 let nextInsurancePolicyId = 1000;
+let nextInvestigationId = 1000;
+let nextContractId = 1000;
+let nextIncidentId = 1000;
+let nextPaymentId = 1000;
+let nextSystemConfigId = 1000;
 
 const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -36,7 +41,11 @@ class DemoDatabase {
   public insurancePolicies: InsurancePolicy[] = [];
   public policyDocuments: any[] = [];
   public policyActivities: any[] = [];
-  public payments: any[] = [];
+  public payments: Payment[] = [];
+  public investigations: Investigation[] = [];
+  public contracts: Contract[] = [];
+  public incidents: Incident[] = [];
+  public systemConfigs: SystemConfig[] = [];
   
   private constructor() {
     this.initializeData();
@@ -139,9 +148,11 @@ class DemoDatabase {
         reviewedAt: null,
         tenantEmail: 'tenant@example.com',
         tenantPhone: '+1234567890',
+        tenantName: 'Maria Rodriguez',
         propertyId: null,
-        status: 'SUBMITTED' as PolicyStatus,
-        currentStep: 4,
+        propertyAddress: 'Av. Reforma 123, Roma Norte, CDMX',
+        status: 'ACTIVE' as PolicyStatusType,
+        currentStep: 6,
         profileData: {
           nationality: 'mexican',
           curp: 'AAAA000000AAAA00'
@@ -164,15 +175,30 @@ class DemoDatabase {
           optionalCount: 0,
           incomeDocsHavePassword: 'no'
         },
+        guarantorData: {
+          name: 'Carlos Rodriguez',
+          phone: '+1234567894',
+          relationship: 'Father'
+        },
         accessToken: 'demo-token-123',
-        tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         submittedAt: new Date('2024-01-15'),
         packageId: 'premium',
         packageName: 'Fortaleza Premium',
-        price: 199,
+        totalPrice: 5500,
+        investigationFee: 200,
+        tenantPaymentPercent: 70,
+        landlordPaymentPercent: 30,
         paymentStatus: 'COMPLETED' as any,
+        investigationStartedAt: new Date('2024-01-02'),
+        investigationCompletedAt: new Date('2024-01-03'),
+        contractUploadedAt: new Date('2024-01-16'),
+        contractSignedAt: new Date('2024-01-20'),
+        policyActivatedAt: new Date('2024-02-01'),
+        contractLength: 12,
+        policyExpiresAt: new Date('2025-02-01'),
         createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-15'),
+        updatedAt: new Date('2024-01-20'),
       },
       {
         id: 'demo-policy-2',
@@ -181,9 +207,11 @@ class DemoDatabase {
         reviewedAt: null,
         tenantEmail: 'tenant2@example.com',
         tenantPhone: '+1234567892',
+        tenantName: 'John Smith',
         propertyId: null,
-        status: 'IN_PROGRESS' as PolicyStatus,
-        currentStep: 5, // At payment step
+        propertyAddress: 'Insurgentes Sur 456, Del Valle, CDMX',
+        status: 'INVESTIGATION_IN_PROGRESS' as PolicyStatusType,
+        currentStep: 4,
         profileData: {
           nationality: 'foreign',
           passport: 'AB1234567'
@@ -206,13 +234,24 @@ class DemoDatabase {
           optionalCount: 1,
           incomeDocsHavePassword: 'no'
         },
+        guarantorData: null,
         accessToken: 'demo-token-456',
         tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        submittedAt: null,
+        submittedAt: new Date('2024-01-12'),
         packageId: 'standard',
         packageName: 'Seguro Estándar',
-        price: 99,
-        paymentStatus: 'COMPLETED' as any,
+        totalPrice: 4100,
+        investigationFee: 200,
+        tenantPaymentPercent: 100,
+        landlordPaymentPercent: 0,
+        paymentStatus: 'PENDING' as any,
+        investigationStartedAt: new Date('2024-01-11'),
+        investigationCompletedAt: null,
+        contractUploadedAt: null,
+        contractSignedAt: null,
+        policyActivatedAt: null,
+        contractLength: 12,
+        policyExpiresAt: null,
         createdAt: new Date('2024-01-10'),
         updatedAt: new Date('2024-01-12'),
       },
@@ -348,6 +387,16 @@ class DemoDatabase {
         updatedAt: new Date('2024-01-01'),
       },
     ];
+
+    // Initialize system configuration
+    this.systemConfigs = [
+      {
+        id: 'system-config-1',
+        investigationFee: 200,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      },
+    ];
   }
 
   // Reset database to initial state
@@ -435,7 +484,7 @@ export class DemoORM {
       if (where.email) {
         if (where.email.contains) {
           const searchTerm = where.email.contains.toLowerCase();
-          results = results.filter(u => u.email.toLowerCase().includes(searchTerm));
+          results = results.filter(u => u.email?.toLowerCase().includes(searchTerm));
         } else {
           results = results.filter(u => u.email === where.email);
         }
@@ -450,7 +499,7 @@ export class DemoORM {
           }
           if (condition.email?.contains) {
             const searchTerm = condition.email.contains.toLowerCase();
-            demoDb.users.filter(u => u.email.toLowerCase().includes(searchTerm)).forEach(u => orResults.add(u));
+            demoDb.users.filter(u => u.email?.toLowerCase().includes(searchTerm)).forEach(u => orResults.add(u));
           }
         });
         results = Array.from(orResults) as User[];
@@ -540,7 +589,7 @@ export class DemoORM {
         }
         if (condition.email?.contains) {
           const searchTerm = condition.email.contains.toLowerCase();
-          demoDb.users.filter(u => u.email.toLowerCase().includes(searchTerm)).forEach(u => orResults.add(u));
+          demoDb.users.filter(u => u.email?.toLowerCase().includes(searchTerm)).forEach(u => orResults.add(u));
         }
       });
       return orResults.size;
@@ -677,16 +726,40 @@ export class DemoORM {
       reviewedAt: data.reviewedAt || null,
       tenantEmail: data.tenantEmail,
       tenantPhone: data.tenantPhone || null,
+      tenantName: data.tenantName || null,
       propertyId: data.propertyId || null,
+      propertyAddress: data.propertyAddress || null,
       status: data.status || 'DRAFT',
       currentStep: data.currentStep || 0,
       profileData: data.profileData || null,
       employmentData: data.employmentData || null,
       referencesData: data.referencesData || null,
       documentsData: data.documentsData || null,
+      guarantorData: data.guarantorData || null,
       accessToken: data.accessToken,
       tokenExpiry: data.tokenExpiry,
       submittedAt: data.submittedAt || null,
+      reviewNotes: data.reviewNotes || null,
+      reviewReason: data.reviewReason || null,
+      
+      // Payment configuration
+      packageId: data.packageId || null,
+      packageName: data.packageName || null,
+      totalPrice: data.totalPrice || 0,
+      investigationFee: data.investigationFee || 200,
+      tenantPaymentPercent: data.tenantPaymentPercent || 100,
+      landlordPaymentPercent: data.landlordPaymentPercent || 0,
+      paymentStatus: data.paymentStatus || 'PENDING',
+      
+      // Lifecycle dates
+      investigationStartedAt: data.investigationStartedAt || null,
+      investigationCompletedAt: data.investigationCompletedAt || null,
+      contractUploadedAt: data.contractUploadedAt || null,
+      contractSignedAt: data.contractSignedAt || null,
+      policyActivatedAt: data.policyActivatedAt || null,
+      contractLength: data.contractLength || 12,
+      policyExpiresAt: data.policyExpiresAt || null,
+      
       createdAt: new Date(),
       updatedAt: new Date(),
     };

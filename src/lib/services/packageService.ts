@@ -1,20 +1,7 @@
 import prisma from '@/lib/prisma';
 import { isMockEnabled } from '../env-check';
 import { MockDataService } from './mockDataService';
-
-// Define the structure of your package data
-interface Package {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  features: string[];
-  ctaText: string;
-  ctaLink: string;
-  highlight: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Package } from '@/lib/prisma-types';
 
 export const getPackages = async (): Promise<Package[]> => {
   if (isMockEnabled()) {

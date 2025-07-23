@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { User, Package, InsurancePolicy, Policy, PolicyStatus } from '@/lib/prisma-types';
+import { User, Package, InsurancePolicy, Policy, PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 
 // Mock users from seed data
 const hashedPassword = bcrypt.hashSync('password123', 10);
@@ -250,7 +250,7 @@ export const mockPolicies: Policy[] = [
     tenantEmail: 'tenant@example.com',
     tenantPhone: '+1234567890',
     propertyId: null,
-    status: 'SUBMITTED' as PolicyStatus,
+    status: 'ACTIVE' as PolicyStatusType,
     currentStep: 4,
     profileData: {
       nationality: 'mexican',
@@ -277,6 +277,30 @@ export const mockPolicies: Policy[] = [
     accessToken: 'sample-token-123',
     tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     submittedAt: new Date('2024-01-15'),
+    tenantName: 'Maria Rodriguez',
+    propertyAddress: 'Av. Reforma 123, Roma Norte, CDMX',
+    reviewNotes: null,
+    reviewReason: null,
+    guarantorData: null,
+    
+    // Payment configuration
+    packageId: 'premium',
+    packageName: 'Fortaleza Premium',
+    totalPrice: 5500,
+    investigationFee: 200,
+    tenantPaymentPercent: 70,
+    landlordPaymentPercent: 30,
+    paymentStatus: 'COMPLETED' as any,
+    
+    // Lifecycle dates
+    investigationStartedAt: new Date('2024-01-02'),
+    investigationCompletedAt: new Date('2024-01-03'),
+    contractUploadedAt: new Date('2024-01-16'),
+    contractSignedAt: new Date('2024-01-20'),
+    policyActivatedAt: new Date('2024-02-01'),
+    contractLength: 12,
+    policyExpiresAt: new Date('2025-02-01'),
+    
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-15'),
   },
@@ -355,7 +379,7 @@ export class MockDataService {
     const user = await this.getUserByEmail(email);
     if (!user) return null;
     
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password || '');
     return isValid ? user : null;
   }
 
@@ -364,11 +388,11 @@ export class MockDataService {
     const lowerQuery = query.toLowerCase();
     return mockUsers.filter(user => 
       user.name?.toLowerCase().includes(lowerQuery) || 
-      user.email.toLowerCase().includes(lowerQuery)
+      user.email?.toLowerCase().includes(lowerQuery)
     );
   }
 
-  static async filterPoliciesByStatus(status: PolicyStatus | 'all') {
+  static async filterPoliciesByStatus(status: PolicyStatusType | 'all') {
     if (status === 'all') return mockPolicies;
     return mockPolicies.filter(policy => policy.status === status);
   }
