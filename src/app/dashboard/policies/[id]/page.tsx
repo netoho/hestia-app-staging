@@ -20,6 +20,8 @@ import { PolicyPaymentInfo } from '@/components/policy-details/PolicyPaymentInfo
 import { PolicyDetailsContent } from '@/components/policy-details/PolicyDetailsContent';
 import { PolicyDocuments } from '@/components/policy-details/PolicyDocuments';
 import { PolicyActivityLog } from '@/components/policy-details/PolicyActivityLog';
+import { PolicyInvestigationInfo } from '@/components/policy-details/PolicyInvestigationInfo';
+import { PolicyContractInfo } from '@/components/policy-details/PolicyContractInfo';
 
 interface PolicyDetails {
   id: string;
@@ -41,6 +43,16 @@ interface PolicyDetails {
   packageName?: string | null;
   price?: number | null;
   paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  
+  // Lifecycle dates
+  investigationStartedAt?: string | null;
+  investigationCompletedAt?: string | null;
+  contractUploadedAt?: string | null;
+  contractSignedAt?: string | null;
+  policyActivatedAt?: string | null;
+  contractLength: number;
+  policyExpiresAt?: string | null;
+  
   createdAt: string;
   updatedAt: string;
   initiatedByUser: {
@@ -67,6 +79,39 @@ interface PolicyDetails {
     performedBy?: string;
     ipAddress?: string;
     createdAt: string;
+  }>;
+  
+  // Investigation data
+  investigation?: {
+    id: string;
+    verdict?: 'APPROVED' | 'REJECTED' | 'HIGH_RISK' | null;
+    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+    rejectedBy?: string | null;
+    rejectionReason?: string | null;
+    rejectedAt?: string | null;
+    landlordDecision?: 'PROCEED' | 'REJECT' | null;
+    landlordOverride: boolean;
+    landlordNotes?: string | null;
+    assignedTo?: string | null;
+    completedBy?: string | null;
+    completedAt?: string | null;
+    responseTimeHours?: number | null;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  
+  // Contract data
+  contracts: Array<{
+    id: string;
+    version: number;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    isCurrent: boolean;
+    uploadedBy: string;
+    uploadedAt: string;
   }>;
 }
 
@@ -108,7 +153,22 @@ export default function PolicyDetailsPage() {
       }
 
       const data = await response.json();
-      setPolicy(data);
+      
+      // Add default values for new fields if they don't exist
+      const policyWithDefaults = {
+        ...data,
+        contractLength: data.contractLength || 12,
+        investigation: data.investigation || null,
+        contracts: data.contracts || [],
+        investigationStartedAt: data.investigationStartedAt || null,
+        investigationCompletedAt: data.investigationCompletedAt || null,
+        contractUploadedAt: data.contractUploadedAt || null,
+        contractSignedAt: data.contractSignedAt || null,
+        policyActivatedAt: data.policyActivatedAt || null,
+        policyExpiresAt: data.policyExpiresAt || null,
+      };
+      
+      setPolicy(policyWithDefaults);
     } catch (err) {
       console.error('Policy fetch error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -271,6 +331,182 @@ export default function PolicyDetailsPage() {
     }
   };
 
+  // Investigation handlers
+  const handleStartInvestigation = async () => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/investigation/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          assignedTo: user?.id,
+          notes: 'Investigation started from policy details page'
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to start investigation');
+      }
+
+      toast({
+        title: 'Investigación Iniciada',
+        description: 'La investigación ha sido iniciada exitosamente.',
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al iniciar investigación',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCompleteInvestigation = async (verdict: 'APPROVED' | 'REJECTED' | 'HIGH_RISK') => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/investigation/complete`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          verdict: verdict,
+          riskLevel: verdict === 'HIGH_RISK' ? 'HIGH' : 'LOW',
+          notes: `Investigation completed with verdict: ${verdict}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to complete investigation');
+      }
+
+      toast({
+        title: 'Investigación Completada',
+        description: `Investigación completada con veredicto: ${verdict}`,
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al completar investigación',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleLandlordOverride = async (decision: 'PROCEED' | 'REJECT', notes?: string) => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/investigation/landlord-override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          decision: decision,
+          notes: notes || `Landlord decision: ${decision}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process landlord override');
+      }
+
+      toast({
+        title: 'Decisión del Propietario',
+        description: `Override procesado: ${decision}`,
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al procesar override',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Contract handlers
+  const handleUploadContract = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('contract', file);
+
+      const response = await fetch(`/api/policies/${policyId}/contracts/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload contract');
+      }
+
+      toast({
+        title: 'Contrato Subido',
+        description: `Contrato "${file.name}" subido exitosamente.`,
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al subir contrato',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDownloadContract = async (contractId: string) => {
+    toast({
+      title: 'Próximamente',
+      description: 'Descarga de contratos estará disponible pronto.',
+      variant: 'default',
+    });
+  };
+
+  const handleMarkContractSigned = async () => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/contracts/mark-signed`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to mark contract as signed');
+      }
+
+      toast({
+        title: 'Contrato Firmado',
+        description: 'El contrato ha sido marcado como firmado.',
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al marcar contrato firmado',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -366,6 +602,36 @@ export default function PolicyDetailsPage() {
               profileData={policy.profileData}
               employmentData={policy.employmentData}
               referencesData={policy.referencesData}
+            />
+            
+            {/* Investigation Management */}
+            <PolicyInvestigationInfo
+              investigation={policy.investigation ? {
+                ...policy.investigation,
+                createdAt: new Date(policy.investigation.createdAt),
+                updatedAt: new Date(policy.investigation.updatedAt),
+                completedAt: policy.investigation.completedAt ? new Date(policy.investigation.completedAt) : null,
+                rejectedAt: policy.investigation.rejectedAt ? new Date(policy.investigation.rejectedAt) : null
+              } : null}
+              policyStatus={policy.status}
+              onStartInvestigation={() => handleStartInvestigation()}
+              onCompleteInvestigation={(verdict) => handleCompleteInvestigation(verdict)}
+              onLandlordOverride={(decision, notes) => handleLandlordOverride(decision, notes)}
+            />
+            
+            {/* Contract Management */}
+            <PolicyContractInfo
+              contracts={policy.contracts.map(contract => ({
+                ...contract,
+                uploadedAt: new Date(contract.uploadedAt)
+              }))}
+              policyStatus={policy.status}
+              contractSignedAt={policy.contractSignedAt ? new Date(policy.contractSignedAt) : null}
+              contractLength={policy.contractLength}
+              policyExpiresAt={policy.policyExpiresAt ? new Date(policy.policyExpiresAt) : null}
+              onUploadContract={(file) => handleUploadContract(file)}
+              onDownloadContract={(contractId) => handleDownloadContract(contractId)}
+              onMarkSigned={() => handleMarkContractSigned()}
             />
             
             <PolicyDocuments
