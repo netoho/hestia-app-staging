@@ -13,7 +13,14 @@ const initiatePolicySchema = z.object({
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
   packageId: z.string().min(1, 'Package is required'),
-  price: z.number().min(0, 'Price must be positive')
+  price: z.number().min(0, 'Price must be positive'),
+  investigationFee: z.number().min(0, 'Investigation fee must be positive').default(200),
+  tenantPaymentPercent: z.number().min(0).max(100, 'Percentage must be between 0 and 100').default(100),
+  landlordPaymentPercent: z.number().min(0).max(100, 'Percentage must be between 0 and 100').default(0),
+  contractLength: z.number().min(1).max(60, 'Contract length must be between 1 and 60 months').default(12),
+}).refine((data) => data.tenantPaymentPercent + data.landlordPaymentPercent === 100, {
+  message: "Payment percentages must add up to 100%",
+  path: ["tenantPaymentPercent"],
 });
 
 export async function POST(request: NextRequest) {
@@ -46,7 +53,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tenantEmail, tenantPhone, tenantName, propertyId, propertyAddress, packageId, price } = validation.data;
+    const { 
+      tenantEmail, 
+      tenantPhone, 
+      tenantName, 
+      propertyId, 
+      propertyAddress, 
+      packageId, 
+      price,
+      investigationFee,
+      tenantPaymentPercent,
+      landlordPaymentPercent,
+      contractLength
+    } = validation.data;
 
     // Fetch package details to get the package name
     const packages = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/packages`);
@@ -62,7 +81,11 @@ export async function POST(request: NextRequest) {
       tenantPhone,
       packageId,
       packageName,
-      price
+      price,
+      investigationFee,
+      tenantPaymentPercent,
+      landlordPaymentPercent,
+      contractLength
     });
 
     // Send invitation email
@@ -75,13 +98,16 @@ export async function POST(request: NextRequest) {
       initiatorName: authResult.user.name || authResult.user.email
     });
 
+    let finalStatus = policy.status;
+
     if (emailSent) {
-      // Update policy status to SENT_TO_TENANT
+      // Update policy status to INVESTIGATION_PENDING
       await updatePolicyStatus(
         policy.id,
-        PolicyStatus.SENT_TO_TENANT,
+        PolicyStatus.INVESTIGATION_PENDING,
         authResult.user.id
       );
+      finalStatus = PolicyStatus.INVESTIGATION_PENDING;
 
       // Add activity log
       await addPolicyActivity(
@@ -106,11 +132,11 @@ export async function POST(request: NextRequest) {
       policy: {
         id: policy.id,
         tenantEmail: policy.tenantEmail,
-        status: policy.status,
+        status: finalStatus,
         accessToken: policy.accessToken,
-        tokenExpiry: policy.tokenExpiry,
-        emailSent
+        tokenExpiry: policy.tokenExpiry
       },
+      emailSent,
       message: emailSent 
         ? 'Policy created and invitation sent successfully' 
         : 'Policy created but email sending failed. Please resend the invitation.'
