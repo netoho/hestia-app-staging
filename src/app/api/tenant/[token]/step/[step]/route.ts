@@ -8,27 +8,27 @@ import { z } from 'zod';
 
 // Validation schemas for each step
 const profileSchema = z.object({
-  nationality: z.enum(['mexican', 'foreign']),
+  nationality: z.enum(['MEXICAN', 'FOREIGN']),
   curp: z.string().optional(),
   passport: z.string().optional()
 });
 
 const employmentSchema = z.object({
-  employmentStatus: z.string(),
-  industry: z.string(),
-  occupation: z.string(),
-  companyName: z.string(),
-  position: z.string(),
+  employmentStatus: z.enum(['employed', 'self-employed', 'unemployed', 'student', 'retired']),
+  industry: z.string().min(1),
+  occupation: z.string().min(1),
+  companyName: z.string().min(1),
+  position: z.string().min(1),
   companyWebsite: z.string().optional(),
   workAddress: z.string().optional(),
-  incomeSource: z.string(),
-  monthlyIncome: z.number(),
+  incomeSource: z.enum(['salary', 'business', 'freelance', 'benefits', 'other']),
+  monthlyIncome: z.number().positive(),
   creditCheckConsent: z.boolean()
 });
 
 const referencesSchema = z.object({
-  personalReferenceName: z.string(),
-  personalReferencePhone: z.string(),
+  personalReferenceName: z.string().min(1),
+  personalReferencePhone: z.string().min(1),
   workReferenceName: z.string().optional(),
   workReferencePhone: z.string().optional(),
   landlordReferenceName: z.string().optional(),
@@ -39,21 +39,31 @@ const documentsSchema = z.object({
   identificationCount: z.number(),
   incomeCount: z.number(),
   optionalCount: z.number(),
-  incomeDocsHavePassword: z.enum(['yes', 'no'])
+  incomeDocsHavePassword: z.enum(['YES', 'NO'])
+});
+
+const guarantorSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().min(1),
+  email: z.string().optional(),
+  relationship: z.enum(['parent', 'sibling', 'friend', 'colleague', 'other']),
+  address: z.string().optional()
 });
 
 const stepSchemas: Record<string, z.ZodSchema> = {
   '1': profileSchema,
   '2': employmentSchema,
   '3': referencesSchema,
-  '4': documentsSchema
+  '4': documentsSchema,
+  '5': guarantorSchema
 };
 
 const stepFields: Record<string, string> = {
   '1': 'profileData',
   '2': 'employmentData',
   '3': 'referencesData',
-  '4': 'documentsData'
+  '4': 'documentsData',
+  '5': 'guarantorData'
 };
 
 export async function PUT(
@@ -64,7 +74,7 @@ export async function PUT(
     const { token, step } = await params;
 
     // Validate step number
-    if (!['1', '2', '3', '4', '5', '6'].includes(step)) {
+    if (!['1', '2', '3', '4', '5', '6', '7'].includes(step)) {
       return NextResponse.json(
         { error: 'Invalid step number' },
         { status: 400 }
@@ -92,13 +102,13 @@ export async function PUT(
 
     const stepNumber = parseInt(step);
     
-    // For steps 5 (payment) and 6 (review), we don't save form data
-    if (step === '5' || step === '6') {
-      // Step 5 (payment) - just advance the step, payment is handled separately
-      // Step 6 (review) - just advance the step, this is the final step before submission
+    // For steps 6 (payment) and 7 (review), we don't save form data  
+    if (step === '6' || step === '7') {
+      // Step 6 (payment) - just advance the step, payment is handled separately
+      // Step 7 (review) - just advance the step, this is the final step before submission
       
-      // For step 6 (review), check if payment is completed
-      if (step === '6' && policy.paymentStatus !== 'COMPLETED') {
+      // For step 7 (review), check if payment is completed
+      if (step === '7' && policy.paymentStatus !== 'COMPLETED') {
         return NextResponse.json(
           { error: 'Payment must be completed before proceeding to review' },
           { status: 400 }
@@ -114,7 +124,7 @@ export async function PUT(
           { id: policy.id },
           {
             currentStep: newCurrentStep,
-            status: PolicyStatus.IN_PROGRESS
+            status: PolicyStatus.INVESTIGATION_IN_PROGRESS
           }
         );
       } else {
@@ -122,7 +132,7 @@ export async function PUT(
           where: { id: policy.id },
           data: {
             currentStep: newCurrentStep,
-            status: PolicyStatus.IN_PROGRESS
+            status: PolicyStatus.INVESTIGATION_IN_PROGRESS
           }
         });
       }
@@ -143,9 +153,17 @@ export async function PUT(
       });
     }
 
-    // For steps 1-4, validate and save form data
+    // For steps 1-5, validate and save form data
     const body = await request.json();
     const schema = stepSchemas[step];
+    
+    if (!schema) {
+      return NextResponse.json(
+        { error: 'No validation schema defined for this step' },
+        { status: 400 }
+      );
+    }
+    
     const validation = schema.safeParse(body);
 
     if (!validation.success) {
@@ -155,43 +173,95 @@ export async function PUT(
       );
     }
 
-    // Update policy data
-    const fieldName = stepFields[step];
-    
-    // When a step is completed, advance to the next step
-    // Steps 1-4 save form data and advance to next step
-    // Only the actual submission API should change status to SUBMITTED
+    // Save data to structured models and update policy
     const nextStep = stepNumber + 1;
-    const nextStatus = PolicyStatus.IN_PROGRESS; // Always stay IN_PROGRESS until actual submission
+    const nextStatus = PolicyStatus.INVESTIGATION_IN_PROGRESS;
     
-    // Determine the correct currentStep to advance to:
-    // - If editing a previous step, go to the next sequential step (stepNumber + 1)
-    // - If at current progress, advance normally but cap at current progress + 1
+    // Determine the correct currentStep to advance to
     let newCurrentStep: number;
     if (stepNumber < policy.currentStep) {
-      // User is editing a previous step, advance sequentially
       newCurrentStep = stepNumber + 1;
     } else {
-      // User is at current progress, advance normally
       newCurrentStep = Math.max(nextStep, policy.currentStep);
     }
-    
-    const updateData: any = {
-      [fieldName]: validation.data,
-      currentStep: newCurrentStep,
-      status: nextStatus
-    };
 
     let updatedPolicy;
     if (isDemoMode()) {
+      // For demo mode, keep using JSON fields for now
+      const fieldName = stepFields[step];
+      const updateData: any = {
+        [fieldName]: validation.data,
+        currentStep: newCurrentStep,
+        status: nextStatus
+      };
       updatedPolicy = await DemoORM.updatePolicy(
         { id: policy.id },
         updateData
       );
     } else {
-      updatedPolicy = await prisma.policy.update({
-        where: { id: policy.id },
-        data: updateData
+      // For production, use structured models
+      await prisma.$transaction(async (tx) => {
+        // Save step data to appropriate model
+        if (step === '1') {
+          // Profile data
+          await tx.tenantProfile.upsert({
+            where: { policyId: policy.id },
+            update: validation.data,
+            create: {
+              policyId: policy.id,
+              ...validation.data
+            }
+          });
+        } else if (step === '2') {
+          // Employment data
+          await tx.tenantEmployment.upsert({
+            where: { policyId: policy.id },
+            update: validation.data,
+            create: {
+              policyId: policy.id,
+              ...validation.data
+            }
+          });
+        } else if (step === '3') {
+          // References data
+          await tx.tenantReferences.upsert({
+            where: { policyId: policy.id },
+            update: validation.data,
+            create: {
+              policyId: policy.id,
+              ...validation.data
+            }
+          });
+        } else if (step === '4') {
+          // Documents data
+          await tx.tenantDocuments.upsert({
+            where: { policyId: policy.id },
+            update: validation.data,
+            create: {
+              policyId: policy.id,
+              ...validation.data
+            }
+          });
+        } else if (step === '5') {
+          // Guarantor data
+          await tx.tenantGuarantor.upsert({
+            where: { policyId: policy.id },
+            update: validation.data,
+            create: {
+              policyId: policy.id,
+              ...validation.data
+            }
+          });
+        }
+
+        // Update policy progress
+        updatedPolicy = await tx.policy.update({
+          where: { id: policy.id },
+          data: {
+            currentStep: newCurrentStep,
+            status: nextStatus
+          }
+        });
       });
     }
 
