@@ -71,6 +71,13 @@ model VerificationToken {
 
 
 // Application-specific models
+model SystemConfig {
+  id                String   @id @default(cuid())
+  investigationFee  Float    @default(200)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 model Package {
   id          String   @id @default(cuid())
   name        String
@@ -109,15 +116,18 @@ model InsurancePolicy {
 model Policy {
   id             String      @id @default(cuid())
   propertyId     String?
+  propertyAddress String?
   initiatedBy    String
   tenantEmail    String
   tenantPhone    String?
+  tenantName     String?
   status         PolicyStatus @default(DRAFT)
   currentStep    Int         @default(1)
   profileData    Json?
   employmentData Json?
   referencesData Json?
   documentsData  Json?
+  guarantorData  Json?       // New field for guarantor information
   accessToken    String      @unique
   tokenExpiry    DateTime
   submittedAt    DateTime?
@@ -125,17 +135,34 @@ model Policy {
   reviewedAt     DateTime?
   reviewNotes    String?
   reviewReason   String?
-  // Payment related fields
-  packageId      String?     // Reference to the selected package
-  packageName    String?     // Store package name for history
-  price          Float?      // Negotiated price (can differ from package price)
+  
+  // Payment configuration
+  packageId      String?     
+  packageName    String?     
+  totalPrice     Float       @default(0)
+  investigationFee Float     @default(200)
+  tenantPaymentPercent Float @default(100)
+  landlordPaymentPercent Float @default(0)
   paymentStatus  PaymentStatus @default(PENDING)
+  
+  // Lifecycle dates
+  investigationStartedAt DateTime?
+  investigationCompletedAt DateTime?
+  contractUploadedAt DateTime?
+  contractSignedAt DateTime?
+  policyActivatedAt DateTime?  // "Valid from" date
+  contractLength Int @default(12) // months
+  policyExpiresAt DateTime?
+  
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   documents PolicyDocument[]
   activities PolicyActivity[]
   payments  Payment[]
+  investigation Investigation?
+  contracts Contract[]
+  incidents Incident[]
   
   initiatedByUser User @relation("InitiatedByUser", fields: [initiatedBy], references: [id])
   reviewedByUser  User? @relation("ReviewedByUser", fields: [reviewedBy], references: [id])
@@ -175,10 +202,19 @@ model Payment {
   currency          String        @default("MXN")
   status            PaymentStatus @default(PENDING)
   method            PaymentMethod?
+  type              String        @default("POLICY") // INVESTIGATION_FEE, POLICY, PARTIAL, INCIDENT
+  paidBy            String        @default("TENANT") // TENANT, LANDLORD
+  
   // Stripe specific fields
   stripeIntentId    String?       @unique
   stripeSessionId   String?       @unique
   stripeCustomerId  String?
+  
+  // Manual payment fields
+  isManual          Boolean       @default(false)
+  reference         String?       // Reference number for manual payments
+  receiptUrl        String?       // URL to uploaded receipt
+  
   // Additional payment details
   description       String?
   metadata          Json?
@@ -192,15 +228,90 @@ model Payment {
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
+model Investigation {
+  id                String   @id @default(cuid())
+  policyId          String   @unique
+  
+  // Verdict tracking
+  verdict           String?  // APPROVED, REJECTED, HIGH_RISK
+  riskLevel         String?  // LOW, MEDIUM, HIGH
+  
+  // Rejection details
+  rejectedBy        String?  // STAFF, TENANT, LANDLORD
+  rejectionReason   String?
+  rejectedAt        DateTime?
+  
+  // Landlord override
+  landlordDecision  String?  // PROCEED, REJECT
+  landlordOverride  Boolean  @default(false)
+  landlordNotes     String?
+  
+  // Staff tracking
+  assignedTo        String?
+  completedBy       String?
+  completedAt       DateTime?
+  responseTimeHours Int?     // For SLA tracking
+  notes             String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+model Contract {
+  id          String    @id @default(cuid())
+  policyId    String
+  version     Int       @default(1)
+  fileUrl     String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  isCurrent   Boolean   @default(true)
+  uploadedBy  String
+  uploadedAt  DateTime  @default(now())
+  
+  policy      Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  
+  @@index([policyId, version])
+}
+
+model Incident {
+  id              String   @id @default(cuid())
+  policyId        String
+  reportedBy      String   // TENANT, LANDLORD, STAFF
+  reporterName    String
+  reporterContact String
+  description     String   @db.Text
+  resolution      String?  @db.Text
+  requiresPayment Boolean  @default(false)
+  paymentAmount   Float?
+  isCoveredByPolicy Boolean @default(true)
+  status          String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  
+  assignedTo      String?
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  policy          Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
 
 enum PolicyStatus {
   DRAFT
-  SENT_TO_TENANT
-  IN_PROGRESS
-  SUBMITTED
-  UNDER_REVIEW
-  APPROVED
-  DENIED
+  INVESTIGATION_PENDING
+  INVESTIGATION_IN_PROGRESS
+  INVESTIGATION_REJECTED
+  INVESTIGATION_APPROVED
+  CONTRACT_PENDING
+  CONTRACT_UPLOADED
+  CONTRACT_SIGNED
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 enum PaymentStatus {
@@ -209,10 +320,13 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+  PARTIAL
 }
 
 enum PaymentMethod {
   CARD
   BANK_TRANSFER
   CASH
+  STRIPE
+  MANUAL
 }

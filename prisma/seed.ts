@@ -149,6 +149,18 @@ async function main() {
     console.log(`Created insurance policy for property: ${created.propertyAddress}`);
   }
 
+  // Seed SystemConfig first
+  console.log('Seeding system configuration...');
+  await prisma.systemConfig.upsert({
+    where: { id: 'system-config-1' },
+    update: { investigationFee: 200 },
+    create: {
+      id: 'system-config-1',
+      investigationFee: 200
+    }
+  });
+  console.log('Created/updated system configuration');
+
   // Seed sample policy applications (new Policy model)
   console.log('Seeding policy applications...');
   const samplePolicies = [
@@ -156,8 +168,10 @@ async function main() {
       initiatedBy: staff.id,
       tenantEmail: 'tenant@example.com',
       tenantPhone: '+1234567890',
-      status: 'SUBMITTED',
-      currentStep: 4,
+      tenantName: 'Maria Rodriguez',
+      propertyAddress: 'Av. Reforma 123, Roma Norte, CDMX', 
+      status: 'ACTIVE' as any,
+      currentStep: 6,
       profileData: {
         nationality: 'mexican',
         curp: 'AAAA000000AAAA00'
@@ -180,15 +194,77 @@ async function main() {
         optionalCount: 0,
         incomeDocsHavePassword: 'no'
       },
+      guarantorData: {
+        name: 'Carlos Rodriguez',
+        phone: '+1234567894',
+        relationship: 'Father'
+      },
       accessToken: 'sample-token-123',
-      tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+      tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      submittedAt: new Date('2024-01-15'),
+      packageId: 'premium',
+      packageName: 'Fortaleza Premium',
+      totalPrice: 5500,
+      investigationFee: 200,
+      tenantPaymentPercent: 70,
+      landlordPaymentPercent: 30,
+      investigationStartedAt: new Date('2024-01-02'),
+      investigationCompletedAt: new Date('2024-01-03'),
+      contractUploadedAt: new Date('2024-01-16'),
+      contractSignedAt: new Date('2024-01-20'),
+      policyActivatedAt: new Date('2024-02-01'),
+      contractLength: 12,
+      policyExpiresAt: new Date('2025-02-01')
+    },
+    {
+      initiatedBy: staff.id,
+      tenantEmail: 'tenant2@example.com',
+      tenantPhone: '+1234567892',
+      tenantName: 'John Smith',
+      propertyAddress: 'Insurgentes Sur 456, Del Valle, CDMX',
+      status: 'INVESTIGATION_IN_PROGRESS' as any,
+      currentStep: 4,
+      profileData: {
+        nationality: 'foreign',
+        passport: 'AB1234567'
+      },
+      employmentData: {
+        employmentStatus: 'employed',
+        industry: 'Finance',
+        companyName: 'Banking Corp',
+        position: 'Financial Analyst',
+        monthlyIncome: 35000,
+        creditCheckConsent: true
+      },
+      referencesData: {
+        personalReferenceName: 'Jane Smith',
+        personalReferencePhone: '+1234567893'
+      },
+      documentsData: {
+        identificationCount: 1,
+        incomeCount: 1,
+        optionalCount: 1,
+        incomeDocsHavePassword: 'no'
+      },
+      accessToken: 'sample-token-456',
+      tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      submittedAt: new Date('2024-01-12'),
+      packageId: 'standard',
+      packageName: 'Seguro Estándar',
+      totalPrice: 4100,
+      investigationFee: 200,
+      tenantPaymentPercent: 100,
+      landlordPaymentPercent: 0,
+      investigationStartedAt: new Date('2024-01-11')
     }
   ];
 
+  const createdPolicies = [];
   for (const policy of samplePolicies) {
     const created = await prisma.policy.create({
       data: policy
     });
+    createdPolicies.push(created);
     console.log(`Created policy application for tenant: ${created.tenantEmail}`);
     
     // Add some sample activities
@@ -201,14 +277,150 @@ async function main() {
       }
     });
     
-    await prisma.policyActivity.create({
+    if (created.status === 'INVESTIGATION_IN_PROGRESS') {
+      await prisma.policyActivity.create({
+        data: {
+          policyId: created.id,
+          action: 'investigation_started',
+          details: { assignedTo: staff.id },
+          performedBy: staff.id
+        }
+      });
+    } else if (created.status === 'ACTIVE') {
+      await prisma.policyActivity.create({
+        data: {
+          policyId: created.id,
+          action: 'investigation_completed',
+          details: { verdict: 'APPROVED' },
+          performedBy: staff.id
+        }
+      });
+      
+      await prisma.policyActivity.create({
+        data: {
+          policyId: created.id,
+          action: 'contract_uploaded',
+          details: { version: 1 },
+          performedBy: staff.id
+        }
+      });
+      
+      await prisma.policyActivity.create({
+        data: {
+          policyId: created.id,
+          action: 'contract_signed',
+          details: { signedAt: created.contractSignedAt },
+          performedBy: 'tenant'
+        }
+      });
+    }
+  }
+
+  // Seed investigations for policies that have them
+  console.log('Seeding investigations...');
+  for (const policy of createdPolicies) {
+    if (policy.status === 'INVESTIGATION_IN_PROGRESS') {
+      await prisma.investigation.create({
+        data: {
+          policyId: policy.id,
+          assignedTo: staff.id,
+          responseTimeHours: 8,
+          notes: 'Investigation in progress. Waiting for additional documentation.'
+        }
+      });
+      console.log(`Created investigation for policy: ${policy.id}`);
+    } else if (policy.status === 'ACTIVE') {
+      await prisma.investigation.create({
+        data: {
+          policyId: policy.id,
+          verdict: 'APPROVED',
+          riskLevel: 'LOW',
+          assignedTo: staff.id,
+          completedBy: staff.id,
+          completedAt: policy.investigationCompletedAt,
+          responseTimeHours: 24,
+          notes: 'Investigation completed successfully. Tenant approved for rental.'
+        }
+      });
+      console.log(`Created completed investigation for policy: ${policy.id}`);
+    }
+  }
+
+  // Seed contracts for active policies
+  console.log('Seeding contracts...');
+  for (const policy of createdPolicies) {
+    if (policy.status === 'ACTIVE' && policy.contractUploadedAt) {
+      await prisma.contract.create({
+        data: {
+          policyId: policy.id,
+          version: 1,
+          fileUrl: '/demo/contracts/contract-v1.pdf',
+          fileName: 'contrato-arrendamiento-v1.pdf',
+          fileSize: 256000,
+          mimeType: 'application/pdf',
+          uploadedBy: staff.id,
+          uploadedAt: policy.contractUploadedAt
+        }
+      });
+      console.log(`Created contract for policy: ${policy.id}`);
+    }
+  }
+
+  // Seed sample payments
+  console.log('Seeding payments...');
+  for (const policy of createdPolicies) {
+    // Investigation fee payment
+    await prisma.payment.create({
       data: {
-        policyId: created.id,
-        action: 'submitted',
-        details: { step: 4 },
-        performedBy: 'tenant'
+        policyId: policy.id,
+        amount: policy.investigationFee,
+        type: 'INVESTIGATION_FEE',
+        paidBy: 'TENANT',
+        status: 'COMPLETED',
+        method: 'STRIPE',
+        paidAt: policy.investigationStartedAt || new Date(),
+        description: 'Investigation fee payment'
       }
     });
+
+    if (policy.status === 'ACTIVE') {
+      // Remaining policy payment
+      const remainingAmount = policy.totalPrice - policy.investigationFee;
+      const tenantAmount = (remainingAmount * policy.tenantPaymentPercent) / 100;
+      const landlordAmount = (remainingAmount * policy.landlordPaymentPercent) / 100;
+
+      if (tenantAmount > 0) {
+        await prisma.payment.create({
+          data: {
+            policyId: policy.id,
+            amount: tenantAmount,
+            type: 'POLICY',
+            paidBy: 'TENANT',
+            status: 'COMPLETED',
+            method: 'STRIPE',
+            paidAt: policy.contractSignedAt || new Date(),
+            description: 'Policy payment - tenant portion'
+          }
+        });
+      }
+
+      if (landlordAmount > 0) {
+        await prisma.payment.create({
+          data: {
+            policyId: policy.id,
+            amount: landlordAmount,
+            type: 'POLICY',
+            paidBy: 'LANDLORD',
+            status: 'COMPLETED',
+            method: 'MANUAL',
+            paidAt: policy.contractSignedAt || new Date(),
+            description: 'Policy payment - landlord portion',
+            reference: 'CASH-001'
+          }
+        });
+      }
+    }
+    console.log(`Created payments for policy: ${policy.id}`);
   }
 
   console.log('Seeding finished.');
