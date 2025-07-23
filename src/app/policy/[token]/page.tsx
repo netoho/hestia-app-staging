@@ -114,25 +114,25 @@ export default function TenantPolicyPage() {
 
   const getStatusMessage = (status: PolicyStatusType) => {
     switch (status) {
-      case PolicyStatus.SENT_TO_TENANT:
+      case PolicyStatus.INVESTIGATION_PENDING:
         return t.wizard.status.welcome;
-      case PolicyStatus.IN_PROGRESS:
+      case PolicyStatus.INVESTIGATION_IN_PROGRESS:
         return t.wizard.status.inProgress;
-      case PolicyStatus.SUBMITTED:
-        return t.wizard.status.submitted;
-      case PolicyStatus.UNDER_REVIEW:
-        return t.wizard.status.underReview;
-      case PolicyStatus.APPROVED:
+      case PolicyStatus.INVESTIGATION_APPROVED:
         return t.wizard.status.approved;
-      case PolicyStatus.DENIED:
+      case PolicyStatus.INVESTIGATION_REJECTED:
         return t.wizard.status.denied;
+      case PolicyStatus.CONTRACT_PENDING:
+        return t.wizard.status.underReview;
+      case PolicyStatus.ACTIVE:
+        return t.wizard.status.approved;
       default:
         return t.wizard.status.unknown;
     }
   };
 
   const canEdit = (status: PolicyStatusType) => {
-    return status === PolicyStatus.SENT_TO_TENANT || status === PolicyStatus.IN_PROGRESS;
+    return status === PolicyStatus.INVESTIGATION_PENDING || status === PolicyStatus.INVESTIGATION_IN_PROGRESS;
   };
 
   if (loading) {
