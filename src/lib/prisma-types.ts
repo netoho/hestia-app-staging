@@ -5,9 +5,10 @@ import { isDemoMode } from './env-check';
 
 // Define types that match Prisma schema
 export type UserRole = 'admin' | 'staff' | 'owner' | 'renter';
-export type PolicyStatusType = 'DRAFT' | 'SENT_TO_TENANT' | 'IN_PROGRESS' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'DENIED';
+export type PolicyStatusType = 'DRAFT' | 'INVESTIGATION_PENDING' | 'INVESTIGATION_IN_PROGRESS' | 'INVESTIGATION_REJECTED' | 'INVESTIGATION_APPROVED' | 'CONTRACT_PENDING' | 'CONTRACT_UPLOADED' | 'CONTRACT_SIGNED' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 export type DocumentCategory = 'identification' | 'income_proof' | 'employment_letter' | 'bank_statements' | 'references' | 'other';
-export type PaymentMethodType = 'CARD' | 'BANK_TRANSFER' | 'CASH';
+export type PaymentMethodType = 'CARD' | 'BANK_TRANSFER' | 'CASH' | 'STRIPE' | 'MANUAL';
+export type PaymentStatusType = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'PARTIAL';
 
 // PolicyStatus will be defined later after checking for Prisma client
 
@@ -29,43 +30,52 @@ export interface User {
 export interface Package {
   id: string;
   name: string;
-  type: string;
-  description?: string | null;
-  features: string;
   price: number;
-  isActive: boolean;
-  displayOrder: number;
+  description: string;
+  features: string;
+  ctaText: string;
+  ctaLink: string;
+  highlight: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface InsurancePolicy {
   id: string;
-  policyNumber: string;
-  holderName: string;
-  holderEmail: string;
+  brokerId: string;
+  tenantId?: string | null;
+  landlordId?: string | null;
+  propertyAddress: string;
+  propertyType: string;
+  status: string;
+  premium: number;
   startDate: Date;
   endDate: Date;
-  premium: number;
-  coverageAmount: number;
-  propertyAddress: string;
-  status: string;
+  payer: string;
+  propertyData?: string | null;
+  coverageData?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  broker?: User;
+  tenant?: User | null;
+  landlord?: User | null;
 }
 
 export interface Policy {
   id: string;
   propertyId?: string | null;
+  propertyAddress?: string | null;
   initiatedBy: string;
   tenantEmail: string;
   tenantPhone?: string | null;
+  tenantName?: string | null;
   status: PolicyStatusType;
   currentStep: number;
   profileData?: any;
   employmentData?: any;
   referencesData?: any;
   documentsData?: any;
+  guarantorData?: any;
   accessToken: string;
   tokenExpiry: Date;
   submittedAt?: Date | null;
@@ -73,14 +83,35 @@ export interface Policy {
   reviewedAt?: Date | null;
   reviewNotes?: string | null;
   reviewReason?: string | null;
+  
+  // Payment configuration
   packageId?: string | null;
   packageName?: string | null;
-  price?: number | null;
-  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | null;
+  totalPrice: number;
+  investigationFee: number;
+  tenantPaymentPercent: number;
+  landlordPaymentPercent: number;
+  paymentStatus?: PaymentStatusType;
+  
+  // Lifecycle dates
+  investigationStartedAt?: Date | null;
+  investigationCompletedAt?: Date | null;
+  contractUploadedAt?: Date | null;
+  contractSignedAt?: Date | null;
+  policyActivatedAt?: Date | null;
+  contractLength: number;
+  policyExpiresAt?: Date | null;
+  
   createdAt: Date;
   updatedAt: Date;
+  
+  // Relations
   documents?: PolicyDocument[];
   activities?: PolicyActivity[];
+  investigation?: Investigation;
+  contracts?: Contract[];
+  incidents?: Incident[];
+  payments?: Payment[];
   initiatedByUser?: User;
   reviewedByUser?: User;
 }
@@ -110,6 +141,94 @@ export interface PolicyActivity {
   policy?: Policy;
 }
 
+export interface Investigation {
+  id: string;
+  policyId: string;
+  verdict?: string | null;
+  riskLevel?: string | null;
+  rejectedBy?: string | null;
+  rejectionReason?: string | null;
+  rejectedAt?: Date | null;
+  landlordDecision?: string | null;
+  landlordOverride: boolean;
+  landlordNotes?: string | null;
+  assignedTo?: string | null;
+  completedBy?: string | null;
+  completedAt?: Date | null;
+  responseTimeHours?: number | null;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+export interface Contract {
+  id: string;
+  policyId: string;
+  version: number;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  isCurrent: boolean;
+  uploadedBy: string;
+  uploadedAt: Date;
+  policy?: Policy;
+}
+
+export interface Incident {
+  id: string;
+  policyId: string;
+  reportedBy: string;
+  reporterName: string;
+  reporterContact: string;
+  description: string;
+  resolution?: string | null;
+  requiresPayment: boolean;
+  paymentAmount?: number | null;
+  isCoveredByPolicy: boolean;
+  status: string;
+  assignedTo?: string | null;
+  resolvedBy?: string | null;
+  resolvedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+export interface Payment {
+  id: string;
+  policyId: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatusType;
+  method?: PaymentMethodType | null;
+  type: string;
+  paidBy: string;
+  stripeIntentId?: string | null;
+  stripeSessionId?: string | null;
+  stripeCustomerId?: string | null;
+  isManual: boolean;
+  reference?: string | null;
+  receiptUrl?: string | null;
+  description?: string | null;
+  metadata?: any;
+  errorMessage?: string | null;
+  paidAt?: Date | null;
+  refundedAt?: Date | null;
+  refundAmount?: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  policy?: Policy;
+}
+
+export interface SystemConfig {
+  id: string;
+  investigationFee: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Re-export actual Prisma types if not in demo mode
 let PrismaExports: any = {};
 
@@ -132,12 +251,16 @@ export const Prisma = PrismaExports.Prisma || {
 // PolicyStatus enum object for accessing values like PolicyStatus.DRAFT
 export const PolicyStatus = PrismaExports.PolicyStatus || {
   DRAFT: 'DRAFT' as PolicyStatusType,
-  SENT_TO_TENANT: 'SENT_TO_TENANT' as PolicyStatusType,
-  IN_PROGRESS: 'IN_PROGRESS' as PolicyStatusType,
-  SUBMITTED: 'SUBMITTED' as PolicyStatusType,
-  UNDER_REVIEW: 'UNDER_REVIEW' as PolicyStatusType,
-  APPROVED: 'APPROVED' as PolicyStatusType,
-  DENIED: 'DENIED' as PolicyStatusType,
+  INVESTIGATION_PENDING: 'INVESTIGATION_PENDING' as PolicyStatusType,
+  INVESTIGATION_IN_PROGRESS: 'INVESTIGATION_IN_PROGRESS' as PolicyStatusType,
+  INVESTIGATION_REJECTED: 'INVESTIGATION_REJECTED' as PolicyStatusType,
+  INVESTIGATION_APPROVED: 'INVESTIGATION_APPROVED' as PolicyStatusType,
+  CONTRACT_PENDING: 'CONTRACT_PENDING' as PolicyStatusType,
+  CONTRACT_UPLOADED: 'CONTRACT_UPLOADED' as PolicyStatusType,
+  CONTRACT_SIGNED: 'CONTRACT_SIGNED' as PolicyStatusType,
+  ACTIVE: 'ACTIVE' as PolicyStatusType,
+  EXPIRED: 'EXPIRED' as PolicyStatusType,
+  CANCELLED: 'CANCELLED' as PolicyStatusType,
 } as const;
 
 // PaymentMethod enum object for accessing values like PaymentMethod.CARD
@@ -145,6 +268,18 @@ export const PaymentMethod = PrismaExports.PaymentMethod || {
   CARD: 'CARD' as PaymentMethodType,
   BANK_TRANSFER: 'BANK_TRANSFER' as PaymentMethodType,
   CASH: 'CASH' as PaymentMethodType,
+  STRIPE: 'STRIPE' as PaymentMethodType,
+  MANUAL: 'MANUAL' as PaymentMethodType,
+} as const;
+
+// PaymentStatus enum object
+export const PaymentStatus = PrismaExports.PaymentStatus || {
+  PENDING: 'PENDING' as PaymentStatusType,
+  PROCESSING: 'PROCESSING' as PaymentStatusType,
+  COMPLETED: 'COMPLETED' as PaymentStatusType,
+  FAILED: 'FAILED' as PaymentStatusType,
+  REFUNDED: 'REFUNDED' as PaymentStatusType,
+  PARTIAL: 'PARTIAL' as PaymentStatusType,
 } as const;
 
 // For components that import specific types, provide them from either source
