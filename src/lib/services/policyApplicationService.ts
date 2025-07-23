@@ -15,6 +15,10 @@ export interface CreatePolicyData {
   packageId?: string;
   packageName?: string;
   price?: number;
+  investigationFee?: number;
+  tenantPaymentPercent?: number;
+  landlordPaymentPercent?: number;
+  contractLength?: number;
 }
 
 export interface PolicyWithRelations extends Omit<Policy, 'initiatedByUser' | 'reviewedByUser'> {
@@ -220,10 +224,27 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       reviewedAt: null,
       reviewNotes: null,
       reviewReason: null,
+      tenantName: data.tenantName || null,
+      propertyAddress: data.propertyAddress || null,
+      guarantorData: null,
       packageId: data.packageId || null,
       packageName: data.packageName || null,
-      price: data.price || null,
+      price: data.price || 0,
+      totalPrice: data.price || 0,
+      investigationFee: data.investigationFee || 200,
+      tenantPaymentPercent: data.tenantPaymentPercent || 100,
+      landlordPaymentPercent: data.landlordPaymentPercent || 0,
+      contractLength: data.contractLength || 12,
       paymentStatus: 'PENDING' as any, // Will be properly typed after regenerating types
+      
+      // Lifecycle dates
+      investigationStartedAt: null,
+      investigationCompletedAt: null,
+      contractUploadedAt: null,
+      contractSignedAt: null,
+      policyActivatedAt: null,
+      policyExpiresAt: null,
+      
       createdAt: new Date(),
       updatedAt: new Date(),
       documents: [],
@@ -239,7 +260,10 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       initiatedByUser: {
         id: data.initiatedBy,
         email: 'staff@example.com',
-        name: 'Staff User'
+        name: 'Staff User',
+        role: 'staff',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       reviewedByUser: null
     };
@@ -257,7 +281,11 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
         tenantPhone: data.tenantPhone,
         packageId: data.packageId,
         packageName: data.packageName,
-        price: data.price,
+        totalPrice: data.price || 0,
+        investigationFee: data.investigationFee || 200,
+        tenantPaymentPercent: data.tenantPaymentPercent || 100,
+        landlordPaymentPercent: data.landlordPaymentPercent || 0,
+        contractLength: data.contractLength || 12,
         accessToken: generateSecureToken(),
         tokenExpiry: generateTokenExpiry(),
         activities: {

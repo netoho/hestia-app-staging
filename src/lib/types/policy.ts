@@ -65,20 +65,28 @@ export const POLICY_STEP_NAMES = {
 // Status display helpers
 export const POLICY_STATUS_DISPLAY: Record<string, string> = {
   DRAFT: 'Draft',
-  SENT_TO_TENANT: 'Sent to Tenant',
-  IN_PROGRESS: 'In Progress',
-  SUBMITTED: 'Submitted',
-  UNDER_REVIEW: 'Under Review',
-  APPROVED: 'Approved',
-  DENIED: 'Denied'
+  INVESTIGATION_PENDING: 'Investigation Pending',
+  INVESTIGATION_IN_PROGRESS: 'Investigation in Progress',
+  INVESTIGATION_REJECTED: 'Investigation Rejected',
+  INVESTIGATION_APPROVED: 'Investigation Approved',
+  CONTRACT_PENDING: 'Contract Pending',
+  CONTRACT_UPLOADED: 'Contract Uploaded',
+  CONTRACT_SIGNED: 'Contract Signed',
+  ACTIVE: 'Active',
+  EXPIRED: 'Expired',
+  CANCELLED: 'Cancelled'
 };
 
 export const POLICY_STATUS_COLORS: Record<string, string> = {
   DRAFT: 'gray',
-  SENT_TO_TENANT: 'blue',
-  IN_PROGRESS: 'yellow',
-  SUBMITTED: 'orange',
-  UNDER_REVIEW: 'purple',
-  APPROVED: 'green',
-  DENIED: 'red'
+  INVESTIGATION_PENDING: 'blue',
+  INVESTIGATION_IN_PROGRESS: 'yellow',
+  INVESTIGATION_REJECTED: 'red',
+  INVESTIGATION_APPROVED: 'green',
+  CONTRACT_PENDING: 'orange',
+  CONTRACT_UPLOADED: 'purple',
+  CONTRACT_SIGNED: 'blue',
+  ACTIVE: 'green',
+  EXPIRED: 'gray',
+  CANCELLED: 'red'
 };
