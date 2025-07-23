@@ -46,6 +46,13 @@ const policyInitiateSchema = z.object({
   propertyAddress: z.string().optional(),
   packageId: z.string().min(1, 'Please select a package'),
   price: z.coerce.number().min(0, 'Price must be a positive number'),
+  investigationFee: z.coerce.number().min(0, 'Investigation fee must be a positive number').default(200),
+  tenantPaymentPercent: z.coerce.number().min(0).max(100, 'Percentage must be between 0 and 100').default(100),
+  landlordPaymentPercent: z.coerce.number().min(0).max(100, 'Percentage must be between 0 and 100').default(0),
+  contractLength: z.coerce.number().min(1).max(60, 'Contract length must be between 1 and 60 months').default(12),
+}).refine((data) => data.tenantPaymentPercent + data.landlordPaymentPercent === 100, {
+  message: "Payment percentages must add up to 100%",
+  path: ["tenantPaymentPercent"],
 });
 
 type PolicyInitiateFormValues = z.infer<typeof policyInitiateSchema>;
@@ -71,6 +78,10 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
       propertyAddress: '',
       packageId: '',
       price: 0,
+      investigationFee: 200,
+      tenantPaymentPercent: 100,
+      landlordPaymentPercent: 0,
+      contractLength: 12,
     },
   });
 
@@ -91,6 +102,15 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
       }
     }
   }, [selectedPackageId, packages, form]);
+
+  // Auto-update landlord percentage when tenant percentage changes
+  const tenantPercent = form.watch('tenantPaymentPercent');
+  useEffect(() => {
+    if (tenantPercent !== undefined) {
+      const landlordPercent = 100 - tenantPercent;
+      form.setValue('landlordPaymentPercent', Math.max(0, landlordPercent));
+    }
+  }, [tenantPercent, form]);
 
   const fetchPackages = async () => {
     setLoadingPackages(true);
@@ -161,7 +181,7 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
           {t.pages.policies.initiateDialog.trigger}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t.pages.policies.initiateDialog.title}</DialogTitle>
           <DialogDescription>
@@ -169,8 +189,9 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
           </DialogDescription>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex-1 overflow-y-auto py-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -321,31 +342,142 @@ export function PolicyInitiateDialog({ onPolicyCreated }: PolicyInitiateDialogPr
               />
             </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isLoading}
-              >
-                {t.actions.cancel}
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t.pages.policies.initiateDialog.form.creatingButton}
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    {t.pages.policies.initiateDialog.form.createButton}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            {/* Investigation and Contract Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-foreground">Configuración de Investigación y Contrato</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="investigationFee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tarifa de Investigación (MXN) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="200"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Costo de la investigación de antecedentes
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contractLength"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duración del Contrato (meses) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="60"
+                          placeholder="12"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Duración del contrato de arrendamiento
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tenantPaymentPercent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>% Pago Inquilino *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="100"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Porcentaje que paga el inquilino
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="landlordPaymentPercent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>% Pago Propietario *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="0"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Porcentaje que paga el propietario
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
+                <strong>Nota:</strong> Los porcentajes de pago deben sumar exactamente 100%. 
+                La configuración predeterminada es que el inquilino pague el 100% de la póliza.
+              </div>
+            </div>
+            </form>
+          </Form>
+        </div>
+
+        <DialogFooter className="flex-shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isLoading}
+          >
+            {t.actions.cancel}
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isLoading}
+            onClick={form.handleSubmit(onSubmit)}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {t.pages.policies.initiateDialog.form.creatingButton}
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                {t.pages.policies.initiateDialog.form.createButton}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
