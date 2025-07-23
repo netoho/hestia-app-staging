@@ -21,8 +21,8 @@ export async function POST(
     }
 
     // Check if policy is in a valid state for uploads
-    if (policy.status !== PolicyStatus.SENT_TO_TENANT && 
-        policy.status !== PolicyStatus.IN_PROGRESS) {
+    if (policy.status !== PolicyStatus.INVESTIGATION_PENDING && 
+        policy.status !== PolicyStatus.INVESTIGATION_IN_PROGRESS) {
       return NextResponse.json(
         { error: 'Policy cannot be modified in its current state' },
         { status: 400 }
@@ -142,8 +142,8 @@ export async function DELETE(
     }
 
     // Check if policy is in a valid state
-    if (policy.status !== PolicyStatus.SENT_TO_TENANT && 
-        policy.status !== PolicyStatus.IN_PROGRESS) {
+    if (policy.status !== PolicyStatus.INVESTIGATION_PENDING && 
+        policy.status !== PolicyStatus.INVESTIGATION_IN_PROGRESS) {
       return NextResponse.json(
         { error: 'Policy cannot be modified in its current state' },
         { status: 400 }
