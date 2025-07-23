@@ -36,7 +36,7 @@ export async function POST(
 
     // Check if policy already has a completed payment
     const existingPayments = await PaymentService.getPaymentsByPolicyId(policy.id);
-    const hasCompletedPayment = existingPayments.some(p => p.status === 'COMPLETED');
+    const hasCompletedPayment = existingPayments.some((p: any) => p.status === 'COMPLETED');
     
     if (hasCompletedPayment) {
       return NextResponse.json(

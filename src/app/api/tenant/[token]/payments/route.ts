@@ -22,7 +22,7 @@ export async function GET(
     const payments = await PaymentService.getPaymentsByPolicyId(policy.id);
 
     return NextResponse.json({
-      payments: payments.map(payment => ({
+      payments: payments.map((payment: any) => ({
         id: payment.id,
         amount: payment.amount,
         currency: payment.currency,
