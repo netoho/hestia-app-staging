@@ -17,11 +17,19 @@ interface PolicyData {
   id: string;
   status: PolicyStatusType;
   currentStep: number;
+  tenantType?: 'individual' | 'company';
   tenantEmail: string;
+  tenantName?: string | null;
+  companyName?: string | null;
+  companyRfc?: string | null;
+  legalRepresentativeName?: string | null;
   profileData?: any;
   employmentData?: any;
   referencesData?: any;
   documentsData?: any;
+  packageName?: string | null;
+  price?: number | null;
+  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   documents: Array<{
     id: string;
     category: string;
