@@ -6,19 +6,26 @@ Hestia is a Next.js 15 rental guarantee platform for the Mexican market with com
 ## Current Status
 🟢 **PRODUCTION READY** - Core features complete including payment processing, comprehensive API testing with Vitest
 
-## Recent Session Summary (July 23, 2025) - Vitest Migration Complete
+## Recent Session Summary (July 24, 2025) - Persona Moral Implementation Complete
 
-### ✅ **Major Achievement: Testing Framework Migration**
-- **Successfully migrated** from Jest to Vitest for performance gains
-- **Django-style database testing** maintained with real PostgreSQL integration
-- **All API tests passing** with significant speed improvements
-- **15 comprehensive tests** covering staff and tenant workflows
+### ✅ **Major Achievement: Persona Moral (Company) Support**
+- **Complete company tenant support** - Full workflow from policy creation to data capture
+- **Structured database design** - Proper relational models for company data
+- **Production-ready implementation** - All tests passing with comprehensive coverage
+- **Fixed form validation** - Employment step schema now matches actual form values
 
-### **Testing Infrastructure**
+### **New Features Implemented**
+1. **Policy Initiation Page** (`/dashboard/policies/new`) - Tenant type selection as first step
+2. **Company Profile Form** - Legal representative data with nationality-based ID validation
+3. **Database Models** - CompanyProfile, LegalRepresentative, CompanyFinancial, CompanyReferences
+4. **API Integration** - Dynamic validation schemas based on tenant type
+5. **Document Requirements** - Different document lists for individuals vs companies
+
+### **Testing Infrastructure** (Maintained from July 23)
 - **Framework**: Vitest with native TypeScript support
-- **Database**: Django-style drop/recreate pattern before each test run
+- **Database**: Django-style drop/recreate pattern before each test run  
 - **Coverage**: Real PostgreSQL database testing (not mocked)
-- **Performance**: Faster startup, better error messages, hot reload
+- **New Tests**: 49 total tests (45 passed, 4 skipped) including company workflow tests
 - **Commands**: `bun run test:api`, `bun run test:watch`, `bun run test:coverage`
 
 ## Tech Stack
@@ -119,17 +126,24 @@ npx prisma studio
 - Demo mode for easy development/testing
 
 ## TODO / Next Steps
+
+### High Priority (Version 1.1)
 - [ ] Invoice Generation - PDF receipts for payments
+- [ ] Company forms enhancement - Update Employment/References/Documents for company mode
+- [ ] Company document uploads - Different requirements for Persona Moral applications
+
+### Medium Priority (Version 2.0)
 - [ ] Refund Management - Staff refund interface
 - [ ] Analytics Dashboard - KPIs and metrics
 - [ ] Multiple Payment Methods - Add MercadoPago
 - [ ] Subscription Plans - Recurring billing
+- [ ] Persona Moral PDF - Company rental applications with legal representative data
+
+### Low Priority (Future Versions)
 - [ ] English language toggle for international users
 - [ ] Date/time localization for Mexican format
 - [ ] Enhanced file upload UI (drag & drop)
-- [ ] Persona Moral PDF - Company rental applications
 - [ ] Email template editor for staff
-- [ ] Automated testing suite
 - [ ] Performance optimization (caching)
 - [ ] Background job processing
 - [ ] Two-factor authentication
