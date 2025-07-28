@@ -53,7 +53,7 @@ describe('Integration - Complete Tenant Workflow', () => {
       occupation: 'software-engineer',
       companyName: 'Tech Corp',
       position: 'Software Engineer',
-      incomeSource: 'salary',
+      incomeSource: 'payroll',
       monthlyIncome: 50000,
       creditCheckConsent: true
     }
@@ -216,7 +216,7 @@ describe('Integration - Complete Tenant Workflow', () => {
     // Complete profile step
     request = new Request(`http://localhost:3000/api/tenant/${token}/step/1`, {
       method: 'PUT',
-      body: JSON.stringify({ nationality: 'mexican', curp: 'ABCD123456HDFRLL01' }),
+      body: JSON.stringify({ nationality: 'MEXICAN', curp: 'ABCD123456HDFRLL01' }),
       headers: { 'Content-Type': 'application/json' }
     })
     response = await updateTenantStep(request, { 
@@ -234,7 +234,7 @@ describe('Integration - Complete Tenant Workflow', () => {
         occupation: 'software-engineer',
         companyName: 'Tech Corp',
         position: 'Senior Developer',
-        incomeSource: 'salary',
+        incomeSource: 'payroll',
         monthlyIncome: 50000,
         creditCheckConsent: true
       }),
@@ -248,9 +248,13 @@ describe('Integration - Complete Tenant Workflow', () => {
 
     // Verify data persistence across steps
     const updatedPolicy = await TestDatabase.prisma.policy.findUnique({
-      where: { id: testData.testPolicy.id }
+      where: { id: testData.testPolicy.id },
+      include: {
+        profileData: true,
+        employmentData: true
+      }
     })
-    expect(updatedPolicy?.profileData).toMatchObject({ nationality: 'mexican' })
+    expect(updatedPolicy?.profileData).toMatchObject({ nationality: 'MEXICAN' })
     expect(updatedPolicy?.employmentData).toMatchObject({ companyName: 'Tech Corp' })
   })
 
@@ -261,7 +265,7 @@ describe('Integration - Complete Tenant Workflow', () => {
     const steps = [
       {
         step: 1,
-        data: { nationality: 'mexican', curp: 'ABCD123456HDFRLL01' }
+        data: { nationality: 'MEXICAN', curp: 'ABCD123456HDFRLL01' }
       },
       {
         step: 2,
@@ -271,7 +275,7 @@ describe('Integration - Complete Tenant Workflow', () => {
           occupation: 'software-engineer',
           companyName: 'Tech Corp',
           position: 'Senior Developer',
-          incomeSource: 'salary',
+          incomeSource: 'payroll',
           monthlyIncome: 75000,
           creditCheckConsent: true
         }
@@ -302,7 +306,12 @@ describe('Integration - Complete Tenant Workflow', () => {
 
     // Verify all data is still intact
     const finalPolicy = await TestDatabase.prisma.policy.findUnique({
-      where: { id: testData.testPolicy.id }
+      where: { id: testData.testPolicy.id },
+      include: {
+        profileData: true,
+        employmentData: true,
+        referencesData: true
+      }
     })
 
     expect(finalPolicy?.profileData).toMatchObject(steps[0].data)

@@ -26,7 +26,7 @@ describe('Employment Step - PUT /api/tenant/[token]/step/2', () => {
       occupation: 'software-engineer',
       companyName: 'Tech Corp',
       position: 'Senior Developer',
-      incomeSource: 'salary',
+      incomeSource: 'payroll',
       monthlyIncome: 50000,
       creditCheckConsent: true
     }
@@ -65,7 +65,7 @@ describe('Employment Step - PUT /api/tenant/[token]/step/2', () => {
       occupation: 'software-engineer',
       companyName: 'Tech Corp',
       position: 'Senior Developer',
-      incomeSource: 'salary',
+      incomeSource: 'payroll',
       monthlyIncome: 50000,
       creditCheckConsent: true
     }
@@ -93,7 +93,7 @@ describe('Employment Step - PUT /api/tenant/[token]/step/2', () => {
       occupation: 'software-engineer',
       companyName: 'Tech Corp',
       position: 'Senior Developer',
-      incomeSource: 'salary',
+      incomeSource: 'payroll',
       monthlyIncome: 50000
       // Missing creditCheckConsent
     }
@@ -121,7 +121,7 @@ describe('Employment Step - PUT /api/tenant/[token]/step/2', () => {
       occupation: 'software-engineer',
       companyName: 'Tech Corp',
       position: 'Senior Developer',
-      incomeSource: 'salary',
+      incomeSource: 'payroll',
       monthlyIncome: -1000, // Invalid negative income
       creditCheckConsent: true
     }
