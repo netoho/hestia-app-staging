@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, MoreHorizontal, Eye, Mail, FileText, Loader2 } from 'lucide-react';
+import { Search, MoreHorizontal, Eye, Mail, FileText, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
@@ -36,6 +36,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { ResendInvitationDialog } from '@/components/dialogs/ResendInvitationDialog';
 import { t } from '@/lib/i18n';
 import { TablePagination } from './TablePagination';
+import { PolicyStatusBadge, PolicyProgressIndicator, PaymentStatusBadge } from './PolicyStatusIndicators';
 
 interface PolicyWithRelations {
   id: string;
@@ -221,15 +222,90 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     return resendableStatuses.includes(status);
   };
 
+  // Calculate summary statistics
+  const summaryStats = React.useMemo(() => {
+    const stats = {
+      total: pagination.total,
+      active: 0,
+      pending: 0,
+      inProgress: 0,
+      rejected: 0
+    };
+
+    if (filters.status === 'all' && policies.length > 0) {
+      // Only calculate if we're viewing all statuses
+      policies.forEach(policy => {
+        if (policy.status === 'ACTIVE') stats.active++;
+        else if (policy.status.includes('PENDING')) stats.pending++;
+        else if (policy.status.includes('IN_PROGRESS')) stats.inProgress++;
+        else if (policy.status.includes('REJECTED')) stats.rejected++;
+      });
+    }
+
+    return stats;
+  }, [policies, pagination.total, filters.status]);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t.pages.policies.table.title}</CardTitle>
-        <CardDescription>
-          {t.pages.policies.table.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-4">
+      {/* Summary Cards */}
+      {filters.status === 'all' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Pólizas</p>
+                  <p className="text-2xl font-bold">{summaryStats.total}</p>
+                </div>
+                <FileText className="h-8 w-8 text-muted-foreground/20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Activas</p>
+                  <p className="text-2xl font-bold text-green-600">{summaryStats.active}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-600/20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">En Proceso</p>
+                  <p className="text-2xl font-bold text-yellow-600">{summaryStats.inProgress + summaryStats.pending}</p>
+                </div>
+                <Loader2 className="h-8 w-8 text-yellow-600/20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Rechazadas</p>
+                  <p className="text-2xl font-bold text-red-600">{summaryStats.rejected}</p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-red-600/20" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Table Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.pages.policies.table.title}</CardTitle>
+          <CardDescription>
+            {t.pages.policies.table.description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
@@ -320,25 +396,31 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(policy.status)}>
-                            {POLICY_STATUS_DISPLAY[policy.status as keyof typeof POLICY_STATUS_DISPLAY] || policy.status}
-                          </Badge>
+                          <PolicyStatusBadge 
+                            status={policy.status} 
+                            showIcon={true}
+                            size="md"
+                          />
                         </TableCell>
                         <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant={getPaymentStatusBadgeVariant(policy.paymentStatus)}>
-                              {getPaymentStatusDisplay(policy.paymentStatus)}
-                            </Badge>
-                            {policy.price && (
-                              <div className="text-xs text-muted-foreground">
-                                {formatPrice(policy.price)}
+                          <PaymentStatusBadge
+                            status={policy.paymentStatus}
+                            amount={policy.price || undefined}
+                            showIcon={true}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="w-32">
+                            <PolicyProgressIndicator
+                              currentStep={policy.currentStep}
+                              status={policy.status}
+                              showStepText={true}
+                            />
+                            {!['ACTIVE', 'EXPIRED', 'CANCELLED', 'INVESTIGATION_REJECTED'].includes(policy.status) && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {getProgressText(policy.currentStep, policy.status)}
                               </div>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {getProgressText(policy.currentStep, policy.status)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -400,7 +482,8 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             )}
           </>
         )}
-      </CardContent>
+        </CardContent>
+      </Card>
       
       {/* Resend Invitation Dialog */}
       {selectedPolicy && (
@@ -414,6 +497,6 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
           onSuccess={handleResendSuccess}
         />
       )}
-    </Card>
+    </div>
   );
 }

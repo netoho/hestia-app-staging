@@ -9,6 +9,7 @@ import { CheckCircle, ChevronLeft, ChevronRight, Upload, Send } from 'lucide-rea
 import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STEPS } from '@/lib/types/policy';
 import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileForm';
+import { CreateCompanyProfileForm } from '@/components/forms/CreateCompanyProfileForm';
 import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
 import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyReferencesForm';
 import { CreatePolicyDocumentsForm } from '@/components/forms/CreatePolicyDocumentsForm';
@@ -23,6 +24,11 @@ interface PolicyWizardProps {
     id: string;
     status: PolicyStatusType;
     currentStep: number;
+    tenantType?: 'individual' | 'company';
+    tenantName?: string | null;
+    companyName?: string | null;
+    companyRfc?: string | null;
+    legalRepresentativeName?: string | null;
     profileData?: any;
     employmentData?: any;
     referencesData?: any;
@@ -34,14 +40,14 @@ interface PolicyWizardProps {
   onUpdate: () => void;
 }
 
-const stepTitles: Record<number, string> = {
-  1: t.wizard.stepTitles[1],
-  2: t.wizard.stepTitles[2],
-  3: t.wizard.stepTitles[3],
-  4: t.wizard.stepTitles[4],
-  5: t.wizard.stepTitles[5],
-  6: t.wizard.stepTitles[6]
-};
+const getStepTitles = (isCompany: boolean): Record<number, string> => ({
+  1: isCompany ? 'Datos de la Empresa y Representante Legal' : t.wizard.stepTitles[1],
+  2: isCompany ? 'Información Financiera de la Empresa' : t.wizard.stepTitles[2],
+  3: isCompany ? 'Referencias Comerciales' : t.wizard.stepTitles[3],
+  4: isCompany ? 'Documentos Corporativos' : t.wizard.stepTitles[4],
+  5: t.wizard.stepTitles[5], // Payment is the same
+  6: t.wizard.stepTitles[6]  // Review is the same
+});
 
 export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   const [currentStep, setCurrentStep] = useState(Math.max(1, policy.currentStep));
@@ -49,6 +55,9 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [userNavigatedStep, setUserNavigatedStep] = useState<number | null>(null);
   const { toast } = useToast();
+  
+  const isCompany = policy.tenantType === 'company';
+  const stepTitles = getStepTitles(isCompany);
 
   // Update currentStep when policy changes, but respect user navigation
   useEffect(() => {
@@ -169,31 +178,49 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   };
 
   const renderStep = () => {
+    const isCompany = policy.tenantType === 'company';
+    
     switch (currentStep) {
       case 1:
-        return (
+        // Show different profile form based on tenant type
+        return isCompany ? (
+          <CreateCompanyProfileForm 
+            initialData={policy.profileData}
+            companyInfo={{
+              companyName: policy.companyName || undefined,
+              companyRfc: policy.companyRfc || undefined,
+              legalRepresentativeName: policy.legalRepresentativeName || undefined,
+            }}
+            onNext={handleStepComplete}
+          />
+        ) : (
           <CreatePolicyProfileForm 
             initialData={policy.profileData}
             onNext={handleStepComplete}
           />
         );
       case 2:
+        // Companies might have different employment/financial info requirements
         return (
           <CreatePolicyEmploymentForm
             initialData={policy.employmentData}
             onNext={handleStepComplete}
             onBack={handleBack}
+            isCompany={isCompany}
           />
         );
       case 3:
+        // References might be different for companies (e.g., business references)
         return (
           <CreatePolicyReferencesForm
             initialData={policy.referencesData}
             onNext={handleStepComplete}
             onBack={handleBack}
+            isCompany={isCompany}
           />
         );
       case 4:
+        // Documents will definitely be different for companies
         return (
           <CreatePolicyDocumentsForm
             token={token}
@@ -201,6 +228,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
             initialData={policy.documentsData}
             onNext={handleStepComplete}
             onBack={handleBack}
+            isCompany={isCompany}
           />
         );
       case 5:
