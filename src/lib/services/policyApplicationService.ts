@@ -9,9 +9,17 @@ import { MockDataService } from './mockDataService';
 // Type definitions
 export interface CreatePolicyData {
   propertyId?: string;
+  propertyAddress?: string;
   initiatedBy: string;
+  tenantType?: 'individual' | 'company';
   tenantEmail: string;
   tenantPhone?: string;
+  tenantName?: string;
+  companyName?: string;
+  companyRfc?: string;
+  legalRepresentativeName?: string;
+  legalRepresentativeId?: string;
+  companyAddress?: string;
   packageId?: string;
   packageName?: string;
   price?: number;
@@ -208,9 +216,17 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
     const newPolicy: PolicyWithRelations = {
       id: `mock-policy-${mockNextId++}`,
       propertyId: data.propertyId || null,
+      propertyAddress: data.propertyAddress || null,
       initiatedBy: data.initiatedBy,
+      tenantType: data.tenantType || 'individual' as any,
       tenantEmail: data.tenantEmail,
       tenantPhone: data.tenantPhone || null,
+      tenantName: data.tenantName || null,
+      companyName: data.companyName || null,
+      companyRfc: data.companyRfc || null,
+      legalRepresentativeName: data.legalRepresentativeName || null,
+      legalRepresentativeId: data.legalRepresentativeId || null,
+      companyAddress: data.companyAddress || null,
       status: PolicyStatus.DRAFT,
       currentStep: 1,
       profileData: null,
@@ -224,8 +240,6 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       reviewedAt: null,
       reviewNotes: null,
       reviewReason: null,
-      tenantName: data.tenantName || null,
-      propertyAddress: data.propertyAddress || null,
       guarantorData: null,
       packageId: data.packageId || null,
       packageName: data.packageName || null,
@@ -276,9 +290,17 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
     const newPolicy = await prisma.policy.create({
       data: {
         propertyId: data.propertyId,
+        propertyAddress: data.propertyAddress,
         initiatedBy: data.initiatedBy,
+        tenantType: data.tenantType || 'individual',
         tenantEmail: data.tenantEmail,
         tenantPhone: data.tenantPhone,
+        tenantName: data.tenantName,
+        companyName: data.companyName,
+        companyRfc: data.companyRfc,
+        legalRepresentativeName: data.legalRepresentativeName,
+        legalRepresentativeId: data.legalRepresentativeId,
+        companyAddress: data.companyAddress,
         packageId: data.packageId,
         packageName: data.packageName,
         totalPrice: data.price || 0,
@@ -496,10 +518,17 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
             name: true
           }
         },
-        // Include new structured data models
+        // Include structured data models for both individual and company
         profileData: true,
+        companyProfileData: {
+          include: {
+            legalRepresentative: true
+          }
+        },
         employmentData: true,
+        companyFinancialData: true,
         referencesData: true,
+        companyReferencesData: true,
         documentsData: true,
         guarantorData: true
       }
