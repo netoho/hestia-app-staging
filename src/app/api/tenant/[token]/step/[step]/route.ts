@@ -7,21 +7,30 @@ import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
 // Validation schemas for each step
-const profileSchema = z.object({
+const individualProfileSchema = z.object({
   nationality: z.enum(['MEXICAN', 'FOREIGN']),
   curp: z.string().optional(),
   passport: z.string().optional()
 });
 
+const companyProfileSchema = z.object({
+  legalRepNationality: z.enum(['mexican', 'foreign']),
+  legalRepCurp: z.string().optional(),
+  legalRepPassport: z.string().optional(),
+  legalRepFullName: z.string().min(1),
+  companyTaxAddress: z.string().min(1),
+  companyTaxRegime: z.string().min(1)
+});
+
 const employmentSchema = z.object({
-  employmentStatus: z.enum(['employed', 'self-employed', 'unemployed', 'student', 'retired']),
+  employmentStatus: z.enum(['employed', 'selfEmployed', 'student', 'other']),
   industry: z.string().min(1),
   occupation: z.string().min(1),
   companyName: z.string().min(1),
   position: z.string().min(1),
   companyWebsite: z.string().optional(),
   workAddress: z.string().optional(),
-  incomeSource: z.enum(['salary', 'business', 'freelance', 'benefits', 'other']),
+  incomeSource: z.enum(['mixed', 'payroll', 'freelance']),
   monthlyIncome: z.number().positive(),
   creditCheckConsent: z.boolean()
 });
@@ -50,12 +59,21 @@ const guarantorSchema = z.object({
   address: z.string().optional()
 });
 
-const stepSchemas: Record<string, z.ZodSchema> = {
-  '1': profileSchema,
-  '2': employmentSchema,
-  '3': referencesSchema,
-  '4': documentsSchema,
-  '5': guarantorSchema
+const getStepSchema = (step: string, tenantType?: string): z.ZodSchema => {
+  switch (step) {
+    case '1':
+      return tenantType === 'company' ? companyProfileSchema : individualProfileSchema;
+    case '2':
+      return employmentSchema;
+    case '3':
+      return referencesSchema;
+    case '4':
+      return documentsSchema;
+    case '5':
+      return guarantorSchema;
+    default:
+      throw new Error(`No schema defined for step ${step}`);
+  }
 };
 
 const stepFields: Record<string, string> = {
@@ -155,9 +173,11 @@ export async function PUT(
 
     // For steps 1-5, validate and save form data
     const body = await request.json();
-    const schema = stepSchemas[step];
     
-    if (!schema) {
+    let schema: z.ZodSchema;
+    try {
+      schema = getStepSchema(step, policy.tenantType);
+    } catch (error) {
       return NextResponse.json(
         { error: 'No validation schema defined for this step' },
         { status: 400 }
@@ -187,10 +207,29 @@ export async function PUT(
 
     let updatedPolicy;
     if (isDemoMode()) {
-      // For demo mode, keep using JSON fields for now
+      // For demo mode, store structured data similar to production
+      let dataToStore = validation.data;
+      
+      if (step === '1' && policy.tenantType === 'company') {
+        // Store company profile data in a structured way for demo mode
+        const companyData = validation.data as any;
+        dataToStore = {
+          companyProfile: {
+            taxAddress: companyData.companyTaxAddress,
+            taxRegime: companyData.companyTaxRegime,
+            legalRepresentative: {
+              fullName: companyData.legalRepFullName,
+              nationality: companyData.legalRepNationality.toUpperCase(),
+              curp: companyData.legalRepCurp || null,
+              passport: companyData.legalRepPassport || null,
+            }
+          }
+        };
+      }
+      
       const fieldName = stepFields[step];
       const updateData: any = {
-        [fieldName]: validation.data,
+        [fieldName]: dataToStore,
         currentStep: newCurrentStep,
         status: nextStatus
       };
@@ -203,15 +242,52 @@ export async function PUT(
       await prisma.$transaction(async (tx) => {
         // Save step data to appropriate model
         if (step === '1') {
-          // Profile data
-          await tx.tenantProfile.upsert({
-            where: { policyId: policy.id },
-            update: validation.data,
-            create: {
-              policyId: policy.id,
-              ...validation.data
-            }
-          });
+          if (policy.tenantType === 'company') {
+            // Save company profile data using proper models
+            const companyData = validation.data as any;
+            
+            // Create/update CompanyProfile
+            const companyProfile = await tx.companyProfile.upsert({
+              where: { policyId: policy.id },
+              update: {
+                taxAddress: companyData.companyTaxAddress,
+                taxRegime: companyData.companyTaxRegime,
+              },
+              create: {
+                policyId: policy.id,
+                taxAddress: companyData.companyTaxAddress,
+                taxRegime: companyData.companyTaxRegime,
+              }
+            });
+            
+            // Create/update Legal Representative
+            await tx.legalRepresentative.upsert({
+              where: { companyProfileId: companyProfile.id },
+              update: {
+                fullName: companyData.legalRepFullName,
+                nationality: companyData.legalRepNationality.toUpperCase() as 'MEXICAN' | 'FOREIGN',
+                curp: companyData.legalRepCurp || null,
+                passport: companyData.legalRepPassport || null,
+              },
+              create: {
+                companyProfileId: companyProfile.id,
+                fullName: companyData.legalRepFullName,
+                nationality: companyData.legalRepNationality.toUpperCase() as 'MEXICAN' | 'FOREIGN',
+                curp: companyData.legalRepCurp || null,
+                passport: companyData.legalRepPassport || null,
+              }
+            });
+          } else {
+            // Save individual profile data
+            await tx.tenantProfile.upsert({
+              where: { policyId: policy.id },
+              update: validation.data,
+              create: {
+                policyId: policy.id,
+                ...validation.data
+              }
+            });
+          }
         } else if (step === '2') {
           // Employment data
           await tx.tenantEmployment.upsert({

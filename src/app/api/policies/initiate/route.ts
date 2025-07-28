@@ -7,11 +7,28 @@ import { z } from 'zod';
 
 // Request validation schema
 const initiatePolicySchema = z.object({
+  // Tenant type
+  tenantType: z.enum(['individual', 'company']).default('individual'),
+  
+  // Common fields
   tenantEmail: z.string().email('Invalid email address'),
   tenantPhone: z.string().optional(),
+  
+  // Individual tenant fields
   tenantName: z.string().optional(),
+  
+  // Company tenant fields
+  companyName: z.string().optional(),
+  companyRfc: z.string().optional(),
+  legalRepresentativeName: z.string().optional(),
+  legalRepresentativeId: z.string().optional(),
+  companyAddress: z.string().optional(),
+  
+  // Property info
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
+  
+  // Package and pricing
   packageId: z.string().min(1, 'Package is required'),
   price: z.number().min(0, 'Price must be positive'),
   investigationFee: z.number().min(0, 'Investigation fee must be positive').default(200),
@@ -21,6 +38,37 @@ const initiatePolicySchema = z.object({
 }).refine((data) => data.tenantPaymentPercent + data.landlordPaymentPercent === 100, {
   message: "Payment percentages must add up to 100%",
   path: ["tenantPaymentPercent"],
+}).superRefine((data, ctx) => {
+  // Validate required fields based on tenant type
+  if (data.tenantType === 'individual' && !data.tenantName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Tenant name is required for individual tenants",
+      path: ["tenantName"],
+    });
+  } else if (data.tenantType === 'company') {
+    if (!data.companyName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Company name is required for company tenants",
+        path: ["companyName"],
+      });
+    }
+    if (!data.companyRfc) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Company RFC is required for company tenants",
+        path: ["companyRfc"],
+      });
+    }
+    if (!data.legalRepresentativeName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Legal representative name is required for company tenants",
+        path: ["legalRepresentativeName"],
+      });
+    }
+  }
 });
 
 export async function POST(request: NextRequest) {
@@ -54,9 +102,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { 
+      tenantType,
       tenantEmail, 
       tenantPhone, 
-      tenantName, 
+      tenantName,
+      companyName,
+      companyRfc,
+      legalRepresentativeName,
+      legalRepresentativeId,
+      companyAddress,
       propertyId, 
       propertyAddress, 
       packageId, 
@@ -76,9 +130,17 @@ export async function POST(request: NextRequest) {
     // Create the policy
     const policy = await createPolicy({
       propertyId,
+      propertyAddress,
       initiatedBy: authResult.user.id,
+      tenantType: tenantType as 'individual' | 'company',
       tenantEmail,
       tenantPhone,
+      tenantName: tenantType === 'individual' ? tenantName : undefined,
+      companyName,
+      companyRfc,
+      legalRepresentativeName,
+      legalRepresentativeId,
+      companyAddress,
       packageId,
       packageName,
       price,
@@ -91,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Send invitation email
     const emailSent = await sendPolicyInvitation({
       tenantEmail,
-      tenantName,
+      tenantName: tenantType === 'individual' ? tenantName : companyName,
       propertyAddress,
       accessToken: policy.accessToken,
       expiryDate: policy.tokenExpiry,
