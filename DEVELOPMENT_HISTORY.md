@@ -48,6 +48,18 @@ This document contains archived session notes from July 2025. For current projec
 ### July 18, 2025
 - Authentication system standardization
 - Fixed authentication hook typos
+
+### July 24, 2025 - Persona Moral (Company) Support Implementation
+- **Major Feature**: Complete implementation of Persona Moral (company) tenant support
+- **New Policy Initiation Page**: Created `/dashboard/policies/new` with tenant type selection
+- **Database Schema**: Added TenantType enum and company-specific fields to Policy model
+- **Structured Data Models**: Created CompanyProfile, LegalRepresentative, CompanyFinancial, CompanyReferences models
+- **Company Profile Form**: Built comprehensive form with legal representative data capture
+- **API Integration**: Updated step API to handle company vs individual data validation
+- **Form Validation**: Fixed employment step schema to match actual form values (selfEmployed, payroll)
+- **Comprehensive Testing**: Added 4 new test files with full company workflow coverage
+- **Documentation**: Added required document lists for both individual and company applications
+- **Status**: Core Persona Moral functionality is production ready with proper database models and API validation
 - Fixed demo mode infinite redirect loop
 
 ### July 20, 2025
