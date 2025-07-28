@@ -26,6 +26,9 @@ export default defineConfig({
       'node_modules',
       '.next',
       'dist',
+      'src/**/*-utils.ts',
+      'src/**/*-utils.js',
+      'src/**/test-utils.*',
     ],
     
     // Coverage configuration
