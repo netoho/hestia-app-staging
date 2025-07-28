@@ -115,12 +115,28 @@ model InsurancePolicy {
 
 model Policy {
   id             String      @id @default(cuid())
+  
+  // Tenant type
+  tenantType     TenantType  @default(individual)
+  
+  // Property info
   propertyId     String?
   propertyAddress String?
   initiatedBy    String
+  
+  // Individual tenant fields
   tenantEmail    String
   tenantPhone    String?
   tenantName     String?
+  
+  // Company tenant fields (for Persona Moral)
+  companyName    String?
+  companyRfc     String?
+  legalRepresentativeName String?
+  legalRepresentativeId   String?
+  companyAddress String?
+  
+  // Policy workflow
   status         PolicyStatus @default(DRAFT)
   currentStep    Int         @default(1)
   accessToken    String      @unique
@@ -154,8 +170,11 @@ model Policy {
 
   // Relations to structured data models
   profileData    TenantProfile?
+  companyProfileData CompanyProfile?
   employmentData TenantEmployment?
+  companyFinancialData CompanyFinancial?
   referencesData TenantReferences?
+  companyReferencesData CompanyReferences?
   documentsData  TenantDocuments?
   guarantorData  TenantGuarantor?
 
@@ -170,7 +189,7 @@ model Policy {
   reviewedByUser  User? @relation("ReviewedByUser", fields: [reviewedBy], references: [id])
 }
 
-// Tenant Profile Information
+// Tenant Profile Information (for individuals)
 model TenantProfile {
   id          String   @id @default(cuid())
   policyId    String   @unique
@@ -184,7 +203,40 @@ model TenantProfile {
   policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
-// Tenant Employment Information
+// Company Profile Information (for companies)
+model CompanyProfile {
+  id          String   @id @default(cuid())
+  policyId    String   @unique
+  
+  // Company information
+  taxAddress  String   // Domicilio fiscal
+  taxRegime   String   // Régimen fiscal
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  legalRepresentative LegalRepresentative?
+}
+
+// Legal Representative Information (for companies)
+model LegalRepresentative {
+  id              String   @id @default(cuid())
+  companyProfileId String  @unique
+  
+  // Personal information
+  fullName        String
+  nationality     NationalityType
+  curp            String?  // For Mexican nationals
+  passport        String?  // For foreign nationals
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  companyProfile  CompanyProfile @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Employment Information (for individuals)
 model TenantEmployment {
   id                String   @id @default(cuid())
   policyId          String   @unique
@@ -205,7 +257,27 @@ model TenantEmployment {
   policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
-// Tenant References Information
+// Company Financial Information (for companies)
+model CompanyFinancial {
+  id                String   @id @default(cuid())
+  policyId          String   @unique
+  businessType      String   // tipo de negocio
+  industry          String   // industria/sector
+  yearsInBusiness   Int      // años en operación
+  numberOfEmployees Int      // número de empleados
+  monthlyRevenue    Float    // ingresos mensuales promedio
+  monthlyExpenses   Float    // gastos mensuales promedio
+  hasAccountant     Boolean  // tiene contador
+  accountantName    String?  // nombre del contador
+  accountantPhone   String?  // teléfono del contador
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant References Information (for individuals)
 model TenantReferences {
   id                      String   @id @default(cuid())
   policyId                String   @unique
@@ -220,6 +292,36 @@ model TenantReferences {
   updatedAt               DateTime @updatedAt
   
   policy                  Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Company References Information (for companies)
+model CompanyReferences {
+  id                          String   @id @default(cuid())
+  policyId                    String   @unique
+  
+  // Business references
+  supplierReferenceName       String?
+  supplierReferencePhone      String?
+  supplierReferenceEmail      String?
+  
+  clientReferenceName         String?
+  clientReferencePhone        String?
+  clientReferenceEmail        String?
+  
+  bankReferenceName           String?  // Banco principal
+  bankReferencePhone          String?
+  bankAccountManager          String?  // Ejecutivo de cuenta
+  
+  // Accountant reference
+  accountantName              String?
+  accountantPhone             String?
+  accountantEmail             String?
+  accountantLicense           String?  // Cédula profesional
+  
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  
+  policy                      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
 // Tenant Documents Information
@@ -406,6 +508,11 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIAL
+}
+
+enum TenantType {
+  individual
+  company
 }
 
 enum PaymentMethod {
