@@ -1,17 +1,19 @@
 import { Resend } from 'resend';
 import Mailgun from 'mailgun.js';
+import nodemailer from 'nodemailer';
 import { isEmulator } from '../env-check';
 import { generatePolicyUrl } from '../utils/tokenUtils';
 
 // Email provider configuration
-const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'; // 'resend' or 'mailgun'
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'; // 'resend', 'mailgun', or 'smtp'
 const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const COMPANY_NAME = 'Hestia';
-const SUPPORT_EMAIL = 'support@hestia.com';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@hestiaplp.com.mx';
 
 // Email provider clients (initialized lazily)
 let resendClient: Resend | null = null;
 let mailgunClient: any = null;
+let smtpTransporter: any = null;
 
 // Email provider interface
 interface EmailData {
@@ -36,6 +38,8 @@ class EmailProvider {
       switch (EMAIL_PROVIDER) {
         case 'mailgun':
           return await this.sendWithMailgun(data);
+        case 'smtp':
+          return await this.sendWithSMTP(data);
         case 'resend':
         default:
           return await this.sendWithResend(data);
@@ -93,6 +97,45 @@ class EmailProvider {
     });
 
     console.log('Email sent via Mailgun:', result);
+    return true;
+  }
+
+  private static async sendWithSMTP(data: EmailData): Promise<boolean> {
+    const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      console.error(`SMTP configuration missing: ${missingVars.join(', ')}`);
+      return false;
+    }
+
+    // Initialize SMTP transporter lazily
+    if (!smtpTransporter) {
+      smtpTransporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        // Additional HostGator-specific settings
+        tls: {
+          rejectUnauthorized: false // May be needed for some shared hosting providers
+        }
+      });
+    }
+
+    const mailOptions = {
+      from: FROM_EMAIL,
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      text: data.text
+    };
+
+    const result = await smtpTransporter.sendMail(mailOptions);
+    console.log('Email sent via SMTP:', result);
     return true;
   }
 }
@@ -375,31 +418,181 @@ Questions? Contact us at ${SUPPORT_EMAIL}
 
 // Email service functions
 export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<boolean> => {
-  const template = policyInvitationTemplate(data);
-  return await EmailProvider.sendEmail({
-    to: data.tenantEmail,
-    subject: template.subject,
-    html: template.html,
-    text: template.text
-  });
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { PolicyInvitationEmail } = await import('../../templates/email/react-email/PolicyInvitationEmail');
+    
+    const html = await render(PolicyInvitationEmail(data));
+    const subject = 'Acción Requerida: Completa tu Solicitud de Póliza Hestia';
+    
+    // Generate plain text version
+    const policyUrl = generatePolicyUrl(data.accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
+    const expiryDate = new Date(data.expiryDate).toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    const text = `
+Hola${data.tenantName ? ` ${data.tenantName}` : ''},
+
+${data.initiatorName} ha iniciado una solicitud de póliza de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
+
+Para completar tu solicitud, visita: ${policyUrl}
+
+Importante: Este enlace expirará el ${expiryDate}.
+
+Lo que necesitarás:
+- Identificación válida (CURP mexicana o pasaporte)
+- Información laboral y comprobantes de ingresos  
+- Información de contacto de referencias personales
+- Documentos adicionales (opcional)
+
+El proceso de solicitud toma típicamente 15-20 minutos en completarse.
+
+Si tienes alguna pregunta, contáctanos en soporte@hestiaplp.com.mx
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+    
+    return await EmailProvider.sendEmail({
+      to: data.tenantEmail,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error rendering React Email template, falling back to legacy:', error);
+    // Fallback to legacy template
+    const template = policyInvitationTemplate(data);
+    return await EmailProvider.sendEmail({
+      to: data.tenantEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text
+    });
+  }
 };
 
 export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionData): Promise<boolean> => {
-  const template = policySubmissionTemplate(data);
-  return await EmailProvider.sendEmail({
-    to: data.tenantEmail,
-    subject: template.subject,
-    html: template.html,
-    text: template.text
-  });
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { PolicySubmissionEmail } = await import('../../templates/email/react-email/PolicySubmissionEmail');
+    
+    const html = await render(PolicySubmissionEmail(data));
+    const subject = `Solicitud Recibida - Póliza Hestia #${data.policyId}`;
+    
+    // Generate plain text version
+    const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const text = `
+¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!
+
+Hemos recibido exitosamente tu solicitud de póliza de garantía.
+
+ID de Solicitud: #${data.policyId}
+Enviada el: ${submittedDate}
+
+¿Qué sigue ahora?
+1. Revisión de documentos: Nuestro equipo revisará tu solicitud y documentos
+2. Verificación de referencias: Podemos contactar a tus referencias para verificación
+3. Decisión final: Recibirás un correo con nuestra decisión en 2-3 días hábiles
+
+Si necesitamos información adicional, te contactaremos a esta dirección de correo electrónico.
+
+Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el alquiler.
+
+¿Preguntas? Contáctanos en soporte@hestiaplp.com.mx
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+    
+    return await EmailProvider.sendEmail({
+      to: data.tenantEmail,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error rendering React Email template, falling back to legacy:', error);
+    // Fallback to legacy template
+    const template = policySubmissionTemplate(data);
+    return await EmailProvider.sendEmail({
+      to: data.tenantEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text
+    });
+  }
 };
 
 export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Promise<boolean> => {
-  const template = policyStatusUpdateTemplate(data);
-  return await EmailProvider.sendEmail({
-    to: data.tenantEmail,
-    subject: template.subject,
-    html: template.html,
-    text: template.text
-  });
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { PolicyStatusUpdateEmail } = await import('../../templates/email/react-email/PolicyStatusUpdateEmail');
+    
+    const html = await render(PolicyStatusUpdateEmail(data));
+    const isApproved = data.status === 'approved';
+    const statusText = isApproved ? 'Aprobada' : 'Rechazada';
+    const subject = `Solicitud de Póliza ${statusText} - Hestia`;
+    
+    // Generate plain text version
+    const text = `
+Hola${data.tenantName ? ` ${data.tenantName}` : ''},
+
+Tu solicitud de póliza de garantía ha sido revisada por ${data.reviewerName}.
+
+Estado: ${statusText}
+${data.reason ? `Motivo: ${data.reason}` : ''}
+
+${isApproved ? 
+  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu póliza.
+
+Próximos Pasos:
+- Recibirás los documentos de la póliza por correo electrónico
+- Un representante te contactará para finalizar los detalles
+- Tu garantía estará activa una vez completado el proceso` :
+  `Si crees que esta decisión fue tomada por error o te gustaría discutir tu solicitud, puedes contactar a nuestro equipo de soporte.
+
+Opciones Disponibles:
+- Contacta a nuestro equipo para aclarar dudas
+- Proporciona documentación adicional si es necesario
+- Presenta una nueva solicitud cuando sea apropiado
+
+Contacta soporte: soporte@hestiaplp.com.mx`
+}
+
+Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el alquiler.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+    
+    return await EmailProvider.sendEmail({
+      to: data.tenantEmail,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error rendering React Email template, falling back to legacy:', error);
+    // Fallback to legacy template
+    const template = policyStatusUpdateTemplate(data);
+    return await EmailProvider.sendEmail({
+      to: data.tenantEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text
+    });
+  }
 };
