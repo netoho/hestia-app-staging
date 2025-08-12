@@ -68,7 +68,7 @@ async function main() {
       where: { id: pkg.id },
       update: {
         name: pkg.name,
-        price: parseFloat(pkg.price.replace('$', '')),
+        price: pkg.price,
         description: pkg.description,
         features: JSON.stringify(pkg.features), // Store features as a JSON string
         ctaText: pkg.ctaText,
@@ -78,7 +78,7 @@ async function main() {
       create: {
         id: pkg.id,
         name: pkg.name,
-        price: parseFloat(pkg.price.replace('$', '')),
+        price: pkg.price,
         description: pkg.description,
         features: JSON.stringify(pkg.features), // Store features as a JSON string
         ctaText: pkg.ctaText,
