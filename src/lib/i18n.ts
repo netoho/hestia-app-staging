@@ -295,8 +295,8 @@ const es = {
     pages: {
 
         home: {
-            heroTitle: "Asegura tu Tranquilidad con Hestia",
-            heroSubtitle: "Pólizas de garantía de alquiler integrales para propietarios, inquilinos y asesores inmobiliarios. Navega el mercado de alquiler con confianza.",
+            heroTitle: "Asegura tu Tranquilidad con Hestia.",
+            heroSubtitle: "Protecciones de arrendamiento integrales. Navega el mercado de arrendamiento con confianza.",
             howItWorksTitle: "Cómo Funciona Hestia",
             howItWorksSubtitle: "Un proceso simple y transparente para tu seguridad de alquiler.",
             videoTestimonialTitle: "Escucha a Nuestros Clientes",
@@ -304,17 +304,17 @@ const es = {
             packagesTitle: "Nuestros Paquetes de Protección",
             packagesSubtitle: "Elige el nivel de seguridad adecuado para ti.",
             whyChooseTitle: "¿Por Qué Elegir Hestia?",
-            whyChooseSubtitle: "Experimenta la diferencia con nuestro servicio dedicado y protección robusta.",
+            whyChooseSubtitle: "Experimenta la tranquilidad con nuestro servicio dedicado a proteger tu arrendamiento.",
             forOwners: "Para Propietarios",
-            forOwnersDesc: "Minimiza riesgos, asegura un ingreso de alquiler constante y protege tu inversión inmobiliaria con nuestras fiables pólizas de selección y garantía.",
+            forOwnersDesc: "Protege tu patrimonio, cumple con las regulaciones, contrato acorde a tus necesidades y minimiza riesgos por incumplimientos al contrato.",
             forRenters: "Para Inquilinos",
-            forRentersDesc: "Asegura la casa de tus sueños con facilidad. Nuestras pólizas pueden fortalecer tu solicitud y proporcionar una red de seguridad para tu depósito.",
+            forRentersDesc: "Asegura una estancia segura en tu casa o negocio, revisión de perfil de arrendador, respaldo jurídico para cumplimiento de contrato y derechos como arrendatario y red segura para devolución de deposito.",
             forAdvisors: "Para Asesores",
-            forAdvisorsDesc: "Cierra tratos más rápido y ofrece valor añadido a tus clientes. Nuestro proceso simplificado hace que los contratos de alquiler sean más fluidos para todos.",
+            forAdvisorsDesc: "Cierra tratos más rápido y ofrece valor añadido a tus clientes. Nuestro proceso simplificado hace que los contratos de alquiler sean más fluidos y seguros para las partes.",
             testimonialsTitle: "Con la Confianza de Muchos",
             testimonialsSubtitle: "Escucha lo que nuestros clientes satisfechos tienen que decir sobre Hestia.",
-            ctaTitle: "¿Listo para Experimentar Alquileres Seguros?",
-            ctaSubtitle: "Únete a Hestia hoy y transforma tu experiencia de alquiler. Ya seas propietario, inquilino o asesor, tenemos una solución para ti.",
+            ctaTitle: "¿Listo para Experimentar tu Arrendamiento Seguro?",
+            ctaSubtitle: "Trabaja tu protección con nosotros y transforma tu experiencia de renta. Tenemos una solución para ti.",
             videoTestimonials: [
                 { videoId: "CphDJJat9qE", author: "Augusto" },
                 { videoId: "Anara--Uzkw", author: "Daniela" },
@@ -329,10 +329,10 @@ const es = {
                 { id: 't3', name: 'Karim Goudiaby', role: 'Asesora Inmobiliaria', quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.", avatarUrl: '/images/testimonials/karim.png', dataAiHint: 'professional woman' },
             ] as Testimonial[],
             howItWorksSteps: [
-                { id: "1", title: "Elige tu Paquete", description: "Selecciona entre nuestra gama de paquetes diseñados para tus necesidades específicas, ya seas propietario, inquilino o asesor.", icon: PackageSearch, dataAiHint: "select package" },
-                { id: "2", title: "Regístrate y Proporciona Info", description: "Regístrate en nuestra plataforma y completa los detalles necesarios. Los propietarios listan propiedades, los inquilinos proporcionan información personal para la evaluación.", icon: UserPlus, dataAiHint: "user registration" },
-                { id: "3", title: "Verificación y Aprobación", description: "Nuestro equipo procesa la información, realiza las verificaciones necesarias y aprueba la solicitud de la póliza.", icon: ShieldQuestion, dataAiHint: "security check" },
-                { id: "4", title: "Asegura tu Alquiler", description: "Una vez aprobado y completado el pago, tu alquiler está asegurado con la protección de Hestia. Accede a tus documentos en cualquier momento.", icon: FileText, dataAiHint: "contract document" }
+                { id: "1", title: "Elige tu protección.", description: "Selecciona entre nuestra variedad de servicios diseñados para las necesidades de tu arrendamiento.", icon: "/images/icons/package.png", dataAiHint: "select package" },
+                { id: "2", title: "Regístrate y proporciona información.", description: "Regístrate en nuestra plataforma y completa los formatos y proporciona la documentación requerida.", icon: "/images/icons/note.png", dataAiHint: "user registration" },
+                { id: "3", title: "Verificación y aprobación.", description: "Nuestro equipo analiza la información proporcionada, realiza la investigación correspondiente, emite una opinión de riesgo y te propondra la estrategia correspondiente.", icon: "/images/icons/shield.png", dataAiHint: "security check" },
+                { id: "4", title: "Asegura tu alquier.", description: "Una vez aprobada la estrategia propuesta y definidos los terminos, completa el pago tu alquiler está asegurado con la protección de Hestia. Accede a tus documentos  en cualquier momento.", icon: "/images/icons/search.svg", dataAiHint: "contract document" }
             ] as HowItWorksStep[],
         },
         aboutUs: {

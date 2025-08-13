@@ -41,7 +41,7 @@ export interface HowItWorksStep {
   id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: string;
   dataAiHint: string;
 }
 
