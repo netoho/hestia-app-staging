@@ -14,7 +14,7 @@ export default function PublicFooter() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           <div>
-            <Logo size="sm" className="mb-4"/>
+            <Logo size="lg" className="mb-4"/>
             <p className="text-sm mb-4">
               {t.layout.publicFooter.description}
             </p>
@@ -26,7 +26,7 @@ export default function PublicFooter() {
           </div>
 
           <div>
-            <h3 className="text-lg font-headline font-semibold text-foreground mb-4">{t.layout.publicFooter.quickLinks}</h3>
+            <h3 className="text-2xl font-headline font-bold text-foreground mb-4">{t.layout.publicFooter.quickLinks}</h3>
             <ul className="space-y-2">
               {t.layout.publicHeader.navLinks.slice(0, 4).map((item) => (
                 <li key={item.label}>
@@ -39,7 +39,7 @@ export default function PublicFooter() {
           </div>
 
           <div>
-            <h3 className="text-lg font-headline font-semibold text-foreground mb-4 md:mt-0 mt-8">{t.layout.publicFooter.legal}</h3>
+            <h3 className="text-2xl font-headline font-bold text-foreground mb-4 md:mt-0 mt-8">{t.layout.publicFooter.legal}</h3>
             <ul className="space-y-2">
               {t.layout.publicFooter.footerLinks.map((item) => (
                  <li key={item.label}>
@@ -57,7 +57,7 @@ export default function PublicFooter() {
           </div>
           
           <div>
-            <h3 className="text-lg font-headline font-semibold text-foreground mb-4">{t.layout.publicFooter.newsletter}</h3>
+            <h3 className="text-2xl font-headline font-bold text-foreground mb-4">{t.layout.publicFooter.newsletter}</h3>
             <p className="text-sm mb-3">{t.layout.publicFooter.newsletterDescription}</p>
             <NewsletterForm />
           </div>

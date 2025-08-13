@@ -23,7 +23,7 @@ export default function HomePage() {
         <section className="relative bg-background text-primary-foreground pt-24 md:pt-32 pb-16 md:pb-24 overflow-hidden parallax-bg">
             <div className="absolute inset-0 -z-10">
               <Image
-                src="/images/background-hero-home.jpg"
+                src="/images/hero-home.jpg"
                 alt="Happy couple securing their rental agreement"
                 fill
                 className="object-cover fixed"
