@@ -1,8 +1,7 @@
-import { storage } from '../firebase-admin';
-import { isEmulator } from '../env-check';
+import { getStorageProvider, StorageFile } from '../storage';
+import { isDemoMode } from '../env-check';
 import prisma from '../prisma';
 import { PolicyDocument } from '@/lib/prisma-types';
-import { Readable } from 'stream';
 import crypto from 'crypto';
 
 // Type definitions
@@ -33,12 +32,6 @@ const ALLOWED_MIME_TYPES = [
   'image/gif',
   'image/webp'
 ];
-
-// Mock storage for emulator
-const mockFiles = new Map<string, {
-  policyDocument: PolicyDocument;
-  buffer: Buffer;
-}>();
 
 // Validation functions
 export const validateFile = (file: FileUploadOptions['file']): FileValidationResult => {
@@ -97,67 +90,52 @@ export const uploadFile = async (options: FileUploadOptions): Promise<PolicyDocu
   }
 
   const fileName = generateSafeFileName(options.file.originalName, options.policyId, options.category);
+  const storage = getStorageProvider();
 
-  if (isEmulator()) {
-    console.log('Emulator mode: Mock uploading file');
-    
-    // Create mock document record
-    const mockDocument: PolicyDocument = {
-      id: `mock-doc-${Date.now()}`,
-      policyId: options.policyId,
-      category: options.category,
-      fileName: fileName,
+  try {
+    // Convert to StorageFile format
+    const storageFile: StorageFile = {
+      buffer: options.file.buffer,
       originalName: options.file.originalName,
-      fileSize: options.file.size,
       mimeType: options.file.mimeType,
-      storageUrl: `mock://storage/${fileName}`,
-      uploadedAt: new Date(),
-      uploadedBy: options.uploadedBy
+      size: options.file.size,
     };
 
-    // Store in mock storage
-    mockFiles.set(mockDocument.id, {
-      policyDocument: mockDocument,
-      buffer: options.file.buffer
+    // Upload file using storage abstraction
+    await storage.upload({
+      path: fileName,
+      file: storageFile,
+      metadata: {
+        policyId: options.policyId,
+        category: options.category,
+        uploadedBy: options.uploadedBy,
+      },
+      contentType: options.file.mimeType,
     });
 
-    return mockDocument;
-  } else {
-    console.log('Real mode: Uploading file to Firebase Storage');
-    
-    try {
-      // Get a reference to the file in Firebase Storage
-      const bucket = storage.bucket();
-      const file = bucket.file(fileName);
+    // Generate a signed URL for the file (valid for 1 year for database storage)
+    const storageUrl = await storage.getSignedUrl({
+      path: fileName,
+      action: 'read',
+      expiresInSeconds: 365 * 24 * 60 * 60, // 1 year for DB storage
+    });
 
-      // Create a stream from the buffer
-      const stream = Readable.from(options.file.buffer);
-
-      // Upload the file
-      await new Promise((resolve, reject) => {
-        stream
-          .pipe(file.createWriteStream({
-            metadata: {
-              contentType: options.file.mimeType,
-              metadata: {
-                originalName: options.file.originalName,
-                policyId: options.policyId,
-                category: options.category,
-                uploadedBy: options.uploadedBy
-              }
-            }
-          }))
-          .on('error', reject)
-          .on('finish', resolve);
-      });
-
-      // Make the file publicly accessible (or use signed URLs for security)
-      // For now, we'll use signed URLs
-      const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 365 * 24 * 60 * 60 * 1000 // 1 year
-      });
-
+    // Create document record in database
+    if (isDemoMode()) {
+      // For demo mode, return mock document
+      return {
+        id: `mock-doc-${Date.now()}`,
+        policyId: options.policyId,
+        category: options.category,
+        fileName: fileName,
+        originalName: options.file.originalName,
+        fileSize: options.file.size,
+        mimeType: options.file.mimeType,
+        storageUrl: storageUrl,
+        uploadedAt: new Date(),
+        uploadedBy: options.uploadedBy
+      } as PolicyDocument;
+    } else {
       // Create document record in database
       const document = await prisma.policyDocument.create({
         data: {
@@ -167,90 +145,89 @@ export const uploadFile = async (options: FileUploadOptions): Promise<PolicyDocu
           originalName: options.file.originalName,
           fileSize: options.file.size,
           mimeType: options.file.mimeType,
-          storageUrl: signedUrl,
+          storageUrl: storageUrl,
           uploadedBy: options.uploadedBy
         }
       });
 
       return document;
-    } catch (error) {
-      console.error('File upload error:', error);
-      throw new Error('Failed to upload file');
     }
+  } catch (error) {
+    console.error('File upload error:', error);
+    throw new Error('Failed to upload file');
   }
 };
 
-// Get file URL
+// Get file URL with fresh signed URL
 export const getFileUrl = async (documentId: string): Promise<string | null> => {
-  if (isEmulator()) {
-    const mockFile = mockFiles.get(documentId);
-    return mockFile ? mockFile.policyDocument.storageUrl : null;
-  } else {
-    const document = await prisma.policyDocument.findUnique({
-      where: { id: documentId }
+  if (isDemoMode()) {
+    // For demo mode, just return a mock URL
+    return `http://localhost:3000/api/storage/mock/${documentId}`;
+  }
+
+  const document = await prisma.policyDocument.findUnique({
+    where: { id: documentId }
+  });
+  
+  if (!document) return null;
+
+  const storage = getStorageProvider();
+
+  try {
+    // Check if file exists in storage
+    const exists = await storage.exists(document.fileName);
+    if (!exists) return null;
+
+    // Generate a new signed URL with 7-day expiration for general access
+    const signedUrl = await storage.getSignedUrl({
+      path: document.fileName,
+      action: 'read',
+      expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
     });
-    
-    if (!document) return null;
 
-    // If the URL is expired, generate a new one
-    try {
-      const bucket = storage.bucket();
-      const file = bucket.file(document.fileName);
-      
-      const [exists] = await file.exists();
-      if (!exists) return null;
+    // Update the URL in database
+    await prisma.policyDocument.update({
+      where: { id: documentId },
+      data: { storageUrl: signedUrl }
+    });
 
-      const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
-
-      // Update the URL in database
-      await prisma.policyDocument.update({
-        where: { id: documentId },
-        data: { storageUrl: signedUrl }
-      });
-
-      return signedUrl;
-    } catch (error) {
-      console.error('Error getting file URL:', error);
-      return document.storageUrl; // Return existing URL as fallback
-    }
+    return signedUrl;
+  } catch (error) {
+    console.error('Error getting file URL:', error);
+    return document.storageUrl; // Return existing URL as fallback
   }
 };
 
 // Delete file
 export const deleteFile = async (documentId: string): Promise<boolean> => {
   try {
-    if (isEmulator()) {
-      console.log('Emulator mode: Mock deleting file');
-      mockFiles.delete(documentId);
-      return true;
-    } else {
-      // Get document from database
-      const document = await prisma.policyDocument.findUnique({
-        where: { id: documentId }
-      });
-
-      if (!document) return false;
-
-      // Delete from Firebase Storage
-      const bucket = storage.bucket();
-      const file = bucket.file(document.fileName);
-      
-      try {
-        await file.delete();
-      } catch (error) {
-        console.error('Error deleting file from storage:', error);
-      }
-
-      // Delete from database
-      await prisma.policyDocument.delete({
-        where: { id: documentId }
-      });
-
+    if (isDemoMode()) {
+      console.log('Demo mode: Mock deleting file');
       return true;
     }
+
+    // Get document from database
+    const document = await prisma.policyDocument.findUnique({
+      where: { id: documentId }
+    });
+
+    if (!document) return false;
+
+    const storage = getStorageProvider();
+
+    // Delete from storage
+    try {
+      await storage.delete(document.fileName);
+    } catch (error) {
+      console.error('Error deleting file from storage:', error);
+    }
+
+    // Delete from database
+    await prisma.policyDocument.delete({
+      where: { id: documentId }
+    });
+
+    return true;
   } catch (error) {
     console.error('Delete file error:', error);
     return false;
@@ -259,50 +236,40 @@ export const deleteFile = async (documentId: string): Promise<boolean> => {
 
 // Get all documents for a policy
 export const getPolicyDocuments = async (policyId: string): Promise<PolicyDocument[]> => {
-  if (isEmulator()) {
-    const documents: PolicyDocument[] = [];
-    mockFiles.forEach((file) => {
-      if (file.policyDocument.policyId === policyId) {
-        documents.push(file.policyDocument);
-      }
-    });
-    return documents;
-  } else {
-    return prisma.policyDocument.findMany({
-      where: { policyId },
-      orderBy: { uploadedAt: 'desc' }
-    });
+  if (isDemoMode()) {
+    // Return empty array for demo mode
+    return [];
   }
+
+  return prisma.policyDocument.findMany({
+    where: { policyId },
+    orderBy: { uploadedAt: 'desc' }
+  });
 };
 
-// Generate a signed download URL for a file
-export const getSignedDownloadUrl = async (fileName: string, expiresInSeconds: number = 300): Promise<string> => {
-  if (isEmulator()) {
-    // For emulator, return a mock URL
-    return `http://localhost:9199/v0/b/demo-bucket/o/${encodeURIComponent(fileName)}?alt=media&token=mock-token`;
-  } else {
-    try {
-      const bucket = storage.bucket();
-      const file = bucket.file(fileName);
-      
-      // Check if file exists
-      const [exists] = await file.exists();
-      if (!exists) {
-        throw new Error('File not found in storage');
-      }
+// Generate a signed download URL for a file (with short expiration for security)
+export const getSignedDownloadUrl = async (fileName: string, expiresInSeconds: number = 10): Promise<string> => {
+  const storage = getStorageProvider();
 
-      // Generate signed URL with short expiration
-      const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + (expiresInSeconds * 1000),
-        responseDisposition: 'attachment', // Force download
-      });
-
-      return signedUrl;
-    } catch (error) {
-      console.error('Error generating signed download URL:', error);
-      throw new Error('Failed to generate download URL');
+  try {
+    // Check if file exists
+    const exists = await storage.exists(fileName);
+    if (!exists) {
+      throw new Error('File not found in storage');
     }
+
+    // Generate signed URL with short expiration for security
+    const signedUrl = await storage.getSignedUrl({
+      path: fileName,
+      action: 'read',
+      expiresInSeconds: expiresInSeconds, // Default 10 seconds for security
+      responseDisposition: 'attachment', // Force download
+    });
+
+    return signedUrl;
+  } catch (error) {
+    console.error('Error generating signed download URL:', error);
+    throw new Error('Failed to generate download URL');
   }
 };
 
