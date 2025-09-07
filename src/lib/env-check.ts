@@ -10,8 +10,3 @@ export const isDemoMode = (): boolean => {
 export const isMockEnabled = (): boolean => {
   return isDemoMode();
 };
-
-// Legacy function for backward compatibility - will be removed
-export const isEmulator = (): boolean => {
-  return isDemoMode();
-};
