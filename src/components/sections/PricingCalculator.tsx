@@ -6,52 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowRight, Home, Building2, Factory } from 'lucide-react';
+import type { Package } from '@/lib/types';
 
-interface Package {
-  id: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  percentage?: number;
-  minAmount?: number;
-  features?: string[];
-  maxRent?: number;
-  recommended?: boolean;
-}
+// Map the Package titles to calculator-specific descriptions
+const packageDescriptions: Record<string, string> = {
+  'Protección Libertad': 'Servicios legales hasta la recuperación del inmueble',
+  'Protección Esencial': 'Pagamos hasta 3 meses del 100% de la renta por incumplimiento o atraso', 
+  'Protección Premium': 'Pagamos hasta 12 meses del 100% de la renta por incumplimiento o atraso'
+};
 
-const packages: Package[] = [
-  {
-    id: 'mlegal',
-    name: 'Protección MLegal',
-    description: 'Servicios legales hasta la recuperación del inmueble',
-    basePrice: 3800,
-    percentage: undefined, // Flat fee, no percentage
-    minAmount: undefined,
-    features: [],
-    maxRent: undefined
-  },
-  {
-    id: 'm3',
-    name: 'Protección M3',
-    description: 'Pagamos hasta 3 meses del 100% de la renta por incumplimiento o atraso',
-    basePrice: 4100,
-    percentage: 40,
-    minAmount: 4100,
-    features: [],
-    maxRent: 150000,
-    recommended: true
-  },
-  {
-    id: 'm12',
-    name: 'Protección M12',
-    description: 'Pagamos hasta 12 meses del 100% de la renta por incumplimiento o atraso',
-    basePrice: 5500,
-    percentage: 50,
-    minAmount: 5500,
-    features: [],
-    maxRent: 100000
-  }
-];
+// Maximum rent amounts for each package
+const maxRentAmounts: Record<string, number | undefined> = {
+  'Protección Libertad': undefined,
+  'Protección Esencial': 150000,
+  'Protección Premium': 100000
+};
 
 const commonFeatures = [
   'Investigación de los inquilinos',
@@ -64,22 +33,44 @@ export function PricingCalculator() {
   const [city, setCity] = useState('');
   const [rentAmount, setRentAmount] = useState('');
   const [propertyType, setPropertyType] = useState<'residential' | 'commercial' | 'industrial'>('residential');
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const response = await fetch('/api/packages');
+        if (!response.ok) {
+          throw new Error('Failed to fetch packages');
+        }
+        const data = await response.json();
+        setPackages(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load packages');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
 
   // Calculate price for each package based on rent amount
   const calculatePackagePrice = (pkg: Package): number => {
     const rent = parseFloat(rentAmount) || 0;
     
-    // For MLegal (flat fee package)
+    // For packages without percentage (flat fee)
     if (!pkg.percentage) {
-      return pkg.basePrice;
+      return pkg.price;
     }
     
-    // For percentage-based packages (M3 and M12)
+    // For percentage-based packages
     // Calculate percentage of monthly rent
     const percentagePrice = (rent * pkg.percentage) / 100;
     
     // Return the maximum between minimum price and calculated percentage
-    return Math.max(pkg.minAmount || 0, percentagePrice);
+    return Math.max(pkg.minAmount || pkg.price, percentagePrice);
   };
 
   const handleWhatsAppClick = (packageName: string, price: number) => {
@@ -105,6 +96,48 @@ export function PricingCalculator() {
       maximumFractionDigits: 0
     }).format(amount).replace('MX', '');
   };
+
+  if (loading) {
+    return (
+      <section className="py-16 md:py-24 bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-headline font-bold text-primary mb-4">
+              Calcula el costo de tu protección de renta en segundos
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Elige la cobertura perfecta según el tipo de renta y las necesidades de tu cliente
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-96 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-16 md:py-24 bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-headline font-bold text-primary mb-4">
+              Calcula el costo de tu protección de renta en segundos
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              No se pudieron cargar los paquetes. Por favor intenta más tarde.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Sort packages by price for consistent display
+  const sortedPackages = packages.toSorted((a, b) => a.price - b.price);
 
   return (
     <section className="py-16 md:py-24 bg-gradient-to-b from-background to-muted/20">
@@ -167,7 +200,7 @@ export function PricingCalculator() {
             <Label className="text-primary font-semibold mb-3 block">
               ¿Qué uso se dará al inmueble en renta?
             </Label>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-2">
               Casa, departamento, etc.
             </p>
             <div className="flex flex-col lg:flex-row gap-2">
@@ -201,18 +234,21 @@ export function PricingCalculator() {
 
         {/* Package Cards */}
         <div className="grid md:grid-cols-3 gap-8 mb-12">
-          {packages.map((pkg) => {
+          {sortedPackages.map((pkg, index) => {
             const calculatedPrice = calculatePackagePrice(pkg);
             const showCalculation = rentAmount && pkg.percentage && parseFloat(rentAmount) > 0;
+            const isRecommended = index === 1; // Middle package is recommended
+            const description = packageDescriptions[pkg.name] || pkg.description;
+            const maxRent = maxRentAmounts[pkg.name];
             
             return (
               <Card 
                 key={pkg.id} 
                 className={`relative p-8 bg-white shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 ${
-                  pkg.recommended ? 'ring-2 ring-accent border-accent' : ''
+                  isRecommended ? 'ring-2 ring-accent border-accent' : ''
                 }`}
               >
-                {pkg.recommended && (
+                {isRecommended && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-accent text-accent-foreground px-4 py-1 rounded-full text-sm font-semibold">
                       Recomendado
@@ -225,7 +261,7 @@ export function PricingCalculator() {
                     {pkg.name}
                   </h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    {pkg.description}
+                    {description}
                   </p>
                 </div>
 
@@ -235,25 +271,25 @@ export function PricingCalculator() {
                   </div>
                   <p className="text-sm text-muted-foreground">Más IVA</p>
                   
-                  {showCalculation && calculatedPrice > pkg.minAmount! && (
+                  {showCalculation && calculatedPrice > (pkg.minAmount || pkg.price) && (
                     <p className="text-xs text-muted-foreground mt-2">
                       ({pkg.percentage}% de renta mensual: {formatCurrency(parseFloat(rentAmount))})
                     </p>
                   )}
                   
-                  {pkg.name === 'Protección MLegal' && (
+                  {pkg.name === 'Protección Libertad' && (
                     <p className="text-sm text-red-600 font-semibold mt-3">
                       No incluye protección financiera.
                     </p>
                   )}
                   
-                  {pkg.maxRent && (
+                  {maxRent && (
                     <div className="mt-4 text-sm">
                       <p className="text-muted-foreground">
                         Monto máximo protegido por mes
                       </p>
                       <p className="font-semibold text-primary">
-                        {formatCurrency(pkg.maxRent)} MXN
+                        {formatCurrency(maxRent)} MXN
                       </p>
                     </div>
                   )}
@@ -262,7 +298,7 @@ export function PricingCalculator() {
                 <Button 
                   onClick={() => handleWhatsAppClick(pkg.name, calculatedPrice)}
                   className={`w-full py-6 text-lg font-semibold ${
-                    pkg.recommended 
+                    isRecommended 
                       ? 'bg-accent hover:bg-accent/90 text-accent-foreground' 
                       : 'bg-primary hover:bg-primary/90'
                   }`}
