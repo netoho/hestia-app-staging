@@ -218,7 +218,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
   };
 
   const canResendInvitation = (status: PolicyStatusType) => {
-    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
+    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.INVESTIGATION_PENDING, PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
     return resendableStatuses.includes(status);
   };
 
