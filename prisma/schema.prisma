@@ -79,16 +79,19 @@ model SystemConfig {
 }
 
 model Package {
-  id          String   @id @default(cuid())
-  name        String
-  price       Float
-  description String
-  features    String // Stored as a JSON string
-  ctaText     String
-  ctaLink     String
-  highlight   Boolean
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  price            Float    // Kept for backward compatibility, will be calculated from percentage
+  description      String
+  features         String   // Stored as a JSON string with categories
+  ctaText          String
+  ctaLink          String
+  highlight        Boolean
+  percentage       Float?   // Percentage of rent value (e.g., 40 for 40%)
+  minAmount        Float?   // Minimum amount in pesos
+  shortDescription String?  // Short tagline under the price
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model InsurancePolicy {

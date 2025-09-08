@@ -4,9 +4,94 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 const packagesData = [
-  { id: 'basic', name: 'Libertad', price: 3800, description: 'Servicios esenciales de investigación para asegurar la fiabilidad del inquilino.', features: ['Verificación de antecedentes del inquilino', 'Resumen de informe de crédito', 'Búsqueda de historial de desalojos'], ctaText: 'Comenzar', ctaLink: '/register?package=basic', highlight: false, percentage: 30 },
-  { id: 'standard', name: 'Esencial', price: 4100, description: 'Protección integral que incluye soporte en el contrato y garantías iniciales.', features: ['Todas las funciones de Escudo Básico', 'Plantilla de contrato de arrendamiento personalizable', 'Garantía de pago de renta (1 mes)', 'Consulta legal básica'], ctaText: 'Elegir Estándar', ctaLink: '/register?package=standard', highlight: true, percentage: 40 },
-  { id: 'premium', name: 'Premium', price: 5500, description: 'Tranquilidad total con gestión completa del contrato y cobertura extendida.', features: ['Todas las funciones de Seguro Estándar', 'Gestión del ciclo de vida completo del contrato', 'Garantía de renta extendida (3 meses)', 'Asistencia legal integral', 'Cobertura del proceso de desalojo'], ctaText: 'Optar por Premium', ctaLink: '/register?package=premium', highlight: false, percentage: 50 },
+  { 
+    id: 'basic', 
+    name: 'Protección Libertad', 
+    price: 3800, 
+    percentage: null,  // Flat fee, no percentage
+    minAmount: null,   // No minimum since it's a flat fee
+    shortDescription: null,  // Not needed for flat fee
+    description: 'Servicios esenciales de investigación para la fiabilidad en tu arrendamiento.', 
+    features: {
+      'INVESTIGACIÓN': [
+        'Estudio Socio - Económico',
+        'Análisis de Buró de Crédito',
+        'Investigación Judicial',
+        'Análisis de Garantía'
+      ],
+      'CONTRATO DE ARRENDAMIENTO': [
+        'Redacción y entrega de contrato',
+        'Elaboración de documentos de garantía',
+        'Asistencia de abogado a Firma'
+      ]
+    },
+    ctaText: 'Comenzar', 
+    ctaLink: '/register?package=basic', 
+    highlight: false
+  },
+  { 
+    id: 'standard', 
+    name: 'Protección Esencial', 
+    price: 4100, 
+    percentage: 40,
+    minAmount: 4100,
+    shortDescription: null,
+    description: 'Servicios esenciales de investigación para la fiabilidad en tu arrendamiento.', 
+    features: {
+      'INVESTIGACIÓN': [
+        'Estudio Socio - Económico',
+        'Análisis de Buró de Crédito',
+        'Investigación Judicial',
+        'Análisis de Garantía'
+      ],
+      'CONTRATO DE ARRENDAMIENTO': [
+        'Redacción y entrega de contrato',
+        'Elaboración de documentos de garantía',
+        'Asistencia de abogado a Firma'
+      ],
+      'GESTIÓN DE INCIDENCIAS': [
+        'Mediación entre las partes',
+        'Asesoría legal',
+        'Representación Legal en Juicio Civil'
+      ]
+    },
+    ctaText: 'Elegir Esencial', 
+    ctaLink: '/register?package=standard', 
+    highlight: false
+  },
+  { 
+    id: 'premium', 
+    name: 'Protección Premium', 
+    price: 5500, 
+    percentage: 50,
+    minAmount: 5500,
+    shortDescription: null,
+    description: 'Servicios esenciales de investigación para la fiabilidad en tu arrendamiento.', 
+    features: {
+      'INVESTIGACIÓN': [
+        'Estudio Socio - Económico',
+        'Análisis de Buró de Crédito',
+        'Investigación Judicial',
+        'Análisis de Garantía'
+      ],
+      'CONTRATO DE ARRENDAMIENTO': [
+        'Redacción y entrega de contrato',
+        'Elaboración de documentos de garantía',
+        'Asistencia de abogado a Firma'
+      ],
+      'GESTIÓN DE INCIDENCIAS': [
+        'Mediación entre las partes',
+        'Asesoría legal',
+        'Representación Legal en Juicio Civil',
+        'Representación Legal en Juicio Mercantil',
+        'Desocupación y entrega de inmueble',
+        'Juicio de extinción de dominio'
+      ]
+    },
+    ctaText: 'Optar por Premium', 
+    ctaLink: '/register?package=premium', 
+    highlight: false
+  },
 ];
 
 async function main() {
@@ -74,6 +159,9 @@ async function main() {
         ctaText: pkg.ctaText,
         ctaLink: pkg.ctaLink,
         highlight: pkg.highlight,
+        percentage: pkg.percentage,
+        minAmount: pkg.minAmount,
+        shortDescription: pkg.shortDescription,
       },
       create: {
         id: pkg.id,
@@ -84,6 +172,9 @@ async function main() {
         ctaText: pkg.ctaText,
         ctaLink: pkg.ctaLink,
         highlight: pkg.highlight,
+        percentage: pkg.percentage,
+        minAmount: pkg.minAmount,
+        shortDescription: pkg.shortDescription,
       },
     });
     console.log(`Created/updated package: ${pkg.name}`);
@@ -212,26 +303,44 @@ async function main() {
 
   const createdPolicies = [];
   for (const policy of samplePolicies) {
-    const created = await prisma.policy.create({
-      data: policy
+    const created = await prisma.policy.upsert({
+      where: { accessToken: policy.accessToken },
+      update: policy,
+      create: policy
     });
     createdPolicies.push(created);
-    console.log(`Created policy application for tenant: ${created.tenantEmail}`);
+    console.log(`Created/updated policy application for tenant: ${created.tenantEmail}`);
 
     // Create structured data for each policy
     if (policy.tenantEmail === 'tenant@example.com') {
-      // Create profile data for first policy
-      await prisma.tenantProfile.create({
-        data: {
+      // Create/update profile data for first policy
+      await prisma.tenantProfile.upsert({
+        where: { policyId: created.id },
+        update: {
+          nationality: 'MEXICAN',
+          curp: 'AAAA000000AAAA00'
+        },
+        create: {
           policyId: created.id,
           nationality: 'MEXICAN',
           curp: 'AAAA000000AAAA00'
         }
       });
 
-      // Create employment data
-      await prisma.tenantEmployment.create({
-        data: {
+      // Create/update employment data
+      await prisma.tenantEmployment.upsert({
+        where: { policyId: created.id },
+        update: {
+          employmentStatus: 'employed',
+          industry: 'Technology',
+          occupation: 'Software Engineer',
+          companyName: 'Tech Corp',
+          position: 'Software Engineer',
+          incomeSource: 'salary',
+          monthlyIncome: 50000,
+          creditCheckConsent: true
+        },
+        create: {
           policyId: created.id,
           employmentStatus: 'employed',
           industry: 'Technology',
@@ -244,18 +353,30 @@ async function main() {
         }
       });
 
-      // Create references data
-      await prisma.tenantReferences.create({
-        data: {
+      // Create/update references data
+      await prisma.tenantReferences.upsert({
+        where: { policyId: created.id },
+        update: {
+          personalReferenceName: 'John Doe',
+          personalReferencePhone: '+1234567891'
+        },
+        create: {
           policyId: created.id,
           personalReferenceName: 'John Doe',
           personalReferencePhone: '+1234567891'
         }
       });
 
-      // Create documents data
-      await prisma.tenantDocuments.create({
-        data: {
+      // Create/update documents data
+      await prisma.tenantDocuments.upsert({
+        where: { policyId: created.id },
+        update: {
+          identificationCount: 1,
+          incomeCount: 2,
+          optionalCount: 0,
+          incomeDocsHavePassword: 'NO'
+        },
+        create: {
           policyId: created.id,
           identificationCount: 1,
           incomeCount: 2,
@@ -264,9 +385,15 @@ async function main() {
         }
       });
 
-      // Create guarantor data
-      await prisma.tenantGuarantor.create({
-        data: {
+      // Create/update guarantor data
+      await prisma.tenantGuarantor.upsert({
+        where: { policyId: created.id },
+        update: {
+          name: 'Carlos Rodriguez',
+          phone: '+1234567894',
+          relationship: 'parent'
+        },
+        create: {
           policyId: created.id,
           name: 'Carlos Rodriguez',
           phone: '+1234567894',
@@ -274,18 +401,34 @@ async function main() {
         }
       });
     } else if (policy.tenantEmail === 'tenant2@example.com') {
-      // Create profile data for second policy
-      await prisma.tenantProfile.create({
-        data: {
+      // Create/update profile data for second policy
+      await prisma.tenantProfile.upsert({
+        where: { policyId: created.id },
+        update: {
+          nationality: 'FOREIGN',
+          passport: 'AB1234567'
+        },
+        create: {
           policyId: created.id,
           nationality: 'FOREIGN',
           passport: 'AB1234567'
         }
       });
 
-      // Create employment data
-      await prisma.tenantEmployment.create({
-        data: {
+      // Create/update employment data
+      await prisma.tenantEmployment.upsert({
+        where: { policyId: created.id },
+        update: {
+          employmentStatus: 'employed',
+          industry: 'Finance',
+          occupation: 'Financial Analyst',
+          companyName: 'Banking Corp',
+          position: 'Financial Analyst',
+          incomeSource: 'salary',
+          monthlyIncome: 35000,
+          creditCheckConsent: true
+        },
+        create: {
           policyId: created.id,
           employmentStatus: 'employed',
           industry: 'Finance',
@@ -298,9 +441,14 @@ async function main() {
         }
       });
 
-      // Create references data
-      await prisma.tenantReferences.create({
-        data: {
+      // Create/update references data
+      await prisma.tenantReferences.upsert({
+        where: { policyId: created.id },
+        update: {
+          personalReferenceName: 'Jane Smith',
+          personalReferencePhone: '+1234567893'
+        },
+        create: {
           policyId: created.id,
           personalReferenceName: 'Jane Smith',
           personalReferencePhone: '+1234567893'
