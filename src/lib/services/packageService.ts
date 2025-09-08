@@ -12,10 +12,13 @@ export const getPackages = async (): Promise<Package[]> => {
       name: pkg.name,
       price: pkg.price,
       description: pkg.description,
-      features: JSON.parse(pkg.features),
+      features: pkg.features, // Keep as string - component will parse it
       ctaText: pkg.ctaText,
       ctaLink: pkg.ctaLink,
       highlight: pkg.highlight,
+      percentage: pkg.percentage ?? null,
+      minAmount: pkg.minAmount ?? null,
+      shortDescription: pkg.shortDescription ?? null,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
     }));
@@ -27,10 +30,13 @@ export const getPackages = async (): Promise<Package[]> => {
       name: pkg.name,
       price: pkg.price,
       description: pkg.description,
-      features: JSON.parse(pkg.features),
+      features: pkg.features, // Keep as string - component will parse it
       ctaText: pkg.ctaText,
       ctaLink: pkg.ctaLink,
       highlight: pkg.highlight,
+      percentage: pkg.percentage ?? null,
+      minAmount: pkg.minAmount ?? null,
+      shortDescription: pkg.shortDescription ?? null,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
     }))

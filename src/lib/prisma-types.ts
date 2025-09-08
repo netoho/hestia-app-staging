@@ -38,6 +38,9 @@ export interface Package {
   ctaText: string;
   ctaLink: string;
   highlight: boolean;
+  percentage?: number | null;
+  minAmount?: number | null;
+  shortDescription?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
