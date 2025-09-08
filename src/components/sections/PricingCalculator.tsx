@@ -10,9 +10,9 @@ import type { Package } from '@/lib/types';
 
 // Map the Package titles to calculator-specific descriptions
 const packageDescriptions: Record<string, string> = {
-  'Protección Libertad': 'Servicios legales hasta la recuperación del inmueble',
-  'Protección Esencial': 'Pagamos hasta 3 meses del 100% de la renta por incumplimiento o atraso', 
-  'Protección Premium': 'Pagamos hasta 12 meses del 100% de la renta por incumplimiento o atraso'
+  'Protección Libertad': '',
+  'Protección Esencial': '', 
+  'Protección Premium': ''
 };
 
 // Maximum rent amounts for each package
@@ -237,7 +237,7 @@ export function PricingCalculator() {
           {sortedPackages.map((pkg, index) => {
             const calculatedPrice = calculatePackagePrice(pkg);
             const showCalculation = rentAmount && pkg.percentage && parseFloat(rentAmount) > 0;
-            const isRecommended = index === 1; // Middle package is recommended
+            const isRecommended = index === 2; // Middle package is recommended
             const description = packageDescriptions[pkg.name] || pkg.description;
             const maxRent = maxRentAmounts[pkg.name];
             
@@ -279,17 +279,17 @@ export function PricingCalculator() {
                   
                   {pkg.name === 'Protección Libertad' && (
                     <p className="text-sm text-red-600 font-semibold mt-3">
-                      No incluye protección financiera.
+                      {/* No incluye protección financiera. */}
                     </p>
                   )}
                   
                   {maxRent && (
                     <div className="mt-4 text-sm">
                       <p className="text-muted-foreground">
-                        Monto máximo protegido por mes
+                        {/* Monto máximo protegido por mes */}
                       </p>
                       <p className="font-semibold text-primary">
-                        {formatCurrency(maxRent)} MXN
+                        {/* {formatCurrency(maxRent)} MXN */}
                       </p>
                     </div>
                   )}
