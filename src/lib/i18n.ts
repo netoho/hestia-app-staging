@@ -326,7 +326,7 @@ const es = {
             testimonials: [
                 { id: 't1', name: 'Jazmin Garnelo', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis rentas. Su paquetes son el balance perfecto de protección y precio. ¡Súper recomendado!", avatarUrl: '/images/testimonials/yazmin.png', dataAiHint: 'woman portrait' },
                 { id: 't2', name: 'Michelle Arregui', role: 'Inquilino', quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.", avatarUrl: '/images/testimonials/michelle.png', dataAiHint: 'man smiling' },
-                { id: 't3', name: 'Karim Goudiaby', role: 'Asesora Inmobiliaria', quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.", avatarUrl: '/images/testimonials/karim.png', dataAiHint: 'professional woman' },
+                { id: 't3', name: 'Karim Goudiaby', role: 'Asesor Inmobiliario', quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.", avatarUrl: '/images/testimonials/karim.png', dataAiHint: 'professional woman' },
             ] as Testimonial[],
             howItWorksSteps: [
                 { id: "1", title: "Elige tu protección.", description: "Selecciona entre nuestra variedad de servicios diseñados para las necesidades de tu arrendamiento.", icon: "/images/icons/package.png", dataAiHint: "select package" },
