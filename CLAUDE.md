@@ -4,9 +4,17 @@
 Hestia is a Next.js 15 rental guarantee platform for the Mexican market with complete property management features.
 
 ## Current Status
-🟢 **PRODUCTION READY** - Core features complete including payment processing, comprehensive API testing with Vitest
+🟢 **PRODUCTION READY** - Core features complete including payment processing, comprehensive API testing with Vitest, and robust error handling architecture
 
-## Recent Session Summary (July 24, 2025) - Persona Moral Implementation Complete
+## Recent Session Summary (September 8, 2025) - Pricing Calculator & Backend Architecture
+
+### ✅ **Major Achievements**
+1. **Interactive Pricing Calculator** - Real-time package price calculation based on monthly rent
+2. **Type-Safe Error Handling** - Result<T, E> pattern with comprehensive error system
+3. **Service Layer Architecture** - Abstract base classes with dependency injection support
+4. **Brand Configuration** - Centralized brand colors, fonts, and company information
+
+### Previous Session (July 24, 2025) - Persona Moral Implementation Complete
 
 ### ✅ **Major Achievement: Persona Moral (Company) Support**
 - **Complete company tenant support** - Full workflow from policy creation to data capture
@@ -43,6 +51,17 @@ Hestia is a Next.js 15 rental guarantee platform for the Mexican market with com
 
 ## Architecture
 
+### Service Layer (NEW!)
+- **Result Pattern**: Type-safe error handling with `Result<T, E>` and `AsyncResult<T, E>`
+- **Base Service**: Abstract class providing common functionality (DB operations, validation, logging)
+- **Error System**: Centralized error codes with user-friendly Spanish messages
+- **Service Interfaces**: Contract-based design for testability and dependency injection
+
+### Brand Configuration (NEW!)
+- **Location**: `/src/lib/config/brand.ts`
+- **Contents**: Colors, fonts, company info, URLs
+- **Usage**: Email templates, UI components
+
 ### Database
 ```env
 DATABASE_URL=postgresql://[connection-string]
@@ -60,8 +79,11 @@ DEMO_MODE=true  # Enables in-memory database
 - `PolicyWizard`: 6-step tenant application
 - `PolicyTable`: Staff management interface
 - `DashboardSidebar`: Role-based navigation
+- `PricingCalculator`: Interactive price calculation with WhatsApp integration (NEW!)
 - `PaymentService`: Stripe integration
 - `DemoDatabase`: In-memory ORM for demo mode
+- `BaseService`: Abstract service class with error handling (NEW!)
+- `Result<T, E>`: Type-safe error handling pattern (NEW!)
 
 ## Demo Mode
 When `DEMO_MODE=true`:
@@ -117,6 +139,9 @@ npx prisma studio
 - All tenant-facing content in Spanish
 - Use existing components/patterns
 - Test in both demo and live modes
+- **NEW**: Use `Result<T>` pattern for service methods
+- **NEW**: Extend `BaseService` for new services
+- **NEW**: Import brand config from `/src/lib/config/brand.ts`
 
 ## Recent Context
 - Payment system fully integrated with Stripe
