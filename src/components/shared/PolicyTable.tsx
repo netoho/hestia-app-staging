@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -27,26 +27,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, MoreHorizontal, Eye, Mail, FileText, Loader2 } from 'lucide-react';
+import { Search, MoreHorizontal, Eye, Mail, FileText, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { ResendInvitationDialog } from '@/components/dialogs/ResendInvitationDialog';
 import { t } from '@/lib/i18n';
 import { TablePagination } from './TablePagination';
+import { PolicyStatusBadge, PolicyProgressIndicator, PaymentStatusBadge } from './PolicyStatusIndicators';
 
 interface PolicyWithRelations {
   id: string;
   tenantEmail: string;
   tenantPhone?: string | null;
-  status: PolicyStatus;
+  status: PolicyStatusType;
   currentStep: number;
   createdAt: string;
   updatedAt: string;
   submittedAt?: string | null;
   reviewedAt?: string | null;
+  packageId?: string | null;
+  packageName?: string | null;
+  price?: number | null;
+  paymentStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   initiatedByUser: {
     id: string;
     email: string;
@@ -80,6 +85,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
   const [filters, setFilters] = useState({
     status: 'all',
     search: '',
+    paymentStatus: 'all',
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -104,6 +110,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
         limit: pagination.limit.toString(),
         ...(filters.status !== 'all' && { status: filters.status }),
         ...(filters.search && { search: filters.search }),
+        ...(filters.paymentStatus !== 'all' && { paymentStatus: filters.paymentStatus }),
       });
 
       const response = await fetch(`/api/policies?${params.toString()}`);
@@ -138,7 +145,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const getStatusBadgeVariant = (status: PolicyStatus) => {
+  const getStatusBadgeVariant = (status: PolicyStatusType) => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       gray: 'secondary',
       blue: 'default',
@@ -151,6 +158,36 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     return colorMap[POLICY_STATUS_COLORS[status]] || 'default';
   };
 
+  const getPaymentStatusBadgeVariant = (paymentStatus: string) => {
+    const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      PENDING: 'outline',
+      PROCESSING: 'secondary',
+      COMPLETED: 'default',
+      FAILED: 'destructive',
+      REFUNDED: 'secondary',
+    };
+    return variantMap[paymentStatus] || 'outline';
+  };
+
+  const getPaymentStatusDisplay = (paymentStatus: string) => {
+    const displayMap: Record<string, string> = {
+      PENDING: t.pages.policies.table.paymentStatus.pending,
+      PROCESSING: t.pages.policies.table.paymentStatus.processing,
+      COMPLETED: t.pages.policies.table.paymentStatus.completed,
+      FAILED: t.pages.policies.table.paymentStatus.failed,
+      REFUNDED: t.pages.policies.table.paymentStatus.refunded,
+    };
+    return displayMap[paymentStatus] || paymentStatus;
+  };
+
+  const formatPrice = (price: number | null) => {
+    if (!price) return '-';
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(price);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-MX', {
       year: 'numeric',
@@ -159,7 +196,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     });
   };
 
-  const getProgressText = (currentStep: number, status: PolicyStatus) => {
+  const getProgressText = (currentStep: number, status: PolicyStatusType) => {
     if (status === PolicyStatus.SUBMITTED || status === PolicyStatus.APPROVED || status === PolicyStatus.DENIED) {
       return t.pages.policies.progressComplete;
     }
@@ -180,20 +217,95 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
     fetchPolicies();
   };
 
-  const canResendInvitation = (status: PolicyStatus) => {
-    const resendableStatuses: PolicyStatus[] = [PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
+  const canResendInvitation = (status: PolicyStatusType) => {
+    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.INVESTIGATION_PENDING, PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
     return resendableStatuses.includes(status);
   };
 
+  // Calculate summary statistics
+  const summaryStats = React.useMemo(() => {
+    const stats = {
+      total: pagination.total,
+      active: 0,
+      pending: 0,
+      inProgress: 0,
+      rejected: 0
+    };
+
+    if (filters.status === 'all' && policies.length > 0) {
+      // Only calculate if we're viewing all statuses
+      policies.forEach(policy => {
+        if (policy.status === 'ACTIVE') stats.active++;
+        else if (policy.status.includes('PENDING')) stats.pending++;
+        else if (policy.status.includes('IN_PROGRESS')) stats.inProgress++;
+        else if (policy.status.includes('REJECTED')) stats.rejected++;
+      });
+    }
+
+    return stats;
+  }, [policies, pagination.total, filters.status]);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t.pages.policies.table.title}</CardTitle>
-        <CardDescription>
-          {t.pages.policies.table.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-4">
+      {/* Summary Cards */}
+      {filters.status === 'all' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Pólizas</p>
+                  <p className="text-2xl font-bold">{summaryStats.total}</p>
+                </div>
+                <FileText className="h-8 w-8 text-muted-foreground/20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Activas</p>
+                  <p className="text-2xl font-bold text-green-600">{summaryStats.active}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-600/20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">En Proceso</p>
+                  <p className="text-2xl font-bold text-yellow-600">{summaryStats.inProgress + summaryStats.pending}</p>
+                </div>
+                <Loader2 className="h-8 w-8 text-yellow-600/20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Rechazadas</p>
+                  <p className="text-2xl font-bold text-red-600">{summaryStats.rejected}</p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-red-600/20" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Table Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.pages.policies.table.title}</CardTitle>
+          <CardDescription>
+            {t.pages.policies.table.description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
@@ -211,7 +323,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             value={filters.status}
             onValueChange={(value) => handleFilterChange('status', value)}
           >
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder={t.pages.policies.table.filterPlaceholder} />
             </SelectTrigger>
             <SelectContent>
@@ -221,6 +333,22 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                   {label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.paymentStatus}
+            onValueChange={(value) => handleFilterChange('paymentStatus', value)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder={t.pages.policies.table.paymentFilterPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t.pages.policies.table.allPaymentStatuses}</SelectItem>
+              <SelectItem value="PENDING">{t.pages.policies.table.paymentStatus.pending}</SelectItem>
+              <SelectItem value="PROCESSING">{t.pages.policies.table.paymentStatus.processing}</SelectItem>
+              <SelectItem value="COMPLETED">{t.pages.policies.table.paymentStatus.completed}</SelectItem>
+              <SelectItem value="FAILED">{t.pages.policies.table.paymentStatus.failed}</SelectItem>
+              <SelectItem value="REFUNDED">{t.pages.policies.table.paymentStatus.refunded}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -239,6 +367,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                   <TableRow>
                     <TableHead>{t.pages.policies.table.headers.tenant}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.status}</TableHead>
+                    <TableHead>{t.pages.policies.table.headers.payment}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.progress}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.initiatedBy}</TableHead>
                     <TableHead>{t.pages.policies.table.headers.created}</TableHead>
@@ -249,7 +378,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                 <TableBody>
                   {policies.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         {t.pages.policies.table.noPoliciesFound}
                       </TableCell>
                     </TableRow>
@@ -267,13 +396,31 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(policy.status)}>
-                            {POLICY_STATUS_DISPLAY[policy.status as keyof typeof POLICY_STATUS_DISPLAY] || policy.status}
-                          </Badge>
+                          <PolicyStatusBadge 
+                            status={policy.status} 
+                            showIcon={true}
+                            size="md"
+                          />
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {getProgressText(policy.currentStep, policy.status)}
+                          <PaymentStatusBadge
+                            status={policy.paymentStatus}
+                            amount={policy.price || undefined}
+                            showIcon={true}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="w-32">
+                            <PolicyProgressIndicator
+                              currentStep={policy.currentStep}
+                              status={policy.status}
+                              showStepText={true}
+                            />
+                            {!['ACTIVE', 'EXPIRED', 'CANCELLED', 'INVESTIGATION_REJECTED'].includes(policy.status) && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {getProgressText(policy.currentStep, policy.status)}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -335,7 +482,8 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             )}
           </>
         )}
-      </CardContent>
+        </CardContent>
+      </Card>
       
       {/* Resend Invitation Dialog */}
       {selectedPolicy && (
@@ -349,6 +497,6 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
           onSuccess={handleResendSuccess}
         />
       )}
-    </Card>
+    </div>
   );
 }

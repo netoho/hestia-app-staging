@@ -80,12 +80,9 @@ export default function PackagesPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Todos los Paquetes</CardTitle>
+            <br/ >
             <CardDescription>{!isLoading && !error && `Actualmente hay ${packages.length} paquetes en el sistema.`}</CardDescription>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Nuevo Paquete
-          </Button>
         </CardHeader>
         <CardContent>
             {(isLoading || isAuthLoading) ? (
@@ -117,20 +114,6 @@ export default function PackagesPage() {
                         <TableCell className="font-medium">{pkg.name}</TableCell>
                         <TableCell>${pkg.price.toLocaleString('es-MX')}</TableCell>
                         <TableCell>{pkg.description}</TableCell>
-                        <TableCell>
-                            <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Editar</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
-                            </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
                         </TableRow>
                     ))}
                     </TableBody>

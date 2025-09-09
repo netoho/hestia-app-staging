@@ -34,16 +34,46 @@ export async function GET(
       request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     );
 
+    // Transform profile data based on tenant type
+    let profileData = null;
+    if (policy.tenantType === 'company' && policy.companyProfileData) {
+      // Transform company profile data back to form format
+      const companyProfile = policy.companyProfileData as any;
+      const legalRep = companyProfile.legalRepresentative;
+      
+      if (legalRep) {
+        profileData = {
+          legalRepNationality: legalRep.nationality.toLowerCase(),
+          legalRepCurp: legalRep.curp || '',
+          legalRepPassport: legalRep.passport || '',
+          legalRepFullName: legalRep.fullName,
+          companyTaxAddress: companyProfile.taxAddress,
+          companyTaxRegime: companyProfile.taxRegime,
+        };
+      }
+    } else if (policy.profileData) {
+      profileData = policy.profileData;
+    }
+
     // Return policy data (excluding sensitive information)
     return NextResponse.json({
       id: policy.id,
       status: policy.status,
       currentStep: policy.currentStep,
+      tenantType: policy.tenantType,
       tenantEmail: policy.tenantEmail,
-      profileData: policy.profileData,
-      employmentData: policy.employmentData,
-      referencesData: policy.referencesData,
+      tenantName: policy.tenantName,
+      companyName: policy.companyName,
+      companyRfc: policy.companyRfc,
+      legalRepresentativeName: policy.legalRepresentativeName,
+      profileData: profileData,
+      employmentData: policy.employmentData || policy.companyFinancialData,
+      referencesData: policy.referencesData || policy.companyReferencesData,
       documentsData: policy.documentsData,
+      packageId: policy.packageId,
+      packageName: policy.packageName,
+      price: policy.totalPrice,
+      paymentStatus: policy.paymentStatus,
       documents: policy.documents.map(doc => ({
         id: doc.id,
         category: doc.category,

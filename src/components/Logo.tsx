@@ -11,7 +11,7 @@ interface LogoProps {
 }
 
 const Logo = ({ size = 'md', className, iconOnly = false }: LogoProps) => {
-  const height = size === 'sm' ? 32 : size === 'md' ? 40 : 48;
+  const height = size === 'sm' ? 36 : size === 'md' ? 48 : 64;
   const width = height * 3.5; // Approximate aspect ratio
 
   return (

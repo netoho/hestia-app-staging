@@ -1,0 +1,205 @@
+/**
+ * AWS S3 Storage Provider
+ * Implements private file storage with signed URLs
+ */
+
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import {
+  StorageProvider,
+  StorageUploadOptions,
+  SignedUrlOptions,
+  StorageFileMetadata,
+} from '../types';
+import { Readable } from 'stream';
+
+export class S3StorageProvider implements StorageProvider {
+  private client: S3Client;
+  private bucket: string;
+
+  constructor(config: {
+    bucket: string;
+    region: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    endpoint?: string;
+  }) {
+    this.bucket = config.bucket;
+    this.client = new S3Client({
+      region: config.region,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+      endpoint: config.endpoint,
+    });
+  }
+
+  async upload(options: StorageUploadOptions): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: options.path,
+      Body: options.file.buffer,
+      ContentType: options.contentType || options.file.mimeType,
+      Metadata: {
+        originalName: options.file.originalName,
+        ...options.metadata,
+      },
+      // Private by default - no public access
+      ACL: 'private',
+    });
+
+    await this.client.send(command);
+    return options.path;
+  }
+
+  async download(path: string): Promise<Buffer> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: path,
+    });
+
+    const response = await this.client.send(command);
+    
+    if (!response.Body) {
+      throw new Error('File not found');
+    }
+
+    // Convert stream to buffer
+    const stream = response.Body as Readable;
+    const chunks: Buffer[] = [];
+    
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      stream.on('error', (err) => reject(err));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+  }
+
+  async delete(path: string): Promise<boolean> {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: path,
+      });
+
+      await this.client.send(command);
+      return true;
+    } catch (error) {
+      console.error('Error deleting file from S3:', error);
+      return false;
+    }
+  }
+
+  async exists(path: string): Promise<boolean> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: path,
+      });
+
+      await this.client.send(command);
+      return true;
+    } catch (error: any) {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  async getMetadata(path: string): Promise<StorageFileMetadata | null> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: path,
+      });
+
+      const response = await this.client.send(command);
+      
+      return {
+        size: response.ContentLength || 0,
+        contentType: response.ContentType,
+        created: response.LastModified || new Date(),
+        updated: response.LastModified || new Date(),
+        metadata: response.Metadata,
+      };
+    } catch (error: any) {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async getSignedUrl(options: SignedUrlOptions): Promise<string> {
+    let command;
+    
+    switch (options.action) {
+      case 'read':
+        command = new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: options.path,
+          ResponseContentDisposition: options.responseDisposition === 'attachment'
+            ? `attachment; filename="${options.fileName || options.path.split('/').pop()}"`
+            : undefined,
+        });
+        break;
+      
+      case 'write':
+        command = new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: options.path,
+        });
+        break;
+      
+      case 'delete':
+        command = new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: options.path,
+        });
+        break;
+      
+      default:
+        throw new Error(`Unsupported action: ${options.action}`);
+    }
+
+    // Default to 10 seconds for security
+    const expiresIn = options.expiresInSeconds || 10;
+    
+    const signedUrl = await getSignedUrl(this.client, command, {
+      expiresIn,
+    });
+
+    return signedUrl;
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: prefix,
+      });
+
+      const response = await this.client.send(command);
+      
+      if (!response.Contents) {
+        return [];
+      }
+
+      return response.Contents
+        .filter(obj => obj.Key)
+        .map(obj => obj.Key as string);
+    } catch (error) {
+      console.error('Error listing files from S3:', error);
+      return [];
+    }
+  }
+}

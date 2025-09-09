@@ -12,6 +12,7 @@ import { BenefitsSection } from '@/components/sections/BenefitsSection';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 import { CtaSection } from '@/components/sections/CtaSection';
 import { VideoTestimonialSection } from '@/components/sections/VideoTestimonialSection';
+import { PricingCalculator } from '@/components/sections/PricingCalculator';
 
 export default function HomePage() {
 
@@ -23,7 +24,7 @@ export default function HomePage() {
         <section className="relative bg-background text-primary-foreground pt-24 md:pt-32 pb-16 md:pb-24 overflow-hidden parallax-bg">
             <div className="absolute inset-0 -z-10">
               <Image
-                src="/images/background-hero-home.jpg"
+                src="/images/hero-home.jpg"
                 alt="Happy couple securing their rental agreement"
                 fill
                 className="object-cover fixed"
@@ -65,6 +66,9 @@ export default function HomePage() {
 
         {/* Packages Section */}
         <PackagesSection />
+
+        {/* Pricing Calculator */}
+        <PricingCalculator />
 
         {/* Benefits Section */}
         <BenefitsSection />

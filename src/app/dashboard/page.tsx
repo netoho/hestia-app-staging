@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,9 +15,28 @@ export default function DashboardPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
 
-  // Redirect to login if not authenticated after loading
-  if (!isLoading && !isAuthenticated) {
-    router.push('/login');
+  // Handle authentication redirect after loading is complete
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated and not loading, the useEffect will redirect
+  if (!isAuthenticated) {
+    return null;
   }
 
   let welcomeMessage = t.pages.dashboard.welcomeBack;
@@ -142,11 +162,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-   if (isLoading || !isAuthenticated) {
-     // Render loading state or null while authentication status is being determined
-     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-   }
 
   return (
     <div>

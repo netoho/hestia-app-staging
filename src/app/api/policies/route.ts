@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { getPolicies } from '@/lib/services/policyApplicationService';
-import { PolicyStatus } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-config';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user has permission (staff or admin only)
-    if (!['staff', 'admin'].includes(session.user.role)) {
+    if (!['staff', 'admin'].includes(authResult.user.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Only staff and admin can view policies' },
         { status: 403 }
@@ -23,7 +21,8 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') as PolicyStatus | 'all' | null;
+    const status = searchParams.get('status') as PolicyStatusType | 'all' | null;
+    const paymentStatus = searchParams.get('paymentStatus') as 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all' | null;
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -44,6 +43,9 @@ export async function GET(request: NextRequest) {
       const where: any = {};
       if (status && status !== 'all') {
         where.status = status;
+      }
+      if (paymentStatus && paymentStatus !== 'all') {
+        where.paymentStatus = paymentStatus;
       }
       if (search) {
         where.tenantEmail = { contains: search };
@@ -77,6 +79,7 @@ export async function GET(request: NextRequest) {
       // Use real database
       result = await getPolicies({
         status: status || undefined,
+        paymentStatus: paymentStatus || undefined,
         search: search || undefined,
         page,
         limit

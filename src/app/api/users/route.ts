@@ -12,7 +12,7 @@ export async function GET() {
     });
 
     // The 'role' field is now a string, so we just need to convert it to lowercase
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = users.map((user: any) => ({
       ...user,
       role: user.role.toLowerCase()
     }))

@@ -1,13 +1,19 @@
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
+import prisma from '@/lib/prisma';
+
+// Conditionally import PrismaAdapter
+let adapter: any;
+if (!isDemoMode() && prisma) {
+  const { PrismaAdapter } = require('@auth/prisma-adapter');
+  adapter = PrismaAdapter(prisma);
+}
 
 export const authOptions: AuthOptions = {
   // Only use PrismaAdapter in production mode
-  ...(isDemoMode() ? {} : { adapter: PrismaAdapter(prisma) }),
+  ...(adapter ? { adapter } : {}),
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -65,14 +71,28 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
+      // In demo mode, always use the super admin user
+      if (isDemoMode() && !user && !token.id) {
+        token.id = 'demo-admin-id';
+        token.email = 'admin@hestiaplp.com.mx';
+        token.name = 'Super Admin';
+        token.role = 'staff';
+      } else if (user) {
         token.id = user.id;
         token.role = (user as any).role; // Add role to the JWT token
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      // In demo mode, always return the super admin session
+      if (isDemoMode()) {
+        session.user = {
+          id: 'demo-admin-id',
+          email: 'admin@hestiaplp.com.mx',
+          name: 'Super Admin',
+          role: 'staff'
+        } as any;
+      } else if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string; // Add role to the session
       }
@@ -82,5 +102,6 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  // secret: process.env.NEXTAUTH_SECRET,
+  secret: "generate-strong-secret-here",
 };

@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 
 const resendInvitationSchema = z.object({
   tenantName: z.string().optional(),
@@ -41,7 +41,7 @@ interface ResendInvitationDialogProps {
   policy: {
     id: string;
     tenantEmail: string;
-    status: PolicyStatus;
+    status: PolicyStatusType;
   };
   onSuccess?: () => void;
 }
@@ -100,7 +100,7 @@ export function ResendInvitationDialog({
     }
   };
 
-  const getStatusText = (status: PolicyStatus) => {
+  const getStatusText = (status: PolicyStatusType) => {
     switch (status) {
       case PolicyStatus.DRAFT:
         return 'not yet sent';

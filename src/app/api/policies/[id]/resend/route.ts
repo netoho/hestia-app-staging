@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { getPolicyById, addPolicyActivity } from '@/lib/services/policyApplicationService';
 import { sendPolicyInvitation } from '@/lib/services/emailService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 
 export async function POST(
   request: NextRequest,
@@ -38,7 +38,7 @@ export async function POST(
     }
 
     // Check if policy is in a state where resending makes sense
-    const resendableStatuses: PolicyStatus[] = [PolicyStatus.DRAFT, PolicyStatus.SENT_TO_TENANT, PolicyStatus.IN_PROGRESS];
+    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.DRAFT, PolicyStatus.INVESTIGATION_PENDING, PolicyStatus.INVESTIGATION_IN_PROGRESS];
     if (!resendableStatuses.includes(policy.status)) {
       return NextResponse.json(
         { error: 'Cannot resend invitation for policies in this state' },

@@ -10,7 +10,7 @@ export function CtaSection() {
       <h2 className="text-3xl md:text-4xl font-headline font-bold text-foreground mb-4">
         {t.pages.home.ctaTitle}
       </h2>
-      <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+      <p className="text-lg font-bold max-w-2xl mx-auto mb-8">
         {t.pages.home.ctaSubtitle}
       </p>
       <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-10 py-7 rounded-lg">

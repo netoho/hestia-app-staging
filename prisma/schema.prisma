@@ -71,17 +71,27 @@ model VerificationToken {
 
 
 // Application-specific models
+model SystemConfig {
+  id                String   @id @default(cuid())
+  investigationFee  Float    @default(200)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 model Package {
-  id          String   @id @default(cuid())
-  name        String
-  price       Float
-  description String
-  features    String // Stored as a JSON string
-  ctaText     String
-  ctaLink     String
-  highlight   Boolean
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  price            Float    // Kept for backward compatibility, will be calculated from percentage
+  description      String
+  features         String   // Stored as a JSON string with categories
+  ctaText          String
+  ctaLink          String
+  highlight        Boolean
+  percentage       Float?   // Percentage of rent value (e.g., 40 for 40%)
+  minAmount        Float?   // Minimum amount in pesos
+  shortDescription String?  // Short tagline under the price
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model InsurancePolicy {
@@ -108,16 +118,30 @@ model InsurancePolicy {
 
 model Policy {
   id             String      @id @default(cuid())
+  
+  // Tenant type
+  tenantType     TenantType  @default(individual)
+  
+  // Property info
   propertyId     String?
+  propertyAddress String?
   initiatedBy    String
+  
+  // Individual tenant fields
   tenantEmail    String
   tenantPhone    String?
+  tenantName     String?
+  
+  // Company tenant fields (for Persona Moral)
+  companyName    String?
+  companyRfc     String?
+  legalRepresentativeName String?
+  legalRepresentativeId   String?
+  companyAddress String?
+  
+  // Policy workflow
   status         PolicyStatus @default(DRAFT)
   currentStep    Int         @default(1)
-  profileData    Json?
-  employmentData Json?
-  referencesData Json?
-  documentsData  Json?
   accessToken    String      @unique
   tokenExpiry    DateTime
   submittedAt    DateTime?
@@ -125,14 +149,213 @@ model Policy {
   reviewedAt     DateTime?
   reviewNotes    String?
   reviewReason   String?
+  
+  // Payment configuration
+  packageId      String?     
+  packageName    String?     
+  totalPrice     Float       @default(0)
+  investigationFee Float     @default(200)
+  tenantPaymentPercent Float @default(100)
+  landlordPaymentPercent Float @default(0)
+  paymentStatus  PaymentStatus @default(PENDING)
+  
+  // Lifecycle dates
+  investigationStartedAt DateTime?
+  investigationCompletedAt DateTime?
+  contractUploadedAt DateTime?
+  contractSignedAt DateTime?
+  policyActivatedAt DateTime?  // "Valid from" date
+  contractLength Int @default(12) // months
+  policyExpiresAt DateTime?
+  
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  // Relations to structured data models
+  profileData    TenantProfile?
+  companyProfileData CompanyProfile?
+  employmentData TenantEmployment?
+  companyFinancialData CompanyFinancial?
+  referencesData TenantReferences?
+  companyReferencesData CompanyReferences?
+  documentsData  TenantDocuments?
+  guarantorData  TenantGuarantor?
+
   documents PolicyDocument[]
   activities PolicyActivity[]
+  payments  Payment[]
+  investigation Investigation?
+  contracts Contract[]
+  incidents Incident[]
   
   initiatedByUser User @relation("InitiatedByUser", fields: [initiatedBy], references: [id])
   reviewedByUser  User? @relation("ReviewedByUser", fields: [reviewedBy], references: [id])
+}
+
+// Tenant Profile Information (for individuals)
+model TenantProfile {
+  id          String   @id @default(cuid())
+  policyId    String   @unique
+  nationality NationalityType
+  curp        String?  // For Mexican nationals
+  passport    String?  // For foreign nationals
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Company Profile Information (for companies)
+model CompanyProfile {
+  id          String   @id @default(cuid())
+  policyId    String   @unique
+  
+  // Company information
+  taxAddress  String   // Domicilio fiscal
+  taxRegime   String   // Régimen fiscal
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  legalRepresentative LegalRepresentative?
+}
+
+// Legal Representative Information (for companies)
+model LegalRepresentative {
+  id              String   @id @default(cuid())
+  companyProfileId String  @unique
+  
+  // Personal information
+  fullName        String
+  nationality     NationalityType
+  curp            String?  // For Mexican nationals
+  passport        String?  // For foreign nationals
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  companyProfile  CompanyProfile @relation(fields: [companyProfileId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Employment Information (for individuals)
+model TenantEmployment {
+  id                String   @id @default(cuid())
+  policyId          String   @unique
+  employmentStatus  String   // employed, self-employed, unemployed, student, retired
+  industry          String
+  occupation        String
+  companyName       String
+  position          String
+  companyWebsite    String?
+  workAddress       String?
+  incomeSource      String   // salary, business, freelance, benefits, other
+  monthlyIncome     Float
+  creditCheckConsent Boolean
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Company Financial Information (for companies)
+model CompanyFinancial {
+  id                String   @id @default(cuid())
+  policyId          String   @unique
+  businessType      String   // tipo de negocio
+  industry          String   // industria/sector
+  yearsInBusiness   Int      // años en operación
+  numberOfEmployees Int      // número de empleados
+  monthlyRevenue    Float    // ingresos mensuales promedio
+  monthlyExpenses   Float    // gastos mensuales promedio
+  hasAccountant     Boolean  // tiene contador
+  accountantName    String?  // nombre del contador
+  accountantPhone   String?  // teléfono del contador
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant References Information (for individuals)
+model TenantReferences {
+  id                      String   @id @default(cuid())
+  policyId                String   @unique
+  personalReferenceName   String
+  personalReferencePhone  String
+  workReferenceName       String?
+  workReferencePhone      String?
+  landlordReferenceName   String?
+  landlordReferencePhone  String?
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  policy                  Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Company References Information (for companies)
+model CompanyReferences {
+  id                          String   @id @default(cuid())
+  policyId                    String   @unique
+  
+  // Business references
+  supplierReferenceName       String?
+  supplierReferencePhone      String?
+  supplierReferenceEmail      String?
+  
+  clientReferenceName         String?
+  clientReferencePhone        String?
+  clientReferenceEmail        String?
+  
+  bankReferenceName           String?  // Banco principal
+  bankReferencePhone          String?
+  bankAccountManager          String?  // Ejecutivo de cuenta
+  
+  // Accountant reference
+  accountantName              String?
+  accountantPhone             String?
+  accountantEmail             String?
+  accountantLicense           String?  // Cédula profesional
+  
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  
+  policy                      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Documents Information
+model TenantDocuments {
+  id                     String   @id @default(cuid())
+  policyId               String   @unique
+  identificationCount    Int      @default(0)
+  incomeCount           Int      @default(0)
+  optionalCount         Int      @default(0)
+  incomeDocsHavePassword DocPasswordStatus @default(NO)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  policy                Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+// Tenant Guarantor Information
+model TenantGuarantor {
+  id           String   @id @default(cuid())
+  policyId     String   @unique
+  name         String
+  phone        String
+  email        String?
+  relationship String   // parent, sibling, friend, colleague, other
+  address      String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  policy       Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
 model PolicyDocument {
@@ -162,13 +385,153 @@ model PolicyActivity {
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 }
 
+model Payment {
+  id                String        @id @default(cuid())
+  policyId          String
+  amount            Float
+  currency          String        @default("MXN")
+  status            PaymentStatus @default(PENDING)
+  method            PaymentMethod?
+  type              String        @default("POLICY") // INVESTIGATION_FEE, POLICY, PARTIAL, INCIDENT
+  paidBy            String        @default("TENANT") // TENANT, LANDLORD
+  
+  // Stripe specific fields
+  stripeIntentId    String?       @unique
+  stripeSessionId   String?       @unique
+  stripeCustomerId  String?
+  
+  // Manual payment fields
+  isManual          Boolean       @default(false)
+  reference         String?       // Reference number for manual payments
+  receiptUrl        String?       // URL to uploaded receipt
+  
+  // Additional payment details
+  description       String?
+  metadata          Json?
+  errorMessage      String?
+  paidAt            DateTime?
+  refundedAt        DateTime?
+  refundAmount      Float?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+model Investigation {
+  id                String   @id @default(cuid())
+  policyId          String   @unique
+  
+  // Verdict tracking
+  verdict           String?  // APPROVED, REJECTED, HIGH_RISK
+  riskLevel         String?  // LOW, MEDIUM, HIGH
+  
+  // Rejection details
+  rejectedBy        String?  // STAFF, TENANT, LANDLORD
+  rejectionReason   String?
+  rejectedAt        DateTime?
+  
+  // Landlord override
+  landlordDecision  String?  // PROCEED, REJECT
+  landlordOverride  Boolean  @default(false)
+  landlordNotes     String?
+  
+  // Staff tracking
+  assignedTo        String?
+  completedBy       String?
+  completedAt       DateTime?
+  responseTimeHours Int?     // For SLA tracking
+  notes             String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  policy            Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+model Contract {
+  id          String    @id @default(cuid())
+  policyId    String
+  version     Int       @default(1)
+  fileUrl     String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  isCurrent   Boolean   @default(true)
+  uploadedBy  String
+  uploadedAt  DateTime  @default(now())
+  
+  policy      Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  
+  @@index([policyId, version])
+}
+
+model Incident {
+  id              String   @id @default(cuid())
+  policyId        String
+  reportedBy      String   // TENANT, LANDLORD, STAFF
+  reporterName    String
+  reporterContact String
+  description     String   @db.Text
+  resolution      String?  @db.Text
+  requiresPayment Boolean  @default(false)
+  paymentAmount   Float?
+  isCoveredByPolicy Boolean @default(true)
+  status          String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  
+  assignedTo      String?
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  policy          Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
 
 enum PolicyStatus {
   DRAFT
-  SENT_TO_TENANT
-  IN_PROGRESS
-  SUBMITTED
-  UNDER_REVIEW
-  APPROVED
-  DENIED
+  INVESTIGATION_PENDING
+  INVESTIGATION_IN_PROGRESS
+  INVESTIGATION_REJECTED
+  INVESTIGATION_APPROVED
+  CONTRACT_PENDING
+  CONTRACT_UPLOADED
+  CONTRACT_SIGNED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIAL
+}
+
+enum TenantType {
+  individual
+  company
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  CASH
+  STRIPE
+  MANUAL
+}
+
+enum NationalityType {
+  MEXICAN
+  FOREIGN
+}
+
+enum DocPasswordStatus {
+  YES
+  NO
 }

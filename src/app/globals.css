@@ -105,11 +105,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'PT Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   .font-headline {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Libre Baskerville', serif;
+  }
+  .font-display {
+    font-family: 'Libre Baskerville', serif;
   }
   .font-body {
     font-family: 'PT Sans', sans-serif;

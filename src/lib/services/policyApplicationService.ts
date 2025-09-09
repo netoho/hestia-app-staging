@@ -1,6 +1,7 @@
-import { isMockEnabled } from '../env-check';
+import { isMockEnabled, isDemoMode } from '../env-check';
+import { DemoORM } from './demoDatabase';
 import prisma from '../prisma';
-import { Policy, PolicyStatus, PolicyDocument, PolicyActivity, Prisma } from '@prisma/client';
+import { Policy, PolicyStatus, PolicyStatusType, PolicyDocument, PolicyActivity, Prisma } from '@/lib/prisma-types';
 import { randomUUID } from 'crypto';
 import { generateSecureToken, generateTokenExpiry } from '../utils/tokenUtils';
 import { MockDataService } from './mockDataService';
@@ -8,28 +9,51 @@ import { MockDataService } from './mockDataService';
 // Type definitions
 export interface CreatePolicyData {
   propertyId?: string;
+  propertyAddress?: string;
   initiatedBy: string;
+  tenantType?: 'individual' | 'company';
   tenantEmail: string;
   tenantPhone?: string;
+  tenantName?: string;
+  companyName?: string;
+  companyRfc?: string;
+  legalRepresentativeName?: string;
+  legalRepresentativeId?: string;
+  companyAddress?: string;
+  packageId?: string;
+  packageName?: string;
+  price?: number;
+  investigationFee?: number;
+  tenantPaymentPercent?: number;
+  landlordPaymentPercent?: number;
+  contractLength?: number;
 }
 
-export interface PolicyWithRelations extends Policy {
+export interface PolicyWithRelations extends Omit<Policy, 'initiatedByUser' | 'reviewedByUser'> {
   documents: PolicyDocument[];
   activities: PolicyActivity[];
   initiatedByUser: {
     id: string;
     email: string;
     name: string | null;
+    role: string;
+    createdAt: Date;
+    updatedAt: Date;
   };
   reviewedByUser?: {
     id: string;
     email: string;
     name: string | null;
+    role: string;
+    createdAt: Date;
+    updatedAt: Date;
   } | null;
+  price?: number; // For backward compatibility
 }
 
 interface GetPoliciesOptions {
-  status?: PolicyStatus | 'all';
+  status?: PolicyStatusType | 'all';
+  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all';
   search?: string;
   page?: number;
   limit?: number;
@@ -53,7 +77,7 @@ const mockPolicies: PolicyWithRelations[] = [
     initiatedBy: 'mock-user-1',
     tenantEmail: 'tenant1@example.com',
     tenantPhone: '+1234567890',
-    status: PolicyStatus.SUBMITTED,
+    status: PolicyStatus.ACTIVE,
     currentStep: 4,
     profileData: {
       nationality: 'mexican',
@@ -83,6 +107,29 @@ const mockPolicies: PolicyWithRelations[] = [
     reviewedAt: null,
     reviewNotes: null,
     reviewReason: null,
+    tenantName: 'John Tenant',
+    propertyAddress: '123 Mock Street, Demo City',
+    guarantorData: null,
+    
+    // Payment configuration
+    packageId: 'premium',
+    packageName: 'Escudo Premium',
+    totalPrice: 5500,
+    investigationFee: 200,
+    tenantPaymentPercent: 100,
+    landlordPaymentPercent: 0,
+    paymentStatus: 'COMPLETED' as any,
+    
+    // Lifecycle dates
+    investigationStartedAt: new Date(),
+    investigationCompletedAt: new Date(),
+    contractUploadedAt: new Date(),
+    contractSignedAt: new Date(),
+    policyActivatedAt: new Date(),
+    contractLength: 12,
+    policyExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    
+    price: 5500, // For backward compatibility
     createdAt: new Date(),
     updatedAt: new Date(),
     documents: [],
@@ -90,7 +137,10 @@ const mockPolicies: PolicyWithRelations[] = [
     initiatedByUser: {
       id: 'mock-user-1',
       email: 'staff@example.com',
-      name: 'Staff User'
+      name: 'Staff User',
+      role: 'staff',
+      createdAt: new Date(),
+      updatedAt: new Date()
     },
     reviewedByUser: null
   },
@@ -100,7 +150,7 @@ const mockPolicies: PolicyWithRelations[] = [
     initiatedBy: 'mock-user-1',
     tenantEmail: 'tenant2@example.com',
     tenantPhone: null,
-    status: PolicyStatus.IN_PROGRESS,
+    status: PolicyStatus.INVESTIGATION_IN_PROGRESS,
     currentStep: 2,
     profileData: {
       nationality: 'foreign',
@@ -116,6 +166,29 @@ const mockPolicies: PolicyWithRelations[] = [
     reviewedAt: null,
     reviewNotes: null,
     reviewReason: null,
+    tenantName: 'Jane Tenant',
+    propertyAddress: '456 Another Street, Demo City',
+    guarantorData: null,
+    
+    // Payment configuration
+    packageId: 'basic',
+    packageName: 'Escudo Básico',
+    totalPrice: 2900,
+    investigationFee: 200,
+    tenantPaymentPercent: 100,
+    landlordPaymentPercent: 0,
+    paymentStatus: 'PENDING' as any,
+    
+    // Lifecycle dates
+    investigationStartedAt: new Date(),
+    investigationCompletedAt: null,
+    contractUploadedAt: null,
+    contractSignedAt: null,
+    policyActivatedAt: null,
+    contractLength: 12,
+    policyExpiresAt: null,
+    
+    price: 2900, // For backward compatibility
     createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
     updatedAt: new Date(),
     documents: [],
@@ -123,7 +196,10 @@ const mockPolicies: PolicyWithRelations[] = [
     initiatedByUser: {
       id: 'mock-user-1',
       email: 'staff@example.com',
-      name: 'Staff User'
+      name: 'Staff User',
+      role: 'staff',
+      createdAt: new Date(),
+      updatedAt: new Date()
     },
     reviewedByUser: null
   }
@@ -140,9 +216,17 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
     const newPolicy: PolicyWithRelations = {
       id: `mock-policy-${mockNextId++}`,
       propertyId: data.propertyId || null,
+      propertyAddress: data.propertyAddress || null,
       initiatedBy: data.initiatedBy,
+      tenantType: data.tenantType || 'individual' as any,
       tenantEmail: data.tenantEmail,
       tenantPhone: data.tenantPhone || null,
+      tenantName: data.tenantName || null,
+      companyName: data.companyName || null,
+      companyRfc: data.companyRfc || null,
+      legalRepresentativeName: data.legalRepresentativeName || null,
+      legalRepresentativeId: data.legalRepresentativeId || null,
+      companyAddress: data.companyAddress || null,
       status: PolicyStatus.DRAFT,
       currentStep: 1,
       profileData: null,
@@ -156,6 +240,25 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       reviewedAt: null,
       reviewNotes: null,
       reviewReason: null,
+      guarantorData: null,
+      packageId: data.packageId || null,
+      packageName: data.packageName || null,
+      price: data.price || 0,
+      totalPrice: data.price || 0,
+      investigationFee: data.investigationFee || 200,
+      tenantPaymentPercent: data.tenantPaymentPercent || 100,
+      landlordPaymentPercent: data.landlordPaymentPercent || 0,
+      contractLength: data.contractLength || 12,
+      paymentStatus: 'PENDING' as any, // Will be properly typed after regenerating types
+      
+      // Lifecycle dates
+      investigationStartedAt: null,
+      investigationCompletedAt: null,
+      contractUploadedAt: null,
+      contractSignedAt: null,
+      policyActivatedAt: null,
+      policyExpiresAt: null,
+      
       createdAt: new Date(),
       updatedAt: new Date(),
       documents: [],
@@ -171,7 +274,10 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
       initiatedByUser: {
         id: data.initiatedBy,
         email: 'staff@example.com',
-        name: 'Staff User'
+        name: 'Staff User',
+        role: 'staff',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       reviewedByUser: null
     };
@@ -184,9 +290,24 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
     const newPolicy = await prisma.policy.create({
       data: {
         propertyId: data.propertyId,
+        propertyAddress: data.propertyAddress,
         initiatedBy: data.initiatedBy,
+        tenantType: data.tenantType || 'individual',
         tenantEmail: data.tenantEmail,
         tenantPhone: data.tenantPhone,
+        tenantName: data.tenantName,
+        companyName: data.companyName,
+        companyRfc: data.companyRfc,
+        legalRepresentativeName: data.legalRepresentativeName,
+        legalRepresentativeId: data.legalRepresentativeId,
+        companyAddress: data.companyAddress,
+        packageId: data.packageId,
+        packageName: data.packageName,
+        totalPrice: data.price || 0,
+        investigationFee: data.investigationFee || 200,
+        tenantPaymentPercent: data.tenantPaymentPercent || 100,
+        landlordPaymentPercent: data.landlordPaymentPercent || 0,
+        contractLength: data.contractLength || 12,
         accessToken: generateSecureToken(),
         tokenExpiry: generateTokenExpiry(),
         activities: {
@@ -223,7 +344,7 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
 };
 
 export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<GetPoliciesResult> => {
-  const { status, search, page = 1, limit = 10 } = options;
+  const { status, paymentStatus, search, page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
 
   if (isMockEnabled()) {
@@ -236,6 +357,11 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
     // Filter by status
     if (status && status !== 'all') {
       filteredPolicies = filteredPolicies.filter(p => p.status === status);
+    }
+    
+    // Filter by payment status
+    if (paymentStatus && paymentStatus !== 'all') {
+      filteredPolicies = filteredPolicies.filter(p => (p as any).paymentStatus === paymentStatus);
     }
     
     // Filter by search (email)
@@ -268,6 +394,10 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
     
     if (status && status !== 'all') {
       where.status = status;
+    }
+    
+    if (paymentStatus && paymentStatus !== 'all') {
+      where.paymentStatus = paymentStatus as any;
     }
     
     if (search && search.trim()) {
@@ -353,15 +483,18 @@ export const getPolicyById = async (id: string): Promise<PolicyWithRelations | n
 
 export const getPolicyByToken = async (token: string): Promise<PolicyWithRelations | null> => {
   if (isMockEnabled()) {
-    console.log(`Emulator mode: Fetching mock policy by token`);
-    const policy = mockPolicies.find(p => p.accessToken === token);
-    
-    // Check token expiry
-    if (policy && policy.tokenExpiry < new Date()) {
-      return null; // Token expired
-    }
-    
-    return policy || null;
+    console.log(`Demo mode: Fetching policy by token`);
+    return await DemoORM.findUniquePolicy(
+      { accessToken: token },
+      {
+        include: {
+          initiatedByUser: true,
+          reviewedByUser: true,
+          documents: true,
+          activities: true,
+        }
+      }
+    );
   } else {
     console.log(`Real DB mode: Fetching policy by token`);
     const policy = await prisma.policy.findUnique({
@@ -384,7 +517,20 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
             email: true,
             name: true
           }
-        }
+        },
+        // Include structured data models for both individual and company
+        profileData: true,
+        companyProfileData: {
+          include: {
+            legalRepresentative: true
+          }
+        },
+        employmentData: true,
+        companyFinancialData: true,
+        referencesData: true,
+        companyReferencesData: true,
+        documentsData: true,
+        guarantorData: true
       }
     });
     
@@ -399,7 +545,7 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
 
 export const updatePolicyStatus = async (
   id: string,
-  status: PolicyStatus,
+  status: PolicyStatusType,
   performedBy: string,
   additionalData?: Partial<Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<PolicyWithRelations | null> => {
@@ -535,6 +681,120 @@ export const addPolicyActivity = async (
         details,
         performedBy,
         ipAddress
+      }
+    });
+  }
+};
+
+export const updatePolicyData = async (
+  token: string,
+  step: number,
+  stepData: any
+): Promise<PolicyWithRelations | null> => {
+  if (isDemoMode()) {
+    console.log(`Demo mode: Updating policy step ${step} data`);
+    
+    const policy = await DemoORM.findUniquePolicy(
+      { accessToken: token },
+      {
+        include: {
+          initiatedByUser: true,
+          reviewedByUser: true,
+          documents: true,
+          activities: true
+        }
+      }
+    );
+    
+    if (!policy) return null;
+    
+    // Update step data based on step number
+    const updateData: any = { currentStep: Math.max(policy.currentStep, step) };
+    
+    switch (step) {
+      case 1:
+        updateData.profileData = stepData;
+        break;
+      case 2:
+        updateData.employmentData = stepData;
+        break;
+      case 3:
+        updateData.referencesData = stepData;
+        break;
+      case 4:
+        updateData.documentsData = stepData;
+        break;
+      case 5:
+        // Payment step - no form data to save
+        break;
+      case 6:
+        updateData.guarantorData = stepData;
+        break;
+    }
+    
+    return await DemoORM.updatePolicy({ id: policy.id }, updateData, {
+      include: {
+        initiatedByUser: true,
+        reviewedByUser: true,
+        documents: true,
+        activities: true
+      }
+    });
+  } else {
+    console.log(`Real DB mode: Updating policy step ${step} data`);
+    
+    const policy = await prisma.policy.findUnique({
+      where: { accessToken: token }
+    });
+    
+    if (!policy) return null;
+    
+    // Update step data based on step number
+    const updateData: any = { currentStep: Math.max(policy.currentStep, step) };
+    
+    switch (step) {
+      case 1:
+        updateData.profileData = stepData;
+        break;
+      case 2:
+        updateData.employmentData = stepData;
+        break;
+      case 3:
+        updateData.referencesData = stepData;
+        break;
+      case 4:
+        updateData.documentsData = stepData;
+        break;
+      case 5:
+        // Payment step - no form data to save
+        break;
+      case 6:
+        updateData.guarantorData = stepData;
+        break;
+    }
+    
+    return await prisma.policy.update({
+      where: { id: policy.id },
+      data: updateData,
+      include: {
+        documents: true,
+        activities: {
+          orderBy: { createdAt: 'desc' }
+        },
+        initiatedByUser: {
+          select: {
+            id: true,
+            email: true,
+            name: true
+          }
+        },
+        reviewedByUser: {
+          select: {
+            id: true,
+            email: true,
+            name: true
+          }
+        }
       }
     });
   }

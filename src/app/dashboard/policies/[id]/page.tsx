@@ -4,36 +4,30 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { 
-  ArrowLeft, 
-  User, 
-  Briefcase, 
-  Users, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  XCircle,
-  Loader2,
-  AlertCircle,
-  Download
-} from 'lucide-react';
-import { PolicyStatus } from '@prisma/client';
-import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { PolicyStatusType } from '@/lib/prisma-types';
+import { POLICY_STATUS_DISPLAY } from '@/lib/types/policy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { t } from '@/lib/i18n';
+
+// Import new components
+import { PolicyDetailsHeader } from '@/components/policy-details/PolicyDetailsHeader';
+import { PolicyQuickInfo } from '@/components/policy-details/PolicyQuickInfo';
+import { PolicyStatusActions } from '@/components/policy-details/PolicyStatusActions';
+import { PolicyPaymentInfo } from '@/components/policy-details/PolicyPaymentInfo';
+import { PolicyDetailsContent } from '@/components/policy-details/PolicyDetailsContent';
+import { PolicyDocuments } from '@/components/policy-details/PolicyDocuments';
+import { PolicyActivityLog } from '@/components/policy-details/PolicyActivityLog';
+import { PolicyInvestigationInfo } from '@/components/policy-details/PolicyInvestigationInfo';
+import { PolicyContractInfo } from '@/components/policy-details/PolicyContractInfo';
 
 interface PolicyDetails {
   id: string;
   tenantEmail: string;
   tenantPhone?: string;
-  status: PolicyStatus;
+  status: PolicyStatusType;
   currentStep: number;
   profileData?: any;
   employmentData?: any;
@@ -45,6 +39,20 @@ interface PolicyDetails {
   reviewedAt?: string;
   reviewNotes?: string;
   reviewReason?: string;
+  packageId?: string | null;
+  packageName?: string | null;
+  price?: number | null;
+  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  
+  // Lifecycle dates
+  investigationStartedAt?: string | null;
+  investigationCompletedAt?: string | null;
+  contractUploadedAt?: string | null;
+  contractSignedAt?: string | null;
+  policyActivatedAt?: string | null;
+  contractLength: number;
+  policyExpiresAt?: string | null;
+  
   createdAt: string;
   updatedAt: string;
   initiatedByUser: {
@@ -72,6 +80,39 @@ interface PolicyDetails {
     ipAddress?: string;
     createdAt: string;
   }>;
+  
+  // Investigation data
+  investigation?: {
+    id: string;
+    verdict?: 'APPROVED' | 'REJECTED' | 'HIGH_RISK' | null;
+    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+    rejectedBy?: string | null;
+    rejectionReason?: string | null;
+    rejectedAt?: string | null;
+    landlordDecision?: 'PROCEED' | 'REJECT' | null;
+    landlordOverride: boolean;
+    landlordNotes?: string | null;
+    assignedTo?: string | null;
+    completedBy?: string | null;
+    completedAt?: string | null;
+    responseTimeHours?: number | null;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  
+  // Contract data
+  contracts: Array<{
+    id: string;
+    version: number;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    isCurrent: boolean;
+    uploadedBy: string;
+    uploadedAt: string;
+  }>;
 }
 
 export default function PolicyDetailsPage() {
@@ -84,6 +125,7 @@ export default function PolicyDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -111,7 +153,22 @@ export default function PolicyDetailsPage() {
       }
 
       const data = await response.json();
-      setPolicy(data);
+      
+      // Add default values for new fields if they don't exist
+      const policyWithDefaults = {
+        ...data,
+        contractLength: data.contractLength || 12,
+        investigation: data.investigation || null,
+        contracts: data.contracts || [],
+        investigationStartedAt: data.investigationStartedAt || null,
+        investigationCompletedAt: data.investigationCompletedAt || null,
+        contractUploadedAt: data.contractUploadedAt || null,
+        contractSignedAt: data.contractSignedAt || null,
+        policyActivatedAt: data.policyActivatedAt || null,
+        policyExpiresAt: data.policyExpiresAt || null,
+      };
+      
+      setPolicy(policyWithDefaults);
     } catch (err) {
       console.error('Policy fetch error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -133,87 +190,9 @@ export default function PolicyDetailsPage() {
     }
   }, [isAuthenticated, user]);
 
-  const getStatusBadgeVariant = (status: PolicyStatus) => {
-    const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      gray: 'secondary',
-      blue: 'default',
-      yellow: 'outline',
-      orange: 'outline',
-      purple: 'default',
-      green: 'default',
-      red: 'destructive',
-    };
-    return colorMap[POLICY_STATUS_COLORS[status]] || 'default';
-  };
+  // Simplified handlers - complex logic moved to components
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatFileSize = (bytes: number) => {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const getActivityIcon = (action: string) => {
-    switch (action) {
-      case 'created':
-      case 'initiated':
-        return <Clock className="h-4 w-4 text-blue-500" />;
-      case 'sent':
-      case 'resent':
-        return <User className="h-4 w-4 text-orange-500" />;
-      case 'step_completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'document_uploaded':
-        return <FileText className="h-4 w-4 text-purple-500" />;
-      case 'document_downloaded':
-        return <Download className="h-4 w-4 text-blue-500" />;
-      case 'submitted':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'approved':
-        return <CheckCircle className="h-4 w-4 text-green-700" />;
-      case 'denied':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getActivityDescription = (activity: any) => {
-    switch (activity.action) {
-      case 'created':
-        return 'Solicitud de póliza creada';
-      case 'sent':
-        return 'Invitación enviada al inquilino';
-      case 'resent':
-        return 'Invitación reenviada al inquilino';
-      case 'step_completed':
-        return `Paso ${activity.details?.step || ''} completado`;
-      case 'document_uploaded':
-        return `Documento subido: ${activity.details?.fileName || 'archivo'}`;
-      case 'document_downloaded':
-        return `Documento descargado: ${activity.details?.fileName || 'archivo'}`;
-      case 'submitted':
-        return 'Solicitud enviada para revisión';
-      case 'approved':
-        return 'Solicitud aprobada';
-      case 'denied':
-        return 'Solicitud denegada';
-      default:
-        return activity.action;
-    }
-  };
-
-  const updatePolicyStatus = async (newStatus: PolicyStatus, reason?: string) => {
+  const updatePolicyStatus = async (newStatus: PolicyStatusType, reason?: string) => {
     if (!isAuthenticated || !user || !policy) return;
     
     setUpdatingStatus(true);
@@ -248,6 +227,58 @@ export default function PolicyDetailsPage() {
       });
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!isAuthenticated || !user || !policy) return;
+    
+    setDownloadingPDF(true);
+    try {
+      const response = await fetch(`/api/policies/${policy.id}/pdf`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(t.pages.policies.details.toast.authFailed);
+        }
+        if (response.status === 403) {
+          throw new Error(t.pages.policies.details.toast.noPermission);
+        }
+        if (response.status === 404) {
+          throw new Error(t.pages.policies.details.policyNotFound);
+        }
+        throw new Error('Error al generar el documento PDF');
+      }
+
+      const htmlContent = await response.text();
+      
+      // Create a blob and download link
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `solicitud-arrendamiento-${policy.id}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: t.pages.policies.details.toast.pdfGenerated,
+        description: t.pages.policies.details.toast.pdfGeneratedDesc,
+      });
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast({
+        title: t.pages.policies.details.toast.downloadFailed,
+        description: error instanceof Error ? error.message : 'Error al generar el documento',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingPDF(false);
     }
   };
 
@@ -297,6 +328,182 @@ export default function PolicyDetailsPage() {
       });
     } finally {
       setDownloadingDoc(null);
+    }
+  };
+
+  // Investigation handlers
+  const handleStartInvestigation = async () => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/investigation/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          assignedTo: user?.id,
+          notes: 'Investigation started from policy details page'
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to start investigation');
+      }
+
+      toast({
+        title: 'Investigación Iniciada',
+        description: 'La investigación ha sido iniciada exitosamente.',
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al iniciar investigación',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCompleteInvestigation = async (verdict: 'APPROVED' | 'REJECTED' | 'HIGH_RISK') => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/investigation/complete`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          verdict: verdict,
+          riskLevel: verdict === 'HIGH_RISK' ? 'HIGH' : 'LOW',
+          notes: `Investigation completed with verdict: ${verdict}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to complete investigation');
+      }
+
+      toast({
+        title: 'Investigación Completada',
+        description: `Investigación completada con veredicto: ${verdict}`,
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al completar investigación',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleLandlordOverride = async (decision: 'PROCEED' | 'REJECT', notes?: string) => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/investigation/landlord-override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          decision: decision,
+          notes: notes || `Landlord decision: ${decision}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process landlord override');
+      }
+
+      toast({
+        title: 'Decisión del Propietario',
+        description: `Override procesado: ${decision}`,
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al procesar override',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Contract handlers
+  const handleUploadContract = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('contract', file);
+
+      const response = await fetch(`/api/policies/${policyId}/contracts/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload contract');
+      }
+
+      toast({
+        title: 'Contrato Subido',
+        description: `Contrato "${file.name}" subido exitosamente.`,
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al subir contrato',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDownloadContract = async (contractId: string) => {
+    toast({
+      title: 'Próximamente',
+      description: 'Descarga de contratos estará disponible pronto.',
+      variant: 'default',
+    });
+  };
+
+  const handleMarkContractSigned = async () => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/contracts/mark-signed`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to mark contract as signed');
+      }
+
+      toast({
+        title: 'Contrato Firmado',
+        description: 'El contrato ha sido marcado como firmado.',
+        variant: 'default',
+      });
+
+      // Refresh policy data
+      await fetchPolicy();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al marcar contrato firmado',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -354,90 +561,34 @@ export default function PolicyDetailsPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto py-8 px-4 max-w-6xl">
         {/* Header */}
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/dashboard/policies')}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t.pages.policies.details.backToPolicies}
-          </Button>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{t.pages.policies.details.title}</h1>
-              <p className="text-muted-foreground">
-                {t.pages.policies.details.subtitle}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant={getStatusBadgeVariant(policy.status)} className="text-sm">
-                {POLICY_STATUS_DISPLAY[policy.status]}
-              </Badge>
-            </div>
-          </div>
-        </div>
+        <PolicyDetailsHeader
+          onBack={() => router.push('/dashboard/policies')}
+          status={policy.status}
+          onDownloadPDF={handleDownloadPDF}
+          downloadingPDF={downloadingPDF}
+        />
 
         {/* Quick Info */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.tenantEmail}</p>
-                <p className="font-medium">{policy.tenantEmail}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.created}</p>
-                <p className="font-medium">{formatDate(policy.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.documents}</p>
-                <p className="font-medium">{policy.documents.length} {t.pages.policies.details.quickInfo.files}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <PolicyQuickInfo
+          tenantEmail={policy.tenantEmail}
+          createdAt={policy.createdAt}
+          documentsCount={policy.documents.length}
+        />
 
         {/* Status Actions */}
-        {(policy.status === PolicyStatus.SUBMITTED || policy.status === PolicyStatus.UNDER_REVIEW) && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>{t.pages.policies.details.reviewActions.title}</CardTitle>
-              <CardDescription>
-                {t.pages.policies.details.reviewActions.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => updatePolicyStatus(PolicyStatus.APPROVED)}
-                  disabled={updatingStatus}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {t.pages.policies.details.reviewActions.approve}
-                </Button>
-                <Button
-                  onClick={() => updatePolicyStatus(PolicyStatus.DENIED, 'Additional review required')}
-                  disabled={updatingStatus}
-                  variant="destructive"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  {t.pages.policies.details.reviewActions.deny}
-                </Button>
-                <Button
-                  onClick={() => updatePolicyStatus(PolicyStatus.UNDER_REVIEW)}
-                  disabled={updatingStatus}
-                  variant="outline"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  {t.pages.policies.details.reviewActions.markUnderReview}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <PolicyStatusActions
+          status={policy.status}
+          onUpdateStatus={updatePolicyStatus}
+          updatingStatus={updatingStatus}
+        />
+
+        {/* Payment Information */}
+        <PolicyPaymentInfo
+          packageId={policy.packageId}
+          packageName={policy.packageName}
+          price={policy.price}
+          paymentStatus={policy.paymentStatus}
+        />
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="details" className="space-y-6">
@@ -447,227 +598,51 @@ export default function PolicyDetailsPage() {
           </TabsList>
 
           <TabsContent value="details" className="space-y-6">
-            {/* Profile Data */}
-            {policy.profileData && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    {t.pages.policies.details.sections.personalInfo}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.nationality}</p>
-                      <p className="font-medium">{policy.profileData.nationality === 'mexican' ? t.pages.policies.details.fields.mexican : t.pages.policies.details.fields.foreign}</p>
-                    </div>
-                    {policy.profileData.curp && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.curp}</p>
-                        <p className="font-medium">{policy.profileData.curp}</p>
-                      </div>
-                    )}
-                    {policy.profileData.passport && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.passport}</p>
-                        <p className="font-medium">{policy.profileData.passport}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Employment Data */}
-            {policy.employmentData && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5" />
-                    {t.pages.policies.details.sections.employmentInfo}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.employmentStatus}</p>
-                      <p className="font-medium">{policy.employmentData.employmentStatus}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.industry}</p>
-                      <p className="font-medium">{policy.employmentData.industry}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.company}</p>
-                      <p className="font-medium">{policy.employmentData.companyName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.position}</p>
-                      <p className="font-medium">{policy.employmentData.position}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.monthlyIncome}</p>
-                      <p className="font-medium">${policy.employmentData.monthlyIncome?.toLocaleString()} MXN</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t.pages.policies.details.fields.creditCheckConsent}</p>
-                      <p className="font-medium">{policy.employmentData.creditCheckConsent ? t.pages.policies.details.fields.yes : t.pages.policies.details.fields.no}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* References Data */}
-            {policy.referencesData && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    {t.pages.policies.details.sections.references}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">{t.pages.policies.details.references.personalReference}</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.name}</p>
-                          <p className="font-medium">{policy.referencesData.personalReferenceName}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.phone}</p>
-                          <p className="font-medium">{policy.referencesData.personalReferencePhone}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {policy.referencesData.workReferenceName && (
-                      <div>
-                        <h4 className="font-medium mb-2">{t.pages.policies.details.references.workReference}</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.name}</p>
-                            <p className="font-medium">{policy.referencesData.workReferenceName}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.phone}</p>
-                            <p className="font-medium">{policy.referencesData.workReferencePhone}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {policy.referencesData.landlordReferenceName && (
-                      <div>
-                        <h4 className="font-medium mb-2">{t.pages.policies.details.references.landlordReference}</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.name}</p>
-                            <p className="font-medium">{policy.referencesData.landlordReferenceName}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t.pages.policies.details.references.phone}</p>
-                            <p className="font-medium">{policy.referencesData.landlordReferencePhone}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Documents */}
-            {policy.documents.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    {t.pages.policies.details.sections.uploadedDocuments}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {policy.documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-blue-500" />
-                          <div>
-                            <p className="font-medium">{doc.originalName}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatFileSize(doc.fileSize)} • {t.pages.policies.details.documents.uploaded} {formatDistanceToNow(new Date(doc.uploadedAt), { addSuffix: true, locale: es })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {doc.category === 'identification' ? t.pages.policies.details.documents.category.identification : 
-                             doc.category === 'income' ? t.pages.policies.details.documents.category.income : t.pages.policies.details.documents.category.optional}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownloadDocument(doc.id, doc.originalName)}
-                            disabled={downloadingDoc === doc.id}
-                          >
-                            {downloadingDoc === doc.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Download className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <PolicyDetailsContent
+              profileData={policy.profileData}
+              employmentData={policy.employmentData}
+              referencesData={policy.referencesData}
+            />
+            
+            {/* Investigation Management */}
+            <PolicyInvestigationInfo
+              investigation={policy.investigation ? {
+                ...policy.investigation,
+                createdAt: new Date(policy.investigation.createdAt),
+                updatedAt: new Date(policy.investigation.updatedAt),
+                completedAt: policy.investigation.completedAt ? new Date(policy.investigation.completedAt) : null,
+                rejectedAt: policy.investigation.rejectedAt ? new Date(policy.investigation.rejectedAt) : null
+              } : null}
+              policyStatus={policy.status}
+              onStartInvestigation={() => handleStartInvestigation()}
+              onCompleteInvestigation={(verdict) => handleCompleteInvestigation(verdict)}
+              onLandlordOverride={(decision, notes) => handleLandlordOverride(decision, notes)}
+            />
+            
+            {/* Contract Management */}
+            <PolicyContractInfo
+              contracts={policy.contracts.map(contract => ({
+                ...contract,
+                uploadedAt: new Date(contract.uploadedAt)
+              }))}
+              policyStatus={policy.status}
+              contractSignedAt={policy.contractSignedAt ? new Date(policy.contractSignedAt) : null}
+              contractLength={policy.contractLength}
+              policyExpiresAt={policy.policyExpiresAt ? new Date(policy.policyExpiresAt) : null}
+              onUploadContract={(file) => handleUploadContract(file)}
+              onDownloadContract={(contractId) => handleDownloadContract(contractId)}
+              onMarkSigned={() => handleMarkContractSigned()}
+            />
+            
+            <PolicyDocuments
+              documents={policy.documents}
+              onDownloadDocument={handleDownloadDocument}
+              downloadingDoc={downloadingDoc}
+            />
           </TabsContent>
 
           <TabsContent value="activity">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.pages.policies.details.activity.title}</CardTitle>
-                <CardDescription>
-                  {t.pages.policies.details.activity.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {policy.activities.map((activity, index) => (
-                    <div key={activity.id} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        {getActivityIcon(activity.action)}
-                        {index < policy.activities.length - 1 && (
-                          <div className="w-px h-8 bg-border mt-2" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium">{getActivityDescription(activity)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true, locale: es })}
-                          </p>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.performedBy === 'tenant' ? t.pages.policies.details.activity.performedBy.tenant : 
-                           activity.performedBy ? t.pages.policies.details.activity.performedBy.staff : t.pages.policies.details.activity.performedBy.system}
-                        </p>
-                        {activity.details && (
-                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-                            <pre className="whitespace-pre-wrap">{JSON.stringify(activity.details, null, 2)}</pre>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <PolicyActivityLog activities={policy.activities} />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,15 +1,7 @@
 
 
-export interface Package {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  features: string[];
-  ctaText?: string | null;
-  ctaLink: string;
-  highlight?: boolean | null;
-}
+// Import Package from prisma-types for consistency
+export { Package } from '@/lib/prisma-types';
 
 export interface Testimonial {
   id: string;
@@ -49,7 +41,7 @@ export interface HowItWorksStep {
   id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: string;
   dataAiHint: string;
 }
 

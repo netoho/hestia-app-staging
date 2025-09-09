@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPolicyByToken, updatePolicyStatus, addPolicyActivity } from '@/lib/services/policyApplicationService';
 import { validatePolicyDocuments } from '@/lib/services/fileUploadService';
 import { sendPolicySubmissionConfirmation } from '@/lib/services/emailService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus } from '@/lib/prisma-types';
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +22,8 @@ export async function POST(
     }
 
     // Check if policy is in a valid state
-    if (policy.status !== PolicyStatus.IN_PROGRESS) {
+    if (policy.status !== PolicyStatus.INVESTIGATION_IN_PROGRESS && 
+        policy.status !== PolicyStatus.INVESTIGATION_PENDING) {
       return NextResponse.json(
         { error: 'Policy must be in progress to submit' },
         { status: 400 }
@@ -31,9 +32,13 @@ export async function POST(
 
     // Validate all required data is present
     const missingSteps = [];
+    
+    // Check for structured data models
     if (!policy.profileData) missingSteps.push('Profile information');
     if (!policy.employmentData) missingSteps.push('Employment information');
     if (!policy.referencesData) missingSteps.push('References');
+    if (!policy.documentsData) missingSteps.push('Documents information');
+    if (!policy.guarantorData) missingSteps.push('Guarantor information');
 
     if (missingSteps.length > 0) {
       return NextResponse.json(
@@ -57,15 +62,15 @@ export async function POST(
       );
     }
 
-    // Update policy status to SUBMITTED
+    // Update policy status to CONTRACT_PENDING after submission
     const submittedAt = new Date();
     await updatePolicyStatus(
       policy.id,
-      PolicyStatus.SUBMITTED,
+      PolicyStatus.CONTRACT_PENDING,
       'tenant',
       { 
         submittedAt,
-        currentStep: 5 // Mark as complete
+        currentStep: 6 // Mark as complete
       }
     );
 

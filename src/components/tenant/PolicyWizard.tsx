@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, ChevronLeft, ChevronRight, Upload, Send } from 'lucide-react';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus, PolicyStatusType } from '@/lib/prisma-types';
 import { POLICY_STEPS } from '@/lib/types/policy';
 import { CreatePolicyProfileForm } from '@/components/forms/CreatePolicyProfileForm';
+import { CreateCompanyProfileForm } from '@/components/forms/CreateCompanyProfileForm';
 import { CreatePolicyEmploymentForm } from '@/components/forms/CreatePolicyEmploymentForm';
 import { CreatePolicyReferencesForm } from '@/components/forms/CreatePolicyReferencesForm';
 import { CreatePolicyDocumentsForm } from '@/components/forms/CreatePolicyDocumentsForm';
+import { PolicyPaymentStep } from '@/components/tenant/PolicyPaymentStep';
 import { PolicyReviewStep } from '@/components/tenant/PolicyReviewStep';
 import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
@@ -20,23 +22,32 @@ interface PolicyWizardProps {
   token: string;
   policy: {
     id: string;
-    status: PolicyStatus;
+    status: PolicyStatusType;
     currentStep: number;
+    tenantType?: 'individual' | 'company';
+    tenantName?: string | null;
+    companyName?: string | null;
+    companyRfc?: string | null;
+    legalRepresentativeName?: string | null;
     profileData?: any;
     employmentData?: any;
     referencesData?: any;
     documentsData?: any;
+    packageName?: string | null;
+    price?: number | null;
+    paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   };
   onUpdate: () => void;
 }
 
-const stepTitles: Record<number, string> = {
-  1: t.wizard.stepTitles[1],
-  2: t.wizard.stepTitles[2],
-  3: t.wizard.stepTitles[3],
-  4: t.wizard.stepTitles[4],
-  5: t.wizard.stepTitles[5]
-};
+const getStepTitles = (isCompany: boolean): Record<number, string> => ({
+  1: isCompany ? 'Datos de la Empresa y Representante Legal' : t.wizard.stepTitles[1],
+  2: isCompany ? 'Información Financiera de la Empresa' : t.wizard.stepTitles[2],
+  3: isCompany ? 'Referencias Comerciales' : t.wizard.stepTitles[3],
+  4: isCompany ? 'Documentos Corporativos' : t.wizard.stepTitles[4],
+  5: t.wizard.stepTitles[5], // Payment is the same
+  6: t.wizard.stepTitles[6]  // Review is the same
+});
 
 export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   const [currentStep, setCurrentStep] = useState(Math.max(1, policy.currentStep));
@@ -44,6 +55,9 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [userNavigatedStep, setUserNavigatedStep] = useState<number | null>(null);
   const { toast } = useToast();
+  
+  const isCompany = policy.tenantType === 'company';
+  const stepTitles = getStepTitles(isCompany);
 
   // Update currentStep when policy changes, but respect user navigation
   useEffect(() => {
@@ -164,31 +178,49 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
   };
 
   const renderStep = () => {
+    const isCompany = policy.tenantType === 'company';
+    
     switch (currentStep) {
       case 1:
-        return (
+        // Show different profile form based on tenant type
+        return isCompany ? (
+          <CreateCompanyProfileForm 
+            initialData={policy.profileData}
+            companyInfo={{
+              companyName: policy.companyName || undefined,
+              companyRfc: policy.companyRfc || undefined,
+              legalRepresentativeName: policy.legalRepresentativeName || undefined,
+            }}
+            onNext={handleStepComplete}
+          />
+        ) : (
           <CreatePolicyProfileForm 
             initialData={policy.profileData}
             onNext={handleStepComplete}
           />
         );
       case 2:
+        // Companies might have different employment/financial info requirements
         return (
           <CreatePolicyEmploymentForm
             initialData={policy.employmentData}
             onNext={handleStepComplete}
             onBack={handleBack}
+            isCompany={isCompany}
           />
         );
       case 3:
+        // References might be different for companies (e.g., business references)
         return (
           <CreatePolicyReferencesForm
             initialData={policy.referencesData}
             onNext={handleStepComplete}
             onBack={handleBack}
+            isCompany={isCompany}
           />
         );
       case 4:
+        // Documents will definitely be different for companies
         return (
           <CreatePolicyDocumentsForm
             token={token}
@@ -196,9 +228,19 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
             initialData={policy.documentsData}
             onNext={handleStepComplete}
             onBack={handleBack}
+            isCompany={isCompany}
           />
         );
       case 5:
+        return (
+          <PolicyPaymentStep
+            token={token}
+            policy={policy}
+            onNext={() => handleStepComplete({})}
+            onBack={handleBack}
+          />
+        );
+      case 6:
         return (
           <PolicyReviewStep
             policy={policy}
@@ -218,7 +260,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
-            {[1, 2, 3, 4, 5].map((step) => {
+            {[1, 2, 3, 4, 5, 6].map((step) => {
               const status = getStepStatus(step);
               const accessible = isStepAccessible(step);
               
@@ -246,7 +288,7 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
                     )}
                   </div>
                   
-                  {step < 5 && (
+                  {step < 6 && (
                     <div
                       className={`hidden md:block w-24 h-0.5 ${
                         step < currentStep ? 'bg-green-500' : 'bg-muted'
@@ -260,10 +302,10 @@ export function PolicyWizard({ token, policy, onUpdate }: PolicyWizardProps) {
           
           {/* Progress Bar */}
           <div className="mt-6">
-            <Progress value={(currentStep / 5) * 100} className="h-2" />
+            <Progress value={(currentStep / 6) * 100} className="h-2" />
             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>{t.wizard.progress.step} {currentStep} {t.wizard.progress.of} 5</span>
-              <span>{Math.round((currentStep / 5) * 100)}% {t.wizard.progress.complete}</span>
+              <span>{t.wizard.progress.step} {currentStep} {t.wizard.progress.of} 6</span>
+              <span>{Math.round((currentStep / 6) * 100)}% {t.wizard.progress.complete}</span>
             </div>
           </div>
         </CardContent>

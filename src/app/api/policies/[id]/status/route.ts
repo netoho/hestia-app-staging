@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { addPolicyActivity } from '@/lib/services/policyApplicationService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus } from '@/lib/prisma-types';
 import prisma from '@/lib/prisma';
 
 export async function PUT(
