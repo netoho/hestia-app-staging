@@ -43,10 +43,10 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
     <Html>
       <Head />
       <Body style={{ backgroundColor: brandColors.background, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-        <Container style={{ 
-          maxWidth: '600px', 
-          margin: '0 auto', 
-          padding: '20px' 
+        <Container style={{
+          maxWidth: '600px',
+          margin: '0 auto',
+          padding: '20px'
         }}>
           {/* Header */}
           <Section style={{
@@ -121,8 +121,8 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
                 {reason ? (
                   <><strong>Motivo:</strong> {reason}</>
                 ) : (
-                  isApproved ? 
-                    'Tu solicitud cumple con todos nuestros requisitos.' : 
+                  isApproved ?
+                    'Tu solicitud cumple con todos nuestros requisitos.' :
                     'Tu solicitud no cumple con los requisitos necesarios en este momento.'
                 )}
               </Text>
@@ -254,7 +254,7 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
               color: brandColors.textSecondary,
               marginTop: '20px'
             }}>
-              Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el alquiler.
+              Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el arrendamiento.
             </Text>
           </Section>
 
@@ -278,7 +278,7 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
               fontSize: '14px',
               color: brandColors.textMuted
             }}>
-              Protegiendo tu tranquilidad en cada alquiler
+              Protegiendo tu tranquilidad en cada arrendamiento.
             </Text>
             <Text style={{
               margin: '15px 0 5px 0',
@@ -286,8 +286,8 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
               color: brandColors.textMuted
             }}>
               ¿Tienes preguntas? Contáctanos en{' '}
-              <a 
-                href="mailto:soporte@hestiaplp.com.mx" 
+              <a
+                href="mailto:soporte@hestiaplp.com.mx"
                 style={{ color: brandColors.secondary, textDecoration: 'none' }}
               >
                 soporte@hestiaplp.com.mx

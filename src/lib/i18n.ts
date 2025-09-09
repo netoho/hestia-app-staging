@@ -9,7 +9,7 @@ const es = {
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
     contactEmail: "info@hestiaplp.com.mx",
     contactPhone: "+52 55 1234 5678",
-    
+
     actions: {
         start: "Comenzar",
         chooseStandard: "Elegir Estándar",
@@ -62,9 +62,9 @@ const es = {
     // Layout Components
     layout: {
         root: {
-            metaTitle: "Hestia - Garantías de Alquiler de Propiedades",
-            metaDescription: "Asegura tus contratos de alquiler con Hestia. Pólizas de garantía integrales para propietarios e inquilinos.",
-            metaKeywords: ['garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
+            metaTitle: "Hestia - Protecciones de Arrendamiento",
+            metaDescription: "Asegura tus contratos de arrendamiento con Hestia. Pólizas de garantía integrales para propietarios e inquilinos.",
+            metaKeywords: ['protección de arrendamiento', 'garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
         },
         publicHeader: {
             navLinks: [
@@ -81,7 +81,7 @@ const es = {
             closeMenu: "Cerrar menú",
         },
         publicFooter: {
-            description: "Hestia ofrece pólizas de garantía de alquiler integrales, proporcionando tranquilidad tanto a propietarios como a inquilinos.",
+            description: "Hestia ofrece protecciones de arrendamiento integrales, proporcionando tranquilidad tanto a propietarios como a inquilinos.",
             address: "Calle Segura 123, Ciudad de México, MX",
             quickLinks: "Enlaces Rápidos",
             legal: "Legal",
@@ -141,7 +141,7 @@ const es = {
     wizard: {
         stepTitles: {
             1: "Información del Perfil",
-            2: "Detalles de Empleo", 
+            2: "Detalles de Empleo",
             3: "Referencias",
             4: "Carga de Documentos",
             5: "Pago",
@@ -156,7 +156,7 @@ const es = {
             progressSaved: "Progreso Guardado",
             stepCompleted: (step: number) => `Paso ${step} completado exitosamente.`,
             applicationSubmitted: "¡Solicitud Enviada!",
-            applicationSubmittedDescription: "Tu solicitud de alquiler ha sido enviada exitosamente.",
+            applicationSubmittedDescription: "Tu solicitud de arrendamiento ha sido enviada exitosamente.",
             submitting: "Enviando...",
             loadingApplication: "Cargando tu solicitud...",
             accessError: "Error de Acceso",
@@ -181,7 +181,7 @@ const es = {
             submittedDescription: "Tu solicitud de póliza ha sido enviada y está siendo procesada por nuestro equipo.",
             notifications: [
                 "📧 Te notificaremos por email sobre el estado de tu solicitud",
-                "⏱️ El tiempo de procesamiento es típicamente de 1-2 días hábiles", 
+                "⏱️ El tiempo de procesamiento es típicamente de 1-2 días hábiles",
                 "📞 Si tienes preguntas, contacta a tu agente inmobiliario"
             ]
         },
@@ -193,7 +193,7 @@ const es = {
             personalInfo: "Información Personal",
             employmentInfo: "Información de Empleo",
             references: "Referencias",
-            documents: "Documentos", 
+            documents: "Documentos",
             readyToSubmit: "¿Listo para Enviar?",
             readyToSubmitDescription: "Al enviar esta solicitud, confirmas que toda la información proporcionada es exacta y completa.",
             backToDocuments: "Volver a Documentos",
@@ -266,14 +266,14 @@ const es = {
         },
         header: {
             title: "Solicitud de Póliza Hestia",
-            description: "Completa tu solicitud de alquiler a continuación",
+            description: "Completa tu solicitud de arrendamiento a continuación",
             applicationProgress: "Progreso de Solicitud"
         },
         summary: {
             title: "Resumen de Solicitud",
             submitted: "Tu solicitud ha sido enviada y está siendo revisada.",
             underReview: "Tu solicitud está actualmente bajo revisión.",
-            approved: "¡Felicidades! Tu solicitud ha sido aprobada.", 
+            approved: "¡Felicidades! Tu solicitud ha sido aprobada.",
             denied: "Tu solicitud ha sido revisada. Contacta a tu agente para más información.",
             informationSent: "Información Enviada:",
             personalInfo: "Información Personal:",
@@ -298,7 +298,7 @@ const es = {
             heroTitle: "Asegura tu Tranquilidad con Hestia.",
             heroSubtitle: "Protecciones de arrendamiento integrales. Navega el mercado de arrendamiento con confianza.",
             howItWorksTitle: "Cómo Funciona Hestia",
-            howItWorksSubtitle: "Un proceso simple y transparente para tu seguridad de alquiler.",
+            howItWorksSubtitle: "Un proceso simple y transparente para tu seguridad de arrendamiento.",
             videoTestimonialTitle: "Escucha a Nuestros Clientes",
             videoTestimonialSubtitle: "Descubre cómo Hestia marca la diferencia.",
             packagesTitle: "Nuestros Paquetes de Protección",
@@ -310,7 +310,7 @@ const es = {
             forRenters: "Para Inquilinos",
             forRentersDesc: "Asegura una estancia segura en tu casa o negocio, revisión de perfil de arrendador, respaldo jurídico para cumplimiento de contrato y derechos como arrendatario y red segura para devolución de deposito.",
             forAdvisors: "Para Asesores",
-            forAdvisorsDesc: "Cierra tratos más rápido y ofrece valor añadido a tus clientes. Nuestro proceso simplificado hace que los contratos de alquiler sean más fluidos y seguros para las partes.",
+            forAdvisorsDesc: "Cierra tratos más rápido y ofrece valor añadido a tus clientes. Nuestro proceso simplificado hace que los contratos de arrendamiento sean más fluidos y seguros para las partes.",
             testimonialsTitle: "Con la Confianza de Muchos",
             testimonialsSubtitle: "Escucha lo que nuestros clientes satisfechos tienen que decir sobre Hestia.",
             ctaTitle: "¿Listo para Experimentar tu Arrendamiento Seguro?",
@@ -332,15 +332,15 @@ const es = {
                 { id: "1", title: "Elige tu protección.", description: "Selecciona entre nuestra variedad de servicios diseñados para las necesidades de tu arrendamiento.", icon: "/images/icons/package.png", dataAiHint: "select package" },
                 { id: "2", title: "Regístrate y proporciona información.", description: "Regístrate en nuestra plataforma y completa los formatos y proporciona la documentación requerida.", icon: "/images/icons/note.png", dataAiHint: "user registration" },
                 { id: "3", title: "Verificación y aprobación.", description: "Nuestro equipo analiza la información proporcionada, realiza la investigación correspondiente, emite una opinión de riesgo y te propondra la estrategia correspondiente.", icon: "/images/icons/shield.png", dataAiHint: "security check" },
-                { id: "4", title: "Asegura tu alquier.", description: "Una vez aprobada la estrategia propuesta y definidos los terminos, completa el pago tu alquiler está asegurado con la protección de Hestia. Accede a tus documentos  en cualquier momento.", icon: "/images/icons/search.svg", dataAiHint: "contract document" }
+                { id: "4", title: "Asegura tu arrendamiento.", description: "Una vez aprobada la estrategia propuesta y definidos los terminos, completa el pago y tu arrendamiento estará asegurado con la protección de Hestia. Accede a tus documentos  en cualquier momento.", icon: "/images/icons/search.svg", dataAiHint: "contract document" }
             ] as HowItWorksStep[],
         },
         aboutUs: {
             pageTitle: "Sobre Hestia",
-            pageSubtitle: "Pioneros en confianza y seguridad en el mercado de alquiler.",
+            pageSubtitle: "Pioneros en confianza y seguridad en el mercado de arrendamiento.",
             ourStory: "Nuestra Historia",
             videoId: "v2Rz_QA5y1M",
-            storyParagraph1: "Hestia fue fundada con una misión clara: revolucionar la experiencia de arrendamiento fomentando la confianza y proporcionando una seguridad sólida para todas las partes involucradas. Vimos los desafíos que enfrentan los propietarios, inquilinos y asesores inmobiliarios: las incertidumbres, los riesgos financieros y las complejidades de los contratos de alquiler.",
+            storyParagraph1: "Hestia fue fundada con una misión clara: revolucionar la experiencia de arrendamiento fomentando la confianza y proporcionando una seguridad sólida para todas las partes involucradas. Vimos los desafíos que enfrentan los propietarios, inquilinos y asesores inmobiliarios: las incertidumbres, los riesgos financieros y las complejidades de los contratos de arrendamiento.",
             storyParagraph2: "Impulsados por una pasión por la innovación y un compromiso con el servicio, desarrollamos una plataforma que ofrece protecciones de arrendamiento integrales. Nuestro objetivo es hacer que el arrendamiento sea más simple, seguro y accesible para todos.",
             imageAlt: "Equipo de Hestia trabajando juntos",
             coreValuesTitle: "Nuestros Valores Fundamentales",
@@ -351,7 +351,7 @@ const es = {
               { icon: Users, title: "Foco en el Cliente", description: "Poniendo siempre las necesidades de nuestros clientes primero." },
             ],
             ourMissionTitle: "Nuestra Misión",
-            missionText: "Ser el proveedor líder de soluciones de garantía de alquiler, empoderando a individuos y empresas mediante la creación de un ecosistema de alquiler seguro y transparente. Nos esforzamos por ofrecer un valor excepcional a través de productos innovadores, un servicio al cliente sobresaliente y un compromiso firme con la integridad."
+            missionText: "Ser el proveedor líder de protecciones de arrendamiento, empoderando a individuos y empresas mediante la creación de un ecosistema de arrendamiento seguro y transparente. Nos esforzamos por ofrecer un valor excepcional a través de productos innovadores, un servicio al cliente sobresaliente y un compromiso firme con la integridad."
         },
         contact: {
             title: "Ponte en Contacto",
@@ -847,7 +847,7 @@ const es = {
             stillHaveQuestions: "¿Todavía tienes preguntas?",
             stillHaveQuestionsDesc: "Si no encuentras la respuesta que buscas, no dudes en contactar a nuestro equipo de soporte.",
             faqs: [
-              { question: "¿Qué es Hestia?", answer: "Hestia ofrece servicios de pólizas de garantía para alquileres de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios." },
+              { question: "¿Qué es Hestia?", answer: "Hestia ofrece servicios de pólizas de garantía para arrendamientos de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios." },
               { question: "¿Cómo me registro en un paquete?", answer: "Puedes registrarte visitando nuestra sección de 'Paquetes' en el sitio web, eligiendo el que mejor se adapte a tus necesidades y haciendo clic en el botón 'Comenzar' o similar. Esto te guiará a través del proceso de registro." },
               { question: "¿Qué información se necesita para una póliza?", answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales." },
               { question: "¿Puedo cambiar mi paquete a uno superior?", answer: "Sí, generalmente puedes mejorar tu paquete. Por favor, contacta a nuestro equipo de soporte o revisa tu panel de control para ver las opciones de actualización." },
@@ -869,7 +869,7 @@ const es = {
         },
         register: {
             title: "Crea Tu Cuenta",
-            description: "Únete a Hestia y asegura tu experiencia de alquiler.",
+            description: "Únete a Hestia y asegura tu experiencia de arrendamiento.",
             hasAccount: "¿Ya tienes una cuenta?",
             loginLink: "Inicia sesión",
             fullName: "Nombre Completo",
@@ -926,10 +926,10 @@ const es = {
         },
         propertyOwners: {
             title: "Proteja su Inversión, Maximice sus Ganancias",
-            subtitle: "Hestia ofrece soluciones robustas de garantía de alquiler para propietarios, asegurando tranquilidad y seguridad financiera.",
+            subtitle: "Hestia ofrece protecciones de arrendamiento para propietarios, asegurando tranquilidad y seguridad financiera.",
             viewPackages: "Ver Nuestros Paquetes",
             imageAlt: "Propietario feliz revisando documentos",
-            sectionTitle: "Asegure sus Ingresos por Alquiler y su Propiedad",
+            sectionTitle: "Asegure sus Ingresos por Arrendamiento y su Propiedad",
             videoId: "v2Rz_QA5y1M",
             sectionText: "Ser propietario de inmuebles de arrendamiento conlleva desafíos. Hestia está aquí para mitigar sus riesgos, desde impagos de inquilinos hasta daños a la propiedad. Nuestras protecciones de arrendamiento están diseñadas para proteger tu inversión.",
             benefitsList: [
@@ -947,13 +947,13 @@ const es = {
             benefit3Title: "Seguridad Financiera",
             benefit3Text: "Protéjase contra rentas no pagadas y costos inesperados, asegurando que su inversión siga siendo rentable.",
             ctaTitle: "¿Listo para Asegurar su Propiedad?",
-            ctaText: "Tome el control de sus inversiones de alquiler con Hestia. Explore nuestros paquetes o contáctenos para encontrar la solución perfecta para sus necesidades.",
+            ctaText: "Tome el control de sus inversiones de arrendamiento con Hestia. Explore nuestros paquetes o contáctenos para encontrar la solución perfecta para sus necesidades.",
             registerAsOwner: "Registrarse como Propietario",
             talkToExpert: "Hablar con un Experto",
         },
         realEstateAdvisors: {
             title: "Potencie su Negocio Inmobiliario",
-            subtitle: "Asóciese con Hestia para ofrecer seguridad mejorada y agilizar los procesos de alquiler para sus clientes.",
+            subtitle: "Asóciese con Hestia para ofrecer seguridad mejorada y agilizar los procesos de arrendamiento para sus clientes.",
             becomePartner: "Conviértase en Socio",
             imageAlt: "Asesores inmobiliarios colaborando",
             whyChooseTitle: "Por Qué los Asesores Eligen Hestia",
@@ -976,7 +976,7 @@ const es = {
             forRentersText2: "Ofrezca una póliza de garantía clara y comprensible que proteja sus intereses.",
             forRentersText3: "Proporcione una experiencia de mudanza más fluida con menos carga financiera inicial en algunos casos.",
             ctaTitle: "¿Listo para Elevar sus Servicios?",
-            ctaText: "Únase a la creciente red de asesores inmobiliarios que se asocian con Hestia. Trabajemos juntos para crear un mercado de alquiler más seguro y eficiente.",
+            ctaText: "Únase a la creciente red de asesores inmobiliarios que se asocian con Hestia. Trabajemos juntos para crear un mercado de arrendamiento más seguro y eficiente.",
             registerAsAdvisor: "Registrarse como Asesor Socio",
         },
     },

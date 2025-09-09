@@ -103,7 +103,7 @@ class EmailProvider {
   private static async sendWithSMTP(data: EmailData): Promise<boolean> {
     const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-    
+
     if (missingVars.length > 0) {
       console.error(`SMTP configuration missing: ${missingVars.join(', ')}`);
       return false;
@@ -422,10 +422,10 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
     // Use React Email templates
     const { render } = await import('@react-email/render');
     const { PolicyInvitationEmail } = await import('../../templates/email/react-email/PolicyInvitationEmail');
-    
+
     const html = await render(PolicyInvitationEmail(data));
     const subject = 'Acción Requerida: Completa tu Solicitud de Póliza Hestia';
-    
+
     // Generate plain text version
     const policyUrl = generatePolicyUrl(data.accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
     const expiryDate = new Date(data.expiryDate).toLocaleDateString('es-MX', {
@@ -434,7 +434,7 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
       month: 'long',
       day: 'numeric'
     });
-    
+
     const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
@@ -456,7 +456,7 @@ Si tienes alguna pregunta, contáctanos en soporte@hestiaplp.com.mx
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
     `.trim();
-    
+
     return await EmailProvider.sendEmail({
       to: data.tenantEmail,
       subject,
@@ -481,10 +481,10 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     // Use React Email templates
     const { render } = await import('@react-email/render');
     const { PolicySubmissionEmail } = await import('../../templates/email/react-email/PolicySubmissionEmail');
-    
+
     const html = await render(PolicySubmissionEmail(data));
     const subject = `Solicitud Recibida - Póliza Hestia #${data.policyId}`;
-    
+
     // Generate plain text version
     const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
       weekday: 'long',
@@ -494,7 +494,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
       hour: '2-digit',
       minute: '2-digit'
     });
-    
+
     const text = `
 ¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!
 
@@ -510,13 +510,13 @@ Enviada el: ${submittedDate}
 
 Si necesitamos información adicional, te contactaremos a esta dirección de correo electrónico.
 
-Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el alquiler.
+Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamiento.
 
 ¿Preguntas? Contáctanos en soporte@hestiaplp.com.mx
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
     `.trim();
-    
+
     return await EmailProvider.sendEmail({
       to: data.tenantEmail,
       subject,
@@ -541,12 +541,12 @@ export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Prom
     // Use React Email templates
     const { render } = await import('@react-email/render');
     const { PolicyStatusUpdateEmail } = await import('../../templates/email/react-email/PolicyStatusUpdateEmail');
-    
+
     const html = await render(PolicyStatusUpdateEmail(data));
     const isApproved = data.status === 'approved';
     const statusText = isApproved ? 'Aprobada' : 'Rechazada';
     const subject = `Solicitud de Póliza ${statusText} - Hestia`;
-    
+
     // Generate plain text version
     const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
@@ -573,11 +573,11 @@ Opciones Disponibles:
 Contacta soporte: soporte@hestiaplp.com.mx`
 }
 
-Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el alquiler.
+Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el arrendamiento.
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
     `.trim();
-    
+
     return await EmailProvider.sendEmail({
       to: data.tenantEmail,
       subject,

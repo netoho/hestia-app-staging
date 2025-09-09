@@ -46,10 +46,10 @@ export const PolicySubmissionEmail: React.FC<PolicySubmissionEmailProps> = ({
     <Html>
       <Head />
       <Body style={{ backgroundColor: brandColors.background, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-        <Container style={{ 
-          maxWidth: '600px', 
-          margin: '0 auto', 
-          padding: '20px' 
+        <Container style={{
+          maxWidth: '600px',
+          margin: '0 auto',
+          padding: '20px'
         }}>
           {/* Header */}
           <Section style={{
@@ -182,7 +182,7 @@ export const PolicySubmissionEmail: React.FC<PolicySubmissionEmailProps> = ({
               color: brandColors.textSecondary,
               marginTop: '30px'
             }}>
-              Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el alquiler.
+              Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamiento.
             </Text>
           </Section>
 
@@ -206,7 +206,7 @@ export const PolicySubmissionEmail: React.FC<PolicySubmissionEmailProps> = ({
               fontSize: '14px',
               color: brandColors.textMuted
             }}>
-              Protegiendo tu tranquilidad en cada alquiler
+              Protegiendo tu tranquilidad en cada arrendamiento
             </Text>
             <Text style={{
               margin: '15px 0 5px 0',
@@ -214,8 +214,8 @@ export const PolicySubmissionEmail: React.FC<PolicySubmissionEmailProps> = ({
               color: brandColors.textMuted
             }}>
               ¿Tienes preguntas? Contáctanos en{' '}
-              <a 
-                href="mailto:soporte@hestiaplp.com.mx" 
+              <a
+                href="mailto:soporte@hestiaplp.com.mx"
                 style={{ color: brandColors.secondary, textDecoration: 'none' }}
               >
                 soporte@hestiaplp.com.mx

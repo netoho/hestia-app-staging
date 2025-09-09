@@ -7,7 +7,7 @@ import type { PolicyInvitationData, PolicySubmissionData, PolicyStatusUpdateData
 // Hestia brand colors
 const BRAND_COLORS = {
   primary: '#1a365d',
-  secondary: '#2b77e6', 
+  secondary: '#2b77e6',
   success: '#38a169',
   warning: '#d69e2e',
   danger: '#e53e3e',
@@ -206,7 +206,7 @@ export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailCo
     
     <div class="footer">
       <div class="footer-logo">Hestia</div>
-      <p style="margin: 5px 0;">Protegiendo tu tranquilidad en cada alquiler</p>
+      <p style="margin: 5px 0;">Protegiendo tu tranquilidad en cada arrendamiento</p>
       <p style="margin: 15px 0 5px 0;">
         ¿Tienes preguntas? Contáctanos en 
         <a href="mailto:soporte@hestiaplp.com.mx" style="color: ${BRAND_COLORS.secondary}; text-decoration: none;">soporte@hestiaplp.com.mx</a>
@@ -295,12 +295,12 @@ export function renderPolicySubmissionEmail(data: PolicySubmissionData): EmailCo
         <p style="margin: 0;">📧 Si necesitamos información adicional, te contactaremos a esta dirección de correo electrónico.</p>
       </div>
       
-      <p style="margin-top: 30px;">Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el alquiler.</p>
+      <p style="margin-top: 30px;">Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamiento.</p>
     </div>
     
     <div class="footer">
       <div class="footer-logo">Hestia</div>
-      <p style="margin: 5px 0;">Protegiendo tu tranquilidad en cada alquiler</p>
+      <p style="margin: 5px 0;">Protegiendo tu tranquilidad en cada arrendamiento</p>
       <p style="margin: 15px 0 5px 0;">
         ¿Tienes preguntas? Contáctanos en 
         <a href="mailto:soporte@hestiaplp.com.mx" style="color: ${BRAND_COLORS.secondary}; text-decoration: none;">soporte@hestiaplp.com.mx</a>
@@ -326,7 +326,7 @@ Enviada el: ${submittedDate}
 
 Si necesitamos información adicional, te contactaremos a esta dirección de correo electrónico.
 
-Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el alquiler.
+Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamiento.
 
 ¿Preguntas? Contáctanos en soporte@hestiaplp.com.mx
 
@@ -406,13 +406,13 @@ export function renderPolicyStatusUpdateEmail(data: PolicyStatusUpdateData): Ema
       `}
       
       <p style="margin-top: 40px; padding-top: 20px; border-top: 1px solid ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.textSecondary};">
-        Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el alquiler.
+        Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el arrendamiento.
       </p>
     </div>
     
     <div class="footer">
       <div class="footer-logo">Hestia</div>
-      <p style="margin: 5px 0;">Protegiendo tu tranquilidad en cada alquiler</p>
+      <p style="margin: 5px 0;">Protegiendo tu tranquilidad en cada arrendamiento</p>
       <p style="margin: 15px 0 5px 0;">
         ¿Tienes preguntas? Contáctanos en 
         <a href="mailto:soporte@hestiaplp.com.mx" style="color: ${BRAND_COLORS.secondary}; text-decoration: none;">soporte@hestiaplp.com.mx</a>
@@ -448,7 +448,7 @@ Opciones Disponibles:
 Contacta soporte: soporte@hestiaplp.com.mx`
 }
 
-Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el alquiler.
+Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor servicio para proteger tu tranquilidad en el arrendamiento.
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
   `.trim();
