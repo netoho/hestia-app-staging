@@ -238,7 +238,7 @@ export function PricingCalculator() {
             const calculatedPrice = calculatePackagePrice(pkg);
             const showCalculation = rentAmount && pkg.percentage && parseFloat(rentAmount) > 0;
             const isRecommended = index === 2; // Middle package is recommended
-            const description = packageDescriptions[pkg.name] || pkg.description;
+            const description = packageDescriptions[pkg.name];
             const maxRent = maxRentAmounts[pkg.name];
             
             return (
