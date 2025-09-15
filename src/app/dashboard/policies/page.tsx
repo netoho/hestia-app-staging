@@ -19,22 +19,56 @@ interface Policy {
   policyNumber: string;
   status: PolicyStatus;
   propertyAddress: string;
+  propertyType?: string;
+  propertyDescription?: string;
   rentAmount: number;
-  startDate: string;
-  endDate: string;
-  tenant?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    informationCompletedAt?: string;
-  };
-  landlord?: {
-    firstName: string;
-    lastName: string;
-    email: string;
+  contractLength?: number;
+  guarantorType?: string;
+  totalPrice?: number;
+  packageId?: string;
+  package?: {
+    name: string;
+    price: number;
   };
   createdAt: string;
   updatedAt: string;
+  submittedAt?: string;
+  activatedAt?: string;
+  tenant?: {
+    id: string;
+    fullName?: string;
+    companyName?: string;
+    email: string;
+    phone?: string;
+    informationComplete: boolean;
+    completedAt?: string;
+  };
+  landlord?: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    isCompany?: boolean;
+    informationComplete: boolean;
+    completedAt?: string;
+  };
+  jointObligors?: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    informationComplete: boolean;
+  }>;
+  avals?: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    informationComplete: boolean;
+  }>;
+  createdBy?: {
+    id: string;
+    name?: string;
+    email: string;
+  };
 }
 
 export default function PoliciesPage() {
@@ -66,9 +100,13 @@ export default function PoliciesPage() {
       const response = await fetch(`/api/policies?${params}`);
       const data = await response.json();
 
-      if (data.success) {
-        setPolicies(data.data.policies);
-        setTotalPages(data.data.pagination.totalPages);
+      if (data.policies) {
+        setPolicies(data.policies);
+        setTotalPages(data.pagination.totalPages);
+      } else if (data.success && data.data) {
+        // Fallback for wrapped response
+        setPolicies(data.data.policies || []);
+        setTotalPages(data.data.pagination?.totalPages || 1);
       }
     } catch (error) {
       console.error('Error fetching policies:', error);
@@ -124,8 +162,10 @@ export default function PoliciesPage() {
   const filteredPolicies = policies.filter(policy =>
     policy.policyNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     policy.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.tenant?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.landlord?.email.toLowerCase().includes(searchTerm.toLowerCase())
+    policy.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    policy.tenant?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    policy.landlord?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    policy.landlord?.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -190,70 +230,199 @@ export default function PoliciesPage() {
                   <TableHead>Propiedad</TableHead>
                   <TableHead>Inquilino</TableHead>
                   <TableHead>Arrendador</TableHead>
-                  <TableHead>Renta Mensual</TableHead>
-                  <TableHead>Vigencia</TableHead>
+                  <TableHead>Garantías</TableHead>
+                  <TableHead>Precio Total</TableHead>
+                  <TableHead>Progreso</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPolicies.map((policy) => (
-                  <TableRow key={policy.id}>
-                    <TableCell className="font-medium">{policy.policyNumber}</TableCell>
-                    <TableCell>{getStatusBadge(policy.status)}</TableCell>
-                    <TableCell>{policy.propertyAddress}</TableCell>
-                    <TableCell>
-                      {policy.tenant ? (
+                {filteredPolicies.map((policy) => {
+                  // Calculate completion progress
+                  let completedActors = 0;
+                  let totalActors = 0;
+
+                  if (policy.landlord) {
+                    totalActors++;
+                    if (policy.landlord.informationComplete) completedActors++;
+                  } else {
+                    totalActors++; // Landlord is required
+                  }
+
+                  if (policy.tenant) {
+                    totalActors++;
+                    if (policy.tenant.informationComplete) completedActors++;
+                  } else {
+                    totalActors++; // Tenant is required
+                  }
+
+                  // Count guarantors based on type
+                  if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {
+                    const joCount = policy.jointObligors?.length || 0;
+                    totalActors += joCount || 1; // At least 1 required
+                    completedActors += policy.jointObligors?.filter(jo => jo.informationComplete).length || 0;
+                  }
+
+                  if (policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') {
+                    const avalCount = policy.avals?.length || 0;
+                    totalActors += avalCount || 1; // At least 1 required
+                    completedActors += policy.avals?.filter(a => a.informationComplete).length || 0;
+                  }
+
+                  const progressPercentage = totalActors > 0 ? Math.round((completedActors / totalActors) * 100) : 0;
+
+                  return (
+                    <TableRow key={policy.id}>
+                      <TableCell className="font-medium">
                         <div>
-                          <div>{`${policy.tenant.firstName} ${policy.tenant.lastName}`}</div>
-                          <div className="text-sm text-gray-500">{policy.tenant.email}</div>
-                          {policy.tenant.informationCompletedAt && (
-                            <CheckCircle className="inline h-3 w-3 text-green-500 ml-1" />
+                          <div>{policy.policyNumber}</div>
+                          <div className="text-xs text-gray-500">
+                            {policy.createdAt && format(new Date(policy.createdAt), 'dd/MM/yyyy', { locale: es })}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(policy.status)}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="text-sm font-medium">{policy.propertyAddress}</div>
+                          {policy.propertyType && (
+                            <div className="text-xs text-gray-500">{policy.propertyType}</div>
+                          )}
+                          <div className="text-xs text-gray-500">
+                            ${policy.rentAmount?.toLocaleString('es-MX')} /mes
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {policy.tenant ? (
+                          <div>
+                            <div className="text-sm">
+                              {policy.tenant.fullName || policy.tenant.companyName || 'Sin nombre'}
+                            </div>
+                            <div className="text-xs text-gray-500">{policy.tenant.email}</div>
+                            {policy.tenant.informationComplete ? (
+                              <CheckCircle className="inline h-3 w-3 text-green-500 mt-1" />
+                            ) : (
+                              <Clock className="inline h-3 w-3 text-orange-500 mt-1" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Pendiente</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {policy.landlord ? (
+                          <div>
+                            <div className="text-sm">{policy.landlord.fullName}</div>
+                            <div className="text-xs text-gray-500">{policy.landlord.email}</div>
+                            {policy.landlord.informationComplete ? (
+                              <CheckCircle className="inline h-3 w-3 text-green-500 mt-1" />
+                            ) : (
+                              <Clock className="inline h-3 w-3 text-orange-500 mt-1" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Pendiente</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {policy.guarantorType === 'NONE' && 'Sin garantías'}
+                          {policy.guarantorType === 'JOINT_OBLIGOR' && (
+                            <div>
+                              <span>Obligado S.</span>
+                              {policy.jointObligors && policy.jointObligors.length > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  {policy.jointObligors.filter(jo => jo.informationComplete).length}/{policy.jointObligors.length} completos
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {policy.guarantorType === 'AVAL' && (
+                            <div>
+                              <span>Aval</span>
+                              {policy.avals && policy.avals.length > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  {policy.avals.filter(a => a.informationComplete).length}/{policy.avals.length} completos
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {policy.guarantorType === 'BOTH' && (
+                            <div>
+                              <span>Ambos</span>
+                              <div className="text-xs text-gray-500">
+                                OS: {policy.jointObligors?.filter(jo => jo.informationComplete).length || 0}/{policy.jointObligors?.length || 0}
+                                {' '}
+                                A: {policy.avals?.filter(a => a.informationComplete).length || 0}/{policy.avals?.length || 0}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {policy.landlord ? (
+                      </TableCell>
+                      <TableCell>
                         <div>
-                          <div>{`${policy.landlord.firstName} ${policy.landlord.lastName}`}</div>
-                          <div className="text-sm text-gray-500">{policy.landlord.email}</div>
+                          <div className="text-sm font-medium">
+                            ${policy.totalPrice?.toLocaleString('es-MX')}
+                          </div>
+                          {policy.package && (
+                            <div className="text-xs text-gray-500">{policy.package.name}</div>
+                          )}
                         </div>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>${policy.rentAmount.toLocaleString('es-MX')}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {format(new Date(policy.startDate), 'dd/MM/yyyy', { locale: es })}
-                        <br />
-                        {format(new Date(policy.endDate), 'dd/MM/yyyy', { locale: es })}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => router.push(`/dashboard/policies/${policy.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {policy.status === PolicyStatus.DRAFT && (
+                      </TableCell>
+                      <TableCell>
+                        <div className="w-20">
+                          <div className="text-xs text-gray-600 mb-1">{progressPercentage}%</div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                progressPercentage === 100
+                                  ? 'bg-green-500'
+                                  : progressPercentage > 0
+                                  ? 'bg-blue-500'
+                                  : 'bg-gray-300'
+                              }`}
+                              style={{ width: `${progressPercentage}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {completedActors}/{totalActors} actores
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleSendInvitations(policy.id)}
+                            onClick={() => router.push(`/dashboard/policies/${policy.id}`)}
+                            title="Ver detalles"
                           >
-                            <Send className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => router.push(`/dashboard/policies/${policy.id}/progress`)}
+                            title="Ver progreso"
+                          >
+                            <Clock className="h-4 w-4" />
+                          </Button>
+                          {(policy.status === PolicyStatus.DRAFT || policy.status === PolicyStatus.COLLECTING_INFO) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendInvitations(policy.id)}
+                              title="Enviar invitaciones"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

@@ -2,38 +2,248 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Send, FileText, CheckCircle, XCircle, Clock, Download, Upload, User } from 'lucide-react';
-import { PolicyStatus, InvestigationStatus, ContractStatus } from '@/types/policy';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import {
+  ArrowLeft,
+  Send,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Download,
+  Upload,
+  User,
+  Users,
+  Building,
+  Home,
+  DollarSign,
+  Calendar,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
+  CreditCard,
+  Edit,
+  Eye,
+  AlertCircle,
+  ChevronRight,
+  Activity,
+  Shield
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-export default function PolicyDetailsPage() {
+interface PolicyDetails {
+  id: string;
+  policyNumber: string;
+  status: string;
+
+  // Property Information
+  propertyAddress: string;
+  propertyType?: string;
+  propertyDescription?: string;
+  rentAmount: number;
+  contractLength?: number;
+
+  // Guarantor Configuration
+  guarantorType: string;
+
+  // Package/Pricing
+  packageId?: string;
+  package?: {
+    id: string;
+    name: string;
+    price: number;
+    features?: string;
+  };
+  totalPrice: number;
+  tenantPercentage?: number;
+  landlordPercentage?: number;
+
+  // Actors
+  landlord?: {
+    id: string;
+    isCompany?: boolean;
+    fullName: string;
+    rfc?: string;
+    email: string;
+    phone: string;
+    address?: string;
+    bankName?: string;
+    accountNumber?: string;
+    clabe?: string;
+    occupation?: string;
+    companyName?: string;
+    monthlyIncome?: number;
+    informationComplete: boolean;
+    completedAt?: string;
+    documents?: Array<{
+      id: string;
+      category: string;
+      documentType: string;
+      originalName: string;
+      verifiedAt?: string;
+    }>;
+  };
+
+  tenant?: {
+    id: string;
+    tenantType?: string;
+    fullName?: string;
+    companyName?: string;
+    email: string;
+    phone: string;
+    nationality?: string;
+    curp?: string;
+    passport?: string;
+    employmentStatus?: string;
+    occupation?: string;
+    monthlyIncome?: number;
+    informationComplete: boolean;
+    completedAt?: string;
+    references?: Array<{
+      name: string;
+      phone: string;
+      email?: string;
+      relationship: string;
+    }>;
+    documents?: Array<{
+      id: string;
+      category: string;
+      documentType: string;
+      originalName: string;
+      verifiedAt?: string;
+    }>;
+  };
+
+  jointObligors?: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    nationality?: string;
+    curp?: string;
+    passport?: string;
+    address?: string;
+    employmentStatus?: string;
+    occupation?: string;
+    companyName?: string;
+    monthlyIncome?: number;
+    informationComplete: boolean;
+    completedAt?: string;
+    references?: Array<{
+      name: string;
+      phone: string;
+      email?: string;
+      relationship: string;
+    }>;
+    documents?: Array<{
+      id: string;
+      category: string;
+      documentType: string;
+      originalName: string;
+    }>;
+  }>;
+
+  avals?: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    nationality?: string;
+    curp?: string;
+    passport?: string;
+    address?: string;
+    employmentStatus?: string;
+    occupation?: string;
+    companyName?: string;
+    monthlyIncome?: number;
+    propertyAddress?: string;
+    propertyValue?: number;
+    propertyDeedNumber?: string;
+    informationComplete: boolean;
+    completedAt?: string;
+    references?: Array<{
+      name: string;
+      phone: string;
+      email?: string;
+      relationship: string;
+    }>;
+    documents?: Array<{
+      id: string;
+      category: string;
+      documentType: string;
+      originalName: string;
+    }>;
+  }>;
+
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+  submittedAt?: string;
+  activatedAt?: string;
+
+  // Activities
+  activities?: Array<{
+    id: string;
+    action: string;
+    description: string;
+    createdAt: string;
+    performedBy?: {
+      name?: string;
+      email: string;
+    };
+    performedByActor?: string;
+  }>;
+
+  // Documents
+  documents?: Array<{
+    id: string;
+    category: string;
+    originalName: string;
+    fileSize: number;
+    createdAt: string;
+  }>;
+}
+
+export default function PolicyDetailsPage({
+  params
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { data: session } = useSession();
   const router = useRouter();
-  const params = useParams();
-  const [policy, setPolicy] = useState<any>(null);
+  const [policyId, setPolicyId] = useState<string>('');
+  const [policy, setPolicy] = useState<PolicyDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [investigation, setInvestigation] = useState<any>(null);
-  const [contract, setContract] = useState<any>(null);
+  const [currentTab, setCurrentTab] = useState('overview');
+
+  // Resolve params
+  useEffect(() => {
+    params.then(resolvedParams => {
+      setPolicyId(resolvedParams.id);
+    });
+  }, [params]);
 
   useEffect(() => {
-    if (params.id) {
+    if (policyId) {
       fetchPolicyDetails();
-      fetchInvestigation();
-      fetchContract();
     }
-  }, [params.id]);
+  }, [policyId]);
 
   const fetchPolicyDetails = async () => {
     try {
-      const response = await fetch(`/api/policies/${params.id}`);
+      const response = await fetch(`/api/policies/${policyId}`);
+      if (!response.ok) throw new Error('Failed to fetch policy');
+
       const data = await response.json();
-      setPolicy(data);
+      setPolicy(data.data || data);
     } catch (error) {
       console.error('Error fetching policy:', error);
     } finally {
@@ -41,33 +251,9 @@ export default function PolicyDetailsPage() {
     }
   };
 
-  const fetchInvestigation = async () => {
-    try {
-      const response = await fetch(`/api/policies/${params.id}/investigation`);
-      const data = await response.json();
-      if (data.success) {
-        setInvestigation(data.data.investigation);
-      }
-    } catch (error) {
-      console.error('Error fetching investigation:', error);
-    }
-  };
-
-  const fetchContract = async () => {
-    try {
-      const response = await fetch(`/api/policies/${params.id}/contract`);
-      const data = await response.json();
-      if (data.success) {
-        setContract(data.data.contract);
-      }
-    } catch (error) {
-      console.error('Error fetching contract:', error);
-    }
-  };
-
   const handleSendInvitations = async () => {
     try {
-      const response = await fetch(`/api/policies/${params.id}/send-invitations`, {
+      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
         method: 'POST',
       });
 
@@ -84,48 +270,43 @@ export default function PolicyDetailsPage() {
     }
   };
 
-  const handleStartInvestigation = async () => {
-    try {
-      const response = await fetch(`/api/policies/${params.id}/investigation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priority: 'NORMAL' }),
-      });
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; color: string }> = {
+      DRAFT: { label: 'Borrador', color: 'bg-gray-500' },
+      COLLECTING_INFO: { label: 'Recopilando Info', color: 'bg-blue-500' },
+      UNDER_INVESTIGATION: { label: 'En Investigación', color: 'bg-yellow-500' },
+      INVESTIGATION_REJECTED: { label: 'Rechazado', color: 'bg-red-500' },
+      PENDING_APPROVAL: { label: 'Pendiente Aprobación', color: 'bg-orange-500' },
+      APPROVED: { label: 'Aprobado', color: 'bg-green-500' },
+      CONTRACT_PENDING: { label: 'Contrato Pendiente', color: 'bg-purple-500' },
+      CONTRACT_SIGNED: { label: 'Contrato Firmado', color: 'bg-indigo-500' },
+      ACTIVE: { label: 'Activa', color: 'bg-green-600' },
+      EXPIRED: { label: 'Expirada', color: 'bg-gray-600' },
+      CANCELLED: { label: 'Cancelada', color: 'bg-red-600' },
+    };
 
-      const data = await response.json();
-      if (data.success) {
-        alert('Investigación iniciada');
-        fetchInvestigation();
-        fetchPolicyDetails();
-      } else {
-        alert('Error al iniciar investigación');
-      }
-    } catch (error) {
-      console.error('Error starting investigation:', error);
-      alert('Error al iniciar investigación');
-    }
+    const config = statusConfig[status] || { label: status, color: 'bg-gray-500' };
+
+    return (
+      <Badge className={`${config.color} text-white`}>
+        {config.label}
+      </Badge>
+    );
   };
 
-  const handleGenerateContract = async () => {
-    try {
-      const response = await fetch(`/api/policies/${params.id}/contract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: 'standard' }),
-      });
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0';
+    return `$${amount.toLocaleString('es-MX')}`;
+  };
 
-      const data = await response.json();
-      if (data.success) {
-        alert('Contrato generado exitosamente');
-        fetchContract();
-        fetchPolicyDetails();
-      } else {
-        alert('Error al generar contrato');
-      }
-    } catch (error) {
-      console.error('Error generating contract:', error);
-      alert('Error al generar contrato');
-    }
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
+  };
+
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return '-';
+    return format(new Date(dateString), "dd/MM/yyyy 'a las' HH:mm", { locale: es });
   };
 
   if (loading) {
@@ -139,304 +320,771 @@ export default function PolicyDetailsPage() {
   if (!policy) {
     return (
       <div className="container mx-auto p-6">
-        <p>Póliza no encontrada</p>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Póliza no encontrada</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
+  // Calculate progress
+  let completedActors = 0;
+  let totalActors = 2; // Landlord and Tenant are always required
+
+  if (policy.landlord?.informationComplete) completedActors++;
+  if (policy.tenant?.informationComplete) completedActors++;
+
+  if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {
+    totalActors += policy.jointObligors?.length || 1;
+    completedActors += policy.jointObligors?.filter(jo => jo.informationComplete).length || 0;
+  }
+
+  if (policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') {
+    totalActors += policy.avals?.length || 1;
+    completedActors += policy.avals?.filter(a => a.informationComplete).length || 0;
+  }
+
+  const progressPercentage = Math.round((completedActors / totalActors) * 100);
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/dashboard/policies')}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
-        </Button>
-        <h1 className="text-3xl font-bold">Póliza {policy.policyNumber}</h1>
-        <Badge>{policy.status}</Badge>
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/policies')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Póliza {policy.policyNumber}</h1>
+            <p className="text-gray-600 mt-1">{policy.propertyAddress}</p>
+          </div>
+          {getStatusBadge(policy.status)}
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/dashboard/policies/${policyId}/progress`)}
+          >
+            <Activity className="mr-2 h-4 w-4" />
+            Ver Progreso
+          </Button>
+          {(policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
+            <Button onClick={handleSendInvitations}>
+              <Send className="mr-2 h-4 w-4" />
+              Enviar Invitaciones
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Información General</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-2">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Propiedad</dt>
-                <dd className="text-sm">{policy.propertyAddress}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Renta Mensual</dt>
-                <dd className="text-sm">${policy.rentAmount?.toLocaleString('es-MX')}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Depósito</dt>
-                <dd className="text-sm">${policy.depositAmount?.toLocaleString('es-MX')}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Vigencia</dt>
-                <dd className="text-sm">
-                  {policy.startDate && format(new Date(policy.startDate), 'dd/MM/yyyy', { locale: es })} -
-                  {policy.endDate && format(new Date(policy.endDate), 'dd/MM/yyyy', { locale: es })}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+      {/* Progress Overview */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600">Progreso de Información</p>
+              <p className="text-2xl font-bold">{progressPercentage}% Completado</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">{completedActors} de {totalActors} actores</p>
+              <p className="text-xs text-gray-500 mt-1">han completado su información</p>
+            </div>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+              className={`h-3 rounded-full transition-all ${
+                progressPercentage === 100 ? 'bg-green-500' : 'bg-blue-500'
+              }`}
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Estado de Investigación</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {investigation ? (
-              <div className="space-y-2">
-                <Badge>{investigation.status}</Badge>
-                <div className="space-y-1 mt-4">
-                  <div className="flex items-center gap-2">
-                    {investigation.tenantVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-400" />}
-                    <span className="text-sm">Inquilino verificado</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {investigation.documentsVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-400" />}
-                    <span className="text-sm">Documentos verificados</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {investigation.incomeVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-400" />}
-                    <span className="text-sm">Ingresos verificados</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {investigation.referencesVerified ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-400" />}
-                    <span className="text-sm">Referencias verificadas</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm text-gray-500 mb-4">No se ha iniciado investigación</p>
-                {policy.status === PolicyStatus.UNDER_INVESTIGATION && (
-                  <Button onClick={handleStartInvestigation} size="sm">
-                    Iniciar Investigación
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Contrato</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {contract ? (
-              <div className="space-y-2">
-                <Badge>{contract.status}</Badge>
-                <div className="space-y-2 mt-4">
-                  <p className="text-sm">
-                    <span className="font-medium">Número:</span> {contract.contractNumber}
-                  </p>
-                  {contract.generatedAt && (
-                    <p className="text-sm">
-                      <span className="font-medium">Generado:</span> {format(new Date(contract.generatedAt), 'dd/MM/yyyy', { locale: es })}
-                    </p>
-                  )}
-                  {contract.contractUrl && (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={contract.contractUrl} download>
-                        <Download className="mr-2 h-4 w-4" />
-                        Descargar Contrato
-                      </a>
-                    </Button>
-                  )}
-                  {contract.signedContractUrl && (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={contract.signedContractUrl} download>
-                        <Download className="mr-2 h-4 w-4" />
-                        Contrato Firmado
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm text-gray-500 mb-4">No se ha generado contrato</p>
-                {policy.status === PolicyStatus.APPROVED && (
-                  <Button onClick={handleGenerateContract} size="sm">
-                    Generar Contrato
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="actors" className="w-full">
-        <TabsList>
-          <TabsTrigger value="actors">Actores</TabsTrigger>
+      {/* Main Content Tabs */}
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">General</TabsTrigger>
+          <TabsTrigger value="landlord">Arrendador</TabsTrigger>
+          <TabsTrigger value="tenant">Inquilino</TabsTrigger>
+          <TabsTrigger value="guarantors">Garantías</TabsTrigger>
           <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="timeline">Línea de Tiempo</TabsTrigger>
+          <TabsTrigger value="timeline">Actividad</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="actors">
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Landlord Card */}
+            {/* Property Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Arrendador
+                  <Home className="h-5 w-5" />
+                  Información del Inmueble
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {policy.landlord ? (
-                  <dl className="space-y-2">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Nombre</dt>
-                      <dd className="text-sm">{policy.landlord.firstName} {policy.landlord.lastName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Email</dt>
-                      <dd className="text-sm">{policy.landlord.email}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
-                      <dd className="text-sm">{policy.landlord.phone || '-'}</dd>
-                    </div>
-                  </dl>
-                ) : (
-                  <p className="text-sm text-gray-500">No registrado</p>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600">Dirección</p>
+                  <p className="font-medium">{policy.propertyAddress}</p>
+                </div>
+                {policy.propertyType && (
+                  <div>
+                    <p className="text-sm text-gray-600">Tipo de Propiedad</p>
+                    <p className="font-medium">{policy.propertyType}</p>
+                  </div>
+                )}
+                {policy.propertyDescription && (
+                  <div>
+                    <p className="text-sm text-gray-600">Descripción</p>
+                    <p className="font-medium">{policy.propertyDescription}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-gray-600">Renta Mensual</p>
+                  <p className="font-medium text-lg">{formatCurrency(policy.rentAmount)}</p>
+                </div>
+                {policy.contractLength && (
+                  <div>
+                    <p className="text-sm text-gray-600">Duración del Contrato</p>
+                    <p className="font-medium">{policy.contractLength} meses</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Tenant Card */}
+            {/* Package & Pricing */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Inquilino
-                  {policy.tenant?.informationCompletedAt && (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  )}
+                  <DollarSign className="h-5 w-5" />
+                  Plan y Precio
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {policy.tenant ? (
-                  <dl className="space-y-2">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Nombre</dt>
-                      <dd className="text-sm">{policy.tenant.firstName} {policy.tenant.lastName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Email</dt>
-                      <dd className="text-sm">{policy.tenant.email}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
-                      <dd className="text-sm">{policy.tenant.phone || '-'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Información completada</dt>
-                      <dd className="text-sm">
-                        {policy.tenant.informationCompletedAt
-                          ? format(new Date(policy.tenant.informationCompletedAt), 'dd/MM/yyyy HH:mm', { locale: es })
-                          : 'Pendiente'}
-                      </dd>
-                    </div>
-                  </dl>
-                ) : (
-                  <p className="text-sm text-gray-500">No registrado</p>
+              <CardContent className="space-y-3">
+                {policy.package && (
+                  <div>
+                    <p className="text-sm text-gray-600">Plan Seleccionado</p>
+                    <p className="font-medium">{policy.package.name}</p>
+                  </div>
                 )}
+                <div>
+                  <p className="text-sm text-gray-600">Precio Total</p>
+                  <p className="font-medium text-lg text-green-600">{formatCurrency(policy.totalPrice)}</p>
+                </div>
+                {policy.tenantPercentage !== undefined && (
+                  <div>
+                    <p className="text-sm text-gray-600">División del Pago</p>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-sm">Inquilino: {policy.tenantPercentage}%</span>
+                      <span className="text-sm">Arrendador: {policy.landlordPercentage}%</span>
+                    </div>
+                    <div className="flex gap-1 mt-2">
+                      <div
+                        className="h-2 bg-blue-500 rounded-l"
+                        style={{ width: `${policy.tenantPercentage}%` }}
+                      />
+                      <div
+                        className="h-2 bg-green-500 rounded-r"
+                        style={{ width: `${policy.landlordPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-gray-600">Tipo de Garantía</p>
+                  <p className="font-medium">
+                    {policy.guarantorType === 'NONE' && 'Sin garantías'}
+                    {policy.guarantorType === 'JOINT_OBLIGOR' && 'Obligado Solidario'}
+                    {policy.guarantorType === 'AVAL' && 'Aval'}
+                    {policy.guarantorType === 'BOTH' && 'Obligado Solidario y Aval'}
+                  </p>
+                </div>
               </CardContent>
             </Card>
-
-            {/* Joint Obligors */}
-            {policy.jointObligors && policy.jointObligors.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Obligados Solidarios
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {policy.jointObligors.map((jo: any, index: number) => (
-                      <div key={jo.id} className="border-b pb-2 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{jo.firstName} {jo.lastName}</span>
-                          {jo.informationCompletedAt && (
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">{jo.email}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Avals */}
-            {policy.avals && policy.avals.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Avales
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {policy.avals.map((aval: any, index: number) => (
-                      <div key={aval.id} className="border-b pb-2 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{aval.firstName} {aval.lastName}</span>
-                          {aval.informationCompletedAt && (
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">{aval.email}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
-          {policy.status === PolicyStatus.DRAFT && (
-            <div className="mt-6 flex justify-center">
-              <Button onClick={handleSendInvitations}>
-                <Send className="mr-2 h-4 w-4" />
-                Enviar Invitaciones a Actores
-              </Button>
-            </div>
+          {/* Status Timeline */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Línea de Tiempo del Estado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="font-medium">Póliza Creada</p>
+                    <p className="text-sm text-gray-600">{formatDateTime(policy.createdAt)}</p>
+                  </div>
+                </div>
+                {policy.submittedAt && (
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <div>
+                      <p className="font-medium">Enviada para Investigación</p>
+                      <p className="text-sm text-gray-600">{formatDateTime(policy.submittedAt)}</p>
+                    </div>
+                  </div>
+                )}
+                {policy.activatedAt && (
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <div>
+                      <p className="font-medium">Póliza Activada</p>
+                      <p className="text-sm text-gray-600">{formatDateTime(policy.activatedAt)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Landlord Tab */}
+        <TabsContent value="landlord" className="space-y-6">
+          {policy.landlord ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-5 w-5" />
+                      Información del Arrendador
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {policy.landlord.informationComplete ? (
+                        <Badge className="bg-green-500 text-white">Completo</Badge>
+                      ) : (
+                        <Badge className="bg-orange-500 text-white">Pendiente</Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/dashboard/policies/${policyId}/landlord`)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Información Personal</h3>
+                      {policy.landlord.isCompany && (
+                        <div>
+                          <p className="text-sm text-gray-600">Tipo</p>
+                          <Badge variant="outline">Empresa</Badge>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm text-gray-600">{policy.landlord.isCompany ? 'Razón Social' : 'Nombre Completo'}</p>
+                        <p className="font-medium">{policy.landlord.fullName}</p>
+                      </div>
+                      {policy.landlord.rfc && (
+                        <div>
+                          <p className="text-sm text-gray-600">RFC</p>
+                          <p className="font-medium">{policy.landlord.rfc}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm text-gray-600">Email</p>
+                        <p className="font-medium flex items-center gap-1">
+                          <Mail className="h-4 w-4" />
+                          {policy.landlord.email}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Teléfono</p>
+                        <p className="font-medium flex items-center gap-1">
+                          <Phone className="h-4 w-4" />
+                          {policy.landlord.phone}
+                        </p>
+                      </div>
+                      {policy.landlord.address && (
+                        <div>
+                          <p className="text-sm text-gray-600">Dirección</p>
+                          <p className="font-medium flex items-start gap-1">
+                            <MapPin className="h-4 w-4 mt-0.5" />
+                            {policy.landlord.address}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      {(policy.landlord.bankName || policy.landlord.clabe) && (
+                        <>
+                          <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Información Bancaria</h3>
+                          {policy.landlord.bankName && (
+                            <div>
+                              <p className="text-sm text-gray-600">Banco</p>
+                              <p className="font-medium">{policy.landlord.bankName}</p>
+                            </div>
+                          )}
+                          {policy.landlord.accountNumber && (
+                            <div>
+                              <p className="text-sm text-gray-600">Número de Cuenta</p>
+                              <p className="font-medium">{policy.landlord.accountNumber}</p>
+                            </div>
+                          )}
+                          {policy.landlord.clabe && (
+                            <div>
+                              <p className="text-sm text-gray-600">CLABE</p>
+                              <p className="font-medium font-mono">{policy.landlord.clabe}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {!policy.landlord.isCompany && (policy.landlord.occupation || policy.landlord.companyName) && (
+                        <>
+                          <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Información Laboral</h3>
+                          {policy.landlord.occupation && (
+                            <div>
+                              <p className="text-sm text-gray-600">Ocupación</p>
+                              <p className="font-medium">{policy.landlord.occupation}</p>
+                            </div>
+                          )}
+                          {policy.landlord.companyName && (
+                            <div>
+                              <p className="text-sm text-gray-600">Empresa</p>
+                              <p className="font-medium">{policy.landlord.companyName}</p>
+                            </div>
+                          )}
+                          {policy.landlord.monthlyIncome && (
+                            <div>
+                              <p className="text-sm text-gray-600">Ingreso Mensual</p>
+                              <p className="font-medium">{formatCurrency(policy.landlord.monthlyIncome)}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {policy.landlord.documents && policy.landlord.documents.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">Documentos</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {policy.landlord.documents.map(doc => (
+                          <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-gray-500" />
+                              <div>
+                                <p className="text-sm font-medium">{doc.documentType}</p>
+                                <p className="text-xs text-gray-500">{doc.originalName}</p>
+                              </div>
+                            </div>
+                            {doc.verifiedAt && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">No se ha capturado información del arrendador</p>
+                <Button onClick={() => router.push(`/dashboard/policies/${policyId}/landlord`)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Capturar Información
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="documents">
+        {/* Tenant Tab */}
+        <TabsContent value="tenant" className="space-y-6">
+          {policy.tenant ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Información del Inquilino
+                  </div>
+                  {policy.tenant.informationComplete ? (
+                    <Badge className="bg-green-500 text-white">Completo</Badge>
+                  ) : (
+                    <Badge className="bg-orange-500 text-white">Pendiente</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Información Personal</h3>
+                    {policy.tenant.tenantType && (
+                      <div>
+                        <p className="text-sm text-gray-600">Tipo</p>
+                        <Badge variant="outline">
+                          {policy.tenant.tenantType === 'COMPANY' ? 'Empresa' : 'Persona Física'}
+                        </Badge>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-gray-600">Nombre</p>
+                      <p className="font-medium">{policy.tenant.fullName || policy.tenant.companyName || 'Sin nombre'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="font-medium flex items-center gap-1">
+                        <Mail className="h-4 w-4" />
+                        {policy.tenant.email}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Teléfono</p>
+                      <p className="font-medium flex items-center gap-1">
+                        <Phone className="h-4 w-4" />
+                        {policy.tenant.phone}
+                      </p>
+                    </div>
+                    {policy.tenant.nationality && (
+                      <div>
+                        <p className="text-sm text-gray-600">Nacionalidad</p>
+                        <p className="font-medium">{policy.tenant.nationality === 'MEXICAN' ? 'Mexicana' : 'Extranjera'}</p>
+                      </div>
+                    )}
+                    {policy.tenant.curp && (
+                      <div>
+                        <p className="text-sm text-gray-600">CURP</p>
+                        <p className="font-medium font-mono">{policy.tenant.curp}</p>
+                      </div>
+                    )}
+                    {policy.tenant.passport && (
+                      <div>
+                        <p className="text-sm text-gray-600">Pasaporte</p>
+                        <p className="font-medium">{policy.tenant.passport}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {policy.tenant.employmentStatus && (
+                      <>
+                        <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Información Laboral</h3>
+                        <div>
+                          <p className="text-sm text-gray-600">Situación Laboral</p>
+                          <p className="font-medium">{policy.tenant.employmentStatus}</p>
+                        </div>
+                        {policy.tenant.occupation && (
+                          <div>
+                            <p className="text-sm text-gray-600">Ocupación</p>
+                            <p className="font-medium">{policy.tenant.occupation}</p>
+                          </div>
+                        )}
+                        {policy.tenant.monthlyIncome && (
+                          <div>
+                            <p className="text-sm text-gray-600">Ingreso Mensual</p>
+                            <p className="font-medium">{formatCurrency(policy.tenant.monthlyIncome)}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {policy.tenant.references && policy.tenant.references.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">Referencias Personales</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {policy.tenant.references.map((ref, index) => (
+                        <Card key={index} className="p-3">
+                          <p className="font-medium text-sm">{ref.name}</p>
+                          <p className="text-xs text-gray-600">{ref.relationship}</p>
+                          <p className="text-xs text-gray-600">{ref.phone}</p>
+                          {ref.email && <p className="text-xs text-gray-600">{ref.email}</p>}
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {policy.tenant.documents && policy.tenant.documents.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">Documentos</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {policy.tenant.documents.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-gray-500" />
+                            <div>
+                              <p className="text-sm font-medium">{doc.documentType}</p>
+                              <p className="text-xs text-gray-500">{doc.originalName}</p>
+                            </div>
+                          </div>
+                          {doc.verifiedAt && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No se ha capturado información del inquilino</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Guarantors Tab */}
+        <TabsContent value="guarantors" className="space-y-6">
+          {/* Joint Obligors */}
+          {(policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Obligados Solidarios
+              </h3>
+              {policy.jointObligors && policy.jointObligors.length > 0 ? (
+                policy.jointObligors.map((jo) => (
+                  <Card key={jo.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between text-base">
+                        <span>{jo.fullName}</span>
+                        {jo.informationComplete ? (
+                          <Badge className="bg-green-500 text-white">Completo</Badge>
+                        ) : (
+                          <Badge className="bg-orange-500 text-white">Pendiente</Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm text-gray-600">Email</p>
+                            <p className="font-medium">{jo.email}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Teléfono</p>
+                            <p className="font-medium">{jo.phone}</p>
+                          </div>
+                          {jo.nationality && (
+                            <div>
+                              <p className="text-sm text-gray-600">Nacionalidad</p>
+                              <p className="font-medium">{jo.nationality === 'MEXICAN' ? 'Mexicana' : 'Extranjera'}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {jo.occupation && (
+                            <div>
+                              <p className="text-sm text-gray-600">Ocupación</p>
+                              <p className="font-medium">{jo.occupation}</p>
+                            </div>
+                          )}
+                          {jo.companyName && (
+                            <div>
+                              <p className="text-sm text-gray-600">Empresa</p>
+                              <p className="font-medium">{jo.companyName}</p>
+                            </div>
+                          )}
+                          {jo.monthlyIncome && (
+                            <div>
+                              <p className="text-sm text-gray-600">Ingreso Mensual</p>
+                              <p className="font-medium">{formatCurrency(jo.monthlyIncome)}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {jo.references && jo.references.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-semibold mb-2">Referencias</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {jo.references.map((ref, idx) => (
+                              <Badge key={idx} variant="outline">
+                                {ref.name} - {ref.relationship}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {jo.documents && jo.documents.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-semibold mb-2">Documentos</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {jo.documents.map(doc => (
+                              <Badge key={doc.id} variant="secondary">
+                                <FileText className="h-3 w-3 mr-1" />
+                                {doc.documentType}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-gray-600">No se han registrado obligados solidarios</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Avals */}
+          {(policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Avales
+              </h3>
+              {policy.avals && policy.avals.length > 0 ? (
+                policy.avals.map((aval) => (
+                  <Card key={aval.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between text-base">
+                        <span>{aval.fullName}</span>
+                        {aval.informationComplete ? (
+                          <Badge className="bg-green-500 text-white">Completo</Badge>
+                        ) : (
+                          <Badge className="bg-orange-500 text-white">Pendiente</Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm text-gray-600">Email</p>
+                            <p className="font-medium">{aval.email}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Teléfono</p>
+                            <p className="font-medium">{aval.phone}</p>
+                          </div>
+                          {aval.occupation && (
+                            <div>
+                              <p className="text-sm text-gray-600">Ocupación</p>
+                              <p className="font-medium">{aval.occupation}</p>
+                            </div>
+                          )}
+                          {aval.monthlyIncome && (
+                            <div>
+                              <p className="text-sm text-gray-600">Ingreso Mensual</p>
+                              <p className="font-medium">{formatCurrency(aval.monthlyIncome)}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-sm">Propiedad en Garantía</h4>
+                          {aval.propertyAddress && (
+                            <div>
+                              <p className="text-sm text-gray-600">Dirección</p>
+                              <p className="font-medium">{aval.propertyAddress}</p>
+                            </div>
+                          )}
+                          {aval.propertyValue && (
+                            <div>
+                              <p className="text-sm text-gray-600">Valor</p>
+                              <p className="font-medium">{formatCurrency(aval.propertyValue)}</p>
+                            </div>
+                          )}
+                          {aval.propertyDeedNumber && (
+                            <div>
+                              <p className="text-sm text-gray-600">Número de Escritura</p>
+                              <p className="font-medium">{aval.propertyDeedNumber}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {aval.references && aval.references.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-semibold mb-2">Referencias</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {aval.references.map((ref, idx) => (
+                              <Badge key={idx} variant="outline">
+                                {ref.name} - {ref.relationship}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {aval.documents && aval.documents.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-semibold mb-2">Documentos</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {aval.documents.map(doc => (
+                              <Badge key={doc.id} variant="secondary">
+                                <FileText className="h-3 w-3 mr-1" />
+                                {doc.documentType}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-gray-600">No se han registrado avales</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {policy.guarantorType === 'NONE' && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Esta póliza no requiere garantías adicionales</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Documentos de la Póliza</CardTitle>
+              <CardDescription>
+                Todos los documentos relacionados con esta póliza
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {policy.documents && policy.documents.length > 0 ? (
-                <div className="space-y-2">
-                  {policy.documents.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <p className="font-medium">{doc.originalName}</p>
-                        <p className="text-sm text-gray-500">
-                          {doc.category} - {format(new Date(doc.uploadedAt), 'dd/MM/yyyy HH:mm', { locale: es })}
-                        </p>
+                <div className="space-y-3">
+                  {policy.documents.map(doc => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="font-medium">{doc.originalName}</p>
+                          <p className="text-sm text-gray-500">
+                            {doc.category} • {(doc.fileSize / 1024).toFixed(2)} KB • {formatDate(doc.createdAt)}
+                          </p>
+                        </div>
                       </div>
                       <Button size="sm" variant="outline">
                         <Download className="h-4 w-4" />
@@ -445,41 +1093,41 @@ export default function PolicyDetailsPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No hay documentos cargados</p>
+                <p className="text-center text-gray-500 py-8">No hay documentos cargados</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="timeline">
+        {/* Timeline Tab */}
+        <TabsContent value="timeline" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Actividad de la Póliza</CardTitle>
+              <CardTitle>Historial de Actividad</CardTitle>
+              <CardDescription>
+                Registro de todas las acciones realizadas en esta póliza
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {policy.activities && policy.activities.length > 0 ? (
                 <div className="space-y-4">
-                  {policy.activities.map((activity: any) => (
-                    <div key={activity.id} className="flex gap-4 pb-4 border-b last:border-0">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Clock className="h-4 w-4 text-primary" />
-                        </div>
+                  {policy.activities.map(activity => (
+                    <div key={activity.id} className="flex items-start gap-3 pb-4 border-b last:border-0">
+                      <div className="p-2 bg-gray-100 rounded-full">
+                        <Activity className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{activity.action}</p>
-                        {activity.details && (
-                          <p className="text-sm text-gray-500">{JSON.stringify(activity.details)}</p>
-                        )}
-                        <p className="text-xs text-gray-400">
-                          {format(new Date(activity.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        <p className="font-medium">{activity.description}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {activity.performedBy?.name || activity.performedBy?.email || activity.performedByActor || 'Sistema'} •{' '}
+                          {formatDateTime(activity.createdAt)}
                         </p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No hay actividad registrada</p>
+                <p className="text-center text-gray-500 py-8">No hay actividad registrada</p>
               )}
             </CardContent>
           </Card>

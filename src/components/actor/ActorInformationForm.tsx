@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Circle, Upload, User, Briefcase, Users, FileText, Send } from 'lucide-react';
+import { CheckCircle2, Circle, Upload, User, Briefcase, Users, FileText, Send, Plus, Trash2 } from 'lucide-react';
 
 interface PersonalReference {
   name: string;
@@ -104,6 +104,10 @@ export default function ActorInformationForm({
     propertyDeed: null as File | null, // For aval only
   });
 
+  // Upload status tracking
+  const [uploadStatus, setUploadStatus] = useState<Record<string, 'pending' | 'uploading' | 'success' | 'error'>>({});
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
+
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error for this field
@@ -120,6 +124,33 @@ export default function ActorInformationForm({
     const newReferences = [...formData.references];
     newReferences[index] = { ...newReferences[index], [field]: value };
     setFormData(prev => ({ ...prev, references: newReferences }));
+  };
+
+  const addReference = () => {
+    if (formData.references.length < 5) {
+      setFormData(prev => ({
+        ...prev,
+        references: [
+          ...prev.references,
+          { name: '', phone: '', email: '', relationship: '', occupation: '' }
+        ]
+      }));
+    }
+  };
+
+  const removeReference = (index: number) => {
+    if (formData.references.length > 3) {
+      setFormData(prev => ({
+        ...prev,
+        references: prev.references.filter((_, i) => i !== index)
+      }));
+      // Clear any errors for this reference
+      const newErrors = { ...errors };
+      delete newErrors[`ref_${index}_name`];
+      delete newErrors[`ref_${index}_phone`];
+      delete newErrors[`ref_${index}_relationship`];
+      setErrors(newErrors);
+    }
   };
 
   const validateForm = (): boolean => {
@@ -162,6 +193,91 @@ export default function ActorInformationForm({
     return Object.keys(newErrors).length === 0;
   };
 
+  const uploadDocument = async (file: File, documentType: string, category: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    formData.append('category', category);
+
+    setUploadStatus(prev => ({ ...prev, [documentType]: 'uploading' }));
+    setUploadErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[documentType];
+      return newErrors;
+    });
+
+    try {
+      const response = await fetch(`/api/actor/${actorType}/${token}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setUploadStatus(prev => ({ ...prev, [documentType]: 'success' }));
+      return true;
+    } catch (error) {
+      console.error(`Error uploading ${documentType}:`, error);
+      setUploadStatus(prev => ({ ...prev, [documentType]: 'error' }));
+      setUploadErrors(prev => ({
+        ...prev,
+        [documentType]: error instanceof Error ? error.message : 'Upload failed',
+      }));
+      return false;
+    }
+  };
+
+  const handleDocumentChange = async (documentType: string, category: string, file: File | null) => {
+    if (!file) return;
+
+    // Validate file immediately
+    const validation = validateFileClient(file);
+    if (!validation.valid) {
+      setUploadErrors(prev => ({
+        ...prev,
+        [documentType]: validation.error || 'Invalid file',
+      }));
+      return;
+    }
+
+    // Store file for later upload or immediate upload
+    setDocuments(prev => ({ ...prev, [documentType]: file }));
+
+    // Optional: Upload immediately
+    // await uploadDocument(file, documentType, category);
+  };
+
+  const validateFileClient = (file: File) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+    ];
+
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        error: `El archivo excede el tamaño máximo de ${maxSize / (1024 * 1024)}MB`,
+      };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        valid: false,
+        error: 'Tipo de archivo no permitido. Use PDF o imágenes (JPG, PNG)',
+      };
+    }
+
+    return { valid: true };
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       // Find the first tab with errors
@@ -179,6 +295,7 @@ export default function ActorInformationForm({
 
     setLoading(true);
     try {
+      // First submit the form data
       if (onSubmit) {
         await onSubmit(formData);
       } else {
@@ -191,6 +308,32 @@ export default function ActorInformationForm({
 
         if (!response.ok) {
           throw new Error('Error al enviar la información');
+        }
+      }
+
+      // Then upload any documents that were selected
+      const uploadPromises: Promise<boolean>[] = [];
+
+      if (documents.identification) {
+        uploadPromises.push(uploadDocument(documents.identification, 'identification', 'identification'));
+      }
+      if (documents.incomeProof) {
+        uploadPromises.push(uploadDocument(documents.incomeProof, 'income_proof', 'income_proof'));
+      }
+      if (documents.addressProof) {
+        uploadPromises.push(uploadDocument(documents.addressProof, 'address_proof', 'address_proof'));
+      }
+      if (actorType === 'aval' && documents.propertyDeed) {
+        uploadPromises.push(uploadDocument(documents.propertyDeed, 'property_deed', 'property_deed'));
+      }
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        const uploadResults = await Promise.all(uploadPromises);
+        const allUploadsSuccessful = uploadResults.every(result => result);
+
+        if (!allUploadsSuccessful) {
+          console.warn('Some documents failed to upload, but form was submitted successfully');
         }
       }
 
@@ -519,14 +662,38 @@ export default function ActorInformationForm({
           </TabsContent>
 
           <TabsContent value="references" className="space-y-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Proporcione información de 3 referencias personales (no familiares directos)
-            </p>
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm text-gray-600">
+                Proporcione información de 3 a 5 referencias personales (no familiares directos)
+              </p>
+              {formData.references.length < 5 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addReference}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar Referencia
+                </Button>
+              )}
+            </div>
 
             {formData.references.map((ref, index) => (
               <Card key={index}>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">Referencia {index + 1} *</CardTitle>
+                  {formData.references.length > 3 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeReference(index)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -693,13 +860,24 @@ export default function ActorInformationForm({
                     accept="image/*,application/pdf"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) setDocuments(prev => ({ ...prev, identification: file }));
+                      if (file) {
+                        handleDocumentChange('identification', 'identification', file);
+                      }
                     }}
                   />
                   {documents.identification && (
                     <p className="text-sm text-green-600 mt-2">
                       ✓ {documents.identification.name}
                     </p>
+                  )}
+                  {uploadStatus.identification === 'uploading' && (
+                    <p className="text-sm text-blue-600 mt-2">Subiendo...</p>
+                  )}
+                  {uploadStatus.identification === 'success' && (
+                    <p className="text-sm text-green-600 mt-2">✓ Subido exitosamente</p>
+                  )}
+                  {uploadErrors.identification && (
+                    <p className="text-sm text-red-600 mt-2">{uploadErrors.identification}</p>
                   )}
                 </CardContent>
               </Card>
@@ -715,13 +893,24 @@ export default function ActorInformationForm({
                     accept="image/*,application/pdf"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) setDocuments(prev => ({ ...prev, incomeProof: file }));
+                      if (file) {
+                        handleDocumentChange('incomeProof', 'income_proof', file);
+                      }
                     }}
                   />
                   {documents.incomeProof && (
                     <p className="text-sm text-green-600 mt-2">
                       ✓ {documents.incomeProof.name}
                     </p>
+                  )}
+                  {uploadStatus.incomeProof === 'uploading' && (
+                    <p className="text-sm text-blue-600 mt-2">Subiendo...</p>
+                  )}
+                  {uploadStatus.incomeProof === 'success' && (
+                    <p className="text-sm text-green-600 mt-2">✓ Subido exitosamente</p>
+                  )}
+                  {uploadErrors.incomeProof && (
+                    <p className="text-sm text-red-600 mt-2">{uploadErrors.incomeProof}</p>
                   )}
                 </CardContent>
               </Card>
@@ -737,13 +926,24 @@ export default function ActorInformationForm({
                     accept="image/*,application/pdf"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) setDocuments(prev => ({ ...prev, addressProof: file }));
+                      if (file) {
+                        handleDocumentChange('addressProof', 'address_proof', file);
+                      }
                     }}
                   />
                   {documents.addressProof && (
                     <p className="text-sm text-green-600 mt-2">
                       ✓ {documents.addressProof.name}
                     </p>
+                  )}
+                  {uploadStatus.addressProof === 'uploading' && (
+                    <p className="text-sm text-blue-600 mt-2">Subiendo...</p>
+                  )}
+                  {uploadStatus.addressProof === 'success' && (
+                    <p className="text-sm text-green-600 mt-2">✓ Subido exitosamente</p>
+                  )}
+                  {uploadErrors.addressProof && (
+                    <p className="text-sm text-red-600 mt-2">{uploadErrors.addressProof}</p>
                   )}
                 </CardContent>
               </Card>
@@ -760,13 +960,24 @@ export default function ActorInformationForm({
                       accept="image/*,application/pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setDocuments(prev => ({ ...prev, propertyDeed: file }));
+                        if (file) {
+                          handleDocumentChange('propertyDeed', 'property_deed', file);
+                        }
                       }}
                     />
                     {documents.propertyDeed && (
                       <p className="text-sm text-green-600 mt-2">
                         ✓ {documents.propertyDeed.name}
                       </p>
+                    )}
+                    {uploadStatus.propertyDeed === 'uploading' && (
+                      <p className="text-sm text-blue-600 mt-2">Subiendo...</p>
+                    )}
+                    {uploadStatus.propertyDeed === 'success' && (
+                      <p className="text-sm text-green-600 mt-2">✓ Subido exitosamente</p>
+                    )}
+                    {uploadErrors.propertyDeed && (
+                      <p className="text-sm text-red-600 mt-2">{uploadErrors.propertyDeed}</p>
                     )}
                   </CardContent>
                 </Card>
