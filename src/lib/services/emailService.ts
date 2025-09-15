@@ -536,6 +536,71 @@ Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamie
   }
 };
 
+// Join Us notification data
+export interface JoinUsNotificationData {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  experience: string;
+  currentClients: string;
+  message: string;
+}
+
+export const sendJoinUsNotification = async (data: JoinUsNotificationData): Promise<boolean> => {
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { JoinUsNotificationEmail } = await import('../../templates/email/react-email/JoinUsNotificationEmail');
+
+    const html = await render(JoinUsNotificationEmail(data));
+    const subject = `Nueva solicitud para unirse al equipo - ${data.name}`;
+
+    // Generate plain text version
+    const text = `
+Nueva Solicitud para Unirse al Equipo de Asesores
+
+Información del Solicitante:
+- Nombre: ${data.name}
+- Email: ${data.email}
+- Teléfono: ${data.phone}
+- Empresa/Inmobiliaria: ${data.company}
+- Años de Experiencia: ${data.experience}
+- Número de Clientes Actuales: ${data.currentClients}
+
+Mensaje del Solicitante:
+${data.message}
+
+---
+Fecha de solicitud: ${new Date().toLocaleDateString('es-MX', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+
+Por favor, revisa esta solicitud y contacta al solicitante para continuar con el proceso de incorporación.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    // Send to unete@hestiaplp.com.mx
+    const joinUsEmail = process.env.JOIN_US_EMAIL || 'unete@hestiaplp.com.mx';
+
+    return await EmailProvider.sendEmail({
+      to: joinUsEmail,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error sending join us notification:', error);
+    return false;
+  }
+};
+
 export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Promise<boolean> => {
   try {
     // Use React Email templates
