@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { ActorType, DocumentCategory } from '@/types/policy';
 import { uploadActorDocument } from '@/lib/services/fileUploadService';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 
 export async function GET(
   request: NextRequest,
@@ -12,49 +10,7 @@ export async function GET(
   try {
     const { token } = params;
 
-    if (isDemoMode()) {
-      const demoORM = DemoORM;
-      const actorToken = demoORM.actorTokens.find(t => t.token === token);
-
-      if (!actorToken || actorToken.expiresAt < new Date()) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid or expired token' },
-          { status: 401 }
-        );
-      }
-
-      const policy = demoORM.policies.find(p => p.id === actorToken.policyId);
-      if (!policy) {
-        return NextResponse.json(
-          { success: false, error: 'Policy not found' },
-          { status: 404 }
-        );
-      }
-
-      // Get actor data based on type
-      let actorData = null;
-      if (actorToken.actorType === 'tenant') {
-        actorData = demoORM.tenants.find(t => t.id === actorToken.actorId);
-      } else if (actorToken.actorType === 'jointObligor') {
-        actorData = demoORM.jointObligors.find(j => j.id === actorToken.actorId);
-      } else if (actorToken.actorType === 'aval') {
-        actorData = demoORM.avals.find(a => a.id === actorToken.actorId);
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          actorType: actorToken.actorType,
-          actorId: actorToken.actorId,
-          policyNumber: policy.policyNumber,
-          propertyAddress: policy.propertyAddress,
-          actor: actorData,
-          isUsed: actorToken.usedAt !== null,
-        },
-      });
-    }
-
-    // Production mode with Prisma
+    // Prisma database query
     const actorToken = await prisma.actorToken.findUnique({
       where: { token },
       include: {
@@ -129,45 +85,7 @@ export async function PUT(
     const { token } = params;
     const formData = await request.formData();
 
-    if (isDemoMode()) {
-      const demoORM = DemoORM;
-      const actorToken = demoORM.actorTokens.find(t => t.token === token);
-
-      if (!actorToken || actorToken.expiresAt < new Date()) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid or expired token' },
-          { status: 401 }
-        );
-      }
-
-      // Mark token as used
-      actorToken.usedAt = new Date();
-
-      // Parse form data
-      const actorData = JSON.parse(formData.get('data') as string);
-
-      // Update actor based on type
-      if (actorToken.actorType === 'tenant') {
-        const tenant = demoORM.tenants.find(t => t.id === actorToken.actorId);
-        if (tenant) {
-          Object.assign(tenant, actorData);
-        }
-      } else if (actorToken.actorType === 'jointObligor') {
-        const jointObligor = demoORM.jointObligors.find(j => j.id === actorToken.actorId);
-        if (jointObligor) {
-          Object.assign(jointObligor, actorData);
-        }
-      } else if (actorToken.actorType === 'aval') {
-        const aval = demoORM.avals.find(a => a.id === actorToken.actorId);
-        if (aval) {
-          Object.assign(aval, actorData);
-        }
-      }
-
-      return NextResponse.json({ success: true });
-    }
-
-    // Production mode with Prisma
+    // Prisma database operations
     const actorToken = await prisma.actorToken.findUnique({
       where: { token },
       include: {

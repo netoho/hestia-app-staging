@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyPassword, generateToken } from '@/lib/auth';
 import { z } from 'zod';
-import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -24,14 +23,9 @@ export async function POST(request: NextRequest) {
     const { email, password } = validation.data;
     
     // Find user by email
-    let user;
-    if (isDemoMode()) {
-      user = await DemoORM.findUniqueUser({ email });
-    } else {
-      user = await prisma.user.findUnique({
-        where: { email }
-      });
-    }
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
     
     if (!user) {
       return NextResponse.json(

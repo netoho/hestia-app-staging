@@ -3,8 +3,6 @@ import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole, PolicyStatus, ContractStatus } from '@/types/policy';
 import { uploadPolicyDocument, getDocumentUrl } from '@/lib/services/fileUploadService';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET contract information
@@ -16,41 +14,7 @@ export async function GET(
     try {
       const { id } = params;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const policy = demoORM.policies.find(p => p.id === id);
-
-        if (!policy) {
-          return NextResponse.json(
-            { success: false, error: 'Policy not found' },
-            { status: 404 }
-          );
-        }
-
-        // Check access for brokers
-        if (user.role === UserRole.BROKER && policy.createdById !== user.id) {
-          return NextResponse.json(
-            { success: false, error: 'Forbidden' },
-            { status: 403 }
-          );
-        }
-
-        const contract = demoORM.contracts.find(c => c.policyId === id);
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            contract: contract || null,
-            policy: {
-              id: policy.id,
-              policyNumber: policy.policyNumber,
-              status: policy.status,
-            },
-          },
-        });
-      }
-
-      // Production mode with Prisma
+      // Use Prisma
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
@@ -137,64 +101,7 @@ export async function POST(
       const data = await req.json();
       const { template, customClauses } = data;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const policy = demoORM.policies.find(p => p.id === id);
-
-        if (!policy) {
-          return NextResponse.json(
-            { success: false, error: 'Policy not found' },
-            { status: 404 }
-          );
-        }
-
-        // Check if policy is approved
-        if (policy.status !== PolicyStatus.APPROVED) {
-          return NextResponse.json(
-            { success: false, error: 'Policy must be approved before generating contract' },
-            { status: 400 }
-          );
-        }
-
-        // Check if contract already exists
-        const existingContract = demoORM.contracts.find(c => c.policyId === id);
-        if (existingContract) {
-          return NextResponse.json(
-            { success: false, error: 'Contract already exists' },
-            { status: 400 }
-          );
-        }
-
-        // Create contract
-        const contract = {
-          id: uuidv4(),
-          policyId: id,
-          contractNumber: `CON-${policy.policyNumber}`,
-          status: ContractStatus.DRAFT,
-          template: template || 'standard',
-          customClauses: customClauses || [],
-          generatedAt: new Date(),
-          generatedById: user.id,
-          contractS3Key: `demo/contracts/${id}/contract.pdf`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        demoORM.contracts.push(contract);
-
-        // Update policy status
-        const policyIndex = demoORM.policies.findIndex(p => p.id === id);
-        if (policyIndex !== -1) {
-          demoORM.policies[policyIndex].status = PolicyStatus.CONTRACT_PENDING;
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: { contract },
-        });
-      }
-
-      // Production mode with Prisma
+      // Use Prisma
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
@@ -334,42 +241,7 @@ export async function PUT(
       const status = formData.get('status') as ContractStatus;
       const signedFile = formData.get('signedContract') as File | null;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const contractIndex = demoORM.contracts.findIndex(c => c.policyId === id);
-
-        if (contractIndex === -1) {
-          return NextResponse.json(
-            { success: false, error: 'Contract not found' },
-            { status: 404 }
-          );
-        }
-
-        // Update contract
-        demoORM.contracts[contractIndex] = {
-          ...demoORM.contracts[contractIndex],
-          status,
-          updatedAt: new Date(),
-        };
-
-        if (status === ContractStatus.SIGNED && signedFile) {
-          demoORM.contracts[contractIndex].signedAt = new Date();
-          demoORM.contracts[contractIndex].signedContractS3Key = `demo/contracts/${id}/signed_contract.pdf`;
-
-          // Update policy status to active
-          const policyIndex = demoORM.policies.findIndex(p => p.id === id);
-          if (policyIndex !== -1) {
-            demoORM.policies[policyIndex].status = PolicyStatus.ACTIVE;
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: { contract: demoORM.contracts[contractIndex] },
-        });
-      }
-
-      // Production mode with Prisma
+      // Use Prisma
       const contract = await prisma.contract.findUnique({
         where: { policyId: id },
       });

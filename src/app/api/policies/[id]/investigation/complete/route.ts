@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -41,93 +39,10 @@ export async function PUT(
     // Calculate response time
     const completedAt = new Date();
 
-    if (isDemoMode()) {
-      // Demo mode implementation
-      console.log(`Demo mode: Completing investigation for policy ${policyId} with verdict ${verdict}`);
-      
-      // Get the policy
-      const policy = await DemoORM.findUniquePolicy({ id: policyId });
-      if (!policy) {
-        return NextResponse.json(
-          { error: 'Policy not found' },
-          { status: 404 }
-        );
-      }
+    // Production mode implementation
+    console.log(`Production mode: Completing investigation for policy ${policyId} with verdict ${verdict}`);
 
-      // Check if policy is in investigation
-      if (policy.status !== 'INVESTIGATION_IN_PROGRESS') {
-        return NextResponse.json(
-          { error: 'Policy is not under investigation' },
-          { status: 400 }
-        );
-      }
-
-      // Calculate response time
-      const startTime = policy.investigationStartedAt ? new Date(policy.investigationStartedAt) : new Date();
-      const responseTimeHours = Math.round((completedAt.getTime() - startTime.getTime()) / (1000 * 60 * 60));
-
-      // Determine new policy status based on verdict
-      let newStatus = 'INVESTIGATION_APPROVED';
-      if (verdict === 'REJECTED') {
-        newStatus = 'INVESTIGATION_REJECTED';
-      } else if (verdict === 'HIGH_RISK') {
-        newStatus = 'INVESTIGATION_APPROVED'; // High risk is still approved, but flagged
-      }
-
-      // Update policy status
-      await DemoORM.updatePolicy(
-        { id: policyId },
-        { 
-          status: newStatus,
-          investigationCompletedAt: completedAt
-        }
-      );
-
-      // Create/update investigation record (demo mode simulation)
-      const investigation = {
-        id: `demo-investigation-${policyId}`,
-        policyId: policyId,
-        verdict: verdict,
-        riskLevel: riskLevel || (verdict === 'HIGH_RISK' ? 'HIGH' : 'LOW'),
-        rejectedBy: verdict === 'REJECTED' ? 'STAFF' : null,
-        rejectionReason: verdict === 'REJECTED' ? rejectionReason : null,
-        rejectedAt: verdict === 'REJECTED' ? completedAt : null,
-        landlordDecision: null,
-        landlordOverride: false,
-        landlordNotes: null,
-        assignedTo: authResult.user.id,
-        completedBy: authResult.user.id,
-        completedAt: completedAt,
-        responseTimeHours: responseTimeHours,
-        notes: notes || null,
-        createdAt: policy.investigationStartedAt || new Date(),
-        updatedAt: completedAt,
-      };
-
-      // Add activity
-      await DemoORM.createPolicyActivity({
-        policyId: policyId,
-        action: 'investigation_completed',
-        details: { 
-          verdict: verdict,
-          riskLevel: riskLevel,
-          rejectionReason: rejectionReason,
-          responseTimeHours: responseTimeHours,
-          notes: notes || null
-        },
-        performedBy: authResult.user.id,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
-      });
-
-      return NextResponse.json({
-        message: 'Investigation completed successfully',
-        investigation
-      });
-    } else {
-      // Production mode implementation
-      console.log(`Production mode: Completing investigation for policy ${policyId} with verdict ${verdict}`);
-      
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
         // Get the policy and existing investigation
         const policy = await tx.policy.findUnique({
           where: { id: policyId },
@@ -200,12 +115,11 @@ export async function PUT(
           }
         });
 
-        return NextResponse.json({
-          message: 'Investigation completed successfully',
-          investigation: updatedInvestigation
-        });
+      return NextResponse.json({
+        message: 'Investigation completed successfully',
+        investigation: updatedInvestigation
       });
-    }
+    });
   } catch (error) {
     console.error('Complete investigation error:', error);
     

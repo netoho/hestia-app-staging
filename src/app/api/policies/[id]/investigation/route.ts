@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole, PolicyStatus, InvestigationStatus } from '@/types/policy';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET investigation status
@@ -15,33 +13,7 @@ export async function GET(
     try {
       const { id } = params;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const policy = demoORM.policies.find(p => p.id === id);
-
-        if (!policy) {
-          return NextResponse.json(
-            { success: false, error: 'Policy not found' },
-            { status: 404 }
-          );
-        }
-
-        const investigation = demoORM.investigations.find(i => i.policyId === id);
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            investigation: investigation || null,
-            policy: {
-              id: policy.id,
-              policyNumber: policy.policyNumber,
-              status: policy.status,
-            },
-          },
-        });
-      }
-
-      // Production mode with Prisma
+      // Use Prisma
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
@@ -98,61 +70,7 @@ export async function POST(
       const data = await req.json();
       const { notes, priority } = data;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const policy = demoORM.policies.find(p => p.id === id);
-
-        if (!policy) {
-          return NextResponse.json(
-            { success: false, error: 'Policy not found' },
-            { status: 404 }
-          );
-        }
-
-        // Check if investigation already exists
-        const existingInvestigation = demoORM.investigations.find(i => i.policyId === id);
-        if (existingInvestigation) {
-          return NextResponse.json(
-            { success: false, error: 'Investigation already exists' },
-            { status: 400 }
-          );
-        }
-
-        // Create investigation
-        const investigation = {
-          id: uuidv4(),
-          policyId: id,
-          status: InvestigationStatus.IN_PROGRESS,
-          startedAt: new Date(),
-          investigatorId: user.id,
-          notes: notes || null,
-          priority: priority || 'NORMAL',
-          tenantVerified: false,
-          jointObligorsVerified: false,
-          avalsVerified: false,
-          documentsVerified: false,
-          incomeVerified: false,
-          referencesVerified: false,
-          propertyVerified: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        demoORM.investigations.push(investigation);
-
-        // Update policy status
-        const policyIndex = demoORM.policies.findIndex(p => p.id === id);
-        if (policyIndex !== -1) {
-          demoORM.policies[policyIndex].status = PolicyStatus.UNDER_INVESTIGATION;
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: { investigation },
-        });
-      }
-
-      // Production mode with Prisma
+      // Use Prisma
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
@@ -240,57 +158,7 @@ export async function PUT(
       const { id } = params;
       const data = await req.json();
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const investigationIndex = demoORM.investigations.findIndex(i => i.policyId === id);
-
-        if (investigationIndex === -1) {
-          return NextResponse.json(
-            { success: false, error: 'Investigation not found' },
-            { status: 404 }
-          );
-        }
-
-        // Update investigation
-        demoORM.investigations[investigationIndex] = {
-          ...demoORM.investigations[investigationIndex],
-          ...data,
-          updatedAt: new Date(),
-        };
-
-        // Check if investigation is complete
-        const inv = demoORM.investigations[investigationIndex];
-        const allVerified =
-          inv.tenantVerified &&
-          inv.jointObligorsVerified &&
-          inv.avalsVerified &&
-          inv.documentsVerified &&
-          inv.incomeVerified &&
-          inv.referencesVerified &&
-          inv.propertyVerified;
-
-        if (allVerified && data.recommendation) {
-          inv.status = InvestigationStatus.COMPLETED;
-          inv.completedAt = new Date();
-
-          // Update policy status based on recommendation
-          const policyIndex = demoORM.policies.findIndex(p => p.id === id);
-          if (policyIndex !== -1) {
-            if (data.recommendation === 'APPROVE') {
-              demoORM.policies[policyIndex].status = PolicyStatus.APPROVED;
-            } else if (data.recommendation === 'REJECT') {
-              demoORM.policies[policyIndex].status = PolicyStatus.REJECTED;
-            }
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: { investigation: inv },
-        });
-      }
-
-      // Production mode with Prisma
+      // Use Prisma
       const investigation = await prisma.investigation.findUnique({
         where: { policyId: id },
       });

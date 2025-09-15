@@ -16,9 +16,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 
-
-import { isDemoMode } from '@/lib/services/demoDatabase';
-
 const loginSchema = z.object({
   email: z.string().email({ message: t.pages.register.validation.emailInvalid }),
   password: z.string().min(6, { message: t.pages.register.validation.passwordMin }),
@@ -71,9 +68,7 @@ export function LoginForm() {
         <Alert>
           <InfoIcon className="h-4 w-4" />
           <AlertDescription>
-            <strong>isDemoMode: {isDemoMode() ? 'TRUE': 'FALSE'}</strong><br />
-            <br/ >
-            <strong>Demo Credentials:</strong><br />
+            <strong>Development Credentials:</strong><br />
             Email: admin@hestiaplp.com.mx<br />
             Password: password123
           </AlertDescription>

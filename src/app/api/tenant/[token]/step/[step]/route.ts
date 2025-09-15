@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPolicyByToken, addPolicyActivity, updatePolicyData } from '@/lib/services/policyApplicationService';
+import { getPolicyByToken, addPolicyActivity } from '@/lib/services/policyApplicationService';
 import { PolicyStatus } from '@/lib/prisma-types';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -136,24 +134,13 @@ export async function PUT(
       const nextStep = stepNumber + 1;
       const newCurrentStep = Math.max(nextStep, policy.currentStep);
       
-      let updatedPolicy;
-      if (isDemoMode()) {
-        updatedPolicy = await DemoORM.updatePolicy(
-          { id: policy.id },
-          {
-            currentStep: newCurrentStep,
-            status: PolicyStatus.INVESTIGATION_IN_PROGRESS
-          }
-        );
-      } else {
-        updatedPolicy = await prisma.policy.update({
-          where: { id: policy.id },
-          data: {
-            currentStep: newCurrentStep,
-            status: PolicyStatus.INVESTIGATION_IN_PROGRESS
-          }
-        });
-      }
+      const updatedPolicy = await prisma.policy.update({
+        where: { id: policy.id },
+        data: {
+          currentStep: newCurrentStep,
+          status: PolicyStatus.INVESTIGATION_IN_PROGRESS
+        }
+      });
 
       // Log activity
       await addPolicyActivity(
@@ -205,41 +192,9 @@ export async function PUT(
       newCurrentStep = Math.max(nextStep, policy.currentStep);
     }
 
+    // Use structured models
     let updatedPolicy;
-    if (isDemoMode()) {
-      // For demo mode, store structured data similar to production
-      let dataToStore = validation.data;
-      
-      if (step === '1' && policy.tenantType === 'company') {
-        // Store company profile data in a structured way for demo mode
-        const companyData = validation.data as any;
-        dataToStore = {
-          companyProfile: {
-            taxAddress: companyData.companyTaxAddress,
-            taxRegime: companyData.companyTaxRegime,
-            legalRepresentative: {
-              fullName: companyData.legalRepFullName,
-              nationality: companyData.legalRepNationality.toUpperCase(),
-              curp: companyData.legalRepCurp || null,
-              passport: companyData.legalRepPassport || null,
-            }
-          }
-        };
-      }
-      
-      const fieldName = stepFields[step];
-      const updateData: any = {
-        [fieldName]: dataToStore,
-        currentStep: newCurrentStep,
-        status: nextStatus
-      };
-      updatedPolicy = await DemoORM.updatePolicy(
-        { id: policy.id },
-        updateData
-      );
-    } else {
-      // For production, use structured models
-      await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
         // Save step data to appropriate model
         if (step === '1') {
           if (policy.tenantType === 'company') {
@@ -330,16 +285,15 @@ export async function PUT(
           });
         }
 
-        // Update policy progress
-        updatedPolicy = await tx.policy.update({
-          where: { id: policy.id },
-          data: {
-            currentStep: newCurrentStep,
-            status: nextStatus
-          }
-        });
+      // Update policy progress
+      updatedPolicy = await tx.policy.update({
+        where: { id: policy.id },
+        data: {
+          currentStep: newCurrentStep,
+          status: nextStatus
+        }
       });
-    }
+    });
 
     // Log activity
     await addPolicyActivity(

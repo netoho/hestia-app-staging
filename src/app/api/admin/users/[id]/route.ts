@@ -3,8 +3,6 @@ import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';
 import { hashPassword } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 
 // GET single user
 export async function GET(
@@ -15,29 +13,7 @@ export async function GET(
     try {
       const { id } = params;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const targetUser = demoORM.users.find(u => u.id === id);
-
-        if (!targetUser) {
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            user: {
-              ...targetUser,
-              password: undefined,
-            },
-          },
-        });
-      }
-
-      // Production mode with Prisma
+      // Prisma database query
       const targetUser = await prisma.user.findUnique({
         where: { id },
         select: {
@@ -106,56 +82,7 @@ export async function PUT(
         );
       }
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const userIndex = demoORM.users.findIndex(u => u.id === id);
-
-        if (userIndex === -1) {
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-
-        // Check if email is already taken by another user
-        if (email && email !== demoORM.users[userIndex].email) {
-          const existingUser = demoORM.users.find(u => u.email === email && u.id !== id);
-          if (existingUser) {
-            return NextResponse.json(
-              { success: false, error: 'Email already in use' },
-              { status: 400 }
-            );
-          }
-        }
-
-        // Update user
-        const updateData: any = {
-          updatedAt: new Date(),
-        };
-
-        if (email) updateData.email = email;
-        if (name !== undefined) updateData.name = name;
-        if (role) updateData.role = role;
-        if (isActive !== undefined) updateData.isActive = isActive;
-        if (password) updateData.password = await hashPassword(password);
-
-        demoORM.users[userIndex] = {
-          ...demoORM.users[userIndex],
-          ...updateData,
-        };
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            user: {
-              ...demoORM.users[userIndex],
-              password: undefined,
-            },
-          },
-        });
-      }
-
-      // Production mode with Prisma
+      // Prisma database operations
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
         where: { id },
@@ -237,27 +164,7 @@ export async function DELETE(
         );
       }
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        const userIndex = demoORM.users.findIndex(u => u.id === id);
-
-        if (userIndex === -1) {
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-
-        // Remove user
-        demoORM.users.splice(userIndex, 1);
-
-        return NextResponse.json({
-          success: true,
-          message: 'User deleted successfully',
-        });
-      }
-
-      // Production mode with Prisma
+      // Prisma database operations
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
         where: { id },

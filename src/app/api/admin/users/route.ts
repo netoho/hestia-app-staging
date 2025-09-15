@@ -3,8 +3,6 @@ import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';
 import { hashPassword } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET all users
@@ -17,37 +15,7 @@ export async function GET(request: NextRequest) {
       const limit = parseInt(searchParams.get('limit') || '20');
       const skip = (page - 1) * limit;
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-        let users = demoORM.users;
-
-        // Filter by role
-        if (role) {
-          users = users.filter(u => u.role === role);
-        }
-
-        // Paginate
-        const total = users.length;
-        users = users.slice(skip, skip + limit);
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            users: users.map(u => ({
-              ...u,
-              password: undefined, // Never return password
-            })),
-            pagination: {
-              page,
-              limit,
-              total,
-              totalPages: Math.ceil(total / limit),
-            },
-          },
-        });
-      }
-
-      // Production mode with Prisma
+      // Prisma database query
       const where: any = {};
       if (role) {
         where.role = role;
@@ -124,46 +92,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (isDemoMode()) {
-        const demoORM = DemoORM;
-
-        // Check if user already exists
-        const existingUser = demoORM.users.find(u => u.email === email);
-        if (existingUser) {
-          return NextResponse.json(
-            { success: false, error: 'User with this email already exists' },
-            { status: 400 }
-          );
-        }
-
-        // Create user
-        const hashedPassword = await hashPassword(password);
-        const newUser = {
-          id: uuidv4(),
-          email,
-          password: hashedPassword,
-          name: name || null,
-          role,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          lastLoginAt: null,
-        };
-
-        demoORM.users.push(newUser);
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            user: {
-              ...newUser,
-              password: undefined,
-            },
-          },
-        });
-      }
-
-      // Production mode with Prisma
+      // Prisma database operations
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email },

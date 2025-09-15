@@ -1,8 +1,6 @@
 // This file provides type exports that work in both demo and production modes
 // In demo mode, we avoid importing from @prisma/client to prevent OpenSSL dependency
 
-import { isDemoMode } from './env-check';
-
 // Define types that match Prisma schema
 export type UserRole = 'admin' | 'staff' | 'owner' | 'renter';
 export type PolicyStatusType = 'DRAFT' | 'INVESTIGATION_PENDING' | 'INVESTIGATION_IN_PROGRESS' | 'INVESTIGATION_REJECTED' | 'INVESTIGATION_APPROVED' | 'CONTRACT_PENDING' | 'CONTRACT_UPLOADED' | 'CONTRACT_SIGNED' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
@@ -83,7 +81,7 @@ export interface Policy {
   reviewedAt?: Date | null;
   reviewNotes?: string | null;
   reviewReason?: string | null;
-  
+
   // Payment configuration
   packageId?: string | null;
   packageName?: string | null;
@@ -92,7 +90,7 @@ export interface Policy {
   tenantPaymentPercent: number;
   landlordPaymentPercent: number;
   paymentStatus?: PaymentStatusType;
-  
+
   // Lifecycle dates
   investigationStartedAt?: Date | null;
   investigationCompletedAt?: Date | null;
@@ -101,17 +99,17 @@ export interface Policy {
   policyActivatedAt?: Date | null;
   contractLength: number;
   policyExpiresAt?: Date | null;
-  
+
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Relations to structured data models
   profileData?: TenantProfile | null;
   employmentData?: TenantEmployment | null;
   referencesData?: TenantReferences | null;
   documentsData?: TenantDocuments | null;
   guarantorData?: TenantGuarantor | null;
-  
+
   // Other relations
   documents?: PolicyDocument[];
   activities?: PolicyActivity[];
@@ -310,15 +308,7 @@ export interface SystemConfig {
 }
 
 // Re-export actual Prisma types if not in demo mode
-let PrismaExports: any = {};
-
-if (!isDemoMode()) {
-  try {
-    PrismaExports = require('@prisma/client');
-  } catch (e) {
-    // Prisma not available, use our mock types
-  }
-}
+const PrismaExports: any = require('@prisma/client');
 
 // Export either real Prisma types or our mock types
 export const Prisma = PrismaExports.Prisma || {

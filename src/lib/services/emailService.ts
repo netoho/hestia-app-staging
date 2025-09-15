@@ -1,7 +1,6 @@
 import { Resend } from 'resend';
 import Mailgun from 'mailgun.js';
 import nodemailer from 'nodemailer';
-import { isDemoMode } from '../env-check';
 import { generatePolicyUrl } from '../utils/tokenUtils';
 
 // Email provider configuration
@@ -26,14 +25,6 @@ interface EmailData {
 // Email provider abstraction
 class EmailProvider {
   static async sendEmail(data: EmailData): Promise<boolean> {
-    if (isDemoMode()) {
-      console.log('Demo mode: Mock sending email');
-      console.log('Provider:', EMAIL_PROVIDER);
-      console.log('To:', data.to);
-      console.log('Subject:', data.subject);
-      return true;
-    }
-
     try {
       switch (EMAIL_PROVIDER) {
         case 'mailgun':

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -36,78 +34,10 @@ export async function POST(
     const body = await request.json();
     const { assignedTo, notes } = startInvestigationSchema.parse(body);
 
-    if (isDemoMode()) {
-      // Demo mode implementation
-      console.log(`Demo mode: Starting investigation for policy ${policyId}`);
-      
-      // Get the policy
-      const policy = await DemoORM.findUniquePolicy({ id: policyId });
-      if (!policy) {
-        return NextResponse.json(
-          { error: 'Policy not found' },
-          { status: 404 }
-        );
-      }
+    // Production mode implementation
+    console.log(`Production mode: Starting investigation for policy ${policyId}`);
 
-      // Check if investigation already exists
-      if (policy.status !== 'INVESTIGATION_PENDING') {
-        return NextResponse.json(
-          { error: 'Investigation can only be started for pending policies' },
-          { status: 400 }
-        );
-      }
-
-      // Create investigation record (demo mode)
-      const investigation = {
-        id: `demo-investigation-${Date.now()}`,
-        policyId: policyId,
-        verdict: null,
-        riskLevel: null,
-        rejectedBy: null,
-        rejectionReason: null,
-        rejectedAt: null,
-        landlordDecision: null,
-        landlordOverride: false,
-        landlordNotes: null,
-        assignedTo: assignedTo || authResult.user.id,
-        completedBy: null,
-        completedAt: null,
-        responseTimeHours: null,
-        notes: notes || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Update policy status
-      await DemoORM.updatePolicy(
-        { id: policyId },
-        { 
-          status: 'INVESTIGATION_IN_PROGRESS',
-          investigationStartedAt: new Date()
-        }
-      );
-
-      // Add activity
-      await DemoORM.createPolicyActivity({
-        policyId: policyId,
-        action: 'investigation_started',
-        details: { 
-          assignedTo: investigation.assignedTo,
-          notes: notes || null
-        },
-        performedBy: authResult.user.id,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
-      });
-
-      return NextResponse.json({
-        message: 'Investigation started successfully',
-        investigation
-      });
-    } else {
-      // Production mode implementation
-      console.log(`Production mode: Starting investigation for policy ${policyId}`);
-      
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
         // Get the policy
         const policy = await tx.policy.findUnique({
           where: { id: policyId }
@@ -163,12 +93,11 @@ export async function POST(
           }
         });
 
-        return NextResponse.json({
-          message: 'Investigation started successfully',
-          investigation
-        });
+      return NextResponse.json({
+        message: 'Investigation started successfully',
+        investigation
       });
-    }
+    });
   } catch (error) {
     console.error('Start investigation error:', error);
     

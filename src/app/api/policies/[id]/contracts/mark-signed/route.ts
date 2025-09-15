@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 
 export async function PUT(
@@ -28,73 +26,10 @@ export async function PUT(
 
     const { id: policyId } = await params;
 
-    if (isDemoMode()) {
-      // Demo mode implementation
-      console.log(`Demo mode: Marking contract as signed for policy ${policyId}`);
-      
-      // Get the policy
-      const policy = await DemoORM.findUniquePolicy({ id: policyId });
-      if (!policy) {
-        return NextResponse.json(
-          { error: 'Policy not found' },
-          { status: 404 }
-        );
-      }
+    // Production mode implementation
+    console.log(`Production mode: Marking contract as signed for policy ${policyId}`);
 
-      // Check if policy has an uploaded contract
-      if (policy.status !== 'CONTRACT_UPLOADED') {
-        return NextResponse.json(
-          { error: 'Contract must be uploaded before it can be marked as signed' },
-          { status: 400 }
-        );
-      }
-
-      // Check if already signed
-      if (policy.contractSignedAt) {
-        return NextResponse.json(
-          { error: 'Contract is already marked as signed' },
-          { status: 400 }
-        );
-      }
-
-      const signedAt = new Date();
-      const policyExpiresAt = new Date();
-      policyExpiresAt.setMonth(policyExpiresAt.getMonth() + policy.contractLength);
-
-      // Update policy status
-      await DemoORM.updatePolicy(
-        { id: policyId },
-        { 
-          status: 'CONTRACT_SIGNED',
-          contractSignedAt: signedAt,
-          policyExpiresAt: policyExpiresAt
-        }
-      );
-
-      // Add activity
-      await DemoORM.createPolicyActivity({
-        policyId: policyId,
-        action: 'contract_signed',
-        details: { 
-          signedAt: signedAt,
-          contractLength: policy.contractLength,
-          expiresAt: policyExpiresAt,
-          markedBy: authResult.user.email
-        },
-        performedBy: authResult.user.id,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
-      });
-
-      return NextResponse.json({
-        message: 'Contract marked as signed successfully',
-        signedAt: signedAt,
-        policyExpiresAt: policyExpiresAt
-      });
-    } else {
-      // Production mode implementation
-      console.log(`Production mode: Marking contract as signed for policy ${policyId}`);
-      
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
         // Get the policy
         const policy = await tx.policy.findUnique({
           where: { id: policyId },
@@ -153,13 +88,12 @@ export async function PUT(
           }
         });
 
-        return NextResponse.json({
-          message: 'Contract marked as signed successfully',
-          signedAt: signedAt,
-          policyExpiresAt: policyExpiresAt
-        });
+      return NextResponse.json({
+        message: 'Contract marked as signed successfully',
+        signedAt: signedAt,
+        policyExpiresAt: policyExpiresAt
       });
-    }
+    });
   } catch (error) {
     console.error('Mark contract signed error:', error);
     

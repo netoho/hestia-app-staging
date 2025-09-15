@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth/auth-config';
-import { isDemoMode } from './env-check';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = '7d';
@@ -44,33 +43,23 @@ export function verifyToken(token: string): JWTPayload {
 export function getTokenFromRequest(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
   if (!authHeader) return null;
-  
+
   const [bearer, token] = authHeader.split(' ');
   if (bearer !== 'Bearer' || !token) return null;
-  
+
   return token;
 }
 
 // This function is for securing API routes.
 // It uses NextAuth's session management.
 export async function authenticateRequest(request: NextRequest): Promise<JWTPayload | null> {
-  // In demo mode, always return the super admin user
-  if (isDemoMode()) {
-    return {
-      userId: DEMO_SUPER_USER.id,
-      email: DEMO_SUPER_USER.email,
-      role: DEMO_SUPER_USER.role,
-      name: DEMO_SUPER_USER.name
-    };
-  }
-
   const session = await getServerSession(authOptions);
 
   if (session && session.user) {
     return {
       userId: session.user.id,
       email: session.user.email!,
-      role: session.user.role as string,
+      role: session.user.role as 'ADMIN' | 'STAFF' | 'BROKER',
       name: session.user.name || undefined
     };
   }
@@ -86,7 +75,8 @@ export async function authenticateRequest(request: NextRequest): Promise<JWTPayl
 }
 
 export function requireRole(userRole: string, requiredRoles: string[]): boolean {
-  return requiredRoles.includes(userRole);
+  const lowerCaseRoles = requiredRoles.map(role => role.toLowerCase());
+  return lowerCaseRoles.includes(userRole.toLowerCase());
 }
 
 // Wrapper for easier use in API routes
@@ -102,24 +92,11 @@ export interface AuthResult {
 
 export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
   try {
-    // In demo mode, always return the super admin user
-    if (isDemoMode()) {
-      return {
-        success: true,
-        user: {
-          id: DEMO_SUPER_USER.id,
-          email: DEMO_SUPER_USER.email,
-          role: DEMO_SUPER_USER.role,
-          name: DEMO_SUPER_USER.name
-        }
-      };
-    }
-
     const payload = await authenticateRequest(request);
     if (!payload) {
       return { success: false };
     }
-    
+
     return {
       success: true,
       user: {

@@ -2,12 +2,11 @@ import { S3StorageProvider } from '@/lib/storage/providers/s3';
 import { DocumentCategory } from '@/types/policy';
 import prisma from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
-import { isDemoMode } from '@/lib/env-check';
 
 // Initialize S3 provider only if credentials are available
 let s3Provider: S3StorageProvider | null = null;
 
-if (!isDemoMode() && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
   s3Provider = new S3StorageProvider({
     bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
     region: process.env.AWS_REGION || 'us-east-1',

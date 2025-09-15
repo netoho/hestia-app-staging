@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -36,86 +34,10 @@ export async function POST(
     const body = await request.json();
     const { decision, notes } = landlordOverrideSchema.parse(body);
 
-    if (isDemoMode()) {
-      // Demo mode implementation
-      console.log(`Demo mode: Landlord override for policy ${policyId} with decision ${decision}`);
-      
-      // Get the policy
-      const policy = await DemoORM.findUniquePolicy({ id: policyId });
-      if (!policy) {
-        return NextResponse.json(
-          { error: 'Policy not found' },
-          { status: 404 }
-        );
-      }
+    // Production mode implementation
+    console.log(`Production mode: Landlord override for policy ${policyId} with decision ${decision}`);
 
-      // Check if policy was rejected and can be overridden
-      if (policy.status !== 'INVESTIGATION_REJECTED') {
-        return NextResponse.json(
-          { error: 'Landlord override only available for rejected investigations' },
-          { status: 400 }
-        );
-      }
-
-      // Determine new status based on decision
-      let newStatus = 'INVESTIGATION_REJECTED';
-      if (decision === 'PROCEED') {
-        newStatus = 'CONTRACT_PENDING'; // Move to contract stage
-      }
-
-      // Update policy status
-      await DemoORM.updatePolicy(
-        { id: policyId },
-        { 
-          status: newStatus
-        }
-      );
-
-      // Create/update investigation record with override (demo mode simulation)
-      const investigation = {
-        id: `demo-investigation-${policyId}`,
-        policyId: policyId,
-        verdict: 'REJECTED',
-        riskLevel: 'HIGH',
-        rejectedBy: 'STAFF',
-        rejectionReason: 'Investigation rejected by staff',
-        rejectedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Simulate rejection yesterday
-        landlordDecision: decision,
-        landlordOverride: decision === 'PROCEED',
-        landlordNotes: notes || null,
-        assignedTo: authResult.user.id,
-        completedBy: authResult.user.id,
-        completedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        responseTimeHours: 24,
-        notes: 'Investigation completed with landlord override',
-        createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-        updatedAt: new Date(),
-      };
-
-      // Add activity
-      await DemoORM.createPolicyActivity({
-        policyId: policyId,
-        action: 'landlord_override',
-        details: { 
-          decision: decision,
-          notes: notes || null,
-          originalVerdict: 'REJECTED',
-          overrideResult: decision === 'PROCEED' ? 'APPROVED' : 'CONFIRMED_REJECTED'
-        },
-        performedBy: authResult.user.id,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
-      });
-
-      return NextResponse.json({
-        message: 'Landlord override processed successfully',
-        investigation,
-        newStatus: newStatus
-      });
-    } else {
-      // Production mode implementation
-      console.log(`Production mode: Landlord override for policy ${policyId} with decision ${decision}`);
-      
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
         // Get the policy and existing investigation
         const policy = await tx.policy.findUnique({
           where: { id: policyId },
@@ -180,13 +102,12 @@ export async function POST(
           }
         });
 
-        return NextResponse.json({
-          message: 'Landlord override processed successfully',
-          investigation: updatedInvestigation,
-          newStatus: newStatus
-        });
+      return NextResponse.json({
+        message: 'Landlord override processed successfully',
+        investigation: updatedInvestigation,
+        newStatus: newStatus
       });
-    }
+    });
   } catch (error) {
     console.error('Landlord override error:', error);
     
