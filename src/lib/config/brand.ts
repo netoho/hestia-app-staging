@@ -23,7 +23,11 @@ export const brandColors = {
   success: '#10b981',        // Emerald-500
   warning: '#f59e0b',        // Amber-500
   danger: '#ef4444',         // Red-500
-  info: '#3b82f6',          // Blue-500
+  info: {
+    bg: '#dbeafe',          // Blue-100
+    border: '#60a5fa',      // Blue-400
+    text: '#1e40af',        // Blue-800
+  },
   
   // Text colors
   textPrimary: '#1f2937',    // Gray-800 - Main text
@@ -41,6 +45,7 @@ export const brandColors = {
   black: '#000000',
   border: '#e5e7eb',         // Gray-200 - Default borders
   borderDark: '#d1d5db',     // Gray-300 - Darker borders
+  link: '#7c3aed',           // Purple-600 - Link color
   
   // Email-specific colors (for better email client support)
   email: {
@@ -73,8 +78,10 @@ export const brandFonts = {
 } as const;
 
 export const brandInfo = {
+  name: 'Hestia',
   companyName: 'Hestia',
-  companyLegalName: 'Hestia Propiedades Libres de Preocupación S.A. de C.V.',
+  legalName: 'Hestia Protección Legal y Patrimonial S.A.S de C.V.',
+  companyLegalName: 'Hestia Protección Legal y Patrimonial S.A.S de C.V.',
   companyShortName: 'Hestia PLP',
   tagline: 'Tu garantía de confianza en el arrendamiento',
   supportEmail: 'soporte@hestiaplp.com.mx',
@@ -84,6 +91,7 @@ export const brandInfo = {
 } as const;
 
 export const brandUrls = {
+  production: 'https://hestiaplp.com.mx',
   logo: {
     colorTop: '/images/logo-hestia-azul-top.png',
     white: '/images/logo-hestia-blanco.png',
