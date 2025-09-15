@@ -61,7 +61,7 @@ export default function PublicHeader() {
                   <Link href="/login">{t.layout.publicHeader.login}</Link>
                 </Button>
                 <Button variant="default" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground text-base font-bold">
-                  <Link href="/register">{t.layout.publicHeader.register}</Link>
+                  <Link href="/join-us">Únete a Nosotros</Link>
                 </Button>
               </>
             )}
@@ -114,7 +114,7 @@ export default function PublicHeader() {
                         </SheetClose>
                         <SheetClose asChild>
                           <Button variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                            <Link href="/register">{t.layout.publicHeader.register}</Link>
+                            <Link href="/join-us">Únete a Nosotros</Link>
                           </Button>
                         </SheetClose>
                       </>
