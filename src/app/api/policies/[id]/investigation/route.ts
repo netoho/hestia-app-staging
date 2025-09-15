@@ -7,11 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 // GET investigation status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN, UserRole.STAFF], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
 
       // Use Prisma
       const policy = await prisma.policy.findUnique({
@@ -62,11 +62,11 @@ export async function GET(
 // POST start investigation
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN, UserRole.STAFF], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const data = await req.json();
       const { notes, priority } = data;
 
@@ -151,11 +151,11 @@ export async function POST(
 // PUT update investigation
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN, UserRole.STAFF], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const data = await req.json();
 
       // Use Prisma

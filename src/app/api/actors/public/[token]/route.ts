@@ -5,7 +5,7 @@ import { uploadActorDocument } from '@/lib/services/fileUploadService';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = params;

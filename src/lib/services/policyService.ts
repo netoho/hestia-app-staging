@@ -4,9 +4,17 @@ import { PolicyStatus, GuarantorType, PropertyType } from '@prisma/client';
 interface CreatePolicyData {
   propertyAddress: string;
   propertyType?: PropertyType;
+  propertyDescription?: string;
   rentAmount: string | number;
   depositAmount?: string | number;
+  contractLength?: number;
+  startDate?: string;
+  endDate?: string;
   guarantorType?: GuarantorType;
+  packageId?: string;
+  tenantPercentage?: number;
+  landlordPercentage?: number;
+  totalPrice?: number;
   createdById: string;
   landlord: {
     firstName: string;
@@ -44,9 +52,14 @@ export async function createPolicy(data: CreatePolicyData) {
       policyNumber,
       propertyAddress: data.propertyAddress,
       propertyType: data.propertyType || 'APARTMENT',
+      propertyDescription: data.propertyDescription,
       rentAmount: parseFloat(data.rentAmount.toString()),
-      totalPrice: parseFloat((data.depositAmount || data.rentAmount).toString()),
+      contractLength: data.contractLength || 12,
+      totalPrice: data.totalPrice || parseFloat((data.depositAmount || data.rentAmount).toString()),
+      tenantPercentage: data.tenantPercentage || 100,
+      landlordPercentage: data.landlordPercentage || 0,
       guarantorType: data.guarantorType || 'NONE',
+      packageId: data.packageId,
       createdById: data.createdById,
       status: 'DRAFT',
       // Create related actors

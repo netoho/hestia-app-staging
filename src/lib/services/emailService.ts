@@ -532,11 +532,12 @@ export interface ActorInvitationData {
   actorType: 'tenant' | 'joint_obligor' | 'aval';
   email: string;
   name?: string;
+  token: string;
+  url: string;
   policyNumber: string;
   propertyAddress: string;
-  accessToken: string;
-  expiryDate: Date;
-  initiatorName: string;
+  expiryDate?: Date;
+  initiatorName?: string;
 }
 
 // Join Us notification data
@@ -552,8 +553,8 @@ export interface JoinUsNotificationData {
 
 export const sendActorInvitation = async (data: ActorInvitationData): Promise<boolean> => {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const actorUrl = `${appUrl}/policy/${data.accessToken}`;
+    // Use the URL provided directly from the token service
+    const actorUrl = data.url;
 
     const actorTypeNames = {
       'tenant': 'Inquilino',
@@ -589,7 +590,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     <div class="content">
       <h2>Hola${data.name ? ` ${data.name}` : ''},</h2>
 
-      <p>${data.initiatorName} te ha designado como <strong>${actorTypeName}</strong> en una póliza de garantía de arrendamiento.</p>
+      <p>${data.initiatorName || 'El administrador'} te ha designado como <strong>${actorTypeName}</strong> en una póliza de garantía de arrendamiento.</p>
 
       <div class="info-box">
         <p style="margin: 0;"><strong>Número de Póliza:</strong> ${data.policyNumber}</p>
@@ -610,12 +611,12 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
         ${data.actorType === 'aval' ? '<li>Información de la propiedad en garantía</li>' : ''}
       </ul>
 
-      <p><strong>Importante:</strong> Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX', {
+      <p><strong>Importante:</strong> Este enlace expirará el ${data.expiryDate ? new Date(data.expiryDate).toLocaleDateString('es-MX', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
-      })}.</p>
+      }) : 'en 7 días'}.</p>
 
       <div class="footer">
         <p>Si tienes preguntas, contacta a: <a href="mailto:soporte@hestiaplp.com.mx">soporte@hestiaplp.com.mx</a></p>
@@ -630,7 +631,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     const text = `
 Hola${data.name ? ` ${data.name}` : ''},
 
-${data.initiatorName} te ha designado como ${actorTypeName} en una póliza de garantía de arrendamiento.
+${data.initiatorName || 'El administrador'} te ha designado como ${actorTypeName} en una póliza de garantía de arrendamiento.
 
 Número de Póliza: ${data.policyNumber}
 Propiedad: ${data.propertyAddress}
@@ -645,7 +646,7 @@ Accede aquí: ${actorUrl}
 - 3 referencias personales con datos de contacto
 ${data.actorType === 'aval' ? '- Información de la propiedad en garantía' : ''}
 
-Importante: Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX')}.
+Importante: Este enlace expirará ${data.expiryDate ? `el ${new Date(data.expiryDate).toLocaleDateString('es-MX')}` : 'en 7 días'}.
 
 Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
 

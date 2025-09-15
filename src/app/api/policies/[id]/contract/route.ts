@@ -8,11 +8,11 @@ import { v4 as uuidv4 } from 'uuid';
 // GET contract information
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN, UserRole.STAFF, UserRole.BROKER], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
 
       // Use Prisma
       const policy = await prisma.policy.findUnique({
@@ -93,11 +93,11 @@ export async function GET(
 // POST generate contract
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN, UserRole.STAFF], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const data = await req.json();
       const { template, customClauses } = data;
 
@@ -232,11 +232,11 @@ export async function POST(
 // PUT update contract status
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN, UserRole.STAFF], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const formData = await request.formData();
       const status = formData.get('status') as ContractStatus;
       const signedFile = formData.get('signedContract') as File | null;

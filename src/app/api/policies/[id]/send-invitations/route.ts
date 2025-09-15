@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
-import { UserRole, ActorType } from '@/types/policy';
+import { UserRole } from '@/types/policy';
 import { sendActorInvitation } from '@/lib/services/emailService';
-import { v4 as uuidv4 } from 'uuid';
+import {
+  generateTenantToken,
+  generateJointObligorToken,
+  generateAvalToken
+} from '@/lib/services/actorTokenService';
+import { logPolicyActivity } from '@/lib/services/policyService';
+import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 
 export async function POST(
   request: NextRequest,
@@ -40,102 +46,108 @@ export async function POST(
 
       const invitations = [];
 
-      // Create token for tenant
+      // Generate token for tenant
       if (policy.tenant && policy.tenant.email) {
-        const tenantToken = await prisma.actorToken.create({
-          data: {
-            token: uuidv4(),
-            actorType: ActorType.TENANT,
-            actorId: policy.tenant.id,
-            policyId: policy.id,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          },
-        });
+        const tokenData = await generateTenantToken(policy.tenant.id);
 
         const sent = await sendActorInvitation({
           actorType: 'tenant',
           email: policy.tenant.email,
-          name: policy.tenant.firstName ? `${policy.tenant.firstName} ${policy.tenant.lastName}` : 'Inquilino',
-          token: tenantToken.token,
+          name: policy.tenant.fullName || 'Inquilino',
+          token: tokenData.token,
+          url: tokenData.url,
           policyNumber: policy.policyNumber,
           propertyAddress: policy.propertyAddress,
+          expiryDate: tokenData.expiresAt,
+          initiatorName: user.name || user.email,
         });
 
         invitations.push({
           actorType: 'tenant',
           email: policy.tenant.email,
           sent,
-          token: tenantToken.token,
+          token: tokenData.token,
+          url: tokenData.url,
+          expiresAt: tokenData.expiresAt,
         });
       }
 
-      // Create tokens for joint obligors
+      // Generate tokens for joint obligors
       for (const jo of policy.jointObligors) {
         if (jo.email) {
-          const joToken = await prisma.actorToken.create({
-            data: {
-              token: uuidv4(),
-              actorType: ActorType.JOINT_OBLIGOR,
-              actorId: jo.id,
-              policyId: policy.id,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          });
+          const tokenData = await generateJointObligorToken(jo.id);
 
           const sent = await sendActorInvitation({
             actorType: 'joint_obligor',
             email: jo.email,
-            name: jo.firstName ? `${jo.firstName} ${jo.lastName}` : 'Obligado Solidario',
-            token: joToken.token,
+            name: jo.fullName || 'Obligado Solidario',
+            token: tokenData.token,
+            url: tokenData.url,
             policyNumber: policy.policyNumber,
             propertyAddress: policy.propertyAddress,
+            expiryDate: tokenData.expiresAt,
+            initiatorName: user.name || user.email,
           });
 
           invitations.push({
             actorType: 'jointObligor',
             email: jo.email,
             sent,
-            token: joToken.token,
+            token: tokenData.token,
+            url: tokenData.url,
+            expiresAt: tokenData.expiresAt,
           });
         }
       }
 
-      // Create tokens for avals
+      // Generate tokens for avals
       for (const aval of policy.avals) {
         if (aval.email) {
-          const avalToken = await prisma.actorToken.create({
-            data: {
-              token: uuidv4(),
-              actorType: ActorType.AVAL,
-              actorId: aval.id,
-              policyId: policy.id,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          });
+          const tokenData = await generateAvalToken(aval.id);
 
           const sent = await sendActorInvitation({
             actorType: 'aval',
             email: aval.email,
-            name: aval.firstName ? `${aval.firstName} ${aval.lastName}` : 'Aval',
-            token: avalToken.token,
+            name: aval.fullName || 'Aval',
+            token: tokenData.token,
+            url: tokenData.url,
             policyNumber: policy.policyNumber,
             propertyAddress: policy.propertyAddress,
+            expiryDate: tokenData.expiresAt,
+            initiatorName: user.name || user.email,
           });
 
           invitations.push({
             actorType: 'aval',
             email: aval.email,
             sent,
-            token: avalToken.token,
+            token: tokenData.token,
+            url: tokenData.url,
+            expiresAt: tokenData.expiresAt,
           });
         }
       }
 
-      // Update policy status
-      await prisma.policy.update({
-        where: { id },
-        data: { status: 'PENDING_INFO' },
-      });
+      // Update policy status to COLLECTING_INFO
+      const transitionResult = await transitionPolicyStatus(
+        policy.id,
+        'COLLECTING_INFO',
+        user.id,
+        'Actor invitations sent'
+      );
+
+      if (!transitionResult.success) {
+        console.warn('Failed to transition policy status:', transitionResult.error);
+      }
+
+      // Log activity
+      await logPolicyActivity(
+        policy.id,
+        'invitations_sent',
+        `Invitations sent to ${invitations.length} actors`,
+        { invitations: invitations.map(i => ({ type: i.actorType, email: i.email, sent: i.sent })) },
+        user.id
+      );
 
       return NextResponse.json({
         success: true,

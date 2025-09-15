@@ -99,6 +99,33 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     );
 
+    // Automatically send invitations to actors if checkbox was checked
+    if (data.sendInvitations !== false) {
+      try {
+        const invitationResponse = await fetch(
+          `${request.nextUrl.origin}/api/policies/${policy.id}/send-invitations`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': request.headers.get('authorization') || '',
+              'Cookie': request.headers.get('cookie') || '',
+            },
+          }
+        );
+
+        if (invitationResponse.ok) {
+          const invitationData = await invitationResponse.json();
+          console.log('Invitations sent:', invitationData);
+        } else {
+          console.error('Failed to send invitations:', await invitationResponse.text());
+        }
+      } catch (error) {
+        console.error('Error sending invitations:', error);
+        // Don't fail the policy creation if invitations fail
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: { policy }
