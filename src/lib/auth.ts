@@ -11,7 +11,7 @@ const JWT_EXPIRES_IN = '7d';
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
+  role: 'ADMIN' | 'STAFF' | 'BROKER';
   name?: string;
 }
 
@@ -20,7 +20,7 @@ const DEMO_SUPER_USER = {
   id: 'demo-admin-id',
   email: 'admin@hestiaplp.com.mx',
   name: 'Super Admin',
-  role: 'staff' // staff role has admin privileges
+  role: 'ADMIN' as const // ADMIN role has full privileges
 };
 
 export async function hashPassword(password: string): Promise<string> {
@@ -95,7 +95,7 @@ export interface AuthResult {
   user?: {
     id: string;
     email: string;
-    role: string;
+    role: 'ADMIN' | 'STAFF' | 'BROKER';
     name?: string | null;
   };
 }

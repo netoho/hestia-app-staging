@@ -536,6 +536,18 @@ Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamie
   }
 };
 
+// Actor invitation data
+export interface ActorInvitationData {
+  actorType: 'tenant' | 'joint_obligor' | 'aval';
+  email: string;
+  name?: string;
+  policyNumber: string;
+  propertyAddress: string;
+  accessToken: string;
+  expiryDate: Date;
+  initiatorName: string;
+}
+
 // Join Us notification data
 export interface JoinUsNotificationData {
   name: string;
@@ -546,6 +558,120 @@ export interface JoinUsNotificationData {
   currentClients: string;
   message: string;
 }
+
+export const sendActorInvitation = async (data: ActorInvitationData): Promise<boolean> => {
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const actorUrl = `${appUrl}/policy/${data.accessToken}`;
+
+    const actorTypeNames = {
+      'tenant': 'Inquilino',
+      'joint_obligor': 'Obligado Solidario',
+      'aval': 'Aval'
+    };
+
+    const actorTypeName = actorTypeNames[data.actorType];
+    const subject = `Acción Requerida: Completa tu información como ${actorTypeName} - Póliza ${data.policyNumber}`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #6d28d9 0%, #a855f7 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
+    .content { background-color: #ffffff; padding: 40px 30px; border: 1px solid #e9ecef; border-radius: 0 0 12px 12px; }
+    .button { display: inline-block; padding: 14px 30px; background-color: #10b981; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .info-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center; font-size: 14px; color: #6c757d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 style="margin: 0; color: #ffffff;">Hestia</h1>
+      <p style="margin: 10px 0 0 0; color: #ffffff;">Sistema de Pólizas de Garantía</p>
+    </div>
+    <div class="content">
+      <h2>Hola${data.name ? ` ${data.name}` : ''},</h2>
+
+      <p>${data.initiatorName} te ha designado como <strong>${actorTypeName}</strong> en una póliza de garantía de arrendamiento.</p>
+
+      <div class="info-box">
+        <p style="margin: 0;"><strong>Número de Póliza:</strong> ${data.policyNumber}</p>
+        <p style="margin: 10px 0 0 0;"><strong>Propiedad:</strong> ${data.propertyAddress}</p>
+      </div>
+
+      <p>Para continuar con el proceso, necesitamos que completes tu información y documentación:</p>
+
+      <div style="text-align: center;">
+        <a href="${actorUrl}" class="button">Completar Mi Información</a>
+      </div>
+
+      <h3>¿Qué necesitarás?</h3>
+      <ul>
+        <li>Identificación oficial (INE o pasaporte)</li>
+        <li>Información laboral y comprobantes de ingresos</li>
+        <li>3 referencias personales con datos de contacto</li>
+        ${data.actorType === 'aval' ? '<li>Información de la propiedad en garantía</li>' : ''}
+      </ul>
+
+      <p><strong>Importante:</strong> Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}.</p>
+
+      <div class="footer">
+        <p>Si tienes preguntas, contacta a: <a href="mailto:soporte@hestiaplp.com.mx">soporte@hestiaplp.com.mx</a></p>
+        <p>&copy; ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    const text = `
+Hola${data.name ? ` ${data.name}` : ''},
+
+${data.initiatorName} te ha designado como ${actorTypeName} en una póliza de garantía de arrendamiento.
+
+Número de Póliza: ${data.policyNumber}
+Propiedad: ${data.propertyAddress}
+
+Para continuar con el proceso, necesitamos que completes tu información y documentación.
+
+Accede aquí: ${actorUrl}
+
+¿Qué necesitarás?
+- Identificación oficial (INE o pasaporte)
+- Información laboral y comprobantes de ingresos
+- 3 referencias personales con datos de contacto
+${data.actorType === 'aval' ? '- Información de la propiedad en garantía' : ''}
+
+Importante: Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX')}.
+
+Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error sending actor invitation:', error);
+    return false;
+  }
+};
 
 export const sendJoinUsNotification = async (data: JoinUsNotificationData): Promise<boolean> => {
   try {

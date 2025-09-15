@@ -1,294 +1,447 @@
-import { getStorageProvider, StorageFile } from '../storage';
-import { isDemoMode } from '../env-check';
-import prisma from '../prisma';
-import { PolicyDocument } from '@/lib/prisma-types';
-import crypto from 'crypto';
+import { S3StorageProvider } from '@/lib/storage/providers/s3';
+import { DocumentCategory } from '@/types/policy';
+import prisma from '@/lib/prisma';
+import { v4 as uuidv4 } from 'uuid';
+import { isDemoMode } from '@/lib/env-check';
 
-// Type definitions
-export interface FileUploadOptions {
-  policyId: string;
-  category: 'identification' | 'income' | 'optional';
-  file: {
-    buffer: Buffer;
-    originalName: string;
-    mimeType: string;
-    size: number;
-  };
-  uploadedBy: string; // 'tenant' or user ID
+// Initialize S3 provider only if credentials are available
+let s3Provider: S3StorageProvider | null = null;
+
+if (!isDemoMode() && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  s3Provider = new S3StorageProvider({
+    bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
+    region: process.env.AWS_REGION || 'us-east-1',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    endpoint: process.env.AWS_S3_ENDPOINT, // Optional for local testing with MinIO
+  });
 }
 
-export interface FileValidationResult {
-  valid: boolean;
+export interface UploadedFile {
+  buffer: Buffer;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
+export interface FileUploadResult {
+  success: boolean;
+  s3Key?: string;
+  documentId?: string;
   error?: string;
 }
 
-// Configuration
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'image/webp'
-];
+/**
+ * Generate S3 key for actor documents
+ */
+function generateS3Key(
+  policyNumber: string,
+  actorType: string,
+  actorId: string,
+  fileName: string
+): string {
+  const ext = fileName.split('.').pop() || 'pdf';
+  const uniqueId = uuidv4().slice(0, 8);
+  return `policies/${policyNumber}/${actorType}/${actorId}/${uniqueId}.${ext}`;
+}
 
-// Validation functions
-export const validateFile = (file: FileUploadOptions['file']): FileValidationResult => {
-  // Check file size
-  if (file.size > MAX_FILE_SIZE) {
+/**
+ * Upload actor document to S3 and save metadata
+ */
+export async function uploadActorDocument(
+  file: UploadedFile,
+  policyId: string,
+  policyNumber: string,
+  actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval',
+  actorId: string,
+  category: DocumentCategory,
+  documentType: string,
+  uploadedBy?: string
+): Promise<FileUploadResult> {
+  try {
+    // Generate S3 key
+    const s3Key = generateS3Key(policyNumber, actorType, actorId, file.originalName);
+
+    // Upload to S3
+    const uploadPath = await s3Provider.upload({
+      path: s3Key,
+      file: {
+        buffer: file.buffer,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+      },
+      contentType: file.mimeType,
+      metadata: {
+        policyId,
+        actorType,
+        actorId,
+        category,
+        documentType,
+        uploadedBy: uploadedBy || 'self',
+      },
+    });
+
+    // Save document metadata to database
+    const document = await prisma.actorDocument.create({
+      data: {
+        category,
+        documentType,
+        fileName: file.originalName,
+        originalName: file.originalName,
+        fileSize: file.size,
+        mimeType: file.mimeType,
+        s3Key,
+        s3Bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
+        s3Region: process.env.AWS_REGION || 'us-east-1',
+        uploadedBy: uploadedBy || 'self',
+        // Connect to the appropriate actor
+        ...(actorType === 'landlord' && { landlordId: actorId }),
+        ...(actorType === 'tenant' && { tenantId: actorId }),
+        ...(actorType === 'jointObligor' && { jointObligorId: actorId }),
+        ...(actorType === 'aval' && { avalId: actorId }),
+      },
+    });
+
     return {
-      valid: false,
-      error: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      success: true,
+      s3Key,
+      documentId: document.id,
+    };
+  } catch (error) {
+    console.error('File upload error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload failed',
     };
   }
+}
 
-  // Check mime type
-  if (!ALLOWED_MIME_TYPES.includes(file.mimeType)) {
+/**
+ * Upload policy document (contracts, reports, etc.)
+ */
+export async function uploadPolicyDocument(
+  file: UploadedFile,
+  policyId: string,
+  policyNumber: string,
+  category: string,
+  uploadedBy: string,
+  version?: number
+): Promise<FileUploadResult> {
+  try {
+    const s3Key = `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}_${file.originalName}`;
+
+    // Upload to S3
+    await s3Provider.upload({
+      path: s3Key,
+      file: {
+        buffer: file.buffer,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+      },
+      contentType: file.mimeType,
+      metadata: {
+        policyId,
+        category,
+        uploadedBy,
+        version: version?.toString(),
+      },
+    });
+
+    // Save to database
+    const document = await prisma.policyDocument.create({
+      data: {
+        policyId,
+        category,
+        fileName: file.originalName,
+        originalName: file.originalName,
+        fileSize: file.size,
+        mimeType: file.mimeType,
+        s3Key,
+        s3Bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
+        s3Region: process.env.AWS_REGION || 'us-east-1',
+        uploadedBy,
+        version: version || 1,
+        isCurrent: true,
+      },
+    });
+
+    // If this is a new version, mark previous versions as not current
+    if (version && version > 1) {
+      await prisma.policyDocument.updateMany({
+        where: {
+          policyId,
+          category,
+          id: { not: document.id },
+        },
+        data: {
+          isCurrent: false,
+        },
+      });
+    }
+
     return {
-      valid: false,
-      error: 'File type not allowed. Please upload PDF or image files only.'
+      success: true,
+      s3Key,
+      documentId: document.id,
+    };
+  } catch (error) {
+    console.error('Policy document upload error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload failed',
     };
   }
+}
 
-  // Check for suspicious file names
-  const suspiciousPatterns = [
-    /\.exe$/i,
-    /\.bat$/i,
-    /\.cmd$/i,
-    /\.com$/i,
-    /\.scr$/i,
-    /\.vbs$/i,
-    /\.js$/i,
-    /\.jar$/i
+/**
+ * Get signed URL for document download
+ */
+export async function getDocumentUrl(
+  s3Key: string,
+  fileName?: string,
+  expiresInSeconds: number = 3600
+): Promise<string> {
+  return s3Provider.getSignedUrl({
+    path: s3Key,
+    action: 'read',
+    expiresInSeconds,
+    fileName,
+    responseDisposition: 'inline',
+  });
+}
+
+/**
+ * Get signed URL for document download (force download)
+ */
+export async function getDocumentDownloadUrl(
+  s3Key: string,
+  fileName?: string,
+  expiresInSeconds: number = 3600
+): Promise<string> {
+  return s3Provider.getSignedUrl({
+    path: s3Key,
+    action: 'read',
+    expiresInSeconds,
+    fileName,
+    responseDisposition: 'attachment',
+  });
+}
+
+/**
+ * Delete document from S3 and database
+ */
+export async function deleteDocument(documentId: string, isActorDocument: boolean = true): Promise<boolean> {
+  try {
+    if (isActorDocument) {
+      // Get document info
+      const document = await prisma.actorDocument.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        return false;
+      }
+
+      // Delete from S3
+      await s3Provider.delete(document.s3Key);
+
+      // Delete from database
+      await prisma.actorDocument.delete({
+        where: { id: documentId },
+      });
+    } else {
+      // Policy document
+      const document = await prisma.policyDocument.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        return false;
+      }
+
+      // Delete from S3
+      await s3Provider.delete(document.s3Key);
+
+      // Delete from database
+      await prisma.policyDocument.delete({
+        where: { id: documentId },
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Document deletion error:', error);
+    return false;
+  }
+}
+
+/**
+ * Verify document exists in S3
+ */
+export async function verifyDocument(s3Key: string): Promise<boolean> {
+  return s3Provider.exists(s3Key);
+}
+
+/**
+ * Get document metadata
+ */
+export async function getDocumentMetadata(s3Key: string) {
+  return s3Provider.getMetadata(s3Key);
+}
+
+/**
+ * Validate file for upload
+ */
+export function validateFile(
+  file: File | UploadedFile,
+  options: {
+    maxSize?: number; // in bytes
+    allowedTypes?: string[];
+  } = {}
+): { valid: boolean; error?: string } {
+  const maxSize = options.maxSize || 10 * 1024 * 1024; // Default 10MB
+  const allowedTypes = options.allowedTypes || [
+    'application/pdf',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
   ];
 
-  if (suspiciousPatterns.some(pattern => pattern.test(file.originalName))) {
+  // Check file size
+  const fileSize = 'size' in file ? file.size : file.buffer.length;
+  if (fileSize > maxSize) {
     return {
       valid: false,
-      error: 'Suspicious file type detected.'
+      error: `File size exceeds maximum of ${maxSize / (1024 * 1024)}MB`,
+    };
+  }
+
+  // Check file type
+  const mimeType = 'type' in file ? file.type : file.mimeType;
+  if (!allowedTypes.includes(mimeType)) {
+    return {
+      valid: false,
+      error: `File type ${mimeType} is not allowed`,
     };
   }
 
   return { valid: true };
-};
+}
 
-// Generate safe file name
-const generateSafeFileName = (originalName: string, policyId: string, category: string): string => {
-  const ext = originalName.split('.').pop()?.toLowerCase() || 'unknown';
-  const timestamp = Date.now();
-  const randomStr = crypto.randomBytes(8).toString('hex');
-  return `${policyId}/${category}/${timestamp}-${randomStr}.${ext}`;
-};
+/**
+ * Upload a single file (simplified wrapper)
+ */
+export async function uploadFile(
+  file: UploadedFile,
+  path: string,
+  metadata?: Record<string, string>
+): Promise<string> {
+  return s3Provider.upload({
+    path,
+    file: {
+      buffer: file.buffer,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+    },
+    contentType: file.mimeType,
+    metadata,
+  });
+}
 
-// Upload file to storage
-export const uploadFile = async (options: FileUploadOptions): Promise<PolicyDocument> => {
-  // Validate file
-  const validation = validateFile(options.file);
-  if (!validation.valid) {
-    throw new Error(validation.error);
+/**
+ * Get signed download URL (alias for getDocumentDownloadUrl)
+ */
+export async function getSignedDownloadUrl(
+  s3Key: string,
+  fileName?: string,
+  expiresInSeconds: number = 3600
+): Promise<string> {
+  return getDocumentDownloadUrl(s3Key, fileName, expiresInSeconds);
+}
+
+/**
+ * Validate policy documents completeness
+ */
+export async function validatePolicyDocuments(
+  policyId: string,
+  requiredCategories: DocumentCategory[] = [
+    DocumentCategory.IDENTIFICATION,
+    DocumentCategory.INCOME_PROOF,
+  ]
+): Promise<{ valid: boolean; missing: DocumentCategory[] }> {
+  if (!prisma) {
+    // Demo mode
+    return { valid: true, missing: [] };
   }
 
-  const fileName = generateSafeFileName(options.file.originalName, options.policyId, options.category);
-  const storage = getStorageProvider();
-
-  try {
-    // Convert to StorageFile format
-    const storageFile: StorageFile = {
-      buffer: options.file.buffer,
-      originalName: options.file.originalName,
-      mimeType: options.file.mimeType,
-      size: options.file.size,
-    };
-
-    // Upload file using storage abstraction
-    await storage.upload({
-      path: fileName,
-      file: storageFile,
-      metadata: {
-        policyId: options.policyId,
-        category: options.category,
-        uploadedBy: options.uploadedBy,
+  // Get all actor documents for this policy
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    include: {
+      tenant: {
+        include: {
+          documents: true,
+        },
       },
-      contentType: options.file.mimeType,
-    });
-
-    // Generate a signed URL for the file (valid for 1 year for database storage)
-    const storageUrl = await storage.getSignedUrl({
-      path: fileName,
-      action: 'read',
-      expiresInSeconds: 365 * 24 * 60 * 60, // 1 year for DB storage
-    });
-
-    // Create document record in database
-    if (isDemoMode()) {
-      // For demo mode, return mock document
-      return {
-        id: `mock-doc-${Date.now()}`,
-        policyId: options.policyId,
-        category: options.category,
-        fileName: fileName,
-        originalName: options.file.originalName,
-        fileSize: options.file.size,
-        mimeType: options.file.mimeType,
-        storageUrl: storageUrl,
-        uploadedAt: new Date(),
-        uploadedBy: options.uploadedBy
-      } as PolicyDocument;
-    } else {
-      // Create document record in database
-      const document = await prisma.policyDocument.create({
-        data: {
-          policyId: options.policyId,
-          category: options.category,
-          fileName: fileName,
-          originalName: options.file.originalName,
-          fileSize: options.file.size,
-          mimeType: options.file.mimeType,
-          storageUrl: storageUrl,
-          uploadedBy: options.uploadedBy
-        }
-      });
-
-      return document;
-    }
-  } catch (error) {
-    console.error('File upload error:', error);
-    throw new Error('Failed to upload file');
-  }
-};
-
-// Get file URL with fresh signed URL
-export const getFileUrl = async (documentId: string): Promise<string | null> => {
-  if (isDemoMode()) {
-    // For demo mode, just return a mock URL
-    return `http://localhost:3000/api/storage/mock/${documentId}`;
-  }
-
-  const document = await prisma.policyDocument.findUnique({
-    where: { id: documentId }
+      jointObligors: {
+        include: {
+          documents: true,
+        },
+      },
+      avals: {
+        include: {
+          documents: true,
+        },
+      },
+      landlord: {
+        include: {
+          documents: true,
+        },
+      },
+    },
   });
-  
-  if (!document) return null;
 
-  const storage = getStorageProvider();
-
-  try {
-    // Check if file exists in storage
-    const exists = await storage.exists(document.fileName);
-    if (!exists) return null;
-
-    // Generate a new signed URL with 7-day expiration for general access
-    const signedUrl = await storage.getSignedUrl({
-      path: document.fileName,
-      action: 'read',
-      expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    // Update the URL in database
-    await prisma.policyDocument.update({
-      where: { id: documentId },
-      data: { storageUrl: signedUrl }
-    });
-
-    return signedUrl;
-  } catch (error) {
-    console.error('Error getting file URL:', error);
-    return document.storageUrl; // Return existing URL as fallback
+  if (!policy) {
+    return { valid: false, missing: requiredCategories };
   }
-};
 
-// Delete file
-export const deleteFile = async (documentId: string): Promise<boolean> => {
-  try {
-    if (isDemoMode()) {
-      console.log('Demo mode: Mock deleting file');
-      return true;
+  // Check tenant documents
+  const tenantDocs = policy.tenant?.documents || [];
+  const tenantCategories = new Set(tenantDocs.map(d => d.category));
+
+  const missing: DocumentCategory[] = [];
+  for (const category of requiredCategories) {
+    if (!tenantCategories.has(category)) {
+      missing.push(category);
     }
+  }
 
-    // Get document from database
-    const document = await prisma.policyDocument.findUnique({
-      where: { id: documentId }
-    });
-
-    if (!document) return false;
-
-    const storage = getStorageProvider();
-
-    // Delete from storage
-    try {
-      await storage.delete(document.fileName);
-    } catch (error) {
-      console.error('Error deleting file from storage:', error);
+  // Check joint obligors
+  for (const jo of policy.jointObligors || []) {
+    const joDocs = jo.documents || [];
+    const joCategories = new Set(joDocs.map(d => d.category));
+    for (const category of requiredCategories) {
+      if (!joCategories.has(category)) {
+        missing.push(category);
+      }
     }
-
-    // Delete from database
-    await prisma.policyDocument.delete({
-      where: { id: documentId }
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Delete file error:', error);
-    return false;
-  }
-};
-
-// Get all documents for a policy
-export const getPolicyDocuments = async (policyId: string): Promise<PolicyDocument[]> => {
-  if (isDemoMode()) {
-    // Return empty array for demo mode
-    return [];
   }
 
-  return prisma.policyDocument.findMany({
-    where: { policyId },
-    orderBy: { uploadedAt: 'desc' }
-  });
-};
-
-// Generate a signed download URL for a file (with short expiration for security)
-export const getSignedDownloadUrl = async (fileName: string, expiresInSeconds: number = 10): Promise<string> => {
-  const storage = getStorageProvider();
-
-  try {
-    // Check if file exists
-    const exists = await storage.exists(fileName);
-    if (!exists) {
-      throw new Error('File not found in storage');
+  // Check avals (they need property documents too)
+  for (const aval of policy.avals || []) {
+    const avalDocs = aval.documents || [];
+    const avalCategories = new Set(avalDocs.map(d => d.category));
+    const avalRequired = [...requiredCategories, DocumentCategory.PROPERTY_DEED];
+    for (const category of avalRequired) {
+      if (!avalCategories.has(category)) {
+        missing.push(category);
+      }
     }
-
-    // Generate signed URL with short expiration for security
-    const signedUrl = await storage.getSignedUrl({
-      path: fileName,
-      action: 'read',
-      expiresInSeconds: expiresInSeconds, // Default 10 seconds for security
-      responseDisposition: 'attachment', // Force download
-    });
-
-    return signedUrl;
-  } catch (error) {
-    console.error('Error generating signed download URL:', error);
-    throw new Error('Failed to generate download URL');
   }
-};
 
-// Validate all required documents are uploaded
-export const validatePolicyDocuments = async (policyId: string): Promise<{
-  valid: boolean;
-  missing: string[];
-}> => {
-  const documents = await getPolicyDocuments(policyId);
-  
-  const hasIdentification = documents.some(doc => doc.category === 'identification');
-  const hasIncome = documents.some(doc => doc.category === 'income');
-  
-  const missing: string[] = [];
-  if (!hasIdentification) missing.push('identification');
-  if (!hasIncome) missing.push('income');
-  
   return {
     valid: missing.length === 0,
-    missing
+    missing: [...new Set(missing)], // Remove duplicates
   };
-};
+}
