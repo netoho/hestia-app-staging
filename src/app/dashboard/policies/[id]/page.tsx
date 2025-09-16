@@ -24,9 +24,7 @@ import {
 import { t } from '@/lib/i18n';
 
 // Import new components
-import LandlordCard from '@/components/policies/details/LandlordCard';
-import TenantCard from '@/components/policies/details/TenantCard';
-import GuarantorCard from '@/components/policies/details/GuarantorCard';
+import ActorCard from '@/components/policies/details/ActorCard';
 import ActorVerificationCard from '@/components/policies/details/ActorVerificationCard';
 import PropertyCard from '@/components/policies/details/PropertyCard';
 import PricingCard from '@/components/policies/details/PricingCard';
@@ -457,12 +455,22 @@ export default function PolicyDetailsPage({
 
         {/* Landlord Tab */}
         <TabsContent value="landlord" className="space-y-6">
-          <LandlordCard landlord={policy.landlord} policyId={policyId} />
+          <ActorCard
+            actor={policy.landlord}
+            actorType="landlord"
+            policyId={policyId}
+            getVerificationBadge={getVerificationBadge}
+          />
         </TabsContent>
 
         {/* Tenant Tab */}
         <TabsContent value="tenant" className="space-y-6">
-          <TenantCard tenant={policy.tenant} policyId={policyId} />
+          <ActorCard
+            actor={policy.tenant}
+            actorType="tenant"
+            policyId={policyId}
+            getVerificationBadge={getVerificationBadge}
+          />
         </TabsContent>
 
         {/* Guarantors Tab */}
@@ -470,18 +478,13 @@ export default function PolicyDetailsPage({
           {/* Joint Obligors */}
           {(policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Obligados Solidarios
-              </h3>
               {policy.jointObligors && policy.jointObligors.length > 0 ? (
                 policy.jointObligors.map((jo: any) => (
-                  <GuarantorCard
+                  <ActorCard
                     key={jo.id}
-                    guarantor={jo}
-                    type="jointObligor"
-                    onSendInvitation={(id) => sendIndividualInvitation('jointObligor', id)}
-                    sending={sending === jo.id}
+                    actor={jo}
+                    actorType="jointObligor"
+                    policyId={policyId}
                     getVerificationBadge={getVerificationBadge}
                   />
                 ))
@@ -504,12 +507,11 @@ export default function PolicyDetailsPage({
               </h3>
               {policy.avals && policy.avals.length > 0 ? (
                 policy.avals.map((aval: any) => (
-                  <GuarantorCard
+                  <ActorCard
                     key={aval.id}
-                    guarantor={aval}
-                    type="aval"
-                    onSendInvitation={(id) => sendIndividualInvitation('aval', id)}
-                    sending={sending === aval.id}
+                    actor={aval}
+                    actorType="aval"
+                    policyId={policyId}
                     getVerificationBadge={getVerificationBadge}
                   />
                 ))
