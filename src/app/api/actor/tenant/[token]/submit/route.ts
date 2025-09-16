@@ -66,18 +66,18 @@ export async function POST(
     }
 
     // Log activity
-    await logPolicyActivity(
-      tenant.policyId,
-      'tenant_info_completed',
-      'Tenant information completed',
-      {
+    await logPolicyActivity({
+      policyId: tenant.policyId,
+      action: 'tenant_info_completed',
+      description: 'Tenant information completed',
+      details: {
         tenantId: tenant.id,
         tenantName: data.fullName,
         completedAt: new Date()
       },
-      undefined,
-      'tenant'
-    );
+      performedByActor: 'tenant',
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     // Check if all actors are complete and transition status if needed
     const actorsStatus = await checkPolicyActorsComplete(tenant.policyId);

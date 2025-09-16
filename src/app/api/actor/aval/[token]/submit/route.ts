@@ -70,20 +70,23 @@ export async function POST(
       });
     }
 
+
+    console.log('ip', request.headers.get('x-forwarded-for') || 'unknown')
+
     // Log activity
-    await logPolicyActivity(
-      aval.policyId,
-      'aval_info_completed',
-      'Aval information completed',
-      {
+    await logPolicyActivity({
+      policyId: aval.policyId,
+      action: 'aval_info_completed',
+      description: 'Aval information completed',
+      details: {
         avalId: aval.id,
         avalName: data.fullName,
         propertyValue: data.propertyValue,
         completedAt: new Date()
       },
-      undefined,
-      'aval'
-    );
+      performedByActor: 'aval',
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     // Check if all actors are complete and transition status if needed
     const actorsStatus = await checkPolicyActorsComplete(aval.policyId);

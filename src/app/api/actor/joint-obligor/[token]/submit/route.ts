@@ -66,18 +66,18 @@ export async function POST(
     }
 
     // Log activity
-    await logPolicyActivity(
-      jointObligor.policyId,
-      'joint_obligor_info_completed',
-      'Joint obligor information completed',
-      {
+    await logPolicyActivity({
+      policyId: jointObligor.policyId,
+      action: 'joint_obligor_info_completed',
+      description: 'Joint obligor information completed',
+      details: {
         jointObligorId: jointObligor.id,
         jointObligorName: data.fullName,
         completedAt: new Date()
       },
-      undefined,
-      'joint_obligor'
-    );
+      performedByActor: 'joint_obligor',
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     // Check if all actors are complete and transition status if needed
     const actorsStatus = await checkPolicyActorsComplete(jointObligor.policyId);
