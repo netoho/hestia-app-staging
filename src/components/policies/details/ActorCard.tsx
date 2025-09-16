@@ -259,6 +259,18 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
           </div>
         </div>
 
+        {/* Additional Information */}
+        {actor.additionalInfo && (
+          <div className="mt-6">
+            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
+              Información Adicional
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <p className="text-xs text-gray-600">{actor.additionalInfo}</p>
+            </div>
+          </div>
+        )}
+
         {/* References */}
         {actor.references && actor.references.length > 0 && (
           <div className="mt-6">

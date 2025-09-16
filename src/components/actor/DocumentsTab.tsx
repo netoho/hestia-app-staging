@@ -2,6 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from "@/components/ui/label";
+import { Textarea } from '@/components/ui/textarea';
 
 interface DocumentsTabProps {
   documents: {
@@ -10,20 +12,24 @@ interface DocumentsTabProps {
     addressProof: File | null;
     propertyDeed: File | null;
   };
+  additionalInfo?: string;
   existingDocuments: Record<string, any>;
   uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
   uploadErrors: Record<string, string>;
   handleDocumentChange: (documentType: string, category: string, file: File | null) => void;
+  updateFormData: (field: string, value: any) => void,
   actorType: 'tenant' | 'joint-obligor' | 'aval';
 }
 
 export default function DocumentsTab({
   documents,
   existingDocuments,
+  additionalInfo,
   uploadStatus,
   uploadErrors,
   handleDocumentChange,
-  actorType
+  updateFormData,
+  actorType,
 }: DocumentsTabProps) {
   const renderDocumentCard = (
     title: string,
@@ -104,6 +110,20 @@ export default function DocumentsTab({
           'propertyDeed',
           'property_deed'
         )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Información adicional:</CardTitle>
+            <CardDescription>Cualquier información adicional que quieras compartir: Linkedin, Portafolio, etc...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="additionalInfo"></Label>
+            <Textarea
+              id="additionalInfo"
+              value={additionalInfo || ''}
+              onChange={(e) => updateFormData('additionalInfo', e.target.value)}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

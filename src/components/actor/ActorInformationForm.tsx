@@ -27,6 +27,7 @@ interface ActorData {
   curp?: string;
   passport?: string;
   address?: string;
+  additionalInfo?: string;
 
   // Employment Information
   employmentStatus: string;
@@ -57,7 +58,7 @@ interface ActorInformationFormProps {
   onSubmit?: (data: ActorData) => Promise<void>;
 }
 
-export default function ActorInformationFormV2({
+export default function ActorInformationForm({
   actorType,
   token,
   policyData,
@@ -93,6 +94,7 @@ export default function ActorInformationFormV2({
     propertyValue: initialData?.propertyValue || 0,
     propertyDeedNumber: initialData?.propertyDeedNumber || '',
     propertyRegistry: initialData?.propertyRegistry || '',
+    additionalInfo: initialData?.additionalInfo || '',
   });
 
   // Use document upload hook
@@ -371,6 +373,8 @@ export default function ActorInformationFormV2({
           <TabsContent value="documents">
             <DocumentsTab
               documents={documents}
+              additionalInfo={formData.additionalInfo}
+              updateFormData={updateFormData}
               existingDocuments={existingDocuments}
               uploadStatus={uploadStatus}
               uploadErrors={uploadErrors}
