@@ -223,6 +223,8 @@ model Landlord {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  additionalInfo   String? @db.Char(1000)
 }
 
 model Tenant {
@@ -283,6 +285,9 @@ model Tenant {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+
+  additionalInfo   String? @db.Char(1000)
 }
 
 model JointObligor {
@@ -332,6 +337,8 @@ model JointObligor {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  additionalInfo   String? @db.Char(1000)
 }
 
 model Aval {
@@ -387,6 +394,8 @@ model Aval {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  additionalInfo   String? @db.Char(1000)
 }
 
 model PersonalReference {
