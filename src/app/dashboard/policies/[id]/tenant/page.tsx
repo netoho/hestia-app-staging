@@ -12,9 +12,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, Save, CheckCircle2, AlertCircle, User, Briefcase, Building, Users } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle2, AlertCircle, User, Briefcase, Building, Users, FileText } from 'lucide-react';
 import { individualTenantSchema, companyTenantSchema, personalReferenceSchema } from '@/lib/validations/policy';
 import { z } from 'zod';
+import InternalDocumentsTab from '@/components/dashboard/InternalDocumentsTab';
 
 interface TenantData {
   // Common fields
@@ -79,6 +80,7 @@ export default function TenantInformationPage({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [references, setReferences] = useState<Reference[]>([]);
+  const [documents, setDocuments] = useState([]);
 
   const [formData, setFormData] = useState<TenantData>({
     tenantType: 'INDIVIDUAL',
@@ -122,6 +124,7 @@ export default function TenantInformationPage({
   useEffect(() => {
     if (policyId) {
       fetchPolicyData();
+      fetchDocuments();
     }
   }, [policyId]);
 
@@ -162,6 +165,18 @@ export default function TenantInformationPage({
       }
     } catch (error) {
       console.error('Error fetching references:', error);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/tenant/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
     }
   };
 
@@ -449,7 +464,7 @@ export default function TenantInformationPage({
           </div>
 
           <Tabs value={currentTab} onValueChange={setCurrentTab}>
-            <TabsList className="grid grid-cols-3 w-full">
+            <TabsList className="grid grid-cols-4 w-full">
               <TabsTrigger value="personal">
                 {formData.tenantType === 'COMPANY' ? (
                   <><Building className="h-4 w-4 mr-2" />Empresa</>
@@ -466,6 +481,10 @@ export default function TenantInformationPage({
               <TabsTrigger value="references">
                 <Users className="h-4 w-4 mr-2" />
                 Referencias
+              </TabsTrigger>
+              <TabsTrigger value="documents">
+                <FileText className="h-4 w-4 mr-2" />
+                Documentos
               </TabsTrigger>
             </TabsList>
 
@@ -875,6 +894,17 @@ export default function TenantInformationPage({
                   {saving ? 'Guardando...' : 'Guardar Información'}
                 </Button>
               </div>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-4 mt-4">
+              <InternalDocumentsTab
+                policyId={policyId}
+                actorType="tenant"
+                actorId={policy?.tenant?.id || ''}
+                documents={documents}
+                onDocumentsFetch={fetchDocuments}
+                isAval={false}
+              />
             </TabsContent>
           </Tabs>
 

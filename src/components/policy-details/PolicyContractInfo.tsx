@@ -3,16 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  FileText, 
-  Upload, 
-  Download, 
+import {
+  FileText,
+  Upload,
+  Download,
   Calendar,
   User,
   History,
   CheckCircle
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
+import { formatFileSize } from '@/lib/utils';
 
 interface Contract {
   id: string;
@@ -37,7 +38,7 @@ interface PolicyContractInfoProps {
   onMarkSigned?: () => void;
 }
 
-export function PolicyContractInfo({ 
+export function PolicyContractInfo({
   contracts = [],
   policyStatus,
   contractSignedAt,
@@ -55,14 +56,6 @@ export function PolicyContractInfo({
   const currentContract = contracts.find(c => c.isCurrent) || contracts[0];
   const hasContract = contracts.length > 0;
   const isSigned = !!contractSignedAt;
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   const formatDate = (date: Date | null | undefined) => {
     if (!date) return '-';
@@ -128,7 +121,7 @@ export function PolicyContractInfo({
                     <Badge variant="outline" className="text-xs">Actual</Badge>
                   )}
                 </div>
-                
+
                 <div className="text-sm text-muted-foreground space-y-1">
                   <p>Versión: {currentContract.version}</p>
                   <p>Tamaño: {formatFileSize(currentContract.fileSize)}</p>
@@ -147,7 +140,7 @@ export function PolicyContractInfo({
                     Descargar
                   </Button>
                 )}
-                
+
                 {!isSigned && onMarkSigned && policyStatus === 'CONTRACT_UPLOADED' && (
                   <Button
                     size="sm"
@@ -224,8 +217,8 @@ export function PolicyContractInfo({
               {contracts
                 .sort((a, b) => b.version - a.version)
                 .map((contract) => (
-                  <div 
-                    key={contract.id} 
+                  <div
+                    key={contract.id}
                     className="flex items-center justify-between p-2 bg-muted/30 rounded text-sm"
                   >
                     <div>

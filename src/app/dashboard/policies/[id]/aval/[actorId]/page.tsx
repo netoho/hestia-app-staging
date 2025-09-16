@@ -11,9 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, CheckCircle2, AlertCircle, User, Briefcase, Users, Shield } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle2, AlertCircle, User, Briefcase, Users, Shield, FileText } from 'lucide-react';
 import { avalSchema, personalReferenceSchema } from '@/lib/validations/policy';
 import { z } from 'zod';
+import InternalDocumentsTab from '@/components/dashboard/InternalDocumentsTab';
 
 interface AvalData {
   fullName: string;
@@ -62,6 +63,7 @@ export default function AvalEditPage({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [references, setReferences] = useState<Reference[]>([]);
+  const [documents, setDocuments] = useState([]);
   const [policyInfo, setPolicyInfo] = useState<{ policyNumber: string; propertyAddress: string } | null>(null);
 
   const [formData, setFormData] = useState<AvalData>({
@@ -106,6 +108,7 @@ export default function AvalEditPage({
   useEffect(() => {
     if (policyId && actorId) {
       fetchAvalData();
+      fetchDocuments();
     }
   }, [policyId, actorId]);
 
@@ -150,6 +153,19 @@ export default function AvalEditPage({
       console.error('Error fetching aval:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    if (!policyId || !actorId) return;
+    try {
+      const response = await fetch(`/api/policies/${policyId}/aval/${actorId}/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
     }
   };
 
@@ -384,7 +400,7 @@ export default function AvalEditPage({
           )}
 
           <Tabs value={currentTab} onValueChange={setCurrentTab}>
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="personal">
                 <User className="h-4 w-4 mr-2" />
                 Personal
@@ -400,6 +416,10 @@ export default function AvalEditPage({
               <TabsTrigger value="references">
                 <Users className="h-4 w-4 mr-2" />
                 Referencias
+              </TabsTrigger>
+              <TabsTrigger value="documents">
+                <FileText className="h-4 w-4 mr-2" />
+                Documentos
               </TabsTrigger>
             </TabsList>
 
@@ -795,6 +815,17 @@ export default function AvalEditPage({
                   {saving ? 'Guardando...' : 'Guardar Información'}
                 </Button>
               </div>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-4 mt-4">
+              <InternalDocumentsTab
+                policyId={policyId}
+                actorType="aval"
+                actorId={actorId}
+                documents={documents}
+                onDocumentsFetch={fetchDocuments}
+                isAval={true}
+              />
             </TabsContent>
           </Tabs>
 
