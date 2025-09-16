@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit } from 'lucide-react';
+import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 
 interface ActorCardProps {
   actor: any;
@@ -13,6 +14,7 @@ interface ActorCardProps {
 
 export default function ActorCard({ actor, actorType, policyId, getVerificationBadge }: ActorCardProps) {
   const router = useRouter();
+  const { downloadDocument, downloading } = useDocumentDownload();
 
   const formatCurrency = (amount?: number) => {
     if (!amount) return '$0';
@@ -286,16 +288,32 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
               {actor.documents.map((doc: any) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     <FileText className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <p className="text-sm font-medium">{doc.documentType}</p>
-                      <p className="text-xs text-gray-500">{doc.originalName}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{doc.documentType}</p>
+                      <p className="text-xs text-gray-500 truncate">{doc.originalName}</p>
                     </div>
                   </div>
-                  {doc.verifiedAt && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                  <div className="flex items-center gap-2 ml-2">
+                    {doc.verifiedAt && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => downloadDocument({
+                        documentId: doc.id,
+                        documentType: 'actor',
+                        fileName: doc.originalName
+                      })}
+                      disabled={downloading === doc.id}
+                      className="h-8 w-8 p-0"
+                      title="Descargar documento"
+                    >
+                      <Download className={`h-4 w-4 ${downloading === doc.id ? 'animate-pulse' : ''}`} />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

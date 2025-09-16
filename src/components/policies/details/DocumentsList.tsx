@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 
 interface Document {
   id: string;
@@ -17,6 +18,8 @@ interface DocumentsListProps {
 }
 
 export default function DocumentsList({ documents }: DocumentsListProps) {
+  const { downloadDocument, downloading } = useDocumentDownload();
+
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
   };
@@ -35,7 +38,7 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-3 border rounded-lg"
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-gray-500" />
@@ -47,8 +50,19 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
                     </p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline">
-                  <Download className="h-4 w-4" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadDocument({
+                    documentId: doc.id,
+                    documentType: 'policy',
+                    fileName: doc.originalName
+                  })}
+                  disabled={downloading === doc.id}
+                  title="Descargar documento"
+                >
+                  <Download className={`h-4 w-4 ${downloading === doc.id ? 'animate-pulse' : ''}`} />
+                  {downloading === doc.id ? ' Descargando...' : ''}
                 </Button>
               </div>
             ))}
