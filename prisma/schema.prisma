@@ -189,7 +189,8 @@ model Landlord {
 
   // Personal/Company Information
   fullName          String
-  rfc               String
+  rfc               String?
+  curp              String?
   email             String
   phone             String
   address           String
@@ -211,6 +212,13 @@ model Landlord {
   informationComplete Boolean   @default(false)
   completedAt       DateTime?
 
+  // Approval Status
+  verificationStatus ActorVerificationStatus @default(PENDING)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  rejectionReason   String?
+  rejectedAt        DateTime?
+
   policy            Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime    @default(now())
@@ -228,6 +236,7 @@ model Tenant {
   fullName          String?
   nationality       NationalityType?
   curp              String?
+  rfc               String?
   passport          String?
 
   // Company Information
@@ -263,6 +272,13 @@ model Tenant {
   informationComplete Boolean   @default(false)
   completedAt       DateTime?
 
+  // Approval Status
+  verificationStatus ActorVerificationStatus @default(PENDING)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  rejectionReason   String?
+  rejectedAt        DateTime?
+
   policy            Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime    @default(now())
@@ -279,6 +295,7 @@ model JointObligor {
   phone             String
   nationality       NationalityType
   curp              String?
+  rfc               String?
   passport          String?
   address           String?
 
@@ -304,6 +321,13 @@ model JointObligor {
   informationComplete Boolean   @default(false)
   completedAt       DateTime?
 
+  // Approval Status
+  verificationStatus ActorVerificationStatus @default(PENDING)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  rejectionReason   String?
+  rejectedAt        DateTime?
+
   policy            Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime    @default(now())
@@ -320,6 +344,7 @@ model Aval {
   phone             String
   nationality       NationalityType
   curp              String?
+  rfc               String?
   passport          String?
   address           String?
 
@@ -350,6 +375,13 @@ model Aval {
   // Status
   informationComplete Boolean   @default(false)
   completedAt       DateTime?
+
+  // Approval Status
+  verificationStatus ActorVerificationStatus @default(PENDING)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  rejectionReason   String?
+  rejectedAt        DateTime?
 
   policy            Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
@@ -739,4 +771,11 @@ enum IncidentStatus {
   RESOLVED
   CLOSED
   ESCALATED
+}
+
+enum ActorVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  IN_REVIEW
 }
