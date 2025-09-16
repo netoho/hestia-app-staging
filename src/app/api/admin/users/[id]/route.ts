@@ -7,11 +7,11 @@ import { hashPassword } from '@/lib/auth';
 // GET single user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
 
       // Prisma database query
       const targetUser = await prisma.user.findUnique({
@@ -58,11 +58,11 @@ export async function GET(
 // PUT update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const data = await req.json();
       const { email, password, name, role, isActive } = data;
 
@@ -150,11 +150,11 @@ export async function PUT(
 // DELETE user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withRole(request, [UserRole.ADMIN], async (req, user) => {
     try {
-      const { id } = params;
+      const { id } = await params;
 
       // Prevent admin from deleting themselves
       if (id === user.id) {
