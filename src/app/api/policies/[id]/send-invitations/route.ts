@@ -141,13 +141,14 @@ export async function POST(
       }
 
       // Log activity
-      await logPolicyActivity(
-        policy.id,
-        'invitations_sent',
-        `Invitations sent to ${invitations.length} actors`,
-        { invitations: invitations.map(i => ({ type: i.actorType, email: i.email, sent: i.sent })) },
-        user.id
-      );
+      await logPolicyActivity({
+        policyId: policy.id,
+        action: 'invitations_sent',
+        description: `Invitations sent to ${invitations.length} actors`,
+        details: {invitations: invitations.map(i => ({type: i.actorType, email: i.email, sent: i.sent}))},
+        performedById: user.id,
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+      });
 
       return NextResponse.json({
         success: true,

@@ -55,20 +55,20 @@ export const PUT = withPolicyAuth(async (
     }
 
     // Log activity
-    await logPolicyActivity(
-      id,
-      status.toLowerCase(),
-      `Policy status updated to ${status}`,
-      {
+    await logPolicyActivity({
+      policyId: id,
+      action: status.toLowerCase(),
+      description: `Policy status updated to ${status}`,
+      details: {
         status,
         reviewNotes,
         reviewReason,
         managedBy: authResult.user.email,
       },
-      authResult.user.id,
-      undefined,
-      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
-    );
+      performedById: authResult.user.id,
+      performedByActor: undefined,
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+    });
 
     return NextResponse.json(updatedPolicy);
 

@@ -213,7 +213,8 @@ export async function POST(
     }
 
     // Log activity
-    await logPolicyActivity(id, {
+    await logPolicyActivity({
+      policyId: id,
       action: policy.landlord ? 'landlord_updated' : 'landlord_created',
       description: policy.landlord
         ? 'Landlord information updated'
@@ -224,6 +225,7 @@ export async function POST(
         isCompany: landlord.isCompany,
         informationComplete: landlord.informationComplete,
       },
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
     });
 
     // Check if we should update policy status
@@ -348,10 +350,12 @@ export async function DELETE(
     });
 
     // Log activity
-    await logPolicyActivity(id, {
+    await logPolicyActivity({
+      policyId: id,
       action: 'landlord_deleted',
       description: 'Landlord information deleted',
       performedById: user.id,
+      ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
     });
 
     return NextResponse.json({

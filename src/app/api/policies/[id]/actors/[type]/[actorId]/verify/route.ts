@@ -101,12 +101,12 @@ export async function POST(
     }
 
     // Log activity
-    await logPolicyActivity(
+    await logPolicyActivity({
       policyId,
-      action === 'approve' ? `${type}_approved` : `${type}_rejected`,
-      `${actorName} fue ${action === 'approve' ? 'aprobado' : 'rechazado'} por ${authResult.user.name || authResult.user.email}`,
-      authResult.user.id
-    );
+      action: action === 'approve' ? `${type}_approved` : `${type}_rejected`,
+      description: `${actorName} fue ${action === 'approve' ? 'aprobado' : 'rechazado'} por ${authResult.user.name || authResult.user.email}`,
+      performedById: authResult.user.id
+    });
 
     // Send rejection email if actor was rejected
     if (action === 'reject' && actorEmail) {
@@ -182,12 +182,12 @@ async function checkAndUpdatePolicyStatus(policyId: string) {
         },
       });
 
-      await logPolicyActivity(
+      await logPolicyActivity({
         policyId,
-        'all_actors_approved',
-        'Todos los actores han sido aprobados. La póliza está lista para aprobación final.',
-        'system'
-      );
+        action: 'all_actors_approved',
+        description: 'Todos los actores han sido aprobados. La póliza está lista para aprobación final.',
+        performedById: 'system'
+      });
     }
   } catch (error) {
     console.error('Error checking policy status:', error);

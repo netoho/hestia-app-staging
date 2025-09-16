@@ -91,15 +91,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Log activity
-    await logPolicyActivity(
-      policy.id,
-      'created',
-      'Policy created',
-      { createdBy: authResult.user.email },
-      authResult.user.id,
-      undefined,
-      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
-    );
+    await logPolicyActivity({
+      policyId: policy.id,
+      action: 'created',
+      description: 'Policy created',
+      details: {createdBy: authResult.user.email},
+      performedById: authResult.user.id,
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+    });
 
     // Automatically send invitations to actors if checkbox was checked
     if (data.sendInvitations !== false) {
