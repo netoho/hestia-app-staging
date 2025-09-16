@@ -719,6 +719,92 @@ Por favor, revisa esta solicitud y contacta al solicitante para continuar con el
   }
 };
 
+export interface ActorRejectionData {
+  to: string;
+  actorName: string;
+  actorType: string;
+  rejectionReason: string;
+  policyNumber: string;
+}
+
+export const sendActorRejectionEmail = async (params: ActorRejectionData): Promise<boolean> => {
+  try {
+    const { to, actorName, actorType, rejectionReason, policyNumber } = params;
+
+    const actorTypeLabels: Record<string, string> = {
+      landlord: 'Arrendador',
+      tenant: 'Inquilino',
+      jointObligor: 'Obligado Solidario',
+      aval: 'Aval',
+    };
+
+    const subject = `Información Rechazada - Póliza ${policyNumber}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #ef4444; color: white; padding: 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Información Rechazada</h1>
+        </div>
+
+        <div style="padding: 32px;">
+          <p style="color: #333; font-size: 16px; line-height: 1.5;">Hola <strong>${actorName}</strong>,</p>
+
+          <p style="color: #333; font-size: 16px; line-height: 1.5;">
+            Tu información como <strong>${actorTypeLabels[actorType] || actorType}</strong> para la póliza
+            <strong>${policyNumber}</strong> ha sido rechazada.
+          </p>
+
+          <div style="background-color: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
+            <p style="margin: 0; color: #991b1b; font-weight: bold;">Razón del rechazo:</p>
+            <p style="margin: 8px 0 0 0; color: #7f1d1d;">${rejectionReason}</p>
+          </div>
+
+          <p style="color: #333; font-size: 16px; line-height: 1.5;">
+            Por favor, revisa y actualiza tu información según las observaciones proporcionadas.
+            Puedes acceder nuevamente usando el enlace que te fue enviado anteriormente.
+          </p>
+
+          <p style="color: #333; font-size: 16px; line-height: 1.5; margin-top: 24px;">
+            Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en
+            <a href="mailto:${SUPPORT_EMAIL}" style="color: #3b82f6; text-decoration: none;">${SUPPORT_EMAIL}</a>
+          </p>
+        </div>
+
+        <div style="background-color: #f3f4f6; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            Este es un correo automático. Por favor, no respondas a este mensaje.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const text = `
+      Hola ${actorName},
+
+      Tu información como ${actorTypeLabels[actorType] || actorType} para la póliza ${policyNumber} ha sido rechazada.
+
+      Razón del rechazo:
+      ${rejectionReason}
+
+      Por favor, revisa y actualiza tu información según las observaciones proporcionadas.
+
+      Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en ${SUPPORT_EMAIL}.
+    `;
+
+    const result = await sendEmail({
+      to,
+      subject,
+      text,
+      html,
+    });
+
+    console.log('Actor rejection email sent:', result);
+    return true;
+  } catch (error) {
+    console.error('Failed to send actor rejection email:', error);
+    return false;
+  }
+};
+
 export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Promise<boolean> => {
   try {
     // Use React Email templates

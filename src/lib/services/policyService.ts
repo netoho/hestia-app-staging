@@ -1,5 +1,5 @@
 import prisma from '../prisma';
-import { PolicyStatus, GuarantorType, PropertyType } from '@prisma/client';
+import { PolicyStatus, GuarantorType, PropertyType, TenantType } from '@prisma/client';
 
 interface CreatePolicyData {
   propertyAddress: string;
@@ -24,10 +24,13 @@ interface CreatePolicyData {
     rfc?: string;
   };
   tenant: {
-    firstName: string;
-    lastName: string;
+    tenantType?: TenantType;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
     email: string;
     phone?: string;
+    rfc?: string;
   };
   jointObligors?: Array<{
     firstName: string;
@@ -74,9 +77,14 @@ export async function createPolicy(data: CreatePolicyData) {
       },
       tenant: {
         create: {
-          fullName: `${data.tenant.firstName} ${data.tenant.lastName}`,
+          tenantType: data.tenant.tenantType || 'INDIVIDUAL',
+          fullName: data.tenant.tenantType === 'COMPANY'
+            ? (data.tenant.companyName || '')
+            : `${data.tenant.firstName || ''} ${data.tenant.lastName || ''}`.trim(),
+          companyName: data.tenant.tenantType === 'COMPANY' ? data.tenant.companyName : undefined,
           email: data.tenant.email,
           phone: data.tenant.phone || '',
+          rfc: data.tenant.rfc || '',
         }
       }
     },
@@ -135,6 +143,7 @@ export async function getPolicies(params?: {
   search?: string;
   page?: number;
   limit?: number;
+  createdById?: string;
 }) {
   const page = params?.page || 1;
   const limit = params?.limit || 10;
@@ -144,6 +153,10 @@ export async function getPolicies(params?: {
 
   if (params?.status && params.status !== 'all') {
     where.status = params.status;
+  }
+
+  if (params?.createdById) {
+    where.createdById = params.createdById;
   }
 
   if (params?.search) {
