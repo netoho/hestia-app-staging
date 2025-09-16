@@ -14,7 +14,7 @@ import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, Trash2, Calculator, Info, Mail } from 'lucide-react';
-import { PropertyType, GuarantorType } from '@/types/policy';
+import { PropertyType, GuarantorType, TenantType } from '@/types/policy';
 import { formatCurrency } from '@/lib/services/pricingService';
 
 interface ActorForm {
@@ -23,6 +23,11 @@ interface ActorForm {
   email: string;
   phone: string;
   rfc?: string;
+}
+
+interface TenantForm extends ActorForm {
+  tenantType: TenantType;
+  companyName?: string;
 }
 
 export default function NewPolicyPage() {
@@ -62,9 +67,11 @@ export default function NewPolicyPage() {
   });
 
   // Tenant Information
-  const [tenantData, setTenantData] = useState<ActorForm>({
+  const [tenantData, setTenantData] = useState<TenantForm>({
+    tenantType: TenantType.INDIVIDUAL,
     firstName: '',
     lastName: '',
+    companyName: '',
     email: '',
     phone: '',
     rfc: '',
@@ -212,10 +219,17 @@ export default function NewPolicyPage() {
       return false;
     }
 
-    // Validate tenant data
-    if (!tenantData.firstName || !tenantData.lastName || !tenantData.email) {
-      alert('Por favor complete todos los campos del inquilino');
-      return false;
+    // Validate tenant data based on type
+    if (tenantData.tenantType === TenantType.INDIVIDUAL) {
+      if (!tenantData.firstName || !tenantData.lastName || !tenantData.email) {
+        alert('Por favor complete todos los campos del inquilino');
+        return false;
+      }
+    } else if (tenantData.tenantType === TenantType.COMPANY) {
+      if (!tenantData.companyName || !tenantData.email || !tenantData.rfc) {
+        alert('Por favor complete todos los campos de la empresa inquilina');
+        return false;
+      }
     }
 
     // Validate guarantors based on type
@@ -224,9 +238,14 @@ export default function NewPolicyPage() {
         alert('Por favor agregue al menos un obligado solidario');
         return false;
       }
-      for (const jo of jointObligors) {
+      for (let i = 0; i < jointObligors.length; i++) {
+        const jo = jointObligors[i];
         if (!jo.firstName || !jo.lastName || !jo.email) {
-          alert('Por favor complete todos los campos de los obligados solidarios');
+          alert(`Por favor complete todos los campos del obligado solidario ${i + 1}`);
+          return false;
+        }
+        if (!jo.phone) {
+          alert(`Por favor agregue el teléfono del obligado solidario ${i + 1}`);
           return false;
         }
       }
@@ -237,9 +256,14 @@ export default function NewPolicyPage() {
         alert('Por favor agregue al menos un aval');
         return false;
       }
-      for (const aval of avals) {
+      for (let i = 0; i < avals.length; i++) {
+        const aval = avals[i];
         if (!aval.firstName || !aval.lastName || !aval.email) {
-          alert('Por favor complete todos los campos de los avales');
+          alert(`Por favor complete todos los campos del aval ${i + 1}`);
+          return false;
+        }
+        if (!aval.phone) {
+          alert(`Por favor agregue el teléfono del aval ${i + 1}`);
           return false;
         }
       }
@@ -643,25 +667,82 @@ export default function NewPolicyPage() {
               <CardDescription>Ingrese los datos del inquilino</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tenantFirstName">Nombre</Label>
-                  <Input
-                    id="tenantFirstName"
-                    value={tenantData.firstName}
-                    onChange={(e) => setTenantData({ ...tenantData, firstName: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tenantLastName">Apellidos</Label>
-                  <Input
-                    id="tenantLastName"
-                    value={tenantData.lastName}
-                    onChange={(e) => setTenantData({ ...tenantData, lastName: e.target.value })}
-                  />
-                </div>
+              <div>
+                <Label htmlFor="tenantType">Tipo de Inquilino</Label>
+                <Select
+                  value={tenantData.tenantType}
+                  onValueChange={(value) => setTenantData({ ...tenantData, tenantType: value as TenantType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TenantType.INDIVIDUAL}>Persona Física</SelectItem>
+                    <SelectItem value={TenantType.COMPANY}>Persona Moral (Empresa)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {tenantData.tenantType === TenantType.COMPANY && (
+                <div>
+                  <Label htmlFor="tenantCompanyName">Razón Social</Label>
+                  <Input
+                    id="tenantCompanyName"
+                    value={tenantData.companyName}
+                    onChange={(e) => setTenantData({ ...tenantData, companyName: e.target.value })}
+                    placeholder="Nombre de la empresa"
+                    required
+                  />
+                </div>
+              )}
+
+              {tenantData.tenantType === TenantType.INDIVIDUAL && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tenantFirstName">Nombre</Label>
+                    <Input
+                      id="tenantFirstName"
+                      value={tenantData.firstName}
+                      onChange={(e) => setTenantData({ ...tenantData, firstName: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tenantLastName">Apellidos</Label>
+                    <Input
+                      id="tenantLastName"
+                      value={tenantData.lastName}
+                      onChange={(e) => setTenantData({ ...tenantData, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {tenantData.tenantType === TenantType.COMPANY && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tenantRepFirstName">Nombre del Representante</Label>
+                    <Input
+                      id="tenantRepFirstName"
+                      value={tenantData.firstName}
+                      onChange={(e) => setTenantData({ ...tenantData, firstName: e.target.value })}
+                      placeholder="Nombre del representante legal"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tenantRepLastName">Apellidos del Representante</Label>
+                    <Input
+                      id="tenantRepLastName"
+                      value={tenantData.lastName}
+                      onChange={(e) => setTenantData({ ...tenantData, lastName: e.target.value })}
+                      placeholder="Apellidos del representante legal"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="tenantEmail">Email</Label>
@@ -670,6 +751,7 @@ export default function NewPolicyPage() {
                   type="email"
                   value={tenantData.email}
                   onChange={(e) => setTenantData({ ...tenantData, email: e.target.value })}
+                  required
                 />
               </div>
 
@@ -680,15 +762,20 @@ export default function NewPolicyPage() {
                     id="tenantPhone"
                     value={tenantData.phone}
                     onChange={(e) => setTenantData({ ...tenantData, phone: e.target.value })}
+                    required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="tenantRfc">RFC/CURP</Label>
+                  <Label htmlFor="tenantRfc">
+                    {tenantData.tenantType === TenantType.COMPANY ? 'RFC' : 'RFC/CURP'}
+                  </Label>
                   <Input
                     id="tenantRfc"
                     value={tenantData.rfc}
                     onChange={(e) => setTenantData({ ...tenantData, rfc: e.target.value })}
+                    placeholder={tenantData.tenantType === TenantType.COMPANY ? 'RFC de la empresa' : 'RFC o CURP'}
+                    required={tenantData.tenantType === TenantType.COMPANY}
                   />
                 </div>
               </div>
@@ -749,36 +836,53 @@ export default function NewPolicyPage() {
                             size="sm"
                             variant="destructive"
                             onClick={() => removeJointObligor(index)}
+                            disabled={jointObligors.length === 1}
+                            title={jointObligors.length === 1 ? 'Debe haber al menos un obligado solidario' : 'Eliminar'}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <Input
-                            placeholder="Nombre"
-                            value={jo.firstName}
-                            onChange={(e) => updateJointObligor(index, 'firstName', e.target.value)}
-                          />
-                          <Input
-                            placeholder="Apellidos"
-                            value={jo.lastName}
-                            onChange={(e) => updateJointObligor(index, 'lastName', e.target.value)}
-                          />
+                          <div>
+                            <Input
+                              placeholder="Nombre *"
+                              value={jo.firstName}
+                              onChange={(e) => updateJointObligor(index, 'firstName', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Input
+                              placeholder="Apellidos *"
+                              value={jo.lastName}
+                              onChange={(e) => updateJointObligor(index, 'lastName', e.target.value)}
+                              required
+                            />
+                          </div>
                         </div>
                         <Input
-                          placeholder="Email"
+                          placeholder="Email *"
                           type="email"
                           value={jo.email}
                           onChange={(e) => updateJointObligor(index, 'email', e.target.value)}
+                          required
                         />
                         <Input
-                          placeholder="Teléfono"
+                          placeholder="Teléfono *"
                           value={jo.phone}
                           onChange={(e) => updateJointObligor(index, 'phone', e.target.value)}
+                          required
                         />
                       </CardContent>
                     </Card>
                   ))}
+                  {jointObligors.length === 0 && (
+                    <Alert>
+                      <AlertDescription>
+                        Debe agregar al menos un obligado solidario. Haga clic en "Agregar" para continuar.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
 
@@ -801,36 +905,53 @@ export default function NewPolicyPage() {
                             size="sm"
                             variant="destructive"
                             onClick={() => removeAval(index)}
+                            disabled={avals.length === 1}
+                            title={avals.length === 1 ? 'Debe haber al menos un aval' : 'Eliminar'}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <Input
-                            placeholder="Nombre"
-                            value={aval.firstName}
-                            onChange={(e) => updateAval(index, 'firstName', e.target.value)}
-                          />
-                          <Input
-                            placeholder="Apellidos"
-                            value={aval.lastName}
-                            onChange={(e) => updateAval(index, 'lastName', e.target.value)}
-                          />
+                          <div>
+                            <Input
+                              placeholder="Nombre *"
+                              value={aval.firstName}
+                              onChange={(e) => updateAval(index, 'firstName', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Input
+                              placeholder="Apellidos *"
+                              value={aval.lastName}
+                              onChange={(e) => updateAval(index, 'lastName', e.target.value)}
+                              required
+                            />
+                          </div>
                         </div>
                         <Input
-                          placeholder="Email"
+                          placeholder="Email *"
                           type="email"
                           value={aval.email}
                           onChange={(e) => updateAval(index, 'email', e.target.value)}
+                          required
                         />
                         <Input
-                          placeholder="Teléfono"
+                          placeholder="Teléfono *"
                           value={aval.phone}
                           onChange={(e) => updateAval(index, 'phone', e.target.value)}
+                          required
                         />
                       </CardContent>
                     </Card>
                   ))}
+                  {avals.length === 0 && (
+                    <Alert>
+                      <AlertDescription>
+                        Debe agregar al menos un aval. Haga clic en "Agregar" para continuar.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
 
@@ -923,13 +1044,40 @@ export default function NewPolicyPage() {
                 <h3 className="font-medium mb-2">Inquilino</h3>
                 <dl className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Nombre:</dt>
-                    <dd>{tenantData.firstName} {tenantData.lastName}</dd>
+                    <dt className="text-gray-500">Tipo:</dt>
+                    <dd>{tenantData.tenantType === TenantType.INDIVIDUAL ? 'Persona Física' : 'Persona Moral'}</dd>
                   </div>
+                  {tenantData.tenantType === TenantType.COMPANY && tenantData.companyName && (
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Empresa:</dt>
+                      <dd>{tenantData.companyName}</dd>
+                    </div>
+                  )}
+                  {(tenantData.tenantType === TenantType.INDIVIDUAL ||
+                    (tenantData.tenantType === TenantType.COMPANY && (tenantData.firstName || tenantData.lastName))) && (
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">
+                        {tenantData.tenantType === TenantType.COMPANY ? 'Representante:' : 'Nombre:'}
+                      </dt>
+                      <dd>{tenantData.firstName} {tenantData.lastName}</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Email:</dt>
                     <dd>{tenantData.email}</dd>
                   </div>
+                  {tenantData.phone && (
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Teléfono:</dt>
+                      <dd>{tenantData.phone}</dd>
+                    </div>
+                  )}
+                  {tenantData.rfc && (
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">{tenantData.tenantType === TenantType.COMPANY ? 'RFC:' : 'RFC/CURP:'}</dt>
+                      <dd>{tenantData.rfc}</dd>
+                    </div>
+                  )}
                 </dl>
               </div>
 

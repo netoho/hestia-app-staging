@@ -1,34 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
-import { getPolicyById, updatePolicyStatus, logPolicyActivity } from '@/lib/services/policyService';
+import { withPolicyAuth } from '@/lib/middleware/policyAuth';
+import { updatePolicyStatus, logPolicyActivity } from '@/lib/services/policyService';
 
-export async function GET(
+export const GET = withPolicyAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params },
+  authResult
+) => {
   try {
-    const { id } = await params;
-
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get policy with all related data
-    const policy = await getPolicyById(id);
-
-    if (!policy) {
-      return NextResponse.json(
-        { error: 'Policy not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(policy);
+    // Policy is already loaded and authorized by middleware
+    return NextResponse.json(authResult.policy);
 
   } catch (error) {
     console.error('Get policy error:', error);
@@ -37,26 +18,25 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(
+export const PUT = withPolicyAuth(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  { params },
+  authResult
+) => {
   try {
     const { id } = await params;
-
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const { status, reviewNotes, reviewReason } = body;
+
+    // Only ADMIN and STAFF can update policy status
+    if (authResult.user.role === 'BROKER') {
+      return NextResponse.json(
+        { error: 'Forbidden: Brokers cannot update policy status' },
+        { status: 403 }
+      );
+    }
 
     // Update policy status using service
     const updatedPolicy = await updatePolicyStatus(
@@ -99,4 +79,4 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});

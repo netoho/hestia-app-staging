@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
     }
 
 
-    console.log('requireRole(authResult.user.role, [\'STAFF\', \'ADMIN\'])', requireRole(authResult.user.role, ['STAFF', 'ADMIN']), authResult.user);
+    console.log('requireRole(authResult.user.role, [\'STAFF\', \'ADMIN\', \'BROKER\'])', requireRole(authResult.user.role, ['STAFF', 'ADMIN', 'BROKER']), authResult.user);
 
-    if (!requireRole(authResult.user.role, ['STAFF', 'ADMIN'])) {
+    if (!requireRole(authResult.user.role, ['STAFF', 'ADMIN', 'BROKER'])) {
       return NextResponse.json(
-        { error: 'Forbidden: Only staff and admin can view policies' },
+        { error: 'Forbidden: Only staff, admin, and brokers can view policies' },
         { status: 403 }
       );
     }
@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
       paymentStatus: paymentStatus || undefined,
       search: search || undefined,
       page,
-      limit
+      limit,
+      // Filter by createdById for brokers
+      createdById: authResult.user.role === 'BROKER' ? authResult.user.id : undefined
     });
 
     return NextResponse.json(result);
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
         console.log('Authenticated user:', authResult.user);
 
     // Check if user has permission (admin, staff, or broker can create policies)
-    if (!requireRole(authResult.user.role, ['STAFF', 'ADMIN'])) {
+    if (!requireRole(authResult.user.role, ['STAFF', 'ADMIN', 'BROKER'])) {
       return NextResponse.json(
         { error: 'Forbidden: You do not have permission to create policies' },
         { status: 403 }
