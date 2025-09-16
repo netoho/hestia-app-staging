@@ -364,15 +364,26 @@ export async function updatePolicyStatus(
   });
 }
 
-export async function logPolicyActivity(
-  policyId: string,
-  action: string,
-  description: string,
-  details?: any,
-  performedById?: string,
-  performedByActor?: string,
-  ipAddress?: string
-) {
+interface logPolicyActivityParams {
+  policyId: string;
+  action: string;
+  description: string;
+  details?: any;
+  performedById?: string;
+  performedByActor?: string;
+  ipAddress?: string;
+}
+
+export async function logPolicyActivity(data: logPolicyActivityParams) {
+  const {
+    policyId,
+    action,
+    description,
+    details,
+    performedById,
+    performedByActor,
+    ipAddress
+  } = data;
   return prisma.policyActivity.create({
     data: {
       policyId,

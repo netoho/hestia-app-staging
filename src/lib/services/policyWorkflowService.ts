@@ -2,6 +2,8 @@ import { PolicyStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { logPolicyActivity } from './policyService';
 import { checkPolicyActorsComplete } from './actorTokenService';
+import {req} from "agent-base";
+import {request} from "node:http";
 
 /**
  * Policy workflow state transitions
@@ -44,7 +46,7 @@ export async function transitionPolicyStatus(
   newStatus: PolicyStatus,
   userId: string,
   notes?: string,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; policy?: any; error?: string }> {
   // Get current policy
   const policy = await prisma.policy.findUnique({
@@ -91,18 +93,18 @@ export async function transitionPolicyStatus(
   });
 
   // Log activity
-  await logPolicyActivity(
-    policyId,
-    'status_changed',
-    `Status changed from ${policy.status} to ${newStatus}`,
-    {
+  await logPolicyActivity({
+    policyId: policyId,
+    action: 'status_changed',
+    description: `Status changed from ${policy.status} to ${newStatus}`,
+    details: {
       fromStatus: policy.status,
       toStatus: newStatus,
       notes,
       reason
     },
-    userId
-  );
+    performedById: userId,
+  });
 
   // Trigger side effects based on status
   await triggerStatusSideEffects(updatedPolicy, newStatus, userId);
