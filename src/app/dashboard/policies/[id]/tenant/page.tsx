@@ -202,6 +202,7 @@ export default function TenantInformationPage({
   };
 
   const validateForm = (): boolean => {
+    setErrors({});
     try {
       // Create the appropriate schema based on tenant type
       if (formData.tenantType === 'COMPANY') {
@@ -231,22 +232,27 @@ export default function TenantInformationPage({
         throw new Error('Se requieren al menos 3 referencias');
       }
 
+      const refErrors: Record<string, string> = {};
+
       references.forEach((ref, index) => {
-        try {
-          personalReferenceSchema.parse(ref);
-        } catch (err) {
-          if (err instanceof z.ZodError) {
-            err.errors.forEach(error => {
-              const path = error.path.join('.');
-              setErrors(prev => ({
-                ...prev,
-                [`ref_${index}_${path}`]: error.message
-              }));
-            });
-          }
-          throw err;
+        const referencesResult = personalReferenceSchema.safeParse(ref);
+        if(!referencesResult.success){
+          referencesResult.error.issues.forEach(error => {
+            const path = error.path.join('.');
+            refErrors[`ref_${index}_${path}`] = error.message;
+          });
         }
-      });
+      })
+
+      if (Object.keys(refErrors).length > 0) {
+        setErrors(prev => {
+          return {
+            ...prev,
+            ...refErrors
+          }
+        })
+        return false;
+      }
 
       setErrors({});
       return true;
