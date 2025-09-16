@@ -18,6 +18,8 @@
       "Bash(bunx prisma:*)",
       "Bash(bun add:*)",
       "Bash(bun run:*)",
+      "Bash(bun run build:*)",
+      "Bash(bun run:*)",
       "Bash(mkdir:*)",
       "Bash(NODE_ENV=test TEST_DATABASE_URL=\"postgresql://neto:@localhost:5432/hestia_test\" npx jest --testPathPatterns=policies-initiate --verbose —-detectOpenHandles --runInBand)",
       "Bash(psql:*)",
