@@ -436,6 +436,7 @@ export default function PolicyDetailsPage({
               propertyDescription={policy.propertyDescription}
               rentAmount={policy.rentAmount}
               contractLength={policy.contractLength}
+              policyId={policyId}
             />
             <PricingCard
               package={policy.package}
@@ -443,6 +444,7 @@ export default function PolicyDetailsPage({
               tenantPercentage={policy.tenantPercentage}
               landlordPercentage={policy.landlordPercentage}
               guarantorType={policy.guarantorType}
+              policyId={policyId}
             />
           </div>
           <TimelineCard

@@ -1,5 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DollarSign, Edit } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface PricingCardProps {
   package?: {
@@ -12,6 +15,7 @@ interface PricingCardProps {
   tenantPercentage?: number;
   landlordPercentage?: number;
   guarantorType: string;
+  policyId?: string;
 }
 
 export default function PricingCard({
@@ -20,7 +24,11 @@ export default function PricingCard({
   tenantPercentage,
   landlordPercentage,
   guarantorType,
+  policyId,
 }: PricingCardProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
   const formatCurrency = (amount: number) => {
     return `$${amount.toLocaleString('es-MX')}`;
   };
@@ -38,9 +46,21 @@ export default function PricingCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          Plan y Precio
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Plan y Precio
+          </div>
+          {isStaffOrAdmin && policyId && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/dashboard/policies/${policyId}/pricing`)}
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Editar
+            </Button>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
+import { useSession } from 'next-auth/react';
 
 interface ActorCardProps {
   actor: any;
@@ -15,6 +16,9 @@ interface ActorCardProps {
 export default function ActorCard({ actor, actorType, policyId, getVerificationBadge }: ActorCardProps) {
   const router = useRouter();
   const { downloadDocument, downloading } = useDocumentDownload();
+  const { data: session } = useSession();
+
+  const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
 
   const formatCurrency = (amount?: number) => {
     if (!amount) return '$0';
@@ -59,8 +63,14 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
             {getActorIcon()}
           </div>
           <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTitle().toLowerCase()}</p>
-          {actorType === 'landlord' && (
-            <Button onClick={() => router.push(`/dashboard/policies/${policyId}/landlord`)}>
+          {isStaffOrAdmin && (
+            <Button onClick={() => {
+              if (actorType === 'landlord') {
+                router.push(`/dashboard/policies/${policyId}/landlord`);
+              } else if (actorType === 'tenant') {
+                router.push(`/dashboard/policies/${policyId}/tenant`);
+              }
+            }}>
               <Edit className="mr-2 h-4 w-4" />
               Capturar Información
             </Button>
@@ -90,11 +100,21 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
             ) : (
               <Badge className="bg-orange-500 text-white">Pendiente</Badge>
             )}
-            {actorType === 'landlord' && (
+            {isStaffOrAdmin && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => router.push(`/dashboard/policies/${policyId}/landlord`)}
+                onClick={() => {
+                  if (actorType === 'landlord') {
+                    router.push(`/dashboard/policies/${policyId}/landlord`);
+                  } else if (actorType === 'tenant') {
+                    router.push(`/dashboard/policies/${policyId}/tenant`);
+                  } else if (actorType === 'jointObligor') {
+                    router.push(`/dashboard/policies/${policyId}/joint-obligor/${actor.id}`);
+                  } else if (actorType === 'aval') {
+                    router.push(`/dashboard/policies/${policyId}/aval/${actor.id}`);
+                  }
+                }}
               >
                 <Edit className="h-4 w-4 mr-1" />
                 Editar

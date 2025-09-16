@@ -1,5 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Home, Edit } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface PropertyCardProps {
   propertyAddress: string;
@@ -7,6 +10,7 @@ interface PropertyCardProps {
   propertyDescription?: string;
   rentAmount: number;
   contractLength?: number;
+  policyId?: string;
 }
 
 export default function PropertyCard({
@@ -15,7 +19,11 @@ export default function PropertyCard({
   propertyDescription,
   rentAmount,
   contractLength,
+  policyId,
 }: PropertyCardProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
   const formatCurrency = (amount: number) => {
     return `$${amount.toLocaleString('es-MX')}`;
   };
@@ -23,9 +31,21 @@ export default function PropertyCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Home className="h-5 w-5" />
-          Información del Inmueble
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Home className="h-5 w-5" />
+            Información del Inmueble
+          </div>
+          {isStaffOrAdmin && policyId && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/dashboard/policies/${policyId}/property`)}
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Editar
+            </Button>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
