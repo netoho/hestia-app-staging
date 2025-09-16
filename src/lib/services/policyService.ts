@@ -47,7 +47,9 @@ interface CreatePolicyData {
 }
 
 export async function createPolicy(data: CreatePolicyData) {
-  const policyNumber = `POL-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+  const date = new Date();
+  const localDate = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+  const policyNumber = `POL-${localDate}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
   // Create the policy with the new schema
   const policy = await prisma.policy.create({
@@ -266,10 +268,29 @@ export async function getPolicyById(id: string) {
           name: true,
         }
       },
-      landlord: true,
-      tenant: true,
-      jointObligors: true,
-      avals: true,
+      landlord: {
+        include: {
+          documents: true,
+        }
+      },
+      tenant: {
+        include: {
+          references: true,
+          documents: true,
+        }
+      },
+      jointObligors: {
+        include: {
+          references: true,
+          documents: true,
+        }
+      },
+      avals: {
+        include: {
+          references: true,
+          documents: true,
+        }
+      },
       documents: {
         select: {
           id: true,
@@ -320,7 +341,7 @@ export async function updatePolicyStatus(
     data: {
       status,
       managedById: userId,
-      reviewedAt: new Date(),
+      // reviewedAt: new Date(),
       ...(reviewNotes && { reviewNotes }),
       ...(reviewReason && { rejectionReason: reviewReason }),
     },

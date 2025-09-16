@@ -1,7 +1,7 @@
+import prisma from '@/lib/prisma';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
-import { requireRole } from '@/lib/utils';
-import { prisma } from '@/lib/prisma';
+import { verifyAuth, requireRole } from '@/lib/auth';
 import { sendActorRejectionEmail } from '@/lib/services/emailService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 
