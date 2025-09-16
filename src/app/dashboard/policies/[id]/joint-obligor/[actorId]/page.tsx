@@ -191,7 +191,7 @@ export default function JointObligorEditPage({
 
       references.forEach((ref, index) => {
         const referencesResult = personalReferenceSchema.safeParse(ref);
-          if(!referencesResult.success){
+        if(!referencesResult.success){
           referencesResult.error.issues.forEach(error => {
             const path = error.path.join('.');
             refErrors[`ref_${index}_${path}`] = error.message;
