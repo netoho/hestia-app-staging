@@ -138,6 +138,7 @@ export default function TenantPortalPage() {
         nationality: tenantData?.nationality,
         curp: tenantData?.curp,
         passport: tenantData?.passport,
+        address: tenantData?.address,
         employmentStatus: tenantData?.employmentStatus,
         occupation: tenantData?.occupation,
         companyName: tenantData?.employerName,
