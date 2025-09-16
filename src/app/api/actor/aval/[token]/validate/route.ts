@@ -41,6 +41,7 @@ export async function GET(
         propertyRegistry: aval.propertyRegistry,
         informationComplete: aval.informationComplete,
         references: aval.references,
+        additionalInfo: aval.additionalInfo,
       },
       policy: {
         id: aval.policy.id,

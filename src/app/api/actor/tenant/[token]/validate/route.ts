@@ -36,6 +36,7 @@ export async function GET(
         incomeSource: tenant.incomeSource,
         informationComplete: tenant.informationComplete,
         references: tenant.references,
+        additionalInfo: tenant.additionalInfo,
       },
       policy: {
         id: tenant.policy.id,

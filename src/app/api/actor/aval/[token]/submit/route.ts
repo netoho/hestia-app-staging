@@ -46,6 +46,7 @@ export async function POST(
         propertyRegistry: data.propertyRegistry || null,
         informationComplete: true,
         completedAt: new Date(),
+        additionalInfo: data.additionalInfo,
       }
     });
 

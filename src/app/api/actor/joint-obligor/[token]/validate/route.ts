@@ -37,6 +37,7 @@ export async function GET(
         incomeSource: jointObligor.incomeSource,
         informationComplete: jointObligor.informationComplete,
         references: jointObligor.references,
+        additionalInfo: jointObligor.additionalInfo,
       },
       policy: {
         id: jointObligor.policy.id,

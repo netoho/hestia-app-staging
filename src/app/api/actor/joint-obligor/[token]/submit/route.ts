@@ -41,6 +41,7 @@ export async function POST(
         incomeSource: data.incomeSource,
         informationComplete: true,
         completedAt: new Date(),
+        additionalInfo: data.additionalInfo,
       }
     });
 
