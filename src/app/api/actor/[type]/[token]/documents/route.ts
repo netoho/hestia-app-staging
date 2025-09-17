@@ -35,8 +35,8 @@ export async function POST(
     // Parse multipart form data
     const formData = await req.formData();
     const file = formData.get('file') as File;
-    const documentType = formData.get('documentType') as string;
-    const category = formData.get('category') as string;
+    const documentType = (formData.get('documentType') as string).toLowerCase();
+    const category = (formData.get('category') as string).toLowerCase();
 
     if (!file || !documentType || !category) {
       return NextResponse.json(

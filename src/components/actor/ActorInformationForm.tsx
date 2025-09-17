@@ -12,11 +12,8 @@ import { CheckCircle2, Circle, User, Briefcase, Users, FileText, Send, Shield } 
 import PersonalInfoTab from './PersonalInfoTab';
 import EmploymentInfoTab from './EmploymentInfoTab';
 import PersonalReferencesTab, { PersonalReference } from './PersonalReferencesTab';
-import DocumentsTab from './DocumentsTab';
+import EnhancedDocumentsTab from './EnhancedDocumentsTab';
 import PropertyInfoTab from './PropertyInfoTab';
-
-// Import custom hook
-import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 
 interface ActorData {
   // Personal Information
@@ -96,16 +93,6 @@ export default function ActorInformationForm({
     propertyRegistry: initialData?.propertyRegistry || '',
     additionalInfo: initialData?.additionalInfo || '',
   });
-
-  // Use document upload hook
-  const {
-    documents,
-    uploadStatus,
-    uploadErrors,
-    existingDocuments,
-    handleDocumentChange,
-    uploadAllDocuments
-  } = useDocumentUpload({ token, actorType });
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -210,8 +197,6 @@ export default function ActorInformationForm({
 
     setLoading(true);
     try {
-      // Upload any pending documents
-      await uploadAllDocuments();
 
       // Submit form data
       if (onSubmit) {
@@ -253,10 +238,10 @@ export default function ActorInformationForm({
       if (ref.relationship) completed++;
     });
 
-    // Documents
-    total += 2; // ID and income proof are required
-    if (documents.identification || existingDocuments.identification) completed++;
-    if (documents.incomeProof || existingDocuments.incomeProof) completed++;
+    // // Documents
+    // total += 2; // ID and income proof are required
+    // if (documents.identification || existingDocuments.identification) completed++;
+    // if (documents.incomeProof || existingDocuments.incomeProof) completed++;
 
     // Aval property info
     if (actorType === 'aval') {
@@ -371,15 +356,12 @@ export default function ActorInformationForm({
           )}
 
           <TabsContent value="documents">
-            <DocumentsTab
-              documents={documents}
+            <EnhancedDocumentsTab
+              token={token}
+              actorType={actorType}
               additionalInfo={formData.additionalInfo}
               updateFormData={updateFormData}
-              existingDocuments={existingDocuments}
-              uploadStatus={uploadStatus}
-              uploadErrors={uploadErrors}
-              handleDocumentChange={handleDocumentChange}
-              actorType={actorType}
+              isAval={actorType === 'aval'}
             />
           </TabsContent>
         </Tabs>
