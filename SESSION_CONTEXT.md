@@ -46,11 +46,23 @@ Hestia is a comprehensive rent insurance policy management system designed to pr
 - `POST /api/policies/calculate-price` - Calculate policy pricing
 - `POST /api/policies/[id]/actors/[type]/[actorId]/verify` - Approve/reject actors (STAFF/ADMIN)
 
-#### Document Management (Added 2025-09-16)
+#### Document Management (Enhanced 2025-09-16)
 - `GET /api/documents/[id]/download` - Generate signed S3 URL for document download
   - 30-second expiration on URLs
   - Supports both actor and policy documents
   - Role-based access control
+
+#### Internal Team Document APIs (Added 2025-09-16)
+- `POST /api/policies/[id]/tenant/documents` - Upload tenant documents
+- `GET /api/policies/[id]/tenant/documents` - List tenant documents
+- `DELETE /api/policies/[id]/tenant/documents/[documentId]` - Delete tenant document
+- Similar endpoints for joint-obligor and aval actors
+
+#### Actor Portal Document APIs (Enhanced 2025-09-16)
+- `GET /api/actor/[type]/[token]/documents` - List actor's documents
+- `POST /api/actor/[type]/[token]/documents` - Upload new document
+- `DELETE /api/actor/[type]/[token]/documents` - Delete document
+- `GET /api/actor/[type]/[token]/documents/[documentId]/download` - Download document
 
 #### Actor Self-Service
 - `GET /api/actor/tenant/[token]/validate` - Validate tenant token
@@ -142,41 +154,23 @@ INVESTIGATION_REJECTED can go back to → UNDER_INVESTIGATION
 ✅ **Unified Actor Cards** - All actors now use same ActorCard component
 ✅ **Document Downloads** - Implemented signed S3 URLs with 30-second expiration
 ✅ **Actor Verification UI** - Staff/Admin can approve/reject actors with reasons
+✅ **Internal Team Document Management** - ADMIN/STAFF can now manage all actor documents
+✅ **Actor Portal Enhanced Documents** - Actors can upload/download/delete multiple documents per category
 
 ### URGENT FIXES NEEDED
 
-#### 1. Personal References UI Issue
-**Location:** `/src/components/actor/ActorInformationForm.tsx`
-**Problem:** References tab shows 3 reference forms but they're hardcoded - no way to add/remove
-**Fix Needed:**
-```typescript
-// Add state for dynamic references
-const [references, setReferences] = useState([
-  { name: '', phone: '', email: '', relationship: '', occupation: '' }
-]);
+#### 1. Personal References UI Issue - ✅ FIXED
+**Status:** References now support add/remove functionality (min 3, max 5)
+**Location:** All actor edit pages have dynamic reference management
 
-// Add buttons to add/remove references (min 3, max 5)
-const addReference = () => {
-  if (references.length < 5) {
-    setReferences([...references, { name: '', phone: '', email: '', relationship: '', occupation: '' }]);
-  }
-};
-
-const removeReference = (index: number) => {
-  if (references.length > 3) {
-    setReferences(references.filter((_, i) => i !== index));
-  }
-};
-```
-
-#### 2. File Upload Not Implemented
-**Location:** `/src/components/actor/ActorInformationForm.tsx` - Documents tab
-**Status:** UI exists but no actual upload functionality
-**Needs:**
-- Create `/api/actor/[type]/[token]/documents` endpoints
-- Implement S3 upload using existing `fileUploadService.ts`
-- Handle file validation (size, type)
-- Show upload progress
+#### 2. File Upload - ✅ IMPLEMENTED
+**Status:** Full document management system implemented
+**Features Added:**
+- Multiple document uploads per category
+- Download functionality with signed S3 URLs
+- Delete documents capability
+- Real-time document list updates
+- Progress indicators and error handling
 
 ### IMPROVEMENTS NEEDED
 
@@ -221,6 +215,23 @@ if (user.role === 'BROKER' && policy.createdById !== user.id) {
 
 ## 📊 Current Development Status
 
+### 📋 New Components & Hooks (2025-09-16)
+
+#### Document Management Components
+1. **`InternalDocumentsTab`** (`/src/components/dashboard/InternalDocumentsTab.tsx`)
+   - For ADMIN/STAFF to manage actor documents
+   - Upload, view, download, delete functionality
+   - Used in tenant/joint-obligor/aval edit pages
+
+2. **`EnhancedDocumentsTab`** (`/src/components/actor/EnhancedDocumentsTab.tsx`)
+   - For actors to manage their own documents
+   - Multiple uploads per category support
+   - Self-service document management
+
+3. **`useDocumentManagement`** (`/src/hooks/useDocumentManagement.ts`)
+   - Hook for actor portal document operations
+   - Handles upload, download, delete, and state management
+
 ### ✅ Completed Features
 1. **Policy Creation Flow** - Full form with all required fields
 2. **Pricing Calculation** - Dynamic pricing with package selection
@@ -233,10 +244,11 @@ if (user.role === 'BROKER' && policy.createdById !== user.id) {
 9. **Policy Details Refactoring** - Component-based architecture (2025-09-16)
 10. **Document Downloads** - Signed S3 URLs with security (2025-09-16)
 11. **Actor Verification** - Approve/reject workflow for STAFF/ADMIN (2025-09-16)
+12. **Document Management System** - Complete upload/download/delete for all actors (2025-09-16)
+13. **Multiple Documents per Category** - Actors can upload multiple IDs, proofs, etc. (2025-09-16)
 
 ### 🔄 In Progress
-1. **File Upload** - UI exists, needs backend implementation
-2. **Personal References** - Needs add/remove functionality
+None - All major document features completed!
 
 ### 📋 Pending
 1. **Authorization Middleware** - Role-based access control
