@@ -10,9 +10,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-
-    console.log('requireRole(authResult.user.role, [\'STAFF\', \'ADMIN\', \'BROKER\'])', requireRole(authResult.user.role, ['STAFF', 'ADMIN', 'BROKER']), authResult.user);
-
     if (!requireRole(authResult.user.role, ['STAFF', 'ADMIN', 'BROKER'])) {
       return NextResponse.json(
         { error: 'Forbidden: Only staff, admin, and brokers can view policies' },
