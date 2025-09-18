@@ -79,12 +79,21 @@ export function PricingCalculator() {
       return;
     }
 
-    const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5551234567';
-    const formattedPrice = formatCurrency(price);
-    const message = `Hola, estoy interesado en contratar el paquete ${packageName} (${formattedPrice} MXN) para registrar una póliza de arrendamiento en ${city} con un monto de renta de $${rentAmount}. ¿Podrían ayudarme con el proceso?`;
+    const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5521117610';
+    const rent = parseFloat(rentAmount);
+    const isSpecialPricing = rent > 50000;
+
+    let message: string;
+    if (isSpecialPricing) {
+      message = `Hola, estoy interesado en contratar el paquete ${packageName} para registrar una póliza de arrendamiento en ${city} con un monto de renta de $${rentAmount}. Dado el monto de la renta, me gustaría recibir una cotización especial. ¿Podrían ayudarme con el proceso?`;
+    } else {
+      const formattedPrice = formatCurrency(price);
+      message = `Hola, estoy interesado en contratar el paquete ${packageName} (${formattedPrice} MXN) para registrar una póliza de arrendamiento en ${city} con un monto de renta de $${rentAmount}. ¿Podrían ayudarme con el proceso?`;
+    }
+
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
-    
+
     window.open(whatsappUrl, '_blank');
   };
 
@@ -236,14 +245,16 @@ export function PricingCalculator() {
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           {sortedPackages.map((pkg, index) => {
             const calculatedPrice = calculatePackagePrice(pkg);
-            const showCalculation = rentAmount && pkg.percentage && parseFloat(rentAmount) > 0;
+            const rent = parseFloat(rentAmount) || 0;
+            const isSpecialPricing = rent > 50000;
+            const showCalculation = rentAmount && pkg.percentage && rent > 0 && !isSpecialPricing;
             const isRecommended = index === 2; // Middle package is recommended
             const description = packageDescriptions[pkg.name];
             const maxRent = maxRentAmounts[pkg.name];
-            
+
             return (
-              <Card 
-                key={pkg.id} 
+              <Card
+                key={pkg.id}
                 className={`relative p-8 bg-white shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 ${
                   isRecommended ? 'ring-2 ring-accent border-accent' : ''
                 }`}
@@ -255,7 +266,7 @@ export function PricingCalculator() {
                     </span>
                   </div>
                 )}
-                
+
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold text-primary mb-3">
                     {pkg.name}
@@ -266,15 +277,28 @@ export function PricingCalculator() {
                 </div>
 
                 <div className="text-center mb-6">
-                  <div className="text-4xl font-bold text-primary mb-1">
-                    {formatCurrency(calculatedPrice)} MXN
-                  </div>
-                  <p className="text-sm text-muted-foreground">Más IVA</p>
-                  
-                  {showCalculation && calculatedPrice > (pkg.minAmount || pkg.price) && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      ({pkg.percentage}% de renta mensual: {formatCurrency(parseFloat(rentAmount))})
-                    </p>
+                  {isSpecialPricing ? (
+                    <div>
+                      <div className="text-2xl font-bold text-primary mb-2">
+                        Contáctanos para un precio especial
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Cotización personalizada para rentas mayores a $50,000
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-4xl font-bold text-primary mb-1">
+                        {formatCurrency(calculatedPrice)} MXN
+                      </div>
+                      <p className="text-sm text-muted-foreground">Más IVA</p>
+
+                      {showCalculation && calculatedPrice > (pkg.minAmount || pkg.price) && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          ({pkg.percentage}% de renta mensual: {formatCurrency(rent)})
+                        </p>
+                      )}
+                    </>
                   )}
                   
                   {pkg.name === 'Protección Libertad' && (
