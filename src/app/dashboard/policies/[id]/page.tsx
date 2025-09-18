@@ -1,651 +1,563 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { PolicyStatusType } from '@/lib/prisma-types';
-import { POLICY_STATUS_DISPLAY } from '@/lib/types/policy';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import {
+  ArrowLeft,
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  Shield,
+  Users,
+  RefreshCw,
+  Clock,
+  XCircle,
+  Eye
+} from 'lucide-react';
 import { t } from '@/lib/i18n';
 
 // Import new components
-import { PolicyDetailsHeader } from '@/components/policy-details/PolicyDetailsHeader';
-import { PolicyQuickInfo } from '@/components/policy-details/PolicyQuickInfo';
-import { PolicyStatusActions } from '@/components/policy-details/PolicyStatusActions';
-import { PolicyPaymentInfo } from '@/components/policy-details/PolicyPaymentInfo';
-import { PolicyDetailsContent } from '@/components/policy-details/PolicyDetailsContent';
-import { PolicyDocuments } from '@/components/policy-details/PolicyDocuments';
-import { PolicyActivityLog } from '@/components/policy-details/PolicyActivityLog';
-import { PolicyInvestigationInfo } from '@/components/policy-details/PolicyInvestigationInfo';
-import { PolicyContractInfo } from '@/components/policy-details/PolicyContractInfo';
+import ActorCard from '@/components/policies/details/ActorCard';
+import ActorVerificationCard from '@/components/policies/details/ActorVerificationCard';
+import PropertyCard from '@/components/policies/details/PropertyCard';
+import PricingCard from '@/components/policies/details/PricingCard';
+import TimelineCard from '@/components/policies/details/TimelineCard';
+import DocumentsList from '@/components/policies/details/DocumentsList';
+import ActivityTimeline from '@/components/policies/details/ActivityTimeline';
 
 interface PolicyDetails {
   id: string;
-  tenantEmail: string;
-  tenantPhone?: string;
-  status: PolicyStatusType;
-  currentStep: number;
-  profileData?: any;
-  employmentData?: any;
-  referencesData?: any;
-  documentsData?: any;
-  accessToken: string;
-  tokenExpiry: string;
-  submittedAt?: string;
-  reviewedAt?: string;
-  reviewNotes?: string;
-  reviewReason?: string;
-  packageId?: string | null;
-  packageName?: string | null;
-  price?: number | null;
-  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
-  
-  // Lifecycle dates
-  investigationStartedAt?: string | null;
-  investigationCompletedAt?: string | null;
-  contractUploadedAt?: string | null;
-  contractSignedAt?: string | null;
-  policyActivatedAt?: string | null;
-  contractLength: number;
-  policyExpiresAt?: string | null;
-  
+  policyNumber: string;
+  status: string;
+
+  // Property Information
+  propertyAddress: string;
+  propertyType?: string;
+  propertyDescription?: string;
+  rentAmount: number;
+  contractLength?: number;
+
+  // Guarantor Configuration
+  guarantorType: string;
+
+  // Package/Pricing
+  packageId?: string;
+  package?: {
+    id: string;
+    name: string;
+    price: number;
+    features?: string;
+  };
+  totalPrice: number;
+  tenantPercentage?: number;
+  landlordPercentage?: number;
+
+  // Actors with verification status
+  landlord?: any;
+  tenant?: any;
+  jointObligors?: any[];
+  avals?: any[];
+
+  // Timestamps
   createdAt: string;
   updatedAt: string;
-  initiatedByUser: {
-    id: string;
-    email: string;
+  submittedAt?: string;
+  activatedAt?: string;
+  approvedAt?: string;
+
+  // Activities
+  activities?: any[];
+
+  // Documents
+  documents?: any[];
+
+  // User info
+  createdBy?: {
     name?: string;
-  };
-  reviewedByUser?: {
-    id: string;
     email: string;
-    name?: string;
   };
-  documents: Array<{
-    id: string;
-    category: string;
-    originalName: string;
-    fileSize: number;
-    uploadedAt: string;
-  }>;
-  activities: Array<{
-    id: string;
-    action: string;
-    details?: any;
-    performedBy?: string;
-    ipAddress?: string;
-    createdAt: string;
-  }>;
-  
-  // Investigation data
-  investigation?: {
-    id: string;
-    verdict?: 'APPROVED' | 'REJECTED' | 'HIGH_RISK' | null;
-    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
-    rejectedBy?: string | null;
-    rejectionReason?: string | null;
-    rejectedAt?: string | null;
-    landlordDecision?: 'PROCEED' | 'REJECT' | null;
-    landlordOverride: boolean;
-    landlordNotes?: string | null;
-    assignedTo?: string | null;
-    completedBy?: string | null;
-    completedAt?: string | null;
-    responseTimeHours?: number | null;
-    notes?: string | null;
-    createdAt: string;
-    updatedAt: string;
-  } | null;
-  
-  // Contract data
-  contracts: Array<{
-    id: string;
-    version: number;
-    fileUrl: string;
-    fileName: string;
-    fileSize: number;
-    mimeType: string;
-    isCurrent: boolean;
-    uploadedBy: string;
-    uploadedAt: string;
-  }>;
 }
 
-export default function PolicyDetailsPage() {
-  const params = useParams();
+export default function PolicyDetailsPage({
+  params
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { data: session } = useSession();
   const router = useRouter();
-  const policyId = params.id as string;
-  
+  const [policyId, setPolicyId] = useState<string>('');
   const [policy, setPolicy] = useState<PolicyDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
-  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [currentTab, setCurrentTab] = useState('overview');
+  const [sending, setSending] = useState<string | null>(null);
 
-  const { toast } = useToast();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  // Resolve params
+  useEffect(() => {
+    params.then(resolvedParams => {
+      setPolicyId(resolvedParams.id);
+    });
+  }, [params]);
 
-  const fetchPolicy = async () => {
-    if (!isAuthenticated || !user) return;
-    
-    setLoading(true);
-    setError(null);
-    
+  useEffect(() => {
+    if (policyId) {
+      fetchPolicyDetails();
+    }
+  }, [policyId]);
+
+  const fetchPolicyDetails = async () => {
     try {
-      const response = await fetch(`/api/policies/${policyId}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(t.pages.policies.details.policyNotFound);
-        }
-        if (response.status === 401) {
-          throw new Error(t.pages.policies.details.toast.authFailed);
-        }
-        throw new Error(t.pages.policies.details.errorLoading);
-      }
+      const response = await fetch(`/api/policies/${policyId}`);
+      if (!response.ok) throw new Error('Failed to fetch policy');
 
       const data = await response.json();
-      
-      // Add default values for new fields if they don't exist
-      const policyWithDefaults = {
-        ...data,
-        contractLength: data.contractLength || 12,
-        investigation: data.investigation || null,
-        contracts: data.contracts || [],
-        investigationStartedAt: data.investigationStartedAt || null,
-        investigationCompletedAt: data.investigationCompletedAt || null,
-        contractUploadedAt: data.contractUploadedAt || null,
-        contractSignedAt: data.contractSignedAt || null,
-        policyActivatedAt: data.policyActivatedAt || null,
-        policyExpiresAt: data.policyExpiresAt || null,
-      };
-      
-      setPolicy(policyWithDefaults);
-    } catch (err) {
-      console.error('Policy fetch error:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setPolicy(data.data || data);
+    } catch (error) {
+      console.error('Error fetching policy:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (isAuthenticated && user && policyId) {
-      fetchPolicy();
-    }
-  }, [isAuthenticated, user, policyId]);
-
-  // Also try to fetch when authentication becomes available
-  useEffect(() => {
-    if (isAuthenticated && user && policyId && !policy && !loading) {
-      fetchPolicy();
-    }
-  }, [isAuthenticated, user]);
-
-  // Simplified handlers - complex logic moved to components
-
-  const updatePolicyStatus = async (newStatus: PolicyStatusType, reason?: string) => {
-    if (!isAuthenticated || !user || !policy) return;
-    
-    setUpdatingStatus(true);
+  const handleSendInvitations = async () => {
     try {
-      const response = await fetch(`/api/policies/${policy.id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+      setSending('all');
+      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Invitaciones enviadas exitosamente');
+        fetchPolicyDetails();
+      } else {
+        alert('Error al enviar invitaciones');
+      }
+    } catch (error) {
+      console.error('Error sending invitations:', error);
+      alert('Error al enviar invitaciones');
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const sendIndividualInvitation = async (actorType: string, actorId: string) => {
+    setSending(actorId);
+    try {
+      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: newStatus,
+          actors: [actorType],
+          resend: true,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send invitation');
+
+      alert('Invitación enviada exitosamente');
+      await fetchPolicyDetails();
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      alert('Error al enviar la invitación');
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const approveActor = async (actorType: string, actorId: string) => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/actors/${actorType}/${actorId}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to approve actor');
+
+      alert('Actor aprobado exitosamente');
+      await fetchPolicyDetails();
+    } catch (error) {
+      console.error('Error approving actor:', error);
+      alert('Error al aprobar el actor');
+    }
+  };
+
+  const rejectActor = async (actorType: string, actorId: string, reason: string) => {
+    try {
+      const response = await fetch(`/api/policies/${policyId}/actors/${actorType}/${actorId}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject',
           reason: reason,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update policy status');
-      }
+      if (!response.ok) throw new Error('Failed to reject actor');
 
-      await fetchPolicy();
-      toast({
-        title: t.pages.policies.details.toast.statusUpdated,
-        description: t.pages.policies.details.toast.statusChangedTo(POLICY_STATUS_DISPLAY[newStatus]),
-      });
+      alert('Actor rechazado y notificado');
+      await fetchPolicyDetails();
     } catch (error) {
-      console.error('Error updating policy status:', error);
-      toast({
-        title: t.pages.policies.details.toast.error,
-        description: error instanceof Error ? error.message : t.pages.policies.details.toast.failedToUpdate,
-        variant: 'destructive',
-      });
-    } finally {
-      setUpdatingStatus(false);
+      console.error('Error rejecting actor:', error);
+      alert('Error al rechazar el actor');
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!isAuthenticated || !user || !policy) return;
-    
-    setDownloadingPDF(true);
+  const approvePolicy = async () => {
+    if (!confirm('¿Estás seguro de que deseas aprobar esta póliza?')) return;
+
     try {
-      const response = await fetch(`/api/policies/${policy.id}/pdf`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(t.pages.policies.details.toast.authFailed);
-        }
-        if (response.status === 403) {
-          throw new Error(t.pages.policies.details.toast.noPermission);
-        }
-        if (response.status === 404) {
-          throw new Error(t.pages.policies.details.policyNotFound);
-        }
-        throw new Error('Error al generar el documento PDF');
-      }
-
-      const htmlContent = await response.text();
-      
-      // Create a blob and download link
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `solicitud-arrendamiento-${policy.id}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast({
-        title: t.pages.policies.details.toast.pdfGenerated,
-        description: t.pages.policies.details.toast.pdfGeneratedDesc,
-      });
-    } catch (error) {
-      console.error('PDF download error:', error);
-      toast({
-        title: t.pages.policies.details.toast.downloadFailed,
-        description: error instanceof Error ? error.message : 'Error al generar el documento',
-        variant: 'destructive',
-      });
-    } finally {
-      setDownloadingPDF(false);
-    }
-  };
-
-  const handleDownloadDocument = async (documentId: string, fileName: string) => {
-    if (!isAuthenticated || !user || !policy) return;
-    
-    setDownloadingDoc(documentId);
-    try {
-      const response = await fetch(`/api/policies/${policy.id}/documents/${documentId}/download`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(t.pages.policies.details.toast.authFailed);
-        }
-        if (response.status === 403) {
-          throw new Error(t.pages.policies.details.toast.noPermission);
-        }
-        if (response.status === 404) {
-          throw new Error(t.pages.policies.details.toast.documentNotFound);
-        }
-        throw new Error(t.pages.policies.details.toast.failedToGenerate);
-      }
-
-      const data = await response.json();
-      
-      // Create a temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = data.downloadUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast({
-        title: t.pages.policies.details.toast.downloadStarted,
-        description: t.pages.policies.details.toast.isBeingDownloaded(fileName),
-      });
-    } catch (error) {
-      console.error('Download error:', error);
-      toast({
-        title: t.pages.policies.details.toast.downloadFailed,
-        description: error instanceof Error ? error.message : t.pages.policies.details.toast.failedToDownload,
-        variant: 'destructive',
-      });
-    } finally {
-      setDownloadingDoc(null);
-    }
-  };
-
-  // Investigation handlers
-  const handleStartInvestigation = async () => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/investigation/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          assignedTo: user?.id,
-          notes: 'Investigation started from policy details page'
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to start investigation');
-      }
-
-      toast({
-        title: 'Investigación Iniciada',
-        description: 'La investigación ha sido iniciada exitosamente.',
-        variant: 'default',
-      });
-
-      // Refresh policy data
-      await fetchPolicy();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al iniciar investigación',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleCompleteInvestigation = async (verdict: 'APPROVED' | 'REJECTED' | 'HIGH_RISK') => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/investigation/complete`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
-          verdict: verdict,
-          riskLevel: verdict === 'HIGH_RISK' ? 'HIGH' : 'LOW',
-          notes: `Investigation completed with verdict: ${verdict}`
-        })
+          status: 'APPROVED',
+        }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to complete investigation');
-      }
+      if (!response.ok) throw new Error('Failed to approve policy');
 
-      toast({
-        title: 'Investigación Completada',
-        description: `Investigación completada con veredicto: ${verdict}`,
-        variant: 'default',
-      });
-
-      // Refresh policy data
-      await fetchPolicy();
+      alert('Póliza aprobada exitosamente');
+      await fetchPolicyDetails();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al completar investigación',
-        variant: 'destructive',
-      });
+      console.error('Error approving policy:', error);
+      alert('Error al aprobar la póliza');
     }
   };
 
-  const handleLandlordOverride = async (decision: 'PROCEED' | 'REJECT', notes?: string) => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/investigation/landlord-override`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          decision: decision,
-          notes: notes || `Landlord decision: ${decision}`
-        })
-      });
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; color: string }> = {
+      DRAFT: { label: 'Borrador', color: 'bg-gray-500' },
+      COLLECTING_INFO: { label: 'Recopilando Info', color: 'bg-blue-500' },
+      UNDER_INVESTIGATION: { label: 'En Investigación', color: 'bg-yellow-500' },
+      INVESTIGATION_REJECTED: { label: 'Rechazado', color: 'bg-red-500' },
+      PENDING_APPROVAL: { label: 'Pendiente Aprobación', color: 'bg-orange-500' },
+      APPROVED: { label: 'Aprobado', color: 'bg-green-500' },
+      CONTRACT_PENDING: { label: 'Contrato Pendiente', color: 'bg-purple-500' },
+      CONTRACT_SIGNED: { label: 'Contrato Firmado', color: 'bg-indigo-500' },
+      ACTIVE: { label: 'Activa', color: 'bg-green-600' },
+      EXPIRED: { label: 'Expirada', color: 'bg-gray-600' },
+      CANCELLED: { label: 'Cancelada', color: 'bg-red-600' },
+    };
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to process landlord override');
-      }
+    const config = statusConfig[status] || { label: status, color: 'bg-gray-500' };
 
-      toast({
-        title: 'Decisión del Propietario',
-        description: `Override procesado: ${decision}`,
-        variant: 'default',
-      });
+    return (
+      <Badge className={`${config.color} text-white`}>
+        {config.label}
+      </Badge>
+    );
+  };
 
-      // Refresh policy data
-      await fetchPolicy();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al procesar override',
-        variant: 'destructive',
-      });
+  const getVerificationBadge = (status: string) => {
+    const config = {
+      PENDING: { label: t.pages.policies.actorVerification.pending, color: 'bg-gray-500', icon: Clock },
+      APPROVED: { label: t.pages.policies.actorVerification.approved, color: 'bg-green-500', icon: CheckCircle2 },
+      REJECTED: { label: t.pages.policies.actorVerification.rejected, color: 'bg-red-500', icon: XCircle },
+      IN_REVIEW: { label: t.pages.policies.actorVerification.inReview, color: 'bg-yellow-500', icon: Eye },
+    };
+
+    const badgeConfig = config[status as keyof typeof config] || config.PENDING;
+    const Icon = badgeConfig.icon;
+
+    return (
+      <Badge className={`${badgeConfig.color} text-white flex items-center gap-1`}>
+        <Icon className="h-3 w-3" />
+        {badgeConfig.label}
+      </Badge>
+    );
+  };
+
+  const calculateProgress = () => {
+    if (!policy) return 0;
+
+    let completedActors = 0;
+    let totalActors = 2; // Landlord and Tenant are always required
+
+    if (policy.landlord?.informationComplete) completedActors++;
+    if (policy.tenant?.informationComplete) completedActors++;
+
+    if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {
+      totalActors += policy.jointObligors?.length || 1;
+      completedActors += policy.jointObligors?.filter((jo: any) => jo.informationComplete).length || 0;
     }
-  };
 
-  // Contract handlers
-  const handleUploadContract = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('contract', file);
-
-      const response = await fetch(`/api/policies/${policyId}/contracts/upload`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload contract');
-      }
-
-      toast({
-        title: 'Contrato Subido',
-        description: `Contrato "${file.name}" subido exitosamente.`,
-        variant: 'default',
-      });
-
-      // Refresh policy data
-      await fetchPolicy();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al subir contrato',
-        variant: 'destructive',
-      });
+    if (policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') {
+      totalActors += policy.avals?.length || 1;
+      completedActors += policy.avals?.filter((a: any) => a.informationComplete).length || 0;
     }
+
+    return Math.round((completedActors / totalActors) * 100);
   };
 
-  const handleDownloadContract = async (contractId: string) => {
-    toast({
-      title: 'Próximamente',
-      description: 'Descarga de contratos estará disponible pronto.',
-      variant: 'default',
-    });
+  const checkAllActorsApproved = () => {
+    if (!policy) return false;
+
+    const landlordApproved = policy.landlord?.verificationStatus === 'APPROVED';
+    const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
+
+    const jointObligorsApproved = !policy.jointObligors?.length ||
+      policy.jointObligors.every((jo: any) => jo.verificationStatus === 'APPROVED');
+
+    const avalsApproved = !policy.avals?.length ||
+      policy.avals.every((a: any) => a.verificationStatus === 'APPROVED');
+
+    return landlordApproved && tenantApproved && jointObligorsApproved && avalsApproved;
   };
 
-  const handleMarkContractSigned = async () => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/contracts/mark-signed`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to mark contract as signed');
-      }
-
-      toast({
-        title: 'Contrato Firmado',
-        description: 'El contrato ha sido marcado como firmado.',
-        variant: 'default',
-      });
-
-      // Refresh policy data
-      await fetchPolicy();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al marcar contrato firmado',
-        variant: 'destructive',
-      });
-    }
-  };
+  const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">{t.pages.policies.details.loading}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <CardTitle className="text-red-600">{t.pages.policies.details.errorLoading}</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push('/dashboard/policies')} className="w-full">
-              {t.pages.policies.details.backToPolicies}
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!policy) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>{t.pages.policies.details.policyNotFound}</CardTitle>
-            <CardDescription>
-              {t.pages.policies.details.policyNotFoundDesc}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push('/dashboard/policies')} className="w-full">
-              {t.pages.policies.details.backToPolicies}
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto p-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Póliza no encontrada</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
+  const progressPercentage = calculateProgress();
+  const allActorsApproved = checkAllActorsApproved();
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto py-8 px-4 max-w-6xl">
-        {/* Header */}
-        <PolicyDetailsHeader
-          onBack={() => router.push('/dashboard/policies')}
-          status={policy.status}
-          onDownloadPDF={handleDownloadPDF}
-          downloadingPDF={downloadingPDF}
-        />
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/policies')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Póliza {policy.policyNumber}</h1>
+            <p className="text-gray-600 mt-1">{policy.propertyAddress}</p>
+          </div>
+          {getStatusBadge(policy.status)}
+        </div>
 
-        {/* Quick Info */}
-        <PolicyQuickInfo
-          tenantEmail={policy.tenantEmail}
-          createdAt={policy.createdAt}
-          documentsCount={policy.documents.length}
-        />
+        <div className="flex gap-2">
+          {isStaffOrAdmin && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
+            <Button
+              onClick={approvePolicy}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {t.pages.policies.approvePolicy}
+            </Button>
+          )}
 
-        {/* Status Actions */}
-        <PolicyStatusActions
-          status={policy.status}
-          onUpdateStatus={updatePolicyStatus}
-          updatingStatus={updatingStatus}
-        />
-
-        {/* Payment Information */}
-        <PolicyPaymentInfo
-          packageId={policy.packageId}
-          packageName={policy.packageName}
-          price={policy.price}
-          paymentStatus={policy.paymentStatus}
-        />
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="details" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="details">{t.pages.policies.details.tabs.details}</TabsTrigger>
-            <TabsTrigger value="activity">{t.pages.policies.details.tabs.activity}</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="details" className="space-y-6">
-            <PolicyDetailsContent
-              profileData={policy.profileData}
-              employmentData={policy.employmentData}
-              referencesData={policy.referencesData}
-            />
-            
-            {/* Investigation Management */}
-            <PolicyInvestigationInfo
-              investigation={policy.investigation ? {
-                ...policy.investigation,
-                createdAt: new Date(policy.investigation.createdAt),
-                updatedAt: new Date(policy.investigation.updatedAt),
-                completedAt: policy.investigation.completedAt ? new Date(policy.investigation.completedAt) : null,
-                rejectedAt: policy.investigation.rejectedAt ? new Date(policy.investigation.rejectedAt) : null
-              } : null}
-              policyStatus={policy.status}
-              onStartInvestigation={() => handleStartInvestigation()}
-              onCompleteInvestigation={(verdict) => handleCompleteInvestigation(verdict)}
-              onLandlordOverride={(decision, notes) => handleLandlordOverride(decision, notes)}
-            />
-            
-            {/* Contract Management */}
-            <PolicyContractInfo
-              contracts={policy.contracts.map(contract => ({
-                ...contract,
-                uploadedAt: new Date(contract.uploadedAt)
-              }))}
-              policyStatus={policy.status}
-              contractSignedAt={policy.contractSignedAt ? new Date(policy.contractSignedAt) : null}
-              contractLength={policy.contractLength}
-              policyExpiresAt={policy.policyExpiresAt ? new Date(policy.policyExpiresAt) : null}
-              onUploadContract={(file) => handleUploadContract(file)}
-              onDownloadContract={(contractId) => handleDownloadContract(contractId)}
-              onMarkSigned={() => handleMarkContractSigned()}
-            />
-            
-            <PolicyDocuments
-              documents={policy.documents}
-              onDownloadDocument={handleDownloadDocument}
-              downloadingDoc={downloadingDoc}
-            />
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <PolicyActivityLog activities={policy.activities} />
-          </TabsContent>
-        </Tabs>
+          {(policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
+            <Button
+              onClick={handleSendInvitations}
+              variant="default"
+              disabled={sending === 'all'}
+            >
+              {sending === 'all' ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              {t.pages.policies.sendInvitations}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Progress Overview */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600">Progreso de Información</p>
+              <p className="text-2xl font-bold">{progressPercentage}% Completado</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">
+                {policy.landlord?.informationComplete ? 1 : 0} +
+                {policy.tenant?.informationComplete ? 1 : 0} +
+                {policy.jointObligors?.filter((jo: any) => jo.informationComplete).length || 0} +
+                {policy.avals?.filter((a: any) => a.informationComplete).length || 0} actores completados
+              </p>
+              {isStaffOrAdmin && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {allActorsApproved
+                    ? t.pages.policies.actorVerification.allActorsApproved
+                    : t.pages.policies.actorVerification.pendingActorApprovals}
+                </p>
+              )}
+            </div>
+          </div>
+          <Progress value={progressPercentage} className="h-3" />
+        </CardContent>
+      </Card>
+
+      {/* Main Content Tabs */}
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
+        <TabsList className={`grid w-full ${isStaffOrAdmin ? 'grid-cols-7' : 'grid-cols-6'}`}>
+          <TabsTrigger value="overview">General</TabsTrigger>
+          <TabsTrigger value="landlord">Arrendador</TabsTrigger>
+          <TabsTrigger value="tenant">Inquilino</TabsTrigger>
+          <TabsTrigger value="guarantors">Garantías</TabsTrigger>
+          {isStaffOrAdmin && (
+            <TabsTrigger value="verification">Verificación</TabsTrigger>
+          )}
+          <TabsTrigger value="documents">Documentos</TabsTrigger>
+          <TabsTrigger value="timeline">Actividad</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <PropertyCard
+              propertyAddress={policy.propertyAddress}
+              propertyType={policy.propertyType}
+              propertyDescription={policy.propertyDescription}
+              rentAmount={policy.rentAmount}
+              contractLength={policy.contractLength}
+              policyId={policyId}
+            />
+            <PricingCard
+              package={policy.package}
+              totalPrice={policy.totalPrice}
+              tenantPercentage={policy.tenantPercentage}
+              landlordPercentage={policy.landlordPercentage}
+              guarantorType={policy.guarantorType}
+              policyId={policyId}
+            />
+          </div>
+          <TimelineCard
+            createdAt={policy.createdAt}
+            submittedAt={policy.submittedAt}
+            approvedAt={policy.approvedAt}
+            activatedAt={policy.activatedAt}
+          />
+        </TabsContent>
+
+        {/* Landlord Tab */}
+        <TabsContent value="landlord" className="space-y-6">
+          <ActorCard
+            actor={policy.landlord}
+            actorType="landlord"
+            policyId={policyId}
+            getVerificationBadge={getVerificationBadge}
+          />
+        </TabsContent>
+
+        {/* Tenant Tab */}
+        <TabsContent value="tenant" className="space-y-6">
+          <ActorCard
+            actor={policy.tenant}
+            actorType="tenant"
+            policyId={policyId}
+            getVerificationBadge={getVerificationBadge}
+          />
+        </TabsContent>
+
+        {/* Guarantors Tab */}
+        <TabsContent value="guarantors" className="space-y-6">
+          {/* Joint Obligors */}
+          {(policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') && (
+            <div className="space-y-4">
+              {policy.jointObligors && policy.jointObligors.length > 0 ? (
+                policy.jointObligors.map((jo: any) => (
+                  <ActorCard
+                    key={jo.id}
+                    actor={jo}
+                    actorType="jointObligor"
+                    policyId={policyId}
+                    getVerificationBadge={getVerificationBadge}
+                  />
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-gray-600">No se han registrado obligados solidarios</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Avals */}
+          {(policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Avales
+              </h3>
+              {policy.avals && policy.avals.length > 0 ? (
+                policy.avals.map((aval: any) => (
+                  <ActorCard
+                    key={aval.id}
+                    actor={aval}
+                    actorType="aval"
+                    policyId={policyId}
+                    getVerificationBadge={getVerificationBadge}
+                  />
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-gray-600">No se han registrado avales</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {policy.guarantorType === 'NONE' && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Esta póliza no requiere garantías adicionales</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Verification Tab - For Staff/Admin */}
+        {isStaffOrAdmin && (
+          <TabsContent value="verification" className="space-y-6">
+            <ActorVerificationCard
+              policy={policy}
+              onApprove={approveActor}
+              onReject={rejectActor}
+            />
+          </TabsContent>
+        )}
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          <DocumentsList documents={policy.documents} />
+        </TabsContent>
+
+        {/* Timeline Tab */}
+        <TabsContent value="timeline" className="space-y-6">
+          <ActivityTimeline activities={policy.activities} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

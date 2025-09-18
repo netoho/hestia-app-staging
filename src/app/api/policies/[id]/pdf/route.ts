@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 import { PDFService } from '@/lib/services/pdfService';
 
@@ -17,32 +16,20 @@ export async function GET(
   const { id } = await params;
 
   try {
-    let policy;
-
-    if (isDemoMode()) {
-      // Use demo database
-      policy = await DemoORM.findUniquePolicy({ id });
-      if (policy) {
-        // Also get the related documents from demo database
-        const documents = await DemoORM.findManyDocuments({ policyId: id });
-        policy.documents = documents;
-      }
-    } else {
-      // Use real database
-      policy = await prisma.policy.findUnique({
-        where: { id },
-        include: {
-          documents: {
-            select: {
-              id: true,
-              category: true,
-              originalName: true,
-              uploadedAt: true,
-            },
+    // Use real database
+    const policy = await prisma.policy.findUnique({
+      where: { id },
+      include: {
+        documents: {
+          select: {
+            id: true,
+            category: true,
+            originalName: true,
+            uploadedAt: true,
           },
         },
-      });
-    }
+      },
+    });
 
     if (!policy) {
       return NextResponse.json({ error: 'Policy not found' }, { status: 404 });

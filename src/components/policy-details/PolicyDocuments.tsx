@@ -7,6 +7,7 @@ import { FileText, Download, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { t } from '@/lib/i18n';
+import { formatFileSize } from '@/lib/utils';
 
 interface Document {
   id: string;
@@ -22,21 +23,14 @@ interface PolicyDocumentsProps {
   downloadingDoc: string | null;
 }
 
-export function PolicyDocuments({ 
-  documents, 
-  onDownloadDocument, 
-  downloadingDoc 
+export function PolicyDocuments({
+  documents,
+  onDownloadDocument,
+  downloadingDoc
 }: PolicyDocumentsProps) {
   if (documents.length === 0) {
     return null;
   }
-
-  const formatFileSize = (bytes: number) => {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
 
   return (
     <Card>
@@ -61,7 +55,7 @@ export function PolicyDocuments({
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">
-                  {doc.category === 'identification' ? t.pages.policies.details.documents.category.identification : 
+                  {doc.category === 'identification' ? t.pages.policies.details.documents.category.identification :
                    doc.category === 'income' ? t.pages.policies.details.documents.category.income : t.pages.policies.details.documents.category.optional}
                 </Badge>
                 <Button

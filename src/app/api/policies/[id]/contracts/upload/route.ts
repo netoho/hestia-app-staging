@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { isDemoMode } from '@/lib/env-check';
-import { DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 
 export async function POST(
@@ -57,87 +55,10 @@ export async function POST(
       );
     }
 
-    if (isDemoMode()) {
-      // Demo mode implementation
-      console.log(`Demo mode: Uploading contract for policy ${policyId}`);
-      
-      // Get the policy
-      const policy = await DemoORM.findUniquePolicy({ id: policyId });
-      if (!policy) {
-        return NextResponse.json(
-          { error: 'Policy not found' },
-          { status: 404 }
-        );
-      }
+    // Production mode implementation
+    console.log(`Production mode: Uploading contract for policy ${policyId}`);
 
-      // Check if policy can have contract uploaded
-      const allowedStatuses = ['CONTRACT_PENDING', 'CONTRACT_UPLOADED'];
-      if (!allowedStatuses.includes(policy.status)) {
-        return NextResponse.json(
-          { error: 'Contract can only be uploaded for policies in CONTRACT_PENDING or CONTRACT_UPLOADED status' },
-          { status: 400 }
-        );
-      }
-
-      // Get existing contracts to determine version
-      const existingContracts = policy.contracts || [];
-      const nextVersion = existingContracts.length > 0 
-        ? Math.max(...existingContracts.map(c => c.version)) + 1 
-        : 1;
-
-      // Mark all existing contracts as not current
-      const updatedContracts = existingContracts.map(c => ({ ...c, isCurrent: false }));
-
-      // Create new contract record (demo mode simulation)
-      const newContract = {
-        id: `demo-contract-${Date.now()}`,
-        policyId: policyId,
-        version: nextVersion,
-        fileUrl: `/demo/contracts/${policyId}-v${nextVersion}.pdf`, // Demo URL
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        isCurrent: true,
-        uploadedBy: authResult.user.id,
-        uploadedAt: new Date(),
-      };
-
-      // Add new contract to the list
-      updatedContracts.push(newContract);
-
-      // Update policy with contracts and status
-      await DemoORM.updatePolicy(
-        { id: policyId },
-        { 
-          status: 'CONTRACT_UPLOADED',
-          contractUploadedAt: new Date(),
-          contracts: updatedContracts
-        }
-      );
-
-      // Add activity
-      await DemoORM.createPolicyActivity({
-        policyId: policyId,
-        action: 'contract_uploaded',
-        details: { 
-          fileName: file.name,
-          fileSize: file.size,
-          version: nextVersion,
-          uploadedBy: authResult.user.email
-        },
-        performedBy: authResult.user.id,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
-      });
-
-      return NextResponse.json({
-        message: 'Contract uploaded successfully',
-        contract: newContract
-      });
-    } else {
-      // Production mode implementation
-      console.log(`Production mode: Uploading contract for policy ${policyId}`);
-      
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
         // Get the policy
         const policy = await tx.policy.findUnique({
           where: { id: policyId },
@@ -210,12 +131,11 @@ export async function POST(
           }
         });
 
-        return NextResponse.json({
-          message: 'Contract uploaded successfully',
-          contract: newContract
-        });
+      return NextResponse.json({
+        message: 'Contract uploaded successfully',
+        contract: newContract
       });
-    }
+    });
   } catch (error) {
     console.error('Upload contract error:', error);
     

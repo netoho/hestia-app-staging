@@ -12,7 +12,7 @@ export interface Testimonial {
   dataAiHint: string;
 }
 
-export type UserRole = 'owner' | 'renter' | 'staff' | 'admin' | 'broker' | 'tenant' | 'landlord';
+export type UserRole = 'ADMIN' | 'BROKER' | 'STAFF';
 
 export interface User {
   id: string;

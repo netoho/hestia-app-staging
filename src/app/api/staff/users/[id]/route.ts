@@ -5,7 +5,7 @@ import { getUserById, updateUser, deleteUser } from '@/lib/services/userService'
 
 const updateUserSchema = z.object({
   name: z.string().optional(),
-  role: z.enum(['broker', 'tenant', 'landlord', 'staff']).optional(),
+  role: z.enum(['BROKER', 'ADMIN', 'STAFF']).optional(),
   password: z.string().min(6).optional()
 });
 
@@ -15,24 +15,24 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    
+
     const authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
+
+    if (!requireRole(authResult.user.role, ['ADMIN'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    
+
     const user = await getUserById(id);
-    
+
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    
+
     return NextResponse.json(user);
-    
+
   } catch (error) {
     console.error('Failed to fetch user:', error);
     return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
@@ -45,37 +45,37 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    
+
     const authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    
+
     const body = await request.json();
     const validation = updateUserSchema.safeParse(body);
-    
+
     if (!validation.success) {
       return NextResponse.json(
         { error: 'Invalid input', details: validation.error.errors },
         { status: 400 }
       );
     }
-    
+
     const { name, role, password } = validation.data;
-    
+
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (role !== undefined) updateData.role = role;
     if (password !== undefined) updateData.password = await hashPassword(password);
-    
+
     const user = await updateUser(id, updateData);
-    
+
     return NextResponse.json(user);
-    
+
   } catch (error) {
     console.error('Failed to update user:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
@@ -88,24 +88,24 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    
+
     const authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     if (!requireRole(authResult.user.role, ['staff', 'admin'])) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    
+
     if (authResult.user.id === id) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
-    
+
     await deleteUser(id);
-    
+
     return NextResponse.json({ message: 'User deleted successfully' });
-    
+
   } catch (error) {
     console.error('Failed to delete user:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });

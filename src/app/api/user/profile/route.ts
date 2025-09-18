@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 
 export async function GET(req: NextRequest) {
   const authResult = await verifyAuth(req);
@@ -15,38 +14,19 @@ export async function GET(req: NextRequest) {
   const userId = authResult.user.id;
 
   try {
-    let user;
-
-    if (isDemoMode()) {
-      // Use demo database
-      user = await DemoORM.findUniqueUser({ id: userId });
-      if (user) {
-        // Select only the fields we want to return
-        user = {
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          phone: user.phone,
-          address: user.address,
-          image: user.image,
-          createdAt: user.createdAt,
-        };
-      }
-    } else {
-      // Use real database
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          name: true,
-          email: true,
-          role: true,
-          phone: true,
-          address: true,
-          image: true,
-          createdAt: true,
-        },
-      });
-    }
+    // Use real database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        address: true,
+        image: true,
+        createdAt: true,
+      },
+    });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -71,15 +51,8 @@ export async function PUT(req: NextRequest) {
   const { name, email, phone, address, currentPassword, newPassword } = body;
 
   try {
-    let user;
-    
-    if (isDemoMode()) {
-      // Use demo database
-      user = await DemoORM.findUniqueUser({ id: userId });
-    } else {
-      // Use real database
-      user = await prisma.user.findUnique({ where: { id: userId } });
-    }
+    // Use real database
+    const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -89,12 +62,7 @@ export async function PUT(req: NextRequest) {
 
     if (name) dataToUpdate.name = name;
     if (email && email !== user.email) {
-      let existingUser;
-      if (isDemoMode()) {
-        existingUser = await DemoORM.findUniqueUser({ email });
-      } else {
-        existingUser = await prisma.user.findUnique({ where: { email } });
-      }
+      const existingUser = await prisma.user.findUnique({ where: { email } });
       if (existingUser) {
         return NextResponse.json({ error: 'Email already in use' }, { status: 400 });
       }
@@ -115,36 +83,20 @@ export async function PUT(req: NextRequest) {
       dataToUpdate.password = hashedNewPassword;
     }
 
-    let updatedUser;
-    if (isDemoMode()) {
-      // Use demo database
-      updatedUser = await DemoORM.updateUser({ id: userId }, dataToUpdate);
-      // Select only the fields we want to return
-      updatedUser = {
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        phone: updatedUser.phone,
-        address: updatedUser.address,
-        image: updatedUser.image,
-        createdAt: updatedUser.createdAt,
-      };
-    } else {
-      // Use real database
-      updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: dataToUpdate,
-        select: {
-          name: true,
-          email: true,
-          role: true,
-          phone: true,
-          address: true,
-          image: true,
-          createdAt: true,
-        },
-      });
-    }
+    // Use real database
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: dataToUpdate,
+      select: {
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        address: true,
+        image: true,
+        createdAt: true,
+      },
+    });
 
     return NextResponse.json(updatedUser);
   } catch (error) {

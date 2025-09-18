@@ -76,9 +76,9 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
 
   useEffect(() => {
     const userRole = user.role as UserRole;
-    if (userRole === 'owner') setNavLinks(t.layout.dashboardSidebar.ownerLinks);
-    else if (userRole === 'renter' || userRole === 'tenant') setNavLinks(t.layout.dashboardSidebar.renterLinks);
-    else if (userRole === 'staff' || userRole === 'admin') setNavLinks(t.layout.dashboardSidebar.staffLinks);
+    if (userRole === 'BROKER') setNavLinks(t.layout.dashboardSidebar.brokerLinks);
+    else if (userRole === 'STAFF') setNavLinks(t.layout.dashboardSidebar.staffLinks);
+    else if (userRole === 'ADMIN') setNavLinks(t.layout.dashboardSidebar.adminLinks);
     else setNavLinks(t.layout.dashboardSidebar.renterLinks); // Default for safety
   }, [user.role]);
 
@@ -94,7 +94,6 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
          <SidebarTrigger />
         </div>
       </SidebarHeader>
-      
       <SidebarContent className="flex-1 overflow-y-auto">
         <SidebarMenu>
           {navLinks.map((item) => (
@@ -131,7 +130,7 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
               <Bell className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.notifications}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
               onClick={handleLogout}
             >

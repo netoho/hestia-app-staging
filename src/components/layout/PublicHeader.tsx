@@ -9,7 +9,6 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { t } from '@/lib/i18n';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { isDemoMode } from '@/lib/env-check';
 
 export default function PublicHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,7 +23,7 @@ export default function PublicHeader() {
   }, []);
 
   return (
-    <header 
+    <header
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-300",
         isScrolled ? "bg-background/80 backdrop-blur-md shadow-md" : "bg-transparent"
@@ -51,20 +50,14 @@ export default function PublicHeader() {
             ))}
           </nav>
           <div className="hidden md:flex items-center space-x-3">
-            {isDemoMode() ? (
-              <Button variant="default" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground text-base">
-                <Link href="/dashboard">{t.layout.publicHeader.gotoDashboard || 'Go to Dashboard'}</Link>
+            <>
+              <Button variant="outline" asChild className="text-base font-bold">
+                <Link href="/login">{t.layout.publicHeader.login}</Link>
               </Button>
-            ) : (
-              <>
-                <Button variant="outline" asChild className="text-base font-bold">
-                  <Link href="/login">{t.layout.publicHeader.login}</Link>
-                </Button>
-                <Button variant="default" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground text-base font-bold">
-                  <Link href="/register">{t.layout.publicHeader.register}</Link>
-                </Button>
-              </>
-            )}
+              <Button variant="default" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground text-base font-bold">
+                <Link href="/join-us">Únete a Nosotros</Link>
+              </Button>
+            </>
           </div>
           <div className="md:hidden">
             <Sheet>
@@ -99,26 +92,18 @@ export default function PublicHeader() {
                     ))}
                   </nav>
                   <div className="mt-auto space-y-3">
-                    {isDemoMode() ? (
+                    <>
                       <SheetClose asChild>
-                        <Button variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                          <Link href="/dashboard">{t.layout.publicHeader.gotoDashboard || 'Go to Dashboard'}</Link>
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link href="/login">{t.layout.publicHeader.login}</Link>
                         </Button>
                       </SheetClose>
-                    ) : (
-                      <>
-                        <SheetClose asChild>
-                          <Button variant="outline" className="w-full" asChild>
-                            <Link href="/login">{t.layout.publicHeader.login}</Link>
-                          </Button>
-                        </SheetClose>
-                        <SheetClose asChild>
-                          <Button variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                            <Link href="/register">{t.layout.publicHeader.register}</Link>
-                          </Button>
-                        </SheetClose>
-                      </>
-                    )}
+                      <SheetClose asChild>
+                        <Button variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                          <Link href="/join-us">Únete a Nosotros</Link>
+                        </Button>
+                      </SheetClose>
+                    </>
                   </div>
                 </div>
               </SheetContent>

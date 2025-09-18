@@ -37,7 +37,7 @@ import type { User } from '@/lib/types';
 const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['broker', 'tenant', 'landlord', 'staff']),
+  role: z.enum(['BROKER', 'ADMIN', 'STAFF']),
   password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
 });
 
@@ -76,7 +76,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         form.reset({
           name: '',
           email: '',
-          role: 'tenant',
+          role: 'BROKER',
           password: '',
         });
       }
@@ -90,7 +90,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
     try {
       const url = isEditMode ? `/api/staff/users/${user?.id}` : '/api/staff/users';
       const method = isEditMode ? 'PUT' : 'POST';
-      
+
       const payload: any = { ...data };
       if (isEditMode) {
         if (!payload.password) delete payload.password;
@@ -120,7 +120,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
   const handlePasswordReset = async () => {
     if (!user) return;
-    
+
     const newPassword = form.getValues('password');
     if (!newPassword || newPassword.length < 6) {
       form.setError('password', { message: 'Password must be at least 6 characters' });
@@ -160,7 +160,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit User' : 'Create New User'}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
+            {isEditMode
               ? 'Update user information.'
               : 'Add a new user to the system.'}
           </DialogDescription>
@@ -196,10 +196,10 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="john@example.com" 
-                      {...field} 
+                    <Input
+                      type="email"
+                      placeholder="john@example.com"
+                      {...field}
                       disabled={isEditMode}
                     />
                   </FormControl>
@@ -221,10 +221,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="tenant">Tenant</SelectItem>
-                      <SelectItem value="landlord">Landlord</SelectItem>
-                      <SelectItem value="broker">Broker</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="BROKER">Broker</SelectItem>
+                      <SelectItem value="STAFF">Staff</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -240,10 +239,10 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Enter password" 
-                        {...field} 
+                      <Input
+                        type="password"
+                        placeholder="Enter password"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />

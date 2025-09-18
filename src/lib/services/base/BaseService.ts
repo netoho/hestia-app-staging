@@ -7,7 +7,6 @@ import { PrismaClient } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode, Errors } from '../types/errors';
-import { isMockEnabled } from '@/lib/env-check';
 
 export interface ServiceContext {
   userId?: string;
@@ -19,19 +18,16 @@ export interface ServiceContext {
 export interface ServiceOptions {
   prisma?: PrismaClient;
   enableCache?: boolean;
-  enableMock?: boolean;
 }
 
 export abstract class BaseService {
   protected prisma: PrismaClient;
   protected context?: ServiceContext;
   protected enableCache: boolean;
-  protected enableMock: boolean;
 
   constructor(options: ServiceOptions = {}) {
     this.prisma = options.prisma || prisma;
     this.enableCache = options.enableCache ?? false;
-    this.enableMock = options.enableMock ?? isMockEnabled();
   }
 
   /**
@@ -76,7 +72,7 @@ export abstract class BaseService {
       return Result.ok(result);
     } catch (error: any) {
       this.log('error', `Database operation failed: ${operationName}`, error);
-      
+
       // Handle specific Prisma errors
       if (error.code === 'P2002') {
         return Result.error(
@@ -88,7 +84,7 @@ export abstract class BaseService {
           )
         );
       }
-      
+
       if (error.code === 'P2025') {
         return Result.error(
           new ServiceError(
@@ -99,7 +95,7 @@ export abstract class BaseService {
           )
         );
       }
-      
+
       if (error.code === 'P2003') {
         return Result.error(
           new ServiceError(
