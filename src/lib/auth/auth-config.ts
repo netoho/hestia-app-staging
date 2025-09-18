@@ -21,25 +21,24 @@ export const authOptions: AuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
-        
-        // Use real database
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
-        
+
         if (!user || !user.password) {
           return null;
         }
-        
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
-        
+
         if (!isPasswordValid) {
           return null;
         }
-        
+
         return {
           id: user.id,
           email: user.email,
@@ -48,15 +47,10 @@ export const authOptions: AuthOptions = {
         };
       }
     }),
-    // GoogleProvider can be added here later
-    // GoogleProvider({
-    //   clientId: process.env.GOOGLE_CLIENT_ID!,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    // })
   ],
   session: {
     strategy: 'jwt', // JWT sessions work perfectly in demo mode
-maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -77,6 +71,5 @@ maxAge: 30 * 24 * 60 * 60, // 30 days
   pages: {
     signIn: '/login',
   },
-  // secret: process.env.NEXTAUTH_SECRET,
-  secret: "generate-strong-secret-here",
+  secret: process.env.NEXTAUTH_SECRET,
 };

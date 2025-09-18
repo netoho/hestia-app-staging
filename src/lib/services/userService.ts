@@ -100,7 +100,6 @@ export const getUsers = async (options: GetUsersOptions = {}): Promise<GetUsersR
 };
 
 export const createUser = async (userData: CreateUserData): Promise<User> => {
-  console.log('Using real database for createUser');
   const hashedPassword = userData.password ? await hashPassword(userData.password) : 'temp-password';
 
   const newUser = await prisma.user.create({
@@ -108,7 +107,7 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
       email: userData.email,
       name: userData.name,
       password: hashedPassword,
-      role: userData.role || 'user', // Default role
+      role: (userData.role || 'STAFF') as 'ADMIN' | 'STAFF' | 'BROKER',
     },
   });
 
@@ -131,7 +130,6 @@ export const getUserById = async (id: string): Promise<User | null> => {
 };
 
 export const updateUser = async (id: string, data: Partial<CreateUserData>): Promise<User | null> => {
-  console.log('Using real database for updateUser');
   const hashedPassword = data.password ? await hashPassword(data.password) : undefined;
 
   const updateData: any = {
@@ -159,7 +157,6 @@ export const updateUser = async (id: string, data: Partial<CreateUserData>): Pro
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
-  console.log('Using real database for deleteUser');
   try {
     await prisma.user.delete({
       where: { id }
