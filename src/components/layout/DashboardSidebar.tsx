@@ -123,12 +123,12 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
             <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
               <UserCircle className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.profile}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-              <Settings className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.settings}
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Bell className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.notifications}
-            </DropdownMenuItem>
+            {/* <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}> */}
+            {/*   <Settings className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.settings} */}
+            {/* </DropdownMenuItem> */}
+            {/* <DropdownMenuItem> */}
+            {/*   <Bell className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.notifications} */}
+            {/* </DropdownMenuItem> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
