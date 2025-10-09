@@ -23,56 +23,22 @@ import {
 import { DocumentCategory } from '@/types/policy';
 import { formatFileSize } from '@/lib/utils';
 import { useDocumentManagement } from '@/hooks/useDocumentManagement';
+import { getDocumentCategoriesByActorType } from '@/lib/constants/documentCategories';
 
 interface EnhancedDocumentsTabProps {
   token: string | null;
-  actorType: 'tenant' | 'joint-obligor' | 'aval';
+  actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord';
   additionalInfo?: string;
   updateFormData: (field: string, value: any) => void;
-  isAval?: boolean;
+  isCompany?: boolean;
 }
-
-const documentCategories = [
-  {
-    category: DocumentCategory.IDENTIFICATION,
-    title: 'Identificación Oficial',
-    description: 'INE, Pasaporte o Cédula Profesional',
-    documentType: 'identification',
-    required: true,
-  },
-  {
-    category: DocumentCategory.INCOME_PROOF,
-    title: 'Comprobante de Ingresos',
-    description: 'Recibos de nómina, estados de cuenta o declaración fiscal',
-    documentType: 'income_proof',
-    required: true,
-  },
-  {
-    category: DocumentCategory.ADDRESS_PROOF,
-    title: 'Comprobante de Domicilio',
-    description: 'Recibo de servicios (luz, agua, gas, teléfono)',
-    documentType: 'address_proof',
-    required: false,
-  },
-];
-
-const avalDocumentCategories = [
-  ...documentCategories,
-  {
-    category: DocumentCategory.PROPERTY_DEED,
-    title: 'Escritura de Propiedad',
-    description: 'Documento que acredite la propiedad del inmueble en garantía',
-    documentType: 'property_deed',
-    required: true,
-  },
-];
 
 export default function EnhancedDocumentsTab({
   token,
   actorType,
   additionalInfo,
   updateFormData,
-  isAval = false,
+  isCompany = false,
 }: EnhancedDocumentsTabProps) {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -88,7 +54,12 @@ export default function EnhancedDocumentsTab({
     clearUploadError,
   } = useDocumentManagement({ token, actorType });
 
-  const categoriesToShow = isAval ? avalDocumentCategories : documentCategories;
+  // Get dynamic categories based on actor type and company/individual status
+  const categoriesToShow = getDocumentCategoriesByActorType(
+    actorType,
+    isCompany,
+    actorType === 'aval'
+  );
 
   const handleFileSelect = async (category: DocumentCategory, documentType: string, file: File) => {
     await uploadDocument(file, category, documentType);

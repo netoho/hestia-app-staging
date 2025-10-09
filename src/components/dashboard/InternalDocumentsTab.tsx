@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { DocumentCategory } from '@/types/policy';
 import { formatFileSize } from '@/lib/utils';
+import { getDocumentCategoriesByActorType } from '@/lib/constants/documentCategories';
 
 interface Document {
   id: string;
@@ -35,47 +36,12 @@ interface Document {
 
 interface InternalDocumentsTabProps {
   policyId: string;
-  actorType: 'tenant' | 'joint-obligor' | 'aval';
+  actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord';
   actorId: string;
   documents: Document[];
   onDocumentsFetch: () => void;
-  isAval?: boolean;
+  isCompany?: boolean;
 }
-
-const documentCategories = [
-  {
-    category: DocumentCategory.IDENTIFICATION,
-    title: 'Identificación Oficial',
-    description: 'INE, Pasaporte o Cédula Profesional',
-    documentType: 'identification',
-    required: true,
-  },
-  {
-    category: DocumentCategory.INCOME_PROOF,
-    title: 'Comprobante de Ingresos',
-    description: 'Recibos de nómina, estados de cuenta o declaración fiscal',
-    documentType: 'income_proof',
-    required: true,
-  },
-  {
-    category: DocumentCategory.ADDRESS_PROOF,
-    title: 'Comprobante de Domicilio',
-    description: 'Recibo de servicios (luz, agua, gas, teléfono)',
-    documentType: 'address_proof',
-    required: false,
-  },
-];
-
-const avalDocumentCategories = [
-  ...documentCategories,
-  {
-    category: DocumentCategory.PROPERTY_DEED,
-    title: 'Escritura de Propiedad',
-    description: 'Documento que acredite la propiedad del inmueble en garantía',
-    documentType: 'property_deed',
-    required: true,
-  },
-];
 
 export default function InternalDocumentsTab({
   policyId,
@@ -83,7 +49,7 @@ export default function InternalDocumentsTab({
   actorId,
   documents,
   onDocumentsFetch,
-  isAval = false,
+  isCompany = false,
 }: InternalDocumentsTabProps) {
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
@@ -91,7 +57,12 @@ export default function InternalDocumentsTab({
   const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const categoriesToShow = isAval ? avalDocumentCategories : documentCategories;
+  // Get dynamic categories based on actor type and company/individual status
+  const categoriesToShow = getDocumentCategoriesByActorType(
+    actorType,
+    isCompany,
+    actorType === 'aval'
+  );
 
   const handleFileSelect = async (category: DocumentCategory, documentType: string, file: File) => {
     // Validate file

@@ -4,21 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
 import { Textarea } from '@/components/ui/textarea';
+import { DocumentCategory } from '@/types/policy';
+import { getDocumentCategoriesByActorType } from '@/lib/constants/documentCategories';
 
 interface DocumentsTabProps {
-  documents: {
-    identification: File | null;
-    incomeProof: File | null;
-    addressProof: File | null;
-    propertyDeed: File | null;
-  };
+  documents: Record<string, File | null>;
   additionalInfo?: string;
   existingDocuments: Record<string, any>;
   uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
   uploadErrors: Record<string, string>;
   handleDocumentChange: (documentType: string, category: string, file: File | null) => void;
   updateFormData: (field: string, value: any) => void,
-  actorType: 'tenant' | 'joint-obligor' | 'aval';
+  actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord';
+  isCompany?: boolean;
 }
 
 export default function DocumentsTab({
@@ -30,7 +28,15 @@ export default function DocumentsTab({
   handleDocumentChange,
   updateFormData,
   actorType,
+  isCompany = false,
 }: DocumentsTabProps) {
+  // Get dynamic categories based on actor type and company/individual status
+  const categoriesToShow = getDocumentCategoriesByActorType(
+    actorType,
+    isCompany,
+    actorType === 'aval'
+  );
+
   const renderDocumentCard = (
     title: string,
     description: string,
@@ -82,34 +88,16 @@ export default function DocumentsTab({
       </p>
 
       <div className="space-y-4">
-        {renderDocumentCard(
-          'Identificación Oficial',
-          'INE, Pasaporte o Cédula Profesional',
-          'identification',
-          'identification'
+        {categoriesToShow.map(({ category, title, description, documentType, required }) =>
+          renderDocumentCard(
+            title,
+            description,
+            documentType,
+            category.toLowerCase(),
+            required
+          )
         )}
 
-        {renderDocumentCard(
-          'Comprobante de Ingresos',
-          'Recibos de nómina, estados de cuenta o declaración fiscal',
-          'incomeProof',
-          'income_proof'
-        )}
-
-        {renderDocumentCard(
-          'Comprobante de Domicilio',
-          'Recibo de servicios (luz, agua, gas, teléfono)',
-          'addressProof',
-          'address_proof',
-          false
-        )}
-
-        {actorType === 'aval' && renderDocumentCard(
-          'Escritura de Propiedad',
-          'Documento que acredite la propiedad del inmueble en garantía',
-          'propertyDeed',
-          'property_deed'
-        )}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Información adicional:</CardTitle>
