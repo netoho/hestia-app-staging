@@ -4,6 +4,7 @@ import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';
 import { sendActorInvitation } from '@/lib/services/emailService';
 import {
+  generateLandlordToken,
   generateTenantToken,
   generateJointObligorToken,
   generateAvalToken
@@ -23,6 +24,7 @@ export async function POST(
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
+          landlord: true,
           tenant: true,
           jointObligors: true,
           avals: true,
@@ -45,6 +47,32 @@ export async function POST(
       }
 
       const invitations = [];
+
+      // Generate token for landlord
+      if (policy.landlord && policy.landlord.email && !policy.landlord.informationComplete) {
+        const tokenData = await generateLandlordToken(policy.landlord.id);
+
+        const sent = await sendActorInvitation({
+          actorType: 'landlord' as any,
+          email: policy.landlord.email,
+          name: policy.landlord.fullName || policy.landlord.companyName || 'Arrendador',
+          token: tokenData.token,
+          url: tokenData.url,
+          policyNumber: policy.policyNumber,
+          propertyAddress: policy.propertyAddress,
+          expiryDate: tokenData.expiresAt,
+          initiatorName: user.name || user.email,
+        });
+
+        invitations.push({
+          actorType: 'landlord',
+          email: policy.landlord.email,
+          sent,
+          token: tokenData.token,
+          url: tokenData.url,
+          expiresAt: tokenData.expiresAt,
+        });
+      }
 
       // Generate token for tenant
       if (policy.tenant && policy.tenant.email) {
