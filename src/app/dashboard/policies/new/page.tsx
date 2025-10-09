@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, Trash2, Calculator, Info, Mail } from 'lucide-react';
 import { PropertyType, GuarantorType, TenantType } from '@/types/policy';
 import { formatCurrency } from '@/lib/services/pricingService';
+import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 
 interface ActorForm {
   firstName: string;
@@ -41,8 +42,9 @@ export default function NewPolicyPage() {
   const [calculatingPrice, setCalculatingPrice] = useState(false);
 
   // Property Information
-  const [propertyData, setPropertyData] = useState({
+  const [propertyData, setPropertyData] = useState<any>({
     propertyAddress: '',
+    propertyAddressDetails: null,
     propertyType: PropertyType.APARTMENT,
     propertyDescription: '',
     rentAmount: '',
@@ -50,6 +52,32 @@ export default function NewPolicyPage() {
     contractLength: 12,
     startDate: '',
     endDate: '',
+    // New property features
+    parkingSpaces: 0,
+    parkingNumbers: '',
+    isFurnished: false,
+    hasPhone: false,
+    hasElectricity: true,
+    hasWater: true,
+    hasGas: false,
+    hasCableTV: false,
+    hasInternet: false,
+    utilitiesInLandlordName: false,
+    // Financial details
+    hasIVA: false,
+    issuesTaxReceipts: false,
+    securityDeposit: 1, // months
+    maintenanceFee: '',
+    maintenanceIncludedInRent: false,
+    rentIncreasePercentage: '',
+    paymentMethod: 'bank_transfer',
+    // Additional info
+    hasInventory: false,
+    hasRules: false,
+    petsAllowed: false,
+    propertyDeliveryDate: '',
+    contractSigningDate: '',
+    contractSigningLocation: '',
   });
 
   // Package and Pricing
@@ -58,12 +86,21 @@ export default function NewPolicyPage() {
   const [landlordPercentage, setLandlordPercentage] = useState(0);
 
   // Landlord Information
-  const [landlordData, setLandlordData] = useState<ActorForm>({
+  const [landlordData, setLandlordData] = useState<any>({
+    isCompany: false,
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     rfc: '',
+    // Company fields
+    companyName: '',
+    companyRfc: '',
+    legalRepName: '',
+    legalRepPosition: '',
+    legalRepRfc: '',
+    legalRepPhone: '',
+    legalRepEmail: '',
   });
 
   // Tenant Information
@@ -106,14 +143,13 @@ export default function NewPolicyPage() {
     try {
       const response = await fetch('/api/packages');
       const data = await response.json();
-      console.log('Packages response:', data); // Debug log
 
       // The API returns packages directly, not wrapped in a packages property
       if (data && Array.isArray(data)) {
         setPackages(data);
         // Set default package if available
         if (data.length > 0) {
-          setPackageId(data[0].id);
+          setPackageId(data[2].id);
         }
       } else if (data.packages) {
         // Fallback for wrapped response
@@ -207,6 +243,12 @@ export default function NewPolicyPage() {
       return false;
     }
 
+    // Validate property address details if using Google Maps
+    if (propertyData.propertyAddressDetails && (!propertyData.propertyAddressDetails.street || !propertyData.propertyAddressDetails.exteriorNumber)) {
+      alert('Por favor complete la dirección con calle y número exterior');
+      return false;
+    }
+
     // Validate package selection
     if (!packageId) {
       alert('Por favor seleccione un paquete');
@@ -214,9 +256,16 @@ export default function NewPolicyPage() {
     }
 
     // Validate landlord data
-    if (!landlordData.firstName || !landlordData.lastName || !landlordData.email) {
-      alert('Por favor complete todos los campos del arrendador');
-      return false;
+    if (landlordData.isCompany) {
+      if (!landlordData.companyName || !landlordData.companyRfc || !landlordData.email || !landlordData.legalRepName) {
+        alert('Por favor complete todos los campos requeridos del arrendador empresa');
+        return false;
+      }
+    } else {
+      if (!landlordData.firstName || !landlordData.lastName || !landlordData.email) {
+        alert('Por favor complete todos los campos del arrendador');
+        return false;
+      }
     }
 
     // Validate tenant data based on type
@@ -281,6 +330,12 @@ export default function NewPolicyPage() {
         ...propertyData,
         rentAmount: parseFloat(propertyData.rentAmount),
         depositAmount: parseFloat(propertyData.depositAmount || propertyData.rentAmount),
+        securityDeposit: propertyData.securityDeposit,
+        maintenanceFee: propertyData.maintenanceFee ? parseFloat(propertyData.maintenanceFee) : undefined,
+        rentIncreasePercentage: propertyData.rentIncreasePercentage ? parseFloat(propertyData.rentIncreasePercentage) : undefined,
+        parkingNumbers: propertyData.parkingNumbers ? JSON.stringify(propertyData.parkingNumbers.split(',').map(s => s.trim())) : undefined,
+        propertyDeliveryDate: propertyData.propertyDeliveryDate || undefined,
+        contractSigningDate: propertyData.contractSigningDate || undefined,
         packageId,
         tenantPercentage,
         landlordPercentage,
@@ -344,13 +399,19 @@ export default function NewPolicyPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="propertyAddress">Dirección de la Propiedad</Label>
-                <Input
-                  id="propertyAddress"
-                  value={propertyData.propertyAddress}
-                  onChange={(e) => setPropertyData({ ...propertyData, propertyAddress: e.target.value })}
-                  placeholder="Calle, Número, Colonia, Ciudad, Estado"
+                <AddressAutocomplete
+                  label="Dirección de la Propiedad"
+                  value={propertyData.propertyAddressDetails}
+                  onChange={(address) => {
+                    setPropertyData({
+                      ...propertyData,
+                      propertyAddressDetails: address,
+                      propertyAddress: address.formattedAddress ||
+                        `${address.street} ${address.exteriorNumber}${address.interiorNumber ? ` Int. ${address.interiorNumber}` : ''}, ${address.neighborhood}, ${address.municipality}, ${address.state}`
+                    });
+                  }}
                   required
+                  placeholder="Buscar dirección..."
                 />
               </div>
 
@@ -446,7 +507,258 @@ export default function NewPolicyPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              {/* Property Features Section */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-3">Características de la Propiedad</h3>
+
+                {/* Parking */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="parkingSpaces">Espacios de Estacionamiento</Label>
+                    <Input
+                      id="parkingSpaces"
+                      type="number"
+                      min="0"
+                      value={propertyData.parkingSpaces}
+                      onChange={(e) => setPropertyData({ ...propertyData, parkingSpaces: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="parkingNumbers">Números de Cajones</Label>
+                    <Input
+                      id="parkingNumbers"
+                      value={propertyData.parkingNumbers}
+                      onChange={(e) => setPropertyData({ ...propertyData, parkingNumbers: e.target.value })}
+                      placeholder="Ej: A1, A2"
+                    />
+                  </div>
+                </div>
+
+                {/* Property Features Checkboxes */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isFurnished"
+                      checked={propertyData.isFurnished}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, isFurnished: checked as boolean })}
+                    />
+                    <Label htmlFor="isFurnished">Amueblado</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="petsAllowed"
+                      checked={propertyData.petsAllowed}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, petsAllowed: checked as boolean })}
+                    />
+                    <Label htmlFor="petsAllowed">Se permiten mascotas</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasInventory"
+                      checked={propertyData.hasInventory}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasInventory: checked as boolean })}
+                    />
+                    <Label htmlFor="hasInventory">Tiene inventario</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasRules"
+                      checked={propertyData.hasRules}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasRules: checked as boolean })}
+                    />
+                    <Label htmlFor="hasRules">Tiene reglamento</Label>
+                  </div>
+                </div>
+
+                {/* Utilities Section */}
+                <h4 className="font-medium mb-2">Servicios Incluidos</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasElectricity"
+                      checked={propertyData.hasElectricity}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasElectricity: checked as boolean })}
+                    />
+                    <Label htmlFor="hasElectricity">Electricidad</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasWater"
+                      checked={propertyData.hasWater}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasWater: checked as boolean })}
+                    />
+                    <Label htmlFor="hasWater">Agua</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasGas"
+                      checked={propertyData.hasGas}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasGas: checked as boolean })}
+                    />
+                    <Label htmlFor="hasGas">Gas</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasPhone"
+                      checked={propertyData.hasPhone}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasPhone: checked as boolean })}
+                    />
+                    <Label htmlFor="hasPhone">Teléfono</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasCableTV"
+                      checked={propertyData.hasCableTV}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasCableTV: checked as boolean })}
+                    />
+                    <Label htmlFor="hasCableTV">Cable TV</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasInternet"
+                      checked={propertyData.hasInternet}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasInternet: checked as boolean })}
+                    />
+                    <Label htmlFor="hasInternet">Internet</Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="utilitiesInLandlordName"
+                    checked={propertyData.utilitiesInLandlordName}
+                    onCheckedChange={(checked) => setPropertyData({ ...propertyData, utilitiesInLandlordName: checked as boolean })}
+                  />
+                  <Label htmlFor="utilitiesInLandlordName">Los servicios están a nombre del arrendador</Label>
+                </div>
+              </div>
+
+              {/* Financial Details Section */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-3">Detalles Financieros</h3>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="securityDeposit">Depósito de Garantía (meses)</Label>
+                    <Input
+                      id="securityDeposit"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={propertyData.securityDeposit}
+                      onChange={(e) => setPropertyData({ ...propertyData, securityDeposit: parseFloat(e.target.value) || 1 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maintenanceFee">Cuota de Mantenimiento</Label>
+                    <Input
+                      id="maintenanceFee"
+                      type="number"
+                      value={propertyData.maintenanceFee}
+                      onChange={(e) => setPropertyData({ ...propertyData, maintenanceFee: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="maintenanceIncludedInRent"
+                      checked={propertyData.maintenanceIncludedInRent}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, maintenanceIncludedInRent: checked as boolean })}
+                    />
+                    <Label htmlFor="maintenanceIncludedInRent">Mantenimiento incluido en renta</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasIVA"
+                      checked={propertyData.hasIVA}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasIVA: checked as boolean })}
+                    />
+                    <Label htmlFor="hasIVA">Incluye IVA</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="issuesTaxReceipts"
+                      checked={propertyData.issuesTaxReceipts}
+                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, issuesTaxReceipts: checked as boolean })}
+                    />
+                    <Label htmlFor="issuesTaxReceipts">Emite recibos fiscales</Label>
+                  </div>
+                </div>
+
+                {propertyData.contractLength > 12 && (
+                  <div>
+                    <Label htmlFor="rentIncreasePercentage">% Incremento Anual (contratos &gt; 1 año)</Label>
+                    <Input
+                      id="rentIncreasePercentage"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={propertyData.rentIncreasePercentage}
+                      onChange={(e) => setPropertyData({ ...propertyData, rentIncreasePercentage: e.target.value })}
+                      placeholder="Ej: 5.0"
+                    />
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <Label htmlFor="paymentMethod">Método de Pago Preferido</Label>
+                  <Select
+                    value={propertyData.paymentMethod}
+                    onValueChange={(value) => setPropertyData({ ...propertyData, paymentMethod: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank_transfer">Transferencia Bancaria</SelectItem>
+                      <SelectItem value="cash">Efectivo</SelectItem>
+                      <SelectItem value="check">Cheque</SelectItem>
+                      <SelectItem value="deposit">Depósito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Contract Dates Section */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-3">Fechas del Contrato</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="propertyDeliveryDate">Fecha de Entrega del Inmueble</Label>
+                    <Input
+                      id="propertyDeliveryDate"
+                      type="date"
+                      value={propertyData.propertyDeliveryDate}
+                      onChange={(e) => setPropertyData({ ...propertyData, propertyDeliveryDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contractSigningDate">Fecha de Firma del Contrato</Label>
+                    <Input
+                      id="contractSigningDate"
+                      type="date"
+                      value={propertyData.contractSigningDate}
+                      onChange={(e) => setPropertyData({ ...propertyData, contractSigningDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <Label htmlFor="contractSigningLocation">Lugar de Firma del Contrato</Label>
+                  <Input
+                    id="contractSigningLocation"
+                    value={propertyData.contractSigningLocation}
+                    onChange={(e) => setPropertyData({ ...propertyData, contractSigningLocation: e.target.value })}
+                    placeholder="Ej: Ciudad de México"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-6">
                 <Button onClick={() => setCurrentTab('pricing')}>
                   Siguiente
                 </Button>
@@ -479,9 +791,9 @@ export default function NewPolicyPage() {
                         <SelectValue placeholder="Seleccione un paquete" />
                       </SelectTrigger>
                       <SelectContent>
-                        {packages.map((pkg) => (
+                        {packages.sort((a, b) => b.price - a.price).map((pkg) => (
                           <SelectItem key={pkg.id} value={pkg.id}>
-                            {pkg.name} - {formatCurrency(pkg.price)}
+                            {pkg.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -598,55 +910,175 @@ export default function NewPolicyPage() {
               <CardDescription>Ingrese los datos del propietario</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="landlordFirstName">Nombre</Label>
-                  <Input
-                    id="landlordFirstName"
-                    value={landlordData.firstName}
-                    onChange={(e) => setLandlordData({ ...landlordData, firstName: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="landlordLastName">Apellidos</Label>
-                  <Input
-                    id="landlordLastName"
-                    value={landlordData.lastName}
-                    onChange={(e) => setLandlordData({ ...landlordData, lastName: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="landlordEmail">Email</Label>
-                <Input
-                  id="landlordEmail"
-                  type="email"
-                  value={landlordData.email}
-                  onChange={(e) => setLandlordData({ ...landlordData, email: e.target.value })}
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id="landlordIsCompany"
+                  checked={landlordData.isCompany}
+                  onCheckedChange={(checked) => setLandlordData({ ...landlordData, isCompany: checked as boolean })}
                 />
+                <Label htmlFor="landlordIsCompany">El arrendador es una empresa</Label>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="landlordPhone">Teléfono</Label>
-                  <Input
-                    id="landlordPhone"
-                    value={landlordData.phone}
-                    onChange={(e) => setLandlordData({ ...landlordData, phone: e.target.value })}
-                  />
-                </div>
+              {landlordData.isCompany ? (
+                <>
+                  {/* Company Fields */}
+                  <div>
+                    <Label htmlFor="companyName">Razón Social *</Label>
+                    <Input
+                      id="companyName"
+                      value={landlordData.companyName}
+                      onChange={(e) => setLandlordData({ ...landlordData, companyName: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="landlordRfc">RFC</Label>
-                  <Input
-                    id="landlordRfc"
-                    value={landlordData.rfc}
-                    onChange={(e) => setLandlordData({ ...landlordData, rfc: e.target.value })}
-                  />
-                </div>
-              </div>
+                  <div>
+                    <Label htmlFor="companyRfc">RFC de la Empresa *</Label>
+                    <Input
+                      id="companyRfc"
+                      value={landlordData.companyRfc}
+                      onChange={(e) => setLandlordData({ ...landlordData, companyRfc: e.target.value.toUpperCase() })}
+                      placeholder="AAA123456XXX"
+                      maxLength={12}
+                      required
+                    />
+                  </div>
+
+                  <div className="border-l-2 border-blue-200 pl-4 space-y-4">
+                    <h4 className="font-medium text-sm text-gray-700">Representante Legal</h4>
+
+                    <div>
+                      <Label htmlFor="legalRepName">Nombre del Representante *</Label>
+                      <Input
+                        id="legalRepName"
+                        value={landlordData.legalRepName}
+                        onChange={(e) => setLandlordData({ ...landlordData, legalRepName: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="legalRepPosition">Cargo</Label>
+                      <Input
+                        id="legalRepPosition"
+                        value={landlordData.legalRepPosition}
+                        onChange={(e) => setLandlordData({ ...landlordData, legalRepPosition: e.target.value })}
+                        placeholder="Ej: Director General"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="legalRepRfc">RFC del Representante</Label>
+                        <Input
+                          id="legalRepRfc"
+                          value={landlordData.legalRepRfc}
+                          onChange={(e) => setLandlordData({ ...landlordData, legalRepRfc: e.target.value.toUpperCase() })}
+                          placeholder="AAAA123456XXX"
+                          maxLength={13}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="legalRepPhone">Teléfono del Representante</Label>
+                        <Input
+                          id="legalRepPhone"
+                          value={landlordData.legalRepPhone}
+                          onChange={(e) => setLandlordData({ ...landlordData, legalRepPhone: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="legalRepEmail">Email del Representante</Label>
+                      <Input
+                        id="legalRepEmail"
+                        type="email"
+                        value={landlordData.legalRepEmail}
+                        onChange={(e) => setLandlordData({ ...landlordData, legalRepEmail: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="landlordEmail">Email de Contacto *</Label>
+                      <Input
+                        id="landlordEmail"
+                        type="email"
+                        value={landlordData.email}
+                        onChange={(e) => setLandlordData({ ...landlordData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="landlordPhone">Teléfono de Contacto *</Label>
+                      <Input
+                        id="landlordPhone"
+                        value={landlordData.phone}
+                        onChange={(e) => setLandlordData({ ...landlordData, phone: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Individual Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="landlordFirstName">Nombre</Label>
+                      <Input
+                        id="landlordFirstName"
+                        value={landlordData.firstName}
+                        onChange={(e) => setLandlordData({ ...landlordData, firstName: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="landlordLastName">Apellidos</Label>
+                      <Input
+                        id="landlordLastName"
+                        value={landlordData.lastName}
+                        onChange={(e) => setLandlordData({ ...landlordData, lastName: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="landlordEmail">Email</Label>
+                    <Input
+                      id="landlordEmail"
+                      type="email"
+                      value={landlordData.email}
+                      onChange={(e) => setLandlordData({ ...landlordData, email: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="landlordPhone">Teléfono</Label>
+                      <Input
+                        id="landlordPhone"
+                        value={landlordData.phone}
+                        onChange={(e) => setLandlordData({ ...landlordData, phone: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="landlordRfc">RFC</Label>
+                      <Input
+                        id="landlordRfc"
+                        value={landlordData.rfc}
+                        onChange={(e) => setLandlordData({ ...landlordData, rfc: e.target.value.toUpperCase() })}
+                        placeholder="AAAA123456XXX"
+                        maxLength={13}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setCurrentTab('pricing')}>

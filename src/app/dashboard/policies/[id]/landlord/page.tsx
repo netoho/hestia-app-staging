@@ -96,13 +96,13 @@ export default function LandlordInformationPage({
       if (!response.ok) throw new Error('Failed to fetch policy');
 
       const data = await response.json();
-      setPolicy(data.data);
+      setPolicy(data);
 
       // If landlord data exists, populate the form
-      if (data.data.landlord) {
+      if (data.landlord) {
         setFormData({
           ...formData,
-          ...data.data.landlord,
+          ...data.landlord,
         });
       }
     } catch (error) {
