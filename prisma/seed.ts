@@ -194,7 +194,7 @@ async function main() {
     }
   });
 
-  // Create a sample policy with actors
+  // Create a sample policy with actors and enhanced fields
   const samplePolicy = await prisma.policy.create({
     data: {
       policyNumber: 'POL-2024-SAMPLE-001',
@@ -205,23 +205,60 @@ async function main() {
       guarantorType: 'JOINT_OBLIGOR',
       createdById: brokerUser.id,
       status: 'DRAFT',
-      // Create landlord
+      // Enhanced property features
+      isFurnished: false,
+      parkingSpaces: 2,
+      hasElectricity: true,
+      hasWater: true,
+      hasGas: true,
+      hasInternet: true,
+      petsAllowed: false,
+      hasIVA: true,
+      issuesTaxReceipts: true,
+      securityDeposit: 1,
+      maintenanceFee: 2000,
+      maintenanceIncludedInRent: false,
+      // Create landlord with enhanced fields
       landlord: {
         create: {
+          isCompany: false,
           fullName: 'Juan Pérez García',
           email: 'juan.perez@example.com',
           phone: '5512345678',
+          workPhone: '5598765432',
+          personalEmail: 'juanperez.personal@gmail.com',
           rfc: 'PEGJ850101ABC',
+          curp: 'PEGJ850101HDFRRN08',
           address: 'Av. Insurgentes 456, CDMX',
+          bankName: 'BBVA',
+          accountNumber: '0123456789',
+          clabe: '012180001234567890',
+          occupation: 'Empresario',
+          employerName: 'Inmobiliaria Pérez SA de CV',
+          requiresCFDI: true,
         }
       },
-      // Create tenant
+      // Create tenant with enhanced fields
       tenant: {
         create: {
+          tenantType: 'INDIVIDUAL',
           fullName: 'María López Hernández',
+          nationality: 'MEXICAN',
+          curp: 'LOHM900515MDFRPR03',
+          rfc: 'LOHM900515ABC',
           email: 'maria.lopez@example.com',
           phone: '5587654321',
-          tenantType: 'INDIVIDUAL',
+          workPhone: '5511223344',
+          currentAddress: 'Calle Palmas 789, Col. Lomas, CDMX',
+          employmentStatus: 'employed',
+          occupation: 'Gerente de Marketing',
+          employerName: 'Tech Solutions México',
+          employerAddress: 'Torre Mayor, Piso 15, CDMX',
+          position: 'Gerente Senior',
+          monthlyIncome: 45000,
+          incomeSource: 'salary',
+          paymentMethod: 'monthly',
+          requiresCFDI: false,
         }
       },
     },
@@ -243,18 +280,25 @@ async function main() {
   const jointObligor = existingJointObligor || await prisma.jointObligor.create({
     data: {
       policyId: samplePolicy.id,
+      isCompany: false,
       fullName: 'Carlos Rodríguez Martínez',
       email: 'carlos.rodriguez@example.com',
       phone: '5511223344',
+      workPhone: '5599887766',
       nationality: 'MEXICAN',
       curp: 'ROMC850101HDFXXX00',
+      rfc: 'ROMC850101XYZ',
       address: 'Calle Palmas 789, CDMX',
       employmentStatus: 'employed',
       occupation: 'Ingeniero',
-      companyName: 'Tech Solutions SA de CV',
+      employerName: 'Tech Solutions SA de CV',
+      employerAddress: 'Av. Universidad 1000, CDMX',
       position: 'Gerente',
       monthlyIncome: 45000,
       incomeSource: 'salary',
+      guaranteeMethod: 'income',
+      hasPropertyGuarantee: false,
+      maritalStatus: 'single',
     }
   });
   console.log(`Created joint obligor: ${jointObligor.fullName}`);
@@ -272,7 +316,7 @@ async function main() {
   });
   console.log('Created/updated system configuration');
 
-  // Create another sample policy with different status
+  // Create another sample policy with company landlord
   console.log('Creating additional sample policies...');
   const activePolicy = await prisma.policy.create({
     data: {
@@ -288,23 +332,55 @@ async function main() {
       approvedAt: new Date('2024-01-20'),
       activatedAt: new Date('2024-02-01'),
       packageId: 'premium',
-      // Create landlord
+      // Enhanced property details
+      isFurnished: true,
+      parkingSpaces: 3,
+      hasElectricity: true,
+      hasWater: true,
+      hasGas: true,
+      hasCableTV: true,
+      hasInternet: true,
+      petsAllowed: true,
+      hasIVA: true,
+      issuesTaxReceipts: true,
+      securityDeposit: 2,
+      hasInventory: true,
+      hasRules: true,
+      // Create company landlord
       landlord: {
         create: {
-          fullName: 'Roberto Sánchez Villa',
-          email: 'roberto.sanchez@example.com',
+          isCompany: true,
+          companyName: 'Inmobiliaria Polanco SA de CV',
+          companyRfc: 'IPO990101ABC',
+          legalRepName: 'Roberto Sánchez Villa',
+          legalRepPosition: 'Director General',
+          legalRepRfc: 'SAVR780202XYZ',
+          legalRepPhone: '5511112222',
+          legalRepEmail: 'roberto@inmopolanco.com',
+          email: 'contacto@inmopolanco.com',
           phone: '5599887766',
-          rfc: 'SAVR780202XYZ',
           address: 'Bosques de las Lomas, CDMX',
+          bankName: 'Santander',
+          accountNumber: '9876543210',
+          clabe: '014180987654321098',
+          requiresCFDI: true,
         }
       },
-      // Create tenant
+      // Create tenant company
       tenant: {
         create: {
-          fullName: 'Ana Martínez Torres',
-          email: 'ana.martinez@example.com',
+          tenantType: 'COMPANY',
+          companyName: 'Consultores Digitales SA de CV',
+          companyRfc: 'CDI200315XYZ',
+          legalRepName: 'Ana Martínez Torres',
+          legalRepPosition: 'Representante Legal',
+          legalRepRfc: 'MATA900515ABC',
+          legalRepPhone: '5533445566',
+          email: 'facturacion@consultoresdigitales.com',
           phone: '5544332211',
-          tenantType: 'INDIVIDUAL',
+          companyAddress: 'Torre Reforma 500, CDMX',
+          paymentMethod: 'biannual',
+          requiresCFDI: true,
         }
       },
     },
@@ -326,22 +402,35 @@ async function main() {
   const aval = existingAval || await prisma.aval.create({
     data: {
       policyId: activePolicy.id,
+      isCompany: false,
       fullName: 'Pedro González López',
       email: 'pedro.gonzalez@example.com',
       phone: '5566778899',
+      workPhone: '5577889900',
       nationality: 'MEXICAN',
       curp: 'GOLP900303HDFXXX00',
+      rfc: 'GOLP900303ABC',
       address: 'Santa Fe, CDMX',
-      employmentStatus: 'employed',
+      employmentStatus: 'self-employed',
       occupation: 'Empresario',
-      companyName: 'Inmobiliaria González',
+      employerName: 'Inmobiliaria González',
       position: 'Director General',
       monthlyIncome: 150000,
       incomeSource: 'business',
+      // Property guarantee details
       propertyAddress: 'Lomas de Chapultepec 123, CDMX',
       propertyValue: 8000000,
       propertyDeedNumber: 'DEED-2020-4567',
       propertyRegistry: 'Registro Público CDMX',
+      propertyTaxAccount: 'PRED-123456',
+      propertyUnderLegalProceeding: false,
+      guaranteeMethod: 'property',
+      hasPropertyGuarantee: true,
+      // Marriage info
+      maritalStatus: 'married_separate',
+      spouseName: 'Laura Martínez Ruiz',
+      spouseRfc: 'MARL850515XYZ',
+      spouseCurp: 'MARL850515MDFRRT09',
     }
   });
   console.log(`Created aval: ${aval.fullName}`);

@@ -115,11 +115,45 @@ model Policy {
   policyNumber      String      @unique @default(cuid())
 
   // Property Information
-  propertyAddress   String
+  propertyAddress   String      // Legacy field - kept for compatibility
   propertyType      PropertyType
   propertyDescription String?
   rentAmount        Float
   contractLength    Int         @default(12) // months
+
+  // Enhanced Property Details
+  propertyAddressId String?     @unique
+  propertyAddressDetails PropertyAddress? @relation("PolicyPropertyAddress", fields: [propertyAddressId], references: [id])
+
+  // Property Features
+  parkingSpaces     Int?
+  parkingNumbers    String?     // JSON array of parking spot numbers
+  isFurnished       Boolean     @default(false)
+  hasPhone          Boolean     @default(false)
+  hasElectricity    Boolean     @default(true)
+  hasWater          Boolean     @default(true)
+  hasGas            Boolean     @default(false)
+  hasCableTV        Boolean     @default(false)
+  hasInternet       Boolean     @default(false)
+  otherServices     String?     // JSON array of other services
+  utilitiesInLandlordName Boolean @default(false)
+
+  // Financial Details
+  hasIVA            Boolean     @default(false)
+  issuesTaxReceipts Boolean     @default(false)
+  securityDeposit   Float?      // Amount in months (default 1)
+  maintenanceFee    Float?
+  maintenanceIncludedInRent Boolean @default(false)
+  rentIncreasePercentage Float?  // For contracts > 1 year
+  paymentMethod     String?     // bank_transfer, cash, check, etc.
+
+  // Additional Property Info
+  hasInventory      Boolean     @default(false)
+  hasRules          Boolean     @default(false)
+  petsAllowed       Boolean     @default(false)
+  propertyDeliveryDate DateTime?
+  contractSigningDate DateTime?
+  contractSigningLocation String?
 
   // Guarantor Configuration
   guarantorType     GuarantorType
@@ -132,6 +166,11 @@ model Policy {
   totalPrice        Float
   tenantPercentage  Float       @default(100)
   landlordPercentage Float      @default(0)
+
+  // Payment Preferences
+  tenantPaymentMethod String?   // monthly, biannual, annual, other
+  tenantRequiresCFDI Boolean    @default(false)
+  tenantCFDIData    String?     // JSON with RFC and fiscal data
 
   // User Management
   createdById       String
@@ -187,23 +226,52 @@ model Landlord {
   // Type
   isCompany         Boolean     @default(false)
 
-  // Personal/Company Information
-  fullName          String
+  // Personal Information (for individuals)
+  fullName          String?     // Name for individual, company name for company
   rfc               String?
   curp              String?
+
+  // Company Information (for companies)
+  companyName       String?     // Official company name
+  companyRfc        String?
+  legalRepName      String?     // Legal representative name
+  legalRepPosition  String?     // Legal representative position
+  legalRepRfc       String?
+  legalRepPhone     String?
+  legalRepEmail     String?
+
+  // Contact Information
   email             String
   phone             String
-  address           String
+  workPhone         String?
+  personalEmail     String?
+  workEmail         String?
+
+  // Address Information
+  address           String      // Legacy field
+  addressId         String?     @unique
+  addressDetails    PropertyAddress? @relation("LandlordAddress", fields: [addressId], references: [id])
 
   // Bank Information (for payments)
   bankName          String?
   accountNumber     String?
   clabe             String?
+  accountHolder     String?     // Name of account holder if different
 
   // Work Information (if individual)
   occupation        String?
-  companyName       String?
+  employerName      String?
   monthlyIncome     Float?
+
+  // Property Management Details
+  propertyDeedNumber String?
+  propertyRegistryFolio String?
+  requiresCFDI      Boolean     @default(false)
+  cfdiData          String?     // JSON with fiscal data
+
+  // Access Token for self-service
+  accessToken       String?     @unique
+  tokenExpiry       DateTime?
 
   // Documents
   documents         ActorDocument[]
@@ -246,19 +314,45 @@ model Tenant {
   companyRfc        String?
   legalRepName      String?
   legalRepId        String?
-  companyAddress    String?
+  legalRepPosition  String?
+  legalRepRfc       String?
+  legalRepPhone     String?
+  legalRepEmail     String?
+  companyAddress    String?     // Legacy field
 
-  // Common Information
+  // Contact Information
   email             String
   phone             String
+  workPhone         String?
+  personalEmail     String?
+  workEmail         String?
+
+  // Address Information
+  currentAddress    String?     // Current home address
+  addressId         String?     @unique
+  addressDetails    PropertyAddress? @relation("TenantAddress", fields: [addressId], references: [id])
 
   // Employment (for individuals)
   employmentStatus  String?
   occupation        String?
   employerName      String?
+  employerAddress   String?
   position          String?
   monthlyIncome     Float?
   incomeSource      String?
+
+  // Rental History
+  previousLandlordName String?
+  previousLandlordPhone String?
+  previousLandlordEmail String?
+  previousRentAmount Float?
+  previousRentalAddress String?
+  rentalHistoryYears Int?
+
+  // Payment Preferences
+  paymentMethod     String?     // monthly, biannual, annual, other
+  requiresCFDI      Boolean     @default(false)
+  cfdiData          String?     // JSON with fiscal data
 
   // Access Token for self-service
   accessToken       String?     @unique
@@ -266,6 +360,7 @@ model Tenant {
 
   // References
   references        PersonalReference[]
+  commercialReferences CommercialReference[]  // For companies
 
   // Documents
   documents         ActorDocument[]
@@ -286,7 +381,6 @@ model Tenant {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
-
   additionalInfo   String? @db.Char(1000)
 }
 
@@ -294,23 +388,57 @@ model JointObligor {
   id                String      @id @default(cuid())
   policyId          String
 
-  // Personal Information
-  fullName          String
-  email             String
-  phone             String
-  nationality       NationalityType
+  // Type
+  isCompany         Boolean     @default(false)
+
+  // Personal Information (for individuals)
+  fullName          String?
+  nationality       NationalityType?
   curp              String?
   rfc               String?
   passport          String?
-  address           String?
+  relationshipToTenant String?  // Relationship to tenant if any
 
-  // Employment Information
-  employmentStatus  String
-  occupation        String
-  companyName       String
-  position          String
-  monthlyIncome     Float
-  incomeSource      String
+  // Company Information (for companies)
+  companyName       String?
+  companyRfc        String?
+  legalRepName      String?
+  legalRepPosition  String?
+  legalRepRfc       String?
+  legalRepPhone     String?
+  legalRepEmail     String?
+
+  // Contact Information
+  email             String
+  phone             String
+  workPhone         String?
+  personalEmail     String?
+  workEmail         String?
+
+  // Address Information
+  address           String?     // Legacy field
+  addressId         String?     @unique
+  addressDetails    PropertyAddress? @relation("JointObligorAddress", fields: [addressId], references: [id])
+
+  // Employment Information (for individuals)
+  employmentStatus  String?
+  occupation        String?
+  employerName      String?
+  employerAddress   String?
+  position          String?
+  monthlyIncome     Float?
+  incomeSource      String?
+
+  // Guarantee Method
+  guaranteeMethod   String?     // property or income
+  hasPropertyGuarantee Boolean  @default(false)
+  propertyUnderLegalProceeding Boolean @default(false)
+
+  // Marriage Information (for property guarantee)
+  maritalStatus     String?     // single, married_joint, married_separate
+  spouseName        String?
+  spouseRfc         String?
+  spouseCurp        String?
 
   // Access Token for self-service
   accessToken       String?     @unique
@@ -318,6 +446,7 @@ model JointObligor {
 
   // References (3 required)
   references        PersonalReference[]
+  commercialReferences CommercialReference[]  // For companies
 
   // Documents
   documents         ActorDocument[]
@@ -345,29 +474,66 @@ model Aval {
   id                String      @id @default(cuid())
   policyId          String
 
-  // Personal Information
-  fullName          String
-  email             String
-  phone             String
-  nationality       NationalityType
+  // Type
+  isCompany         Boolean     @default(false)
+
+  // Personal Information (for individuals)
+  fullName          String?
+  nationality       NationalityType?
   curp              String?
   rfc               String?
   passport          String?
-  address           String?
+  relationshipToTenant String?
 
-  // Employment Information
-  employmentStatus  String
-  occupation        String
-  companyName       String
-  position          String
-  monthlyIncome     Float
-  incomeSource      String
+  // Company Information (for companies)
+  companyName       String?
+  companyRfc        String?
+  legalRepName      String?
+  legalRepPosition  String?
+  legalRepRfc       String?
+  legalRepPhone     String?
+  legalRepEmail     String?
+
+  // Contact Information
+  email             String
+  phone             String
+  workPhone         String?
+  personalEmail     String?
+  workEmail         String?
+
+  // Address Information
+  address           String?     // Legacy field
+  addressId         String?     @unique
+  addressDetails    PropertyAddress? @relation("AvalAddress", fields: [addressId], references: [id])
+
+  // Employment Information (for individuals)
+  employmentStatus  String?
+  occupation        String?
+  employerName      String?
+  employerAddress   String?
+  position          String?
+  monthlyIncome     Float?
+  incomeSource      String?
 
   // Property Guarantee Information
-  propertyAddress   String
-  propertyValue     Float
+  propertyAddress   String?     // Legacy field for guarantee property
+  guaranteePropertyAddressId String? @unique
+  guaranteePropertyDetails PropertyAddress? @relation("AvalPropertyAddress", fields: [guaranteePropertyAddressId], references: [id])
+  propertyValue     Float?
   propertyDeedNumber String?
   propertyRegistry  String?
+  propertyTaxAccount String?    // Property tax account number
+  propertyUnderLegalProceeding Boolean @default(false)
+
+  // Marriage Information (for property guarantee)
+  maritalStatus     String?     // single, married_joint, married_separate
+  spouseName        String?
+  spouseRfc         String?
+  spouseCurp        String?
+
+  // Guarantee Method
+  guaranteeMethod   String?     // property or income
+  hasPropertyGuarantee Boolean  @default(true)  // Avals typically have property
 
   // Access Token for self-service
   accessToken       String?     @unique
@@ -375,6 +541,7 @@ model Aval {
 
   // References (3 required)
   references        PersonalReference[]
+  commercialReferences CommercialReference[]  // For companies
 
   // Documents
   documents         ActorDocument[]
@@ -403,9 +570,12 @@ model PersonalReference {
 
   name              String
   phone             String
+  homePhone         String?
+  cellPhone         String?
   email             String?
   relationship      String
   occupation        String?
+  address           String?     // Added based on document requirements
 
   // Relations (can belong to different actors)
   tenantId          String?
@@ -416,6 +586,66 @@ model PersonalReference {
 
   avalId            String?
   aval              Aval?       @relation(fields: [avalId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+// New model for commercial references (companies)
+model CommercialReference {
+  id                String      @id @default(cuid())
+
+  companyName       String
+  contactName       String
+  phone             String
+  email             String?
+  relationship      String      // supplier, client, partner, etc.
+  yearsOfRelationship Int?
+
+  // Relations (can belong to company actors)
+  tenantId          String?
+  tenant            Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  jointObligorId    String?
+  jointObligor      JointObligor? @relation(fields: [jointObligorId], references: [id], onDelete: Cascade)
+
+  avalId            String?
+  aval              Aval?       @relation(fields: [avalId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+// New model for structured addresses
+model PropertyAddress {
+  id                String      @id @default(cuid())
+
+  // Street Information
+  street            String
+  exteriorNumber    String
+  interiorNumber    String?
+
+  // Location Information
+  neighborhood      String      // Colonia
+  postalCode        String
+  municipality      String      // Alcaldía/Municipio
+  city              String
+  state             String
+  country           String      @default("México")
+
+  // Google Maps Data
+  placeId           String?     // Google Places ID
+  latitude          Float?
+  longitude         Float?
+  formattedAddress  String?     // Full formatted address from Google
+
+  // Relations
+  policy            Policy?     @relation("PolicyPropertyAddress")
+  landlord          Landlord?   @relation("LandlordAddress")
+  tenant            Tenant?     @relation("TenantAddress")
+  jointObligor      JointObligor? @relation("JointObligorAddress")
+  avalPersonal      Aval?       @relation("AvalAddress")
+  avalProperty      Aval?       @relation("AvalPropertyAddress")
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -715,6 +945,18 @@ enum DocumentCategory {
   PROPERTY_DEED
   TAX_RETURN
   EMPLOYMENT_LETTER
+  PROPERTY_TAX_STATEMENT  // Boleta predial
+  MARRIAGE_CERTIFICATE
+  COMPANY_CONSTITUTION    // Escritura constitutiva
+  LEGAL_POWERS           // Poderes notariales
+  TAX_STATUS_CERTIFICATE // Constancia de situación fiscal
+  CREDIT_REPORT         // Buró de crédito
+  PROPERTY_REGISTRY     // Folio real del registro público
+  PROPERTY_APPRAISAL    // Avalúo de propiedad
+  PASSPORT
+  IMMIGRATION_DOCUMENT
+  UTILITY_BILL
+  PAYROLL_RECEIPT       // Recibo de nómina
   OTHER
 }
 
