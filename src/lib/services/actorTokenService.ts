@@ -11,7 +11,7 @@ export function generateSecureToken(): string {
 /**
  * Generate access URL for an actor
  */
-export function generateActorUrl(token: string, actorType: 'tenant' | 'joint-obligor' | 'aval'): string {
+export function generateActorUrl(token: string, actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord'): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${baseUrl}/actor/${actorType}/${token}`;
 }
@@ -176,9 +176,66 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
 }
 
 /**
+ * Create or update token for a landlord
+ */
+export async function generateLandlordToken(landlordId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
+  const token = generateSecureToken();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+
+  await prisma.landlord.update({
+    where: { id: landlordId },
+    data: {
+      accessToken: token,
+      tokenExpiry: expiresAt
+    }
+  });
+
+  return {
+    token,
+    url: generateActorUrl(token, 'landlord'),
+    expiresAt
+  };
+}
+
+/**
+ * Validate a landlord token
+ */
+export async function validateLandlordToken(token: string): Promise<{ valid: boolean; landlord?: any; message?: string }> {
+  const landlord = await prisma.landlord.findFirst({
+    where: {
+      accessToken: token
+    },
+    include: {
+      policy: {
+        include: {
+          propertyAddressDetails: true
+        }
+      },
+      documents: true,
+      addressDetails: true
+    }
+  });
+
+  if (!landlord) {
+    return { valid: false, message: 'Token inválido' };
+  }
+
+  if (landlord.tokenExpiry && landlord.tokenExpiry < new Date()) {
+    return { valid: false, message: 'Token expirado' };
+  }
+
+  if (landlord.informationComplete) {
+    return { valid: false, message: 'La información ya fue completada' };
+  }
+
+  return { valid: true, landlord };
+}
+
+/**
  * Renew an expired token
  */
-export async function renewToken(actorType: 'tenant' | 'jointObligor' | 'aval', actorId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
+export async function renewToken(actorType: 'tenant' | 'jointObligor' | 'aval' | 'landlord', actorId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
   const token = generateSecureToken();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
@@ -223,6 +280,20 @@ export async function renewToken(actorType: 'tenant' | 'jointObligor' | 'aval', 
       return {
         token,
         url: generateActorUrl(token, 'aval'),
+        expiresAt
+      };
+
+    case 'landlord':
+      await prisma.landlord.update({
+        where: { id: actorId },
+        data: {
+          accessToken: token,
+          tokenExpiry: expiresAt
+        }
+      });
+      return {
+        token,
+        url: generateActorUrl(token, 'landlord'),
         expiresAt
       };
 

@@ -529,7 +529,7 @@ Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamie
 
 // Actor invitation data
 export interface ActorInvitationData {
-  actorType: 'tenant' | 'joint_obligor' | 'aval';
+  actorType: 'landlord' | 'tenant' | 'joint_obligor' | 'aval';
   email: string;
   name?: string;
   token: string;
@@ -557,6 +557,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     const actorUrl = data.url;
 
     const actorTypeNames = {
+      'landlord': 'Arrendador',
       'tenant': 'Inquilino',
       'joint_obligor': 'Obligado Solidario',
       'aval': 'Aval'
