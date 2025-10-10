@@ -42,7 +42,6 @@ export default function DashboardPage() {
   let welcomeMessage = t.pages.dashboard.welcomeBack;
   let roleSpecificContent = null;
 
-  console.log('User role:', user?.role);
 
   if (user?.role === 'owner') {
     welcomeMessage = t.pages.dashboard.welcomeOwner;
