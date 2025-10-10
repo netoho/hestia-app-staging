@@ -77,19 +77,8 @@ export async function GET(
         propertyType: landlord.policy.propertyType,
         rentAmount: landlord.policy.rentAmount,
         contractLength: landlord.policy.contractLength,
-        // Property features
-        parkingSpaces: landlord.policy.parkingSpaces,
-        parkingNumbers: landlord.policy.parkingNumbers,
-        isFurnished: landlord.policy.isFurnished,
-        hasPhone: landlord.policy.hasPhone,
-        hasElectricity: landlord.policy.hasElectricity,
-        hasWater: landlord.policy.hasWater,
-        hasGas: landlord.policy.hasGas,
-        hasCableTV: landlord.policy.hasCableTV,
-        hasInternet: landlord.policy.hasInternet,
-        otherServices: landlord.policy.otherServices,
-        utilitiesInLandlordName: landlord.policy.utilitiesInLandlordName,
-        // Financial
+        status: landlord.policy.status,
+        // Financial details from Policy
         hasIVA: landlord.policy.hasIVA,
         issuesTaxReceipts: landlord.policy.issuesTaxReceipts,
         securityDeposit: landlord.policy.securityDeposit,
@@ -97,14 +86,28 @@ export async function GET(
         maintenanceIncludedInRent: landlord.policy.maintenanceIncludedInRent,
         rentIncreasePercentage: landlord.policy.rentIncreasePercentage,
         paymentMethod: landlord.policy.paymentMethod,
-        // Additional info
-        hasInventory: landlord.policy.hasInventory,
-        hasRules: landlord.policy.hasRules,
-        petsAllowed: landlord.policy.petsAllowed,
-        propertyDeliveryDate: landlord.policy.propertyDeliveryDate,
-        contractSigningDate: landlord.policy.contractSigningDate,
-        contractSigningLocation: landlord.policy.contractSigningLocation,
-        status: landlord.policy.status,
+        propertyDetails: landlord.policy.propertyDetails ? {
+          // Property features
+          parkingSpaces: landlord.policy.propertyDetails.parkingSpaces,
+          parkingNumbers: landlord.policy.propertyDetails.parkingNumbers,
+          isFurnished: landlord.policy.propertyDetails.isFurnished,
+          hasPhone: landlord.policy.propertyDetails.hasPhone,
+          hasElectricity: landlord.policy.propertyDetails.hasElectricity,
+          hasWater: landlord.policy.propertyDetails.hasWater,
+          hasGas: landlord.policy.propertyDetails.hasGas,
+          hasCableTV: landlord.policy.propertyDetails.hasCableTV,
+          hasInternet: landlord.policy.propertyDetails.hasInternet,
+          otherServices: landlord.policy.propertyDetails.otherServices,
+          utilitiesInLandlordName: landlord.policy.propertyDetails.utilitiesInLandlordName,
+          // Additional info
+          hasInventory: landlord.policy.propertyDetails.hasInventory,
+          hasRules: landlord.policy.propertyDetails.hasRules,
+          petsAllowed: landlord.policy.propertyDetails.petsAllowed,
+          propertyDeliveryDate: landlord.policy.propertyDetails.propertyDeliveryDate,
+          contractSigningDate: landlord.policy.propertyDetails.contractSigningDate,
+          contractSigningLocation: landlord.policy.propertyDetails.contractSigningLocation,
+          propertyAddressDetails: landlord.policy.propertyDetails.propertyAddressDetails,
+        } : null,
       }
     });
 

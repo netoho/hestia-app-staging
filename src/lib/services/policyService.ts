@@ -1,5 +1,6 @@
 import prisma from '../prisma';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType } from '@prisma/client';
+import { PropertyDetailsService } from './PropertyDetailsService';
 
 interface CreatePolicyData {
   propertyAddress: string;
@@ -44,6 +45,34 @@ interface CreatePolicyData {
     email: string;
     phone?: string;
   }>;
+  // Property details fields (optional, will be created separately)
+  propertyDetails?: {
+    parkingSpaces?: number;
+    parkingNumbers?: string;
+    isFurnished?: boolean;
+    hasPhone?: boolean;
+    hasElectricity?: boolean;
+    hasWater?: boolean;
+    hasGas?: boolean;
+    hasCableTV?: boolean;
+    hasInternet?: boolean;
+    otherServices?: string;
+    utilitiesInLandlordName?: boolean;
+    hasIVA?: boolean;
+    issuesTaxReceipts?: boolean;
+    securityDeposit?: number;
+    maintenanceFee?: number;
+    maintenanceIncludedInRent?: boolean;
+    rentIncreasePercentage?: number;
+    paymentMethod?: string;
+    hasInventory?: boolean;
+    hasRules?: boolean;
+    petsAllowed?: boolean;
+    propertyDeliveryDate?: string;
+    contractSigningDate?: string;
+    contractSigningLocation?: string;
+    propertyAddressDetails?: any;
+  };
 }
 
 export async function createPolicy(data: CreatePolicyData) {
@@ -51,42 +80,45 @@ export async function createPolicy(data: CreatePolicyData) {
   const localDate = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
   const policyNumber = `POL-${localDate}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
+  // Extract property details from data
+  const { propertyDetails, ...policyData } = data;
+
   // Create the policy with the new schema
   const policy = await prisma.policy.create({
     data: {
       policyNumber,
-      propertyAddress: data.propertyAddress,
-      propertyType: data.propertyType || 'APARTMENT',
-      propertyDescription: data.propertyDescription,
-      rentAmount: parseFloat(data.rentAmount.toString()),
-      contractLength: data.contractLength || 12,
-      totalPrice: data.totalPrice || parseFloat((data.depositAmount || data.rentAmount).toString()),
-      tenantPercentage: data.tenantPercentage || 100,
-      landlordPercentage: data.landlordPercentage || 0,
-      guarantorType: data.guarantorType || 'NONE',
-      packageId: data.packageId,
-      createdById: data.createdById,
+      propertyAddress: policyData.propertyAddress,
+      propertyType: policyData.propertyType || 'APARTMENT',
+      propertyDescription: policyData.propertyDescription,
+      rentAmount: parseFloat(policyData.rentAmount.toString()),
+      contractLength: policyData.contractLength || 12,
+      totalPrice: policyData.totalPrice || parseFloat((policyData.depositAmount || policyData.rentAmount).toString()),
+      tenantPercentage: policyData.tenantPercentage || 100,
+      landlordPercentage: policyData.landlordPercentage || 0,
+      guarantorType: policyData.guarantorType || 'NONE',
+      packageId: policyData.packageId,
+      createdById: policyData.createdById,
       status: 'DRAFT',
       // Create related actors
       landlord: {
         create: {
-          fullName: `${data.landlord.firstName} ${data.landlord.lastName}`,
-          email: data.landlord.email,
-          phone: data.landlord.phone || '',
-          rfc: data.landlord.rfc || '',
-          address: data.propertyAddress, // Use property address as default
+          fullName: `${policyData.landlord.firstName} ${policyData.landlord.lastName}`,
+          email: policyData.landlord.email,
+          phone: policyData.landlord.phone || '',
+          rfc: policyData.landlord.rfc || '',
+          address: policyData.propertyAddress, // Use property address as default
         }
       },
       tenant: {
         create: {
-          tenantType: data.tenant.tenantType || 'INDIVIDUAL',
-          fullName: data.tenant.tenantType === 'COMPANY'
-            ? (data.tenant.companyName || '')
-            : `${data.tenant.firstName || ''} ${data.tenant.lastName || ''}`.trim(),
-          companyName: data.tenant.tenantType === 'COMPANY' ? data.tenant.companyName : undefined,
-          email: data.tenant.email,
-          phone: data.tenant.phone || '',
-          rfc: data.tenant.rfc || '',
+          tenantType: policyData.tenant.tenantType || 'INDIVIDUAL',
+          fullName: policyData.tenant.tenantType === 'COMPANY'
+            ? (policyData.tenant.companyName || '')
+            : `${policyData.tenant.firstName || ''} ${policyData.tenant.lastName || ''}`.trim(),
+          companyName: policyData.tenant.tenantType === 'COMPANY' ? policyData.tenant.companyName : undefined,
+          email: policyData.tenant.email,
+          phone: policyData.tenant.phone || '',
+          rfc: policyData.tenant.rfc || '',
         }
       }
     },
@@ -95,6 +127,17 @@ export async function createPolicy(data: CreatePolicyData) {
       tenant: true,
     }
   });
+
+  // Create property details if provided
+  if (propertyDetails) {
+    const propertyDetailsService = new PropertyDetailsService();
+    const detailsResult = await propertyDetailsService.create(policy.id, propertyDetails);
+    if (!detailsResult.ok) {
+      console.error('Failed to create property details:', detailsResult.error);
+      // Note: We don't fail the policy creation if property details fail
+      // but we log the error for investigation
+    }
+  }
 
   // Create joint obligors if provided
   if (data.jointObligors && data.jointObligors.length > 0) {
@@ -196,6 +239,11 @@ export async function getPolicies(params?: {
         tenant: true,
         jointObligors: true,
         avals: true,
+        propertyDetails: {
+          include: {
+            propertyAddressDetails: true,
+          },
+        },
         documents: {
           select: {
             id: true,
@@ -289,6 +337,11 @@ export async function getPolicyById(id: string) {
         include: {
           references: true,
           documents: true,
+        }
+      },
+      propertyDetails: {
+        include: {
+          propertyAddressDetails: true,
         }
       },
       documents: {

@@ -44,6 +44,9 @@ interface PolicyDetails {
   rentAmount: number;
   contractLength?: number;
 
+  // Property Details (new separated model)
+  propertyDetails?: any;
+
   // Guarantor Configuration
   guarantorType: string;
 
@@ -436,6 +439,7 @@ export default function PolicyDetailsPage({
               propertyDescription={policy.propertyDescription}
               rentAmount={policy.rentAmount}
               contractLength={policy.contractLength}
+              propertyDetails={policy.propertyDetails}
               policyId={policyId}
             />
             <PricingCard

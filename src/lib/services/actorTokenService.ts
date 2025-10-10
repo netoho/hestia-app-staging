@@ -209,7 +209,11 @@ export async function validateLandlordToken(token: string): Promise<{ valid: boo
     include: {
       policy: {
         include: {
-          propertyAddressDetails: true
+          propertyDetails: {
+            include: {
+              propertyAddressDetails: true
+            }
+          }
         }
       },
       documents: true,
