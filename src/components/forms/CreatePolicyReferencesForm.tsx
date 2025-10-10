@@ -44,7 +44,6 @@ export function CreatePolicyReferencesForm({ onNext, onBack, initialData }: Crea
   });
 
   const onSubmit = (values: ReferencesFormValues) => {
-    console.log(values);
     onNext(values);
   };
 

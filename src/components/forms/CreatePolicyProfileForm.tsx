@@ -46,7 +46,6 @@ export function CreatePolicyProfileForm({ onNext, initialData }: CreatePolicyPro
   });
 
   const onSubmit = (values: ProfileFormValues) => {
-    console.log(values);
     onNext(values);
   };
 
