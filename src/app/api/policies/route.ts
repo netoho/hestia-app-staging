@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-        console.log('Authenticated user:', authResult.user);
 
     // Check if user has permission (admin, staff, or broker can create policies)
     if (!requireRole(authResult.user.role, ['STAFF', 'ADMIN', 'BROKER'])) {
@@ -74,12 +73,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-
-
-    console.log({
-      ...data,
-      createdById: authResult.user.id
-    })
 
     // Create policy using service
     const policy = await createPolicy({
@@ -114,7 +107,6 @@ export async function POST(request: NextRequest) {
 
         if (invitationResponse.ok) {
           const invitationData = await invitationResponse.json();
-          console.log('Invitations sent:', invitationData);
         } else {
           console.error('Failed to send invitations:', await invitationResponse.text());
         }

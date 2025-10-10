@@ -35,7 +35,6 @@ export async function POST(
     const { decision, notes } = landlordOverrideSchema.parse(body);
 
     // Production mode implementation
-    console.log(`Production mode: Landlord override for policy ${policyId} with decision ${decision}`);
 
     return await prisma.$transaction(async (tx) => {
         // Get the policy and existing investigation

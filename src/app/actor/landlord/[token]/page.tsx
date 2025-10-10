@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, CheckCircle, AlertCircle, Building2, User } from 'lucide-react';
+import { Loader2, Upload, CheckCircle, AlertCircle, Building2, User, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 
@@ -84,6 +84,7 @@ interface PropertyDetails {
   propertyDeliveryDate?: string;
   contractSigningDate?: string;
   contractSigningLocation?: string;
+  propertyAddressDetails?: any;
 }
 
 export default function LandlordPortalPage() {
@@ -94,6 +95,12 @@ export default function LandlordPortalPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [savingTab, setSavingTab] = useState<string | null>(null);
+  const [tabSaved, setTabSaved] = useState<Record<string, boolean>>({
+    personal: false,
+    property: false,
+    financial: false,
+  });
   const [landlord, setLandlord] = useState<LandlordData | null>(null);
   const [policy, setPolicy] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('personal');
@@ -193,9 +200,32 @@ export default function LandlordPortalPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
+  const sanitizeFormData = (data: any) => {
+    const sanitized: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      // Skip empty strings, convert to null
+      if (value === '') {
+        sanitized[key] = null;
+      }
+      // Handle NaN for numbers
+      else if (typeof value === 'number' && isNaN(value)) {
+        sanitized[key] = null;
+      }
+      // Keep non-empty values
+      else if (value !== undefined && value !== null) {
+        sanitized[key] = value;
+      }
+    }
+    return sanitized;
+  };
+
+  const handleSaveTab = async (tabName: string) => {
+    setSavingTab(tabName);
     try {
+      // Sanitize form data before sending
+      const cleanedFormData = sanitizeFormData(formData);
+      const cleanedPropertyData = sanitizeFormData(propertyData);
+
       const response = await fetch(`/api/actor/landlord/${token}/submit`, {
         method: 'PUT',
         headers: {
@@ -203,10 +233,10 @@ export default function LandlordPortalPage() {
         },
         body: JSON.stringify({
           landlord: {
-            ...formData,
+            ...cleanedFormData,
             isCompany,
           },
-          propertyDetails: propertyData,
+          propertyDetails: cleanedPropertyData,
         }),
       });
 
@@ -214,39 +244,70 @@ export default function LandlordPortalPage() {
 
       if (!response.ok) {
         if (data.details) {
-          data.details.forEach((detail: any) => {
-            toast({
-              title: "Error de validación",
-              description: `${detail.field}: ${detail.message}`,
-              variant: "destructive",
-            });
+          // Only show validation errors for the current tab's fields
+          const relevantErrors = data.details.filter((detail: any) => {
+            const field = detail.field.toLowerCase();
+            if (tabName === 'personal') {
+              return !field.includes('property') && !field.includes('bank') && !field.includes('cfdi');
+            }
+            if (tabName === 'property') {
+              return field.includes('property') || field.includes('parking') || field.includes('services');
+            }
+            if (tabName === 'financial') {
+              return field.includes('bank') || field.includes('cfdi') || field.includes('tax');
+            }
+            return true;
           });
+
+          if (relevantErrors.length > 0) {
+            relevantErrors.forEach((detail: any) => {
+              toast({
+                title: "Error de validación",
+                description: `${detail.field}: ${detail.message}`,
+                variant: "destructive",
+              });
+            });
+            return;
+          }
         } else {
           toast({
             title: "Error",
-            description: data.error || 'Error al enviar información',
+            description: data.error || 'Error al guardar información',
             variant: "destructive",
           });
+          return;
         }
-        return;
       }
 
       toast({
-        title: "Éxito",
-        description: 'Información enviada correctamente',
+        title: "✓ Guardado",
+        description: `Información de ${tabName === 'personal' ? 'información personal' : tabName === 'property' ? 'la propiedad' : 'información fiscal'} guardada exitosamente`,
       });
-      setActiveTab('documents');
-      setLandlord(prev => prev ? { ...prev, informationComplete: true } : null);
+
+      setTabSaved(prev => ({ ...prev, [tabName]: true }));
+
+      // Auto advance to next tab after successful save
+      if (tabName === 'personal') {
+        setTimeout(() => setActiveTab('property'), 1000);
+      } else if (tabName === 'property') {
+        setTimeout(() => setActiveTab('financial'), 1000);
+      } else if (tabName === 'financial' && !landlord?.informationComplete) {
+        setLandlord(prev => prev ? { ...prev, informationComplete: true } : null);
+        setTimeout(() => setActiveTab('documents'), 1000);
+      }
     } catch (error) {
-      console.error('Error submitting:', error);
       toast({
         title: "Error",
-        description: 'Error al enviar la información',
+        description: 'Error al guardar la información',
         variant: "destructive",
       });
     } finally {
-      setSubmitting(false);
+      setSavingTab(null);
     }
+  };
+
+  const handleSubmit = async () => {
+    await handleSaveTab('financial');
   };
 
   const handleFileUpload = async (documentType: string, file: File) => {
@@ -312,7 +373,7 @@ export default function LandlordPortalPage() {
           <CardHeader>
             <CardTitle>Portal del Arrendador</CardTitle>
             <CardDescription>
-              Complete la información solicitada para la póliza #{policy?.policyNumber}
+              Complete la información solicitada para la protección #{policy?.policyNumber}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -324,6 +385,53 @@ export default function LandlordPortalPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Renta mensual:</span>
                 <span className="font-medium">${policy?.rentAmount?.toLocaleString('es-MX')} MXN</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Progress Indicator */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Progreso de Completado</span>
+                  <span className="text-sm text-muted-foreground">
+                    {Object.values(tabSaved).filter(Boolean).length} de 3 secciones guardadas
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <div className={`flex-1 h-2 rounded-full ${tabSaved.personal ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <div className={`flex-1 h-2 rounded-full ${tabSaved.property ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <div className={`flex-1 h-2 rounded-full ${tabSaved.financial ? 'bg-green-500' : 'bg-gray-200'}`} />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-4 text-xs">
+              <div className="flex items-center justify-center">
+                {tabSaved.personal ? (
+                  <Check className="h-3 w-3 text-green-500 mr-1" />
+                ) : null}
+                <span className={tabSaved.personal ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                  Personal
+                </span>
+              </div>
+              <div className="flex items-center justify-center">
+                {tabSaved.property ? (
+                  <Check className="h-3 w-3 text-green-500 mr-1" />
+                ) : null}
+                <span className={tabSaved.property ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                  Propiedad
+                </span>
+              </div>
+              <div className="flex items-center justify-center">
+                {tabSaved.financial ? (
+                  <Check className="h-3 w-3 text-green-500 mr-1" />
+                ) : null}
+                <span className={tabSaved.financial ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                  Fiscal
+                </span>
               </div>
             </div>
           </CardContent>
@@ -501,7 +609,7 @@ export default function LandlordPortalPage() {
                           id="monthlyIncome"
                           type="number"
                           value={formData.monthlyIncome || ''}
-                          onChange={(e) => setFormData({ ...formData, monthlyIncome: parseFloat(e.target.value) })}
+                          onChange={(e) => setFormData({ ...formData, monthlyIncome: e.target.value ? parseFloat(e.target.value) : null })}
                         />
                       </div>
                     </div>
@@ -548,6 +656,29 @@ export default function LandlordPortalPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Save button for Personal Information tab */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => handleSaveTab('personal')}
+                disabled={savingTab === 'personal'}
+                className="w-full sm:w-auto"
+              >
+                {savingTab === 'personal' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : tabSaved.personal ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Guardado - Continuar
+                  </>
+                ) : (
+                  'Guardar y Continuar'
+                )}
+              </Button>
+            </div>
           </TabsContent>
 
           <TabsContent value="property" className="space-y-4">
@@ -583,8 +714,8 @@ export default function LandlordPortalPage() {
                       id="parkingSpaces"
                       type="number"
                       min="0"
-                      value={propertyData.parkingSpaces || 0}
-                      onChange={(e) => setPropertyData({ ...propertyData, parkingSpaces: parseInt(e.target.value) || 0 })}
+                      value={propertyData.parkingSpaces || ''}
+                      onChange={(e) => setPropertyData({ ...propertyData, parkingSpaces: e.target.value ? parseInt(e.target.value) : null })}
                     />
                   </div>
                   <div>
@@ -758,6 +889,29 @@ export default function LandlordPortalPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Save button for Property Details tab */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => handleSaveTab('property')}
+                disabled={savingTab === 'property'}
+                className="w-full sm:w-auto"
+              >
+                {savingTab === 'property' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : tabSaved.property ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Guardado - Continuar
+                  </>
+                ) : (
+                  'Guardar y Continuar'
+                )}
+              </Button>
+            </div>
           </TabsContent>
 
           <TabsContent value="financial" className="space-y-4">
@@ -839,7 +993,7 @@ export default function LandlordPortalPage() {
                       min="0"
                       step="0.5"
                       value={propertyData.securityDeposit || ''}
-                      onChange={(e) => setPropertyData({ ...propertyData, securityDeposit: parseFloat(e.target.value) })}
+                      onChange={(e) => setPropertyData({ ...propertyData, securityDeposit: e.target.value ? parseFloat(e.target.value) : null })}
                     />
                   </div>
                   <div>
@@ -849,7 +1003,7 @@ export default function LandlordPortalPage() {
                       type="number"
                       min="0"
                       value={propertyData.maintenanceFee || ''}
-                      onChange={(e) => setPropertyData({ ...propertyData, maintenanceFee: parseFloat(e.target.value) })}
+                      onChange={(e) => setPropertyData({ ...propertyData, maintenanceFee: e.target.value ? parseFloat(e.target.value) : null })}
                     />
                   </div>
                 </div>
@@ -909,7 +1063,7 @@ export default function LandlordPortalPage() {
                       max="100"
                       step="0.1"
                       value={propertyData.rentIncreasePercentage || ''}
-                      onChange={(e) => setPropertyData({ ...propertyData, rentIncreasePercentage: parseFloat(e.target.value) })}
+                      onChange={(e) => setPropertyData({ ...propertyData, rentIncreasePercentage: e.target.value ? parseFloat(e.target.value) : null })}
                     />
                   </div>
                 )}
@@ -934,26 +1088,37 @@ export default function LandlordPortalPage() {
               </CardContent>
             </Card>
 
-            {!landlord.informationComplete && (
+            {/* Save button for Financial Information tab */}
+            <div className="flex justify-end">
               <Button
                 onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full"
+                disabled={savingTab === 'financial' || landlord?.informationComplete}
+                className="w-full sm:w-auto"
               >
-                {submitting ? (
+                {savingTab === 'financial' ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
+                    Guardando...
+                  </>
+                ) : landlord?.informationComplete ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Información Completa
+                  </>
+                ) : tabSaved.financial ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Guardado - Ver Documentos
                   </>
                 ) : (
-                  'Guardar y Continuar'
+                  'Guardar y Finalizar'
                 )}
               </Button>
-            )}
+            </div>
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-4">
-            {!landlord.informationComplete ? (
+            {landlord.informationComplete ? (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>

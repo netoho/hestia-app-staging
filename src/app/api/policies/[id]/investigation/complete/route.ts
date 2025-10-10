@@ -40,7 +40,6 @@ export async function PUT(
     const completedAt = new Date();
 
     // Production mode implementation
-    console.log(`Production mode: Completing investigation for policy ${policyId} with verdict ${verdict}`);
 
     return await prisma.$transaction(async (tx) => {
         // Get the policy and existing investigation

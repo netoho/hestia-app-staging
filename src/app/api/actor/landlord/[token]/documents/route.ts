@@ -78,6 +78,7 @@ export async function POST(
         buffer,
         mimeType: file.type,
         originalName: file.name,
+        size: file.size,
       },
       contentType: file.type,
     });

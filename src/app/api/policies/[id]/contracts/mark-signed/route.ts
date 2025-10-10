@@ -27,7 +27,6 @@ export async function PUT(
     const { id: policyId } = await params;
 
     // Production mode implementation
-    console.log(`Production mode: Marking contract as signed for policy ${policyId}`);
 
     return await prisma.$transaction(async (tx) => {
         // Get the policy

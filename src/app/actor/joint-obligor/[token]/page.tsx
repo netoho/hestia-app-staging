@@ -421,7 +421,7 @@ export default function JointObligorPortalPage({
         <Alert className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            No se pudo cargar la información de la póliza.
+            No se pudo cargar la información de la protección.
           </AlertDescription>
         </Alert>
       </div>
@@ -439,7 +439,7 @@ export default function JointObligorPortalPage({
               <AlertDescription className="text-green-800">
                 <strong>Información Completa</strong>
                 <p className="mt-2">
-                  Ya has completado tu información para esta póliza. Si necesitas hacer cambios,
+                  Ya has completado tu información para esta protección. Si necesitas hacer cambios,
                   por favor contacta a soporte en soporte@hestiaplp.com.mx
                 </p>
               </AlertDescription>
@@ -472,7 +472,7 @@ export default function JointObligorPortalPage({
         <CardHeader>
           <CardTitle>Información del Obligado Solidario</CardTitle>
           <CardDescription>
-            Complete su información para la póliza de arrendamiento
+            Complete su información para la protección de arrendamiento
           </CardDescription>
           {policy && (
             <Alert className="mt-4">

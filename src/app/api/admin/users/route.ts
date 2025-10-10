@@ -35,11 +35,10 @@ export async function GET(request: NextRequest) {
             isActive: true,
             createdAt: true,
             updatedAt: true,
-            lastLoginAt: true,
             _count: {
               select: {
                 createdPolicies: true,
-                reviewedPolicies: true,
+                managedPolicies: true,
               },
             },
           },

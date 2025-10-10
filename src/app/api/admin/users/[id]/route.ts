@@ -24,11 +24,10 @@ export async function GET(
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          lastLoginAt: true,
           _count: {
             select: {
               createdPolicies: true,
-              reviewedPolicies: true,
+              managedPolicies: true,
             },
           },
         },
@@ -129,7 +128,6 @@ export async function PUT(
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          lastLoginAt: true,
         },
       });
 
@@ -182,7 +180,7 @@ export async function DELETE(
         where: {
           OR: [
             { createdById: id },
-            { reviewedBy: id },
+            { managedById: id },
           ],
         },
       });

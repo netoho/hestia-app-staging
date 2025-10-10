@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Portal de Actores - Hestia',
-  description: 'Complete su información para la póliza de garantía',
+  description: 'Complete su información para la protección de arrendamiento',
 };
 
 export default function ActorLayout({
@@ -19,7 +19,7 @@ export default function ActorLayout({
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               Hestia
             </h1>
-            <p className="text-gray-600 mt-2">Sistema de Pólizas de Garantía</p>
+            <p className="text-gray-600 mt-2">Sistema de Protecciones de Arrendamiento</p>
           </div>
 
           {/* Main Content */}

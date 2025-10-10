@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hashPassword, generateToken } from '@/lib/auth';
 import { z } from 'zod';
+import { UserRole } from '@prisma/client';
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().optional(),
-  role: z.enum(['broker', 'tenant', 'landlord', 'staff'])
+  role: z.enum(['BROKER', 'STAFF', 'ADMIN']).optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -43,14 +44,14 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role
+        role: role as UserRole || UserRole.STAFF
       }
     });
     
     // Generate JWT token
     const token = generateToken({
       userId: user.id,
-      email: user.email,
+      email: user.email || '',
       role: user.role
     });
     

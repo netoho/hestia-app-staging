@@ -71,7 +71,6 @@ export async function POST(
     }
 
 
-    console.log('ip', request.headers.get('x-forwarded-for') || 'unknown')
 
     // Log activity
     await logPolicyActivity({

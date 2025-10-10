@@ -35,7 +35,6 @@ export async function POST(
     const { assignedTo, notes } = startInvestigationSchema.parse(body);
 
     // Production mode implementation
-    console.log(`Production mode: Starting investigation for policy ${policyId}`);
 
     return await prisma.$transaction(async (tx) => {
         // Get the policy

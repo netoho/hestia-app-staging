@@ -56,7 +56,6 @@ export async function POST(
     }
 
     // Production mode implementation
-    console.log(`Production mode: Uploading contract for policy ${policyId}`);
 
     return await prisma.$transaction(async (tx) => {
         // Get the policy
