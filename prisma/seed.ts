@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -108,7 +108,7 @@ async function main() {
       email: adminEmail,
       name: 'Super Admin',
       password: hashedPassword,
-      role: 'ADMIN', // Changed to match enum
+      role: UserRole.ADMIN,
     },
   });
   console.log(`Created/found admin user: ${adminUser.name} with email ${adminUser.email}`);
@@ -119,19 +119,19 @@ async function main() {
       email: 'broker@hestiaplp.com.mx',
       name: 'John Broker',
       password: hashedPassword,
-      role: 'BROKER' // Changed to match enum
+      role: UserRole.BROKER
     },
     {
       email: 'staff@hestiaplp.com.mx',
       name: 'Alice Staff',
       password: hashedPassword,
-      role: 'STAFF' // Changed to match enum
+      role: UserRole.STAFF
     },
     {
       email: 'broker2@hestiaplp.com.mx',
       name: 'Bob Broker',
       password: hashedPassword,
-      role: 'BROKER' // Changed to match enum
+      role: UserRole.BROKER
     }
   ];
 
