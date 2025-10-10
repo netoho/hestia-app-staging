@@ -194,7 +194,7 @@ async function main() {
     }
   });
 
-  // Create a sample policy with actors and enhanced fields
+  // Create a sample policy with actors
   const samplePolicy = await prisma.policy.create({
     data: {
       policyNumber: 'POL-2024-SAMPLE-001',
@@ -205,19 +205,6 @@ async function main() {
       guarantorType: 'JOINT_OBLIGOR',
       createdById: brokerUser.id,
       status: 'DRAFT',
-      // Enhanced property features
-      isFurnished: false,
-      parkingSpaces: 2,
-      hasElectricity: true,
-      hasWater: true,
-      hasGas: true,
-      hasInternet: true,
-      petsAllowed: false,
-      hasIVA: true,
-      issuesTaxReceipts: true,
-      securityDeposit: 1,
-      maintenanceFee: 2000,
-      maintenanceIncludedInRent: false,
       // Create landlord with enhanced fields
       landlord: {
         create: {
@@ -268,6 +255,33 @@ async function main() {
     }
   });
   console.log(`Created sample policy: ${samplePolicy.policyNumber}`);
+
+  // Create PropertyDetails for the sample policy
+  await prisma.propertyDetails.create({
+    data: {
+      policyId: samplePolicy.id,
+      isFurnished: false,
+      parkingSpaces: 2,
+      hasElectricity: true,
+      hasWater: true,
+      hasGas: true,
+      hasInternet: true,
+      petsAllowed: false,
+    }
+  });
+
+  // Update Policy with financial details
+  await prisma.policy.update({
+    where: { id: samplePolicy.id },
+    data: {
+      hasIVA: true,
+      issuesTaxReceipts: true,
+      securityDeposit: 1,
+      maintenanceFee: 2000,
+      maintenanceIncludedInRent: false,
+    }
+  });
+  console.log(`Created property details for policy: ${samplePolicy.policyNumber}`);
 
   // Create a joint obligor for the policy if it doesn't exist
   const existingJointObligor = await prisma.jointObligor.findFirst({
@@ -332,20 +346,6 @@ async function main() {
       approvedAt: new Date('2024-01-20'),
       activatedAt: new Date('2024-02-01'),
       packageId: 'premium',
-      // Enhanced property details
-      isFurnished: true,
-      parkingSpaces: 3,
-      hasElectricity: true,
-      hasWater: true,
-      hasGas: true,
-      hasCableTV: true,
-      hasInternet: true,
-      petsAllowed: true,
-      hasIVA: true,
-      issuesTaxReceipts: true,
-      securityDeposit: 2,
-      hasInventory: true,
-      hasRules: true,
       // Create company landlord
       landlord: {
         create: {
@@ -390,6 +390,37 @@ async function main() {
     }
   });
   console.log(`Created active policy: ${activePolicy.policyNumber}`);
+
+  // Create PropertyDetails for the active policy
+  await prisma.propertyDetails.create({
+    data: {
+      policyId: activePolicy.id,
+      isFurnished: true,
+      parkingSpaces: 3,
+      hasElectricity: true,
+      hasWater: true,
+      hasGas: true,
+      hasCableTV: true,
+      hasInternet: true,
+      petsAllowed: true,
+      hasInventory: true,
+      hasRules: true,
+    }
+  });
+
+  // Update Policy with financial details
+  await prisma.policy.update({
+    where: { id: activePolicy.id },
+    data: {
+      hasIVA: true,
+      issuesTaxReceipts: true,
+      securityDeposit: 2,
+      maintenanceFee: 3500,
+      maintenanceIncludedInRent: false,
+      paymentMethod: 'bank_transfer',
+    }
+  });
+  console.log(`Created property details for policy: ${activePolicy.policyNumber}`);
 
   // Create an aval for the active policy if it doesn't exist
   const existingAval = await prisma.aval.findFirst({

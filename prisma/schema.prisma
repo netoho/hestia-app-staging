@@ -114,46 +114,12 @@ model Policy {
   id                String      @id @default(cuid())
   policyNumber      String      @unique @default(cuid())
 
-  // Property Information
-  propertyAddress   String      // Legacy field - kept for compatibility
+  // Core Policy Information
+  propertyAddress   String      // Basic address string for quick reference
   propertyType      PropertyType
   propertyDescription String?
   rentAmount        Float
   contractLength    Int         @default(12) // months
-
-  // Enhanced Property Details
-  propertyAddressId String?     @unique
-  propertyAddressDetails PropertyAddress? @relation("PolicyPropertyAddress", fields: [propertyAddressId], references: [id])
-
-  // Property Features
-  parkingSpaces     Int?
-  parkingNumbers    String?     // JSON array of parking spot numbers
-  isFurnished       Boolean     @default(false)
-  hasPhone          Boolean     @default(false)
-  hasElectricity    Boolean     @default(true)
-  hasWater          Boolean     @default(true)
-  hasGas            Boolean     @default(false)
-  hasCableTV        Boolean     @default(false)
-  hasInternet       Boolean     @default(false)
-  otherServices     String?     // JSON array of other services
-  utilitiesInLandlordName Boolean @default(false)
-
-  // Financial Details
-  hasIVA            Boolean     @default(false)
-  issuesTaxReceipts Boolean     @default(false)
-  securityDeposit   Float?      // Amount in months (default 1)
-  maintenanceFee    Float?
-  maintenanceIncludedInRent Boolean @default(false)
-  rentIncreasePercentage Float?  // For contracts > 1 year
-  paymentMethod     String?     // bank_transfer, cash, check, etc.
-
-  // Additional Property Info
-  hasInventory      Boolean     @default(false)
-  hasRules          Boolean     @default(false)
-  petsAllowed       Boolean     @default(false)
-  propertyDeliveryDate DateTime?
-  contractSigningDate DateTime?
-  contractSigningLocation String?
 
   // Guarantor Configuration
   guarantorType     GuarantorType
@@ -171,6 +137,15 @@ model Policy {
   tenantPaymentMethod String?   // monthly, biannual, annual, other
   tenantRequiresCFDI Boolean    @default(false)
   tenantCFDIData    String?     // JSON with RFC and fiscal data
+
+  // Financial Details (from Landlord)
+  hasIVA            Boolean     @default(false)
+  issuesTaxReceipts Boolean     @default(false)
+  securityDeposit   Float?      // Amount in months (default 1)
+  maintenanceFee    Float?
+  maintenanceIncludedInRent Boolean @default(false)
+  rentIncreasePercentage Float?  // For contracts > 1 year
+  paymentMethod     String?     // bank_transfer, cash, check, etc.
 
   // User Management
   createdById       String
@@ -200,6 +175,7 @@ model Policy {
   avals             Aval[]
 
   // Related Data
+  propertyDetails   PropertyDetails?
   documents         PolicyDocument[]
   activities        PolicyActivity[]
   payments          Payment[]
@@ -213,6 +189,40 @@ model Policy {
   @@index([status])
   @@index([createdById])
   @@index([managedById])
+}
+
+model PropertyDetails {
+  id                String      @id @default(cuid())
+  policyId          String      @unique
+  policy            Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  // Enhanced Property Address
+  propertyAddressId String?     @unique
+  propertyAddressDetails PropertyAddress? @relation(fields: [propertyAddressId], references: [id])
+
+  // Property Features
+  parkingSpaces     Int?
+  parkingNumbers    String?     // JSON array of parking spot numbers
+  isFurnished       Boolean     @default(false)
+  hasPhone          Boolean     @default(false)
+  hasElectricity    Boolean     @default(true)
+  hasWater          Boolean     @default(true)
+  hasGas            Boolean     @default(false)
+  hasCableTV        Boolean     @default(false)
+  hasInternet       Boolean     @default(false)
+  otherServices     String?     // JSON array of other services
+  utilitiesInLandlordName Boolean @default(false)
+
+  // Additional Property Info
+  hasInventory      Boolean     @default(false)
+  hasRules          Boolean     @default(false)
+  petsAllowed       Boolean     @default(false)
+  propertyDeliveryDate DateTime?
+  contractSigningDate DateTime?
+  contractSigningLocation String?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 // ============================================
@@ -640,7 +650,7 @@ model PropertyAddress {
   formattedAddress  String?     // Full formatted address from Google
 
   // Relations
-  policy            Policy?     @relation("PolicyPropertyAddress")
+  propertyDetails   PropertyDetails? // New relation to PropertyDetails
   landlord          Landlord?   @relation("LandlordAddress")
   tenant            Tenant?     @relation("TenantAddress")
   jointObligor      JointObligor? @relation("JointObligorAddress")
