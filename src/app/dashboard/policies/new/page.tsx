@@ -358,11 +358,11 @@ export default function NewPolicyPage() {
       if (data.success) {
         router.push(`/dashboard/policies/${data.data.policy.id}`);
       } else {
-        alert('Error al crear la póliza: ' + data.error);
+        alert('Error al crear la protección: ' + data.error);
       }
     } catch (error) {
       console.error('Error creating policy:', error);
-      alert('Error al crear la póliza');
+      alert('Error al crear la protección');
     } finally {
       setLoading(false);
     }
@@ -1228,7 +1228,7 @@ export default function NewPolicyPage() {
           <Card>
             <CardHeader>
               <CardTitle>Garantías</CardTitle>
-              <CardDescription>Configure el tipo de garantía para esta póliza</CardDescription>
+              <CardDescription>Configure el tipo de garantía para esta protección</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
