@@ -85,10 +85,10 @@ export function PricingCalculator() {
 
     let message: string;
     if (isSpecialPricing) {
-      message = `Hola, estoy interesado en contratar el paquete ${packageName} para registrar una póliza de arrendamiento en ${city} con un monto de renta de $${rentAmount}. Dado el monto de la renta, me gustaría recibir una cotización especial. ¿Podrían ayudarme con el proceso?`;
+      message = `Hola, estoy interesado en contratar el paquete ${packageName} para registrar una protección de arrendamiento en ${city} con un monto de renta de $${rentAmount}. Dado el monto de la renta, me gustaría recibir una cotización especial. ¿Podrían ayudarme con el proceso?`;
     } else {
       const formattedPrice = formatCurrency(price);
-      message = `Hola, estoy interesado en contratar el paquete ${packageName} (${formattedPrice} MXN) para registrar una póliza de arrendamiento en ${city} con un monto de renta de $${rentAmount}. ¿Podrían ayudarme con el proceso?`;
+      message = `Hola, estoy interesado en contratar el paquete ${packageName} (${formattedPrice} MXN) para registrar una protección de arrendamiento en ${city} con un monto de renta de $${rentAmount}. ¿Podrían ayudarme con el proceso?`;
     }
 
     const encodedMessage = encodeURIComponent(message);
