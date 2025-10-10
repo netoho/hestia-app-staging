@@ -45,7 +45,6 @@ export const getUsers = async (options: GetUsersOptions = {}): Promise<GetUsersR
   const { role, search, page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
 
-  console.log('Using real database for getUsers');
 
   const where: any = {};
 
@@ -115,7 +114,6 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
-  console.log('Using real database for getUserById');
   return prisma.user.findUnique({
     where: { id },
     select: {

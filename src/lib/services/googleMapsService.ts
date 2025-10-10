@@ -69,14 +69,13 @@ export async function searchPlaces(
     key: GOOGLE_MAPS_API_KEY,
     types: 'address',
     language: 'es',
-    components: `country:${countryRestriction}`,
+    // components: `country:${countryRestriction}`,
   });
 
   if (sessionToken) {
     params.append('sessiontoken', sessionToken);
   }
 
-  console.log('Fetching places with params:', params.toString());
 
   try {
     const response = await fetch(

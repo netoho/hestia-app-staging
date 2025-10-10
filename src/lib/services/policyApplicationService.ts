@@ -1,5 +1,5 @@
 import prisma from '../prisma';
-import { Policy, PolicyStatus, PolicyStatusType, PolicyDocument, PolicyActivity, Prisma } from '@/lib/prisma-types';
+import { Policy, PolicyDocument, PolicyActivity, PolicyStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { generateSecureToken, generateTokenExpiry } from '../utils/tokenUtils';
 import { MockDataService } from './mockDataService';
@@ -50,7 +50,7 @@ export interface PolicyWithRelations extends Omit<Policy, 'createdBy' | 'managed
 }
 
 interface GetPoliciesOptions {
-  status?: PolicyStatusType | 'all';
+  status?: PolicyStatus | 'all';
   paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all';
   search?: string;
   page?: number;
@@ -72,7 +72,6 @@ interface GetPoliciesResult {
 
 // Service functions
 export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRelations> => {
-  console.log('Real DB mode: Creating policy');
   const newPolicy = await prisma.policy.create({
     data: {
       propertyId: data.propertyId,
@@ -131,8 +130,6 @@ export const createPolicy = async (data: CreatePolicyData): Promise<PolicyWithRe
 export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<GetPoliciesResult> => {
   const { status, paymentStatus, search, page = 1, limit = 10 } = options;
   const skip = (page - 1) * limit;
-
-  console.log('Real DB mode: Fetching policies');
 
   const where: prisma.PolicyWhereInput = {};
 
@@ -197,7 +194,6 @@ export const getPolicies = async (options: GetPoliciesOptions = {}): Promise<Get
 };
 
 export const getPolicyById = async (id: string): Promise<PolicyWithRelations | null> => {
-  console.log(`Real DB mode: Fetching policy ${id}`);
   return prisma.policy.findUnique({
     where: { id },
     include: {
@@ -224,7 +220,6 @@ export const getPolicyById = async (id: string): Promise<PolicyWithRelations | n
 };
 
 export const getPolicyByToken = async (token: string): Promise<PolicyWithRelations | null> => {
-  console.log(`Real DB mode: Fetching policy by token`);
   const policy = await prisma.policy.findUnique({
     where: { accessToken: token },
     include: {
@@ -276,8 +271,6 @@ export const updatePolicyStatus = async (
   performedBy: string,
   additionalData?: Partial<Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<PolicyWithRelations | null> => {
-  console.log(`Real DB mode: Updating policy ${id} status to ${status}`);
-
   const updatedPolicy = await prisma.policy.update({
     where: { id },
     data: {
@@ -352,8 +345,6 @@ export const addPolicyActivity = async (
   details?: any,
   ipAddress?: string
 ): Promise<PolicyActivity | null> => {
-  console.log(`Real DB mode: Adding activity to policy ${policyId}`);
-
   return prisma.policyActivity.create({
     data: {
       policyId,
@@ -370,8 +361,6 @@ export const updatePolicyData = async (
   step: number,
   stepData: any
 ): Promise<PolicyWithRelations | null> => {
-  console.log(`Real DB mode: Updating policy step ${step} data`);
-
   const policy = await prisma.policy.findUnique({
     where: { accessToken: token }
   });

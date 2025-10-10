@@ -60,7 +60,6 @@ class EmailProvider {
       text: data.text
     });
 
-    console.log('Email sent via Resend:', result);
     return true;
   }
 
@@ -87,7 +86,6 @@ class EmailProvider {
       text: data.text
     });
 
-    console.log('Email sent via Mailgun:', result);
     return true;
   }
 
@@ -126,7 +124,6 @@ class EmailProvider {
     };
 
     const result = await smtpTransporter.sendMail(mailOptions);
-    console.log('Email sent via SMTP:', result);
     return true;
   }
 }
@@ -429,7 +426,7 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
     const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
-${data.initiatorName} ha iniciado una solicitud de póliza de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
+${data.initiatorName} ha iniciado una solicitud de protección de arrendamiento para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
 
 Para completar tu solicitud, visita: ${policyUrl}
 
@@ -489,7 +486,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const text = `
 ¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!
 
-Hemos recibido exitosamente tu solicitud de póliza de garantía.
+Hemos recibido exitosamente tu solicitud de protección de arrendamiento.
 
 ID de Solicitud: #${data.policyId}
 Enviada el: ${submittedDate}
@@ -591,7 +588,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     <div class="content">
       <h2>Hola${data.name ? ` ${data.name}` : ''},</h2>
 
-      <p>${data.initiatorName || 'El administrador'} te ha designado como <strong>${actorTypeName}</strong> en una póliza de garantía de arrendamiento.</p>
+      <p>${data.initiatorName || 'El administrador'} te ha designado como <strong>${actorTypeName}</strong> en una protección de arrendamiento.</p>
 
       <div class="info-box">
         <p style="margin: 0;"><strong>Número de Póliza:</strong> ${data.policyNumber}</p>
@@ -632,7 +629,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     const text = `
 Hola${data.name ? ` ${data.name}` : ''},
 
-${data.initiatorName || 'El administrador'} te ha designado como ${actorTypeName} en una póliza de garantía de arrendamiento.
+${data.initiatorName || 'El administrador'} te ha designado como ${actorTypeName} en una protección de arrendamiento.
 
 Número de Póliza: ${data.policyNumber}
 Propiedad: ${data.propertyAddress}
@@ -798,7 +795,6 @@ export const sendActorRejectionEmail = async (params: ActorRejectionData): Promi
       html,
     });
 
-    console.log('Actor rejection email sent:', result);
     return true;
   } catch (error) {
     console.error('Failed to send actor rejection email:', error);
@@ -821,7 +817,7 @@ export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Prom
     const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
-Tu solicitud de póliza de garantía ha sido revisada por ${data.reviewerName}.
+Tu solicitud de protección de arrendamiento ha sido revisada por ${data.reviewerName}.
 
 Estado: ${statusText}
 ${data.reason ? `Motivo: ${data.reason}` : ''}

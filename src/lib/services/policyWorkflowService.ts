@@ -193,7 +193,6 @@ async function triggerStatusSideEffects(
     case 'COLLECTING_INFO':
       // Generate and send actor tokens
       // This would trigger email sending
-      console.log('TODO: Send actor invitation emails');
       break;
 
     case 'UNDER_INVESTIGATION':
@@ -204,15 +203,12 @@ async function triggerStatusSideEffects(
           createdAt: new Date()
         }
       });
-      console.log('TODO: Notify investigation team');
       break;
 
     case 'APPROVED':
-      console.log('TODO: Send approval notification');
       break;
 
     case 'CONTRACT_PENDING':
-      console.log('TODO: Generate contract document');
       break;
 
     case 'ACTIVE':
@@ -224,11 +220,9 @@ async function triggerStatusSideEffects(
         where: { id: policy.id },
         data: { expiresAt: expirationDate }
       });
-      console.log('TODO: Send activation confirmation');
       break;
 
     case 'CANCELLED':
-      console.log('TODO: Send cancellation notification');
       break;
   }
 }
