@@ -15,6 +15,15 @@ import { PolicyInvitationData } from '@/lib/services/emailService';
 import { generatePolicyUrl } from '@/lib/utils/tokenUtils';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
 
+interface PolicyInvitationEmailProps {
+  tenantEmail: string;
+  tenantName?: string;
+  propertyAddress?: string;
+  accessToken: string;
+  expiryDate: Date;
+  initiatorName: string;
+}
+
 export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
   tenantEmail,
   tenantName,
@@ -64,7 +73,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               fontWeight: '700',
               letterSpacing: '-0.025em'
             }}>
-              Solicitud de Póliza de Garantía
+              Solicitud de Protección de Arrendamiento
             </Heading>
             <Text style={{
               margin: '8px 0 0 0',
@@ -100,7 +109,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              <strong>{initiatorName}</strong> ha iniciado una solicitud de póliza de garantía para ti
+              <strong>{initiatorName}</strong> ha iniciado una solicitud de protección de arrendamiento para ti
               {propertyAddress && (
                 <> para la propiedad ubicada en <strong>{propertyAddress}</strong></>
               )}.

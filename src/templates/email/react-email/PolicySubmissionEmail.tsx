@@ -101,7 +101,7 @@ export const PolicySubmissionEmail: React.FC<PolicySubmissionEmailProps> = ({
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Hemos recibido exitosamente tu solicitud de póliza de garantía.
+              Hemos recibido exitosamente tu solicitud de protección de arrendamiento.
             </Text>
 
             {/* Success Box */}

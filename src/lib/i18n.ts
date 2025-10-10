@@ -246,7 +246,7 @@ const es = {
             title: "Pago Requerido",
             description: "Completa el pago para continuar con tu solicitud de póliza.",
             package: "Paquete de Garantía",
-            packageDescription: "Paquete seleccionado para esta póliza",
+            packageDescription: "Paquete seleccionado para esta protección",
             oneTimePayment: "Pago único",
             currentStatus: "Estado actual",
             paymentHistory: "Historial de Pagos",
@@ -269,7 +269,7 @@ const es = {
                 paymentCompleted: "¡Pago completado exitosamente! Puedes continuar con la revisión final de tu solicitud.",
                 paymentFailed: "El pago anterior falló. Por favor intenta nuevamente o contacta soporte si el problema persiste.",
                 paymentPending: "Tu pago está siendo procesado. Por favor espera un momento.",
-                noPriceSet: "No se ha establecido un precio para esta póliza. Contacta a tu agente.",
+                noPriceSet: "No se ha establecido un precio para esta protección. Contacta a tu agente.",
                 paymentCreationFailed: "Error al crear el pago. Por favor intenta nuevamente.",
                 paymentCreated: "Pago Creado",
                 paymentCreatedDescription: "Serás redirigido a la página de pago segura."
@@ -417,7 +417,7 @@ const es = {
                 acrossAll: "En todas las pólizas activas",
                 viewPayments: "Ver Pagos",
                 newRenterRequest: "Nueva Solicitud de Inquilino",
-                newRenterRequestDesc: "Inicia una nueva póliza para un inquilino potencial.",
+                newRenterRequestDesc: "Inicia una nueva protección para un inquilino potencial.",
                 createNewPolicy: "Crear Nueva Póliza",
             },
             renterCards: {
@@ -494,7 +494,7 @@ const es = {
                     packageLabel: "Paquete",
                     loadingPackages: "Cargando paquetes...",
                     selectPackagePlaceholder: "Selecciona un paquete",
-                    packageDescription: "Selecciona el paquete de garantía para esta póliza",
+                    packageDescription: "Selecciona el paquete de garantía para esta protección",
                     priceLabel: "Precio (MXN)",
                     pricePlaceholder: "0.00",
                     priceDescription: "Puedes ajustar el precio si fue negociado",
@@ -507,7 +507,7 @@ const es = {
                     descriptionFailed: "Póliza creada pero el envío de correo falló. Por favor, reenvía manualmente.",
                 },
                 errors: {
-                    failedToInitiate: "No se pudo iniciar la póliza",
+                    failedToInitiate: "No se pudo iniciar la protección",
                     failedToLoadPackages: "Error al cargar los paquetes",
                 }
             },
@@ -551,7 +551,7 @@ const es = {
                 title: "Detalles de Póliza",
                 subtitle: "Gestiona y revisa los detalles de la solicitud de póliza",
                 backToPolicies: "Volver a Pólizas",
-                loading: "Cargando detalles de la póliza...",
+                loading: "Cargando detalles de la protección...",
                 errorLoading: "Error Cargando Póliza",
                 policyNotFound: "Póliza No Encontrada",
                 policyNotFoundDesc: "La póliza solicitada no se pudo encontrar.",
@@ -681,7 +681,7 @@ const es = {
         },
         newPolicy: {
             title: "Crear Nueva Póliza",
-            subtitle: "Sigue los pasos para registrar una nueva póliza de garantía.",
+            subtitle: "Sigue los pasos para registrar una nueva protección de arrendamiento.",
             steps: {
                 profile: "Perfil",
                 employment: "Situación Laboral",
@@ -884,11 +884,11 @@ const es = {
             stillHaveQuestions: "¿Todavía tienes preguntas?",
             stillHaveQuestionsDesc: "Si no encuentras la respuesta que buscas, no dudes en contactar a nuestro equipo de soporte.",
             faqs: [
-              { question: "¿Qué es Hestia?", answer: "Hestia ofrece servicios de pólizas de garantía para arrendamientos de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios." },
+              { question: "¿Qué es Hestia?", answer: "Hestia ofrece servicios de protecciones de arrendamiento para arrendamientos de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios." },
               { question: "¿Cómo me registro en un paquete?", answer: "Puedes registrarte visitando nuestra sección de 'Paquetes' en el sitio web, eligiendo el que mejor se adapte a tus necesidades y haciendo clic en el botón 'Comenzar' o similar. Esto te guiará a través del proceso de registro." },
-              { question: "¿Qué información se necesita para una póliza?", answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales." },
+              { question: "¿Qué información se necesita para una protección?", answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales." },
               { question: "¿Puedo cambiar mi paquete a uno superior?", answer: "Sí, generalmente puedes mejorar tu paquete. Por favor, contacta a nuestro equipo de soporte o revisa tu panel de control para ver las opciones de actualización." },
-              { question: "¿Quién paga por la póliza?", answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, и a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento." }
+              { question: "¿Quién paga por la protección?", answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, и a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento." }
             ] as FAQ[],
         },
         login: {
@@ -1010,7 +1010,7 @@ const es = {
             forOwnersText3: "Simplifique el proceso de arrendamiento con nuestro marco de pólizas estandarizado y seguro.",
             forRentersTitle: "Para Inquilinos",
             forRentersText1: "Aumente las posibilidades de los inquilinos de asegurar la propiedad deseada.",
-            forRentersText2: "Ofrezca una póliza de garantía clara y comprensible que proteja sus intereses.",
+            forRentersText2: "Ofrezca una protección de arrendamiento clara y comprensible que proteja sus intereses.",
             forRentersText3: "Proporcione una experiencia de mudanza más fluida con menos carga financiera inicial en algunos casos.",
             ctaTitle: "¿Listo para Elevar sus Servicios?",
             ctaText: "Únase a la creciente red de asesores inmobiliarios que se asocian con Hestia. Trabajemos juntos para crear un mercado de arrendamiento más seguro y eficiente.",
