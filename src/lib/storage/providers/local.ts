@@ -49,7 +49,6 @@ export class LocalStorageProvider implements StorageProvider {
     };
 
     this.files.set(options.path, file);
-    console.log(`[LocalStorage] File uploaded: ${options.path} (${options.file.size} bytes)`);
     
     return options.path;
   }
@@ -61,7 +60,6 @@ export class LocalStorageProvider implements StorageProvider {
       throw new Error(`File not found: ${path}`);
     }
 
-    console.log(`[LocalStorage] File downloaded: ${path}`);
     return file.buffer;
   }
 
@@ -70,7 +68,6 @@ export class LocalStorageProvider implements StorageProvider {
     this.files.delete(path);
     
     if (existed) {
-      console.log(`[LocalStorage] File deleted: ${path}`);
     }
     
     return existed;
@@ -110,7 +107,6 @@ export class LocalStorageProvider implements StorageProvider {
       url.searchParams.append('filename', options.fileName);
     }
 
-    console.log(`[LocalStorage] Signed URL generated for ${options.path} (expires in ${options.expiresInSeconds || 10}s)`);
     
     return url.toString();
   }
@@ -124,7 +120,6 @@ export class LocalStorageProvider implements StorageProvider {
       }
     }
 
-    console.log(`[LocalStorage] Listed ${paths.length} files with prefix: ${prefix}`);
     return paths;
   }
 
@@ -136,6 +131,5 @@ export class LocalStorageProvider implements StorageProvider {
   // Helper method to clear all files (useful for testing)
   clear(): void {
     this.files.clear();
-    console.log('[LocalStorage] All files cleared');
   }
 }
