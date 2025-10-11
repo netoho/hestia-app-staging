@@ -88,7 +88,7 @@ export async function generateAvalToken(avalId: string): Promise<{ token: string
 /**
  * Validate a tenant token
  */
-export async function validateTenantToken(token: string): Promise<{ valid: boolean; tenant?: any; message?: string }> {
+export async function validateTenantToken(token: string): Promise<{ valid: boolean; tenant?: any; message?: string; completed?: boolean }> {
   const tenant = await prisma.tenant.findFirst({
     where: {
       accessToken: token
@@ -96,7 +96,10 @@ export async function validateTenantToken(token: string): Promise<{ valid: boole
     include: {
       policy: true,
       documents: true,
-      references: true
+      references: true,
+      addressDetails: true,
+      employerAddressDetails: true,
+      previousRentalAddressDetails: true
     }
   });
 
@@ -109,7 +112,7 @@ export async function validateTenantToken(token: string): Promise<{ valid: boole
   }
 
   if (tenant.informationComplete) {
-    return { valid: false, message: 'La información ya fue completada' };
+    return { valid: true, tenant, completed: true, message: 'La información ya fue completada y está en proceso de revisión' };
   }
 
   return { valid: true, tenant };
@@ -201,7 +204,7 @@ export async function generateLandlordToken(landlordId: string): Promise<{ token
 /**
  * Validate a landlord token
  */
-export async function validateLandlordToken(token: string): Promise<{ valid: boolean; landlord?: any; message?: string }> {
+export async function validateLandlordToken(token: string): Promise<{ valid: boolean; landlord?: any; message?: string; completed?: boolean }> {
   const landlord = await prisma.landlord.findFirst({
     where: {
       accessToken: token
@@ -230,7 +233,7 @@ export async function validateLandlordToken(token: string): Promise<{ valid: boo
   }
 
   if (landlord.informationComplete) {
-    return { valid: false, message: 'La información ya fue completada' };
+    return { valid: true, landlord, completed: true, message: 'La información ya fue completada y está en proceso de revisión' };
   }
 
   return { valid: true, landlord };
