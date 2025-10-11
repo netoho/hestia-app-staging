@@ -1,20 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, CheckCircle, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-interface Document {
-  id: string;
-  documentType: string;
-  fileName: string;
-  uploadedAt: string;
-}
+import { AlertCircle } from 'lucide-react';
+import { useDocumentManagement } from '@/hooks/useDocumentManagement';
+import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
+import { DocumentCategory } from '@/types/policy';
+import { Document } from '@/types/documents';
 
 interface DocumentsSectionProps {
   landlordId?: string;
@@ -31,71 +22,86 @@ export default function DocumentsSection({
   allTabsSaved,
   initialDocuments = [],
 }: DocumentsSectionProps) {
-  const { toast } = useToast();
-  const [documents, setDocuments] = useState<Document[]>(initialDocuments);
-  const [uploading, setUploading] = useState<string | null>(null);
+  const {
+    documents,
+    uploadingFiles,
+    uploadErrors,
+    deletingFiles,
+    uploadDocument,
+    downloadDocument,
+    deleteDocument,
+  } = useDocumentManagement({
+    token,
+    actorType: 'landlord',
+    initialDocuments
+  });
 
-  const handleFileUpload = async (documentType: string, file: File) => {
-    if (!file) return;
-
-    setUploading(documentType);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('documentType', documentType);
-
-    try {
-      const response = await fetch(`/api/actor/landlord/${token}/documents`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast({
-          title: "Error",
-          description: data.error || 'Error al cargar documento',
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Éxito",
-        description: 'Documento cargado exitosamente',
-      });
-
-      setDocuments(prev => [...prev, data.document]);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast({
-        title: "Error",
-        description: 'Error al cargar el documento',
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(null);
-    }
-  };
-
-  const requiredDocuments = isCompany
+  const documentCategories = isCompany
     ? [
-        { type: 'company_constitution', label: 'Escritura Constitutiva' },
-        { type: 'legal_powers', label: 'Poderes del Representante Legal' },
-        { type: 'rfc_document', label: 'Constancia de Situación Fiscal' },
+        {
+          category: DocumentCategory.COMPANY_CONSTITUTION,
+          type: 'company_constitution',
+          title: 'Escritura Constitutiva',
+          description: 'Documento constitutivo de la empresa',
+          required: true
+        },
+        {
+          category: DocumentCategory.LEGAL_POWERS,
+          type: 'legal_powers',
+          title: 'Poderes del Representante Legal',
+          description: 'Documentación de poderes legales',
+          required: true
+        },
+        {
+          category: DocumentCategory.TAX_STATUS_CERTIFICATE,
+          type: 'rfc_document',
+          title: 'Constancia de Situación Fiscal',
+          description: 'RFC y constancia fiscal',
+          required: true
+        },
       ]
     : [
-        { type: 'ine', label: 'Identificación Oficial (INE/Pasaporte)' },
-        { type: 'rfc_document', label: 'RFC (opcional)' },
+        {
+          category: DocumentCategory.IDENTIFICATION,
+          type: 'ine',
+          title: 'Identificación Oficial',
+          description: 'INE, Pasaporte u otra identificación oficial',
+          required: true
+        },
+        {
+          category: DocumentCategory.TAX_STATUS_CERTIFICATE,
+          type: 'rfc_document',
+          title: 'RFC',
+          description: 'Registro Federal de Contribuyentes (opcional)',
+          required: false
+        },
       ];
 
   const commonDocuments = [
-    { type: 'property_deed', label: 'Escritura de la Propiedad' },
-    { type: 'property_tax', label: 'Boleta Predial' },
-    { type: 'bank_statement', label: 'Estado de Cuenta Bancario' },
+    {
+      category: DocumentCategory.PROPERTY_DEED,
+      type: 'property_deed',
+      title: 'Escritura de la Propiedad',
+      description: 'Documento que acredita la propiedad del inmueble',
+      required: true
+    },
+    {
+      category: DocumentCategory.PROPERTY_TAX_STATEMENT,
+      type: 'property_tax',
+      title: 'Boleta Predial',
+      description: 'Comprobante de pago del impuesto predial',
+      required: true
+    },
+    {
+      category: DocumentCategory.BANK_STATEMENT,
+      type: 'bank_statement',
+      title: 'Estado de Cuenta Bancario',
+      description: 'Últimos 3 meses de estados de cuenta',
+      required: false
+    },
   ];
 
-  const allDocuments = [...requiredDocuments, ...commonDocuments];
+  const allDocuments = [...documentCategories, ...commonDocuments];
 
   if (!allTabsSaved) {
     return (
@@ -109,122 +115,34 @@ export default function DocumentsSection({
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Documentos Requeridos</CardTitle>
-          <CardDescription>
-            Cargue los documentos solicitados en formato PDF, JPG o PNG (máx. 10MB)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {allDocuments.map((doc) => (
-            <DocumentUpload
-              key={doc.type}
-              label={doc.label}
-              documentType={doc.type}
-              onUpload={handleFileUpload}
-              uploaded={documents.some(d => d.documentType === doc.type)}
-              uploading={uploading === doc.type}
-            />
-          ))}
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      {allDocuments.map(({ category, type, title, description, required }) => {
+        const categoryDocs = documents[category] || [];
+        const uploadKey = `${category}-upload`;
+        const isUploading = uploadingFiles[uploadKey];
+        const error = uploadErrors[uploadKey];
 
-      {documents.length > 0 && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>Documentos Cargados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="text-sm font-medium">{doc.fileName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {getDocumentTypeLabel(doc.documentType)}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(doc.uploadedAt).toLocaleDateString('es-MX')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </>
-  );
-}
-
-function DocumentUpload({
-  label,
-  documentType,
-  onUpload,
-  uploaded,
-  uploading,
-}: {
-  label: string;
-  documentType: string;
-  onUpload: (type: string, file: File) => void;
-  uploaded: boolean;
-  uploading: boolean;
-}) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUpload(documentType, file);
-    }
-  };
-
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div className="flex items-center space-x-3">
-        {uploaded ? (
-          <CheckCircle className="h-5 w-5 text-green-500" />
-        ) : (
-          <Upload className="h-5 w-5 text-gray-400" />
-        )}
-        <span className={uploaded ? 'text-green-700 font-medium' : ''}>{label}</span>
-      </div>
-      <Label htmlFor={documentType} className="cursor-pointer">
-        <Input
-          id={documentType}
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          onChange={handleChange}
-          className="hidden"
-          disabled={uploading}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          asChild
-          disabled={uploading}
-        >
-          <span>
-            {uploading ? 'Cargando...' : uploaded ? 'Reemplazar' : 'Cargar'}
-          </span>
-        </Button>
-      </Label>
+        return (
+          <DocumentUploadCard
+            key={category}
+            category={category}
+            title={title}
+            description={description}
+            documentType={type}
+            documents={categoryDocs}
+            required={required}
+            allowMultiple={true}
+            onUpload={(file) => uploadDocument(file, category, type)}
+            onDelete={deleteDocument}
+            onDownload={downloadDocument}
+            uploading={isUploading}
+            uploadError={error}
+            deletingDocumentId={Object.keys(deletingFiles).find(id =>
+              categoryDocs.some(doc => doc.id === id && deletingFiles[id])
+            ) || null}
+          />
+        );
+      })}
     </div>
   );
-}
-
-function getDocumentTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    'company_constitution': 'Escritura Constitutiva',
-    'legal_powers': 'Poderes del Representante Legal',
-    'rfc_document': 'RFC',
-    'ine': 'Identificación Oficial',
-    'property_deed': 'Escritura de la Propiedad',
-    'property_tax': 'Boleta Predial',
-    'bank_statement': 'Estado de Cuenta',
-  };
-  return labels[type] || type;
 }

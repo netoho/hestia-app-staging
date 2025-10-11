@@ -171,8 +171,8 @@ export class S3StorageProvider implements StorageProvider {
         throw new Error(`Unsupported action: ${options.action}`);
     }
 
-    // Default to 10 seconds for security
-    const expiresIn = options.expiresInSeconds || 10;
+    // Default to 60 seconds for security (enough time for downloads)
+    const expiresIn = options.expiresInSeconds || 60;
     
     const signedUrl = await getSignedUrl(this.client, command, {
       expiresIn,

@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LandlordData, PolicyFinancialDetails } from '@/lib/types/actor';
+import { DocumentCategory } from '@/types/policy';
+import { InlineDocumentUpload } from '@/components/documents/InlineDocumentUpload';
+import { useDocumentManagement } from '@/hooks/useDocumentManagement';
 
 interface FinancialInfoFormProps {
   landlordData: Partial<LandlordData>;
@@ -15,6 +18,8 @@ interface FinancialInfoFormProps {
   errors?: Record<string, string>;
   disabled?: boolean;
   policy?: any;
+  token: string;
+  landlordId?: string;
 }
 
 export default function FinancialInfoForm({
@@ -25,7 +30,24 @@ export default function FinancialInfoForm({
   errors = {},
   disabled = false,
   policy,
+  token,
+  landlordId,
 }: FinancialInfoFormProps) {
+  const {
+    documents,
+    uploadingFiles,
+    deletingFiles,
+    uploadDocument,
+    downloadDocument,
+    deleteDocument,
+  } = useDocumentManagement({
+    token,
+    actorType: 'landlord',
+  });
+
+  const taxCertificateDocs = documents[DocumentCategory.TAX_STATUS_CERTIFICATE] || [];
+  const propertyDeedDocs = documents[DocumentCategory.PROPERTY_DEED] || [];
+
   return (
     <>
       <Card>
@@ -103,18 +125,41 @@ export default function FinancialInfoForm({
           </div>
 
           {landlordData.requiresCFDI && (
-            <div className="mt-4 p-4 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground mb-2">
-                Por favor, sube tu Constancia de Situación Fiscal en la sección de Documentos
-              </p>
+            <div className="mt-4 space-y-3">
+              <Label className="text-sm font-medium">Constancia de Situación Fiscal</Label>
+              <InlineDocumentUpload
+                label="Constancia de Situación Fiscal"
+                documentType="rfc_document"
+                documents={taxCertificateDocs}
+                allowMultiple={true}
+                onUpload={(file) => uploadDocument(file, DocumentCategory.TAX_STATUS_CERTIFICATE, 'rfc_document')}
+                onDelete={deleteDocument}
+                onDownload={downloadDocument}
+                uploading={uploadingFiles[`${DocumentCategory.TAX_STATUS_CERTIFICATE}-${Date.now()}`]}
+                deletingDocumentId={Object.keys(deletingFiles).find(id =>
+                  taxCertificateDocs.some(doc => doc.id === id && deletingFiles[id])
+                ) || null}
+                disabled={disabled}
+              />
             </div>
           )}
 
-          <div className="mt-6">
-            <Label>Escritura de la Propiedad</Label>
-            <p className="text-sm text-muted-foreground mb-2">
-              La escritura de la propiedad debe subirse en la sección de Documentos
-            </p>
+          <div className="mt-6 space-y-3">
+            <Label className="text-base font-medium">Escritura de la Propiedad</Label>
+            <InlineDocumentUpload
+              label="Escritura de la Propiedad"
+              documentType="property_deed"
+              documents={propertyDeedDocs}
+              allowMultiple={true}
+              onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
+              onDelete={deleteDocument}
+              onDownload={downloadDocument}
+              uploading={Object.values(uploadingFiles).some(Boolean)}
+              deletingDocumentId={Object.keys(deletingFiles).find(id =>
+                propertyDeedDocs.some(doc => doc.id === id && deletingFiles[id])
+              ) || null}
+              disabled={disabled}
+            />
           </div>
         </CardContent>
       </Card>

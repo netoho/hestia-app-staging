@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -160,6 +160,14 @@ export default function LandlordFormWizard({
           phone: formData.phone || '',
           fullName: isCompany ? undefined : formData.fullName,
           companyName: isCompany ? formData.companyName : undefined,
+        };
+      }
+
+      // For financial tab saves, include requiresCFDI
+      if (tabName === 'financial') {
+        submissionData.landlord = {
+          ...submissionData.landlord,
+          requiresCFDI: formData.requiresCFDI,
         };
       }
 
@@ -424,6 +432,8 @@ export default function LandlordFormWizard({
             errors={errors}
             disabled={savingTab === 'financial'}
             policy={policy}
+            token={token}
+            landlordId={formData.id}
           />
 
           <div className="flex justify-end">

@@ -1,32 +1,42 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DocumentCategory } from '@/types/policy';
-
-interface Document {
-  id: string;
-  category: DocumentCategory;
-  documentType: string;
-  fileName: string;
-  fileSize: number;
-  uploadedAt: string;
-  verifiedAt?: string;
-  rejectionReason?: string;
-}
+import { Document } from '@/types/documents';
 
 interface UseDocumentManagementProps {
   token: string | null;
-  actorType: 'tenant' | 'joint-obligor' | 'aval';
+  actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord';
+  initialDocuments?: Document[];
 }
 
-export function useDocumentManagement({ token, actorType }: UseDocumentManagementProps) {
-  const [documents, setDocuments] = useState<Record<DocumentCategory, Document[]>>({
-    [DocumentCategory.IDENTIFICATION]: [],
-    [DocumentCategory.INCOME_PROOF]: [],
-    [DocumentCategory.ADDRESS_PROOF]: [],
-    [DocumentCategory.PROPERTY_DEED]: [],
-    [DocumentCategory.BANK_STATEMENT]: [],
-    [DocumentCategory.TAX_RETURN]: [],
-    [DocumentCategory.EMPLOYMENT_LETTER]: [],
-    [DocumentCategory.OTHER]: [],
+const createEmptyDocumentMap = (): Record<DocumentCategory, Document[]> => ({
+  [DocumentCategory.IDENTIFICATION]: [],
+  [DocumentCategory.PASSPORT]: [],
+  [DocumentCategory.TAX_STATUS_CERTIFICATE]: [],
+  [DocumentCategory.COMPANY_CONSTITUTION]: [],
+  [DocumentCategory.LEGAL_POWERS]: [],
+  [DocumentCategory.PROPERTY_DEED]: [],
+  [DocumentCategory.PROPERTY_TAX_STATEMENT]: [],
+  [DocumentCategory.PROPERTY_REGISTRY]: [],
+  [DocumentCategory.BANK_STATEMENT]: [],
+  [DocumentCategory.INCOME_PROOF]: [],
+  [DocumentCategory.TAX_RETURN]: [],
+  [DocumentCategory.ADDRESS_PROOF]: [],
+  [DocumentCategory.EMPLOYMENT_LETTER]: [],
+  [DocumentCategory.OTHER]: [],
+});
+
+export function useDocumentManagement({ token, actorType, initialDocuments }: UseDocumentManagementProps) {
+  const [documents, setDocuments] = useState<Record<DocumentCategory, Document[]>>(() => {
+    if (initialDocuments && initialDocuments.length > 0) {
+      const grouped = createEmptyDocumentMap();
+      initialDocuments.forEach((doc) => {
+        if (grouped[doc.category]) {
+          grouped[doc.category].push(doc);
+        }
+      });
+      return grouped;
+    }
+    return createEmptyDocumentMap();
   });
 
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
@@ -45,16 +55,7 @@ export function useDocumentManagement({ token, actorType }: UseDocumentManagemen
 
       if (result.success && result.data.documents) {
         // Group documents by category
-        const groupedDocs: Record<DocumentCategory, Document[]> = {
-          [DocumentCategory.IDENTIFICATION]: [],
-          [DocumentCategory.INCOME_PROOF]: [],
-          [DocumentCategory.ADDRESS_PROOF]: [],
-          [DocumentCategory.PROPERTY_DEED]: [],
-          [DocumentCategory.BANK_STATEMENT]: [],
-          [DocumentCategory.TAX_RETURN]: [],
-          [DocumentCategory.EMPLOYMENT_LETTER]: [],
-          [DocumentCategory.OTHER]: [],
-        };
+        const groupedDocs = createEmptyDocumentMap();
 
         result.data.documents.forEach((doc: Document) => {
           if (groupedDocs[doc.category]) {

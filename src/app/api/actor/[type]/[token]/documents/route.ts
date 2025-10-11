@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { uploadActorDocument, validateFile, UploadedFile } from '@/lib/services/fileUploadService';
 import { DocumentCategory } from '@prisma/client';
 
-const ALLOWED_ACTOR_TYPES = ['tenant', 'joint-obligor', 'aval'] as const;
+const ALLOWED_ACTOR_TYPES = ['tenant', 'joint-obligor', 'aval', 'landlord'] as const;
 type ActorType = typeof ALLOWED_ACTOR_TYPES[number];
 
 // Map document types to categories
@@ -78,7 +78,7 @@ export async function POST(
     let actorId: string;
     let policyId: string;
     let policyNumber: string;
-    let dbActorType: 'tenant' | 'jointObligor' | 'aval';
+    let dbActorType: 'tenant' | 'jointObligor' | 'aval' | 'landlord';
 
     switch (type) {
       case 'tenant':
@@ -101,6 +101,13 @@ export async function POST(
           include: { policy: true },
         });
         dbActorType = 'aval';
+        break;
+      case 'landlord':
+        actor = await prisma.landlord.findUnique({
+          where: { accessToken: token },
+          include: { policy: true },
+        });
+        dbActorType = 'landlord';
         break;
     }
 
@@ -228,6 +235,13 @@ export async function GET(
         });
         documents = actor?.documents || [];
         break;
+      case 'landlord':
+        actor = await prisma.landlord.findUnique({
+          where: { accessToken: token },
+          include: { documents: true },
+        });
+        documents = actor?.documents || [];
+        break;
     }
 
     if (!actor) {
@@ -329,6 +343,18 @@ export async function DELETE(
         break;
       case 'aval':
         actor = await prisma.aval.findUnique({
+          where: { accessToken: token },
+          include: {
+            documents: {
+              where: { id: documentId },
+            },
+            policy: true,
+          },
+        });
+        ownsDocument = (actor?.documents.length || 0) > 0;
+        break;
+      case 'landlord':
+        actor = await prisma.landlord.findUnique({
           where: { accessToken: token },
           include: {
             documents: {
