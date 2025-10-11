@@ -817,7 +817,7 @@ export default function JointObligorPortalPage({
                 <TabsContent value="references" className="space-y-4 mt-4">
                   <Alert>
                     <AlertDescription>
-                      Por favor proporcione 3 referencias personales (no familiares directos).
+                        Por favor proporcione 3 referencias personales (no familiares directos, tampoco puede usar las del inquilino).
                     </AlertDescription>
                   </Alert>
 

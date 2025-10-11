@@ -19,6 +19,7 @@ export default function LandlordPortalPage() {
   const [loading, setLoading] = useState(true);
   const [landlord, setLandlord] = useState<LandlordData | null>(null);
   const [policy, setPolicy] = useState<any>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     validateToken();
@@ -41,6 +42,7 @@ export default function LandlordPortalPage() {
 
       setLandlord(data.landlord);
       setPolicy(data.policy);
+      setIsCompleted(data.completed || false);
     } catch (error) {
       console.error('Error validating token:', error);
       toast({
@@ -79,6 +81,50 @@ export default function LandlordPortalPage() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Token inválido o expirado</AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Portal del Arrendador</CardTitle>
+              <CardDescription>
+                Protección #{policy?.policyNumber}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Propiedad:</span>
+                  <span className="font-medium">{policy?.propertyAddress}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Renta mensual:</span>
+                  <span className="font-medium">
+                    ${policy?.rentAmount?.toLocaleString('es-MX')} MXN
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Período:</span>
+                  <span className="font-medium">{policy?.contractLength} meses</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Alert className="border-green-200 bg-green-50">
+            <AlertCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <div className="font-semibold mb-1">Información Enviada</div>
+              Su información ha sido enviada exitosamente y está en proceso de revisión por nuestro equipo.
+              Le notificaremos cuando haya sido aprobada.
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
