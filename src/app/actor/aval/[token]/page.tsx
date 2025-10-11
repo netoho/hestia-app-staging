@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle, XCircle, Loader2 } from 'lucide-react';
@@ -20,7 +19,6 @@ export default function AvalPortalPage({
 }: {
   params: Promise<{ token: string }>
 }) {
-  const router = useRouter();
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +63,9 @@ export default function AvalPortalPage({
   };
 
   const handleComplete = () => {
-    router.push('/success');
+    // Reload data to show completed state
+    setCompleted(true);
+    validateTokenAndLoadData();
   };
 
   if (loading) {
