@@ -48,6 +48,15 @@ export async function POST(
 
       const invitations = [];
 
+      // Log actors found for debugging
+      console.log('Sending invitations for policy:', policy.policyNumber);
+      console.log('Actors found:', {
+        landlord: policy.landlord ? `${policy.landlord.email} (completed: ${policy.landlord.informationComplete})` : 'none',
+        tenant: policy.tenant ? `${policy.tenant.email} (completed: ${policy.tenant.informationComplete})` : 'none',
+        jointObligors: policy.jointObligors.map(jo => `${jo.email} (completed: ${jo.informationComplete})`),
+        avals: policy.avals.map(a => `${a.email} (completed: ${a.informationComplete})`)
+      });
+
       // Generate token for landlord
       if (policy.landlord && policy.landlord.email && !policy.landlord.informationComplete) {
         const tokenData = await generateLandlordToken(policy.landlord.id);
@@ -75,7 +84,7 @@ export async function POST(
       }
 
       // Generate token for tenant
-      if (policy.tenant && policy.tenant.email) {
+      if (policy.tenant && policy.tenant.email && !policy.tenant.informationComplete) {
         const tokenData = await generateTenantToken(policy.tenant.id);
 
         const sent = await sendActorInvitation({
@@ -102,7 +111,7 @@ export async function POST(
 
       // Generate tokens for joint obligors
       for (const jo of policy.jointObligors) {
-        if (jo.email) {
+        if (jo.email && !jo.informationComplete) {
           const tokenData = await generateJointObligorToken(jo.id);
 
           const sent = await sendActorInvitation({
@@ -130,7 +139,7 @@ export async function POST(
 
       // Generate tokens for avals
       for (const aval of policy.avals) {
-        if (aval.email) {
+        if (aval.email && !aval.informationComplete) {
           const tokenData = await generateAvalToken(aval.id);
 
           const sent = await sendActorInvitation({
@@ -176,6 +185,16 @@ export async function POST(
         details: {invitations: invitations.map(i => ({type: i.actorType, email: i.email, sent: i.sent}))},
         performedById: user.id,
         ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      // Log summary for debugging
+      console.log('Invitations sent summary:', {
+        total: invitations.length,
+        landlord: invitations.filter(i => i.actorType === 'landlord').length,
+        tenant: invitations.filter(i => i.actorType === 'tenant').length,
+        jointObligors: invitations.filter(i => i.actorType === 'jointObligor').length,
+        avals: invitations.filter(i => i.actorType === 'aval').length,
+        details: invitations.map(i => ({ type: i.actorType, email: i.email, sent: i.sent }))
       });
 
       return NextResponse.json({

@@ -17,31 +17,22 @@ export async function GET(
       );
     }
 
-    const { aval } = validation;
+    const { aval, completed } = validation;
 
     return NextResponse.json({
+      success: true,
+      completed: completed || false,
       aval: {
-        id: aval.id,
-        fullName: aval.fullName,
-        email: aval.email,
-        phone: aval.phone,
-        nationality: aval.nationality,
-        curp: aval.curp,
-        passport: aval.passport,
-        address: aval.address,
-        employmentStatus: aval.employmentStatus,
-        occupation: aval.occupation,
-        companyName: aval.companyName,
-        position: aval.position,
-        monthlyIncome: aval.monthlyIncome,
-        incomeSource: aval.incomeSource,
-        propertyAddress: aval.propertyAddress,
-        propertyValue: aval.propertyValue,
-        propertyDeedNumber: aval.propertyDeedNumber,
-        propertyRegistry: aval.propertyRegistry,
-        informationComplete: aval.informationComplete,
+        ...aval,
+        // Include all address details
+        addressDetails: aval.addressDetails,
+        employerAddressDetails: aval.employerAddressDetails,
+        guaranteePropertyDetails: aval.guaranteePropertyDetails,
+        // Include all references
         references: aval.references,
-        additionalInfo: aval.additionalInfo,
+        commercialReferences: aval.commercialReferences,
+        // Include documents
+        documents: aval.documents,
       },
       policy: {
         id: aval.policy.id,

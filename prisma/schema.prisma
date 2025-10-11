@@ -439,6 +439,8 @@ model JointObligor {
   occupation        String?
   employerName      String?
   employerAddress   String?
+  employerAddressId String?     @unique
+  employerAddressDetails PropertyAddress? @relation("JointObligorEmployerAddress", fields: [employerAddressId], references: [id])
   position          String?
   monthlyIncome     Float?
   incomeSource      String?
@@ -525,6 +527,8 @@ model Aval {
   occupation        String?
   employerName      String?
   employerAddress   String?
+  employerAddressId String?     @unique
+  employerAddressDetails PropertyAddress? @relation("AvalEmployerAddress", fields: [employerAddressId], references: [id])
   position          String?
   monthlyIncome     Float?
   incomeSource      String?
@@ -660,7 +664,9 @@ model PropertyAddress {
   tenantEmployer    Tenant?     @relation("TenantEmployerAddress")
   tenantPreviousRental Tenant?  @relation("TenantPreviousRentalAddress")
   jointObligor      JointObligor? @relation("JointObligorAddress")
+  jointObligorEmployer JointObligor? @relation("JointObligorEmployerAddress")
   avalPersonal      Aval?       @relation("AvalAddress")
+  avalEmployer      Aval?       @relation("AvalEmployerAddress")
   avalProperty      Aval?       @relation("AvalPropertyAddress")
 
   createdAt         DateTime    @default(now())

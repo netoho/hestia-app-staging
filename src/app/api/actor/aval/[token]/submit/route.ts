@@ -5,6 +5,260 @@ import { logPolicyActivity } from '@/lib/services/policyService';
 import { checkPolicyActorsComplete } from '@/lib/services/actorTokenService';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 
+// Helper function to upsert addresses
+async function upsertAddresses(avalId: string, data: any) {
+  const updates: any = {};
+
+  // Upsert current address
+  if (data.addressDetails) {
+    const currentAddress = await prisma.propertyAddress.upsert({
+      where: { id: data.addressDetails.id || '' },
+      create: {
+        street: data.addressDetails.street,
+        exteriorNumber: data.addressDetails.exteriorNumber,
+        interiorNumber: data.addressDetails.interiorNumber,
+        neighborhood: data.addressDetails.neighborhood,
+        municipality: data.addressDetails.municipality,
+        state: data.addressDetails.state,
+        postalCode: data.addressDetails.postalCode,
+        country: data.addressDetails.country || 'México',
+        latitude: data.addressDetails.latitude,
+        longitude: data.addressDetails.longitude,
+        formattedAddress: data.addressDetails.formattedAddress,
+      },
+      update: {
+        street: data.addressDetails.street,
+        exteriorNumber: data.addressDetails.exteriorNumber,
+        interiorNumber: data.addressDetails.interiorNumber,
+        neighborhood: data.addressDetails.neighborhood,
+        municipality: data.addressDetails.municipality,
+        state: data.addressDetails.state,
+        postalCode: data.addressDetails.postalCode,
+        country: data.addressDetails.country || 'México',
+        latitude: data.addressDetails.latitude,
+        longitude: data.addressDetails.longitude,
+        formattedAddress: data.addressDetails.formattedAddress,
+      },
+    });
+    updates.addressId = currentAddress.id;
+  }
+
+  // Upsert employer address
+  if (data.employerAddressDetails) {
+    const employerAddress = await prisma.propertyAddress.upsert({
+      where: { id: data.employerAddressDetails.id || '' },
+      create: {
+        street: data.employerAddressDetails.street,
+        exteriorNumber: data.employerAddressDetails.exteriorNumber,
+        interiorNumber: data.employerAddressDetails.interiorNumber,
+        neighborhood: data.employerAddressDetails.neighborhood,
+        municipality: data.employerAddressDetails.municipality,
+        state: data.employerAddressDetails.state,
+        postalCode: data.employerAddressDetails.postalCode,
+        country: data.employerAddressDetails.country || 'México',
+        latitude: data.employerAddressDetails.latitude,
+        longitude: data.employerAddressDetails.longitude,
+        formattedAddress: data.employerAddressDetails.formattedAddress,
+      },
+      update: {
+        street: data.employerAddressDetails.street,
+        exteriorNumber: data.employerAddressDetails.exteriorNumber,
+        interiorNumber: data.employerAddressDetails.interiorNumber,
+        neighborhood: data.employerAddressDetails.neighborhood,
+        municipality: data.employerAddressDetails.municipality,
+        state: data.employerAddressDetails.state,
+        postalCode: data.employerAddressDetails.postalCode,
+        country: data.employerAddressDetails.country || 'México',
+        latitude: data.employerAddressDetails.latitude,
+        longitude: data.employerAddressDetails.longitude,
+        formattedAddress: data.employerAddressDetails.formattedAddress,
+      },
+    });
+    updates.employerAddressId = employerAddress.id;
+  }
+
+  // Upsert guarantee property address (MANDATORY for Aval)
+  if (data.guaranteePropertyDetails) {
+    const guaranteePropertyAddress = await prisma.propertyAddress.upsert({
+      where: { id: data.guaranteePropertyDetails.id || '' },
+      create: {
+        street: data.guaranteePropertyDetails.street,
+        exteriorNumber: data.guaranteePropertyDetails.exteriorNumber,
+        interiorNumber: data.guaranteePropertyDetails.interiorNumber,
+        neighborhood: data.guaranteePropertyDetails.neighborhood,
+        municipality: data.guaranteePropertyDetails.municipality,
+        state: data.guaranteePropertyDetails.state,
+        postalCode: data.guaranteePropertyDetails.postalCode,
+        country: data.guaranteePropertyDetails.country || 'México',
+        latitude: data.guaranteePropertyDetails.latitude,
+        longitude: data.guaranteePropertyDetails.longitude,
+        formattedAddress: data.guaranteePropertyDetails.formattedAddress,
+      },
+      update: {
+        street: data.guaranteePropertyDetails.street,
+        exteriorNumber: data.guaranteePropertyDetails.exteriorNumber,
+        interiorNumber: data.guaranteePropertyDetails.interiorNumber,
+        neighborhood: data.guaranteePropertyDetails.neighborhood,
+        municipality: data.guaranteePropertyDetails.municipality,
+        state: data.guaranteePropertyDetails.state,
+        postalCode: data.guaranteePropertyDetails.postalCode,
+        country: data.guaranteePropertyDetails.country || 'México',
+        latitude: data.guaranteePropertyDetails.latitude,
+        longitude: data.guaranteePropertyDetails.longitude,
+        formattedAddress: data.guaranteePropertyDetails.formattedAddress,
+      },
+    });
+    updates.guaranteePropertyAddressId = guaranteePropertyAddress.id;
+  }
+
+  return updates;
+}
+
+// Helper function to save references
+async function saveReferences(avalId: string, data: any) {
+  // Delete existing personal references
+  await prisma.personalReference.deleteMany({
+    where: { avalId }
+  });
+
+  // Delete existing commercial references
+  await prisma.commercialReference.deleteMany({
+    where: { avalId }
+  });
+
+  // Create new personal references (for individuals)
+  if (data.references && data.references.length > 0) {
+    await prisma.personalReference.createMany({
+      data: data.references.map((ref: any) => ({
+        avalId,
+        name: ref.name,
+        phone: ref.phone,
+        email: ref.email || null,
+        relationship: ref.relationship,
+        occupation: ref.occupation || null,
+        address: ref.address || null,
+      }))
+    });
+  }
+
+  // Create new commercial references (for companies)
+  if (data.commercialReferences && data.commercialReferences.length > 0) {
+    await prisma.commercialReference.createMany({
+      data: data.commercialReferences.map((ref: any) => ({
+        avalId,
+        companyName: ref.companyName,
+        contactName: ref.contactName,
+        phone: ref.phone,
+        email: ref.email || null,
+        relationship: ref.relationship,
+        yearsOfRelationship: ref.yearsOfRelationship || null,
+      }))
+    });
+  }
+}
+
+// PUT handler for partial saves (per-tab auto-save)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  try {
+    const { token } = await params;
+    const data = await request.json();
+
+    // Validate token
+    const validation = await validateAvalToken(token);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.message },
+        { status: 400 }
+      );
+    }
+
+    const { aval } = validation;
+
+    // Upsert addresses
+    const addressUpdates = await upsertAddresses(aval.id, data);
+
+    // Prepare update data
+    const updateData: any = {
+      // Type
+      isCompany: data.isCompany,
+      // Individual Information
+      fullName: data.fullName,
+      nationality: data.nationality,
+      curp: data.curp || null,
+      rfc: data.rfc || null,
+      passport: data.passport || null,
+      relationshipToTenant: data.relationshipToTenant || null,
+      // Company Information
+      companyName: data.companyName || null,
+      companyRfc: data.companyRfc || null,
+      legalRepName: data.legalRepName || null,
+      legalRepId: data.legalRepId || null,
+      legalRepPosition: data.legalRepPosition || null,
+      legalRepRfc: data.legalRepRfc || null,
+      legalRepPhone: data.legalRepPhone || null,
+      legalRepEmail: data.legalRepEmail || null,
+      // Contact Information
+      email: data.email,
+      phone: data.phone,
+      workPhone: data.workPhone || null,
+      personalEmail: data.personalEmail || null,
+      workEmail: data.workEmail || null,
+      // Employment (for individuals)
+      employmentStatus: data.employmentStatus || null,
+      occupation: data.occupation || null,
+      employerName: data.employerName || null,
+      employerAddress: data.employerAddress || null,
+      position: data.position || null,
+      monthlyIncome: data.monthlyIncome || null,
+      incomeSource: data.incomeSource || null,
+      // Property Guarantee Information (MANDATORY for Aval)
+      propertyAddress: data.propertyAddress || null,
+      propertyValue: data.propertyValue || null,
+      propertyDeedNumber: data.propertyDeedNumber || null,
+      propertyRegistry: data.propertyRegistry || null,
+      propertyTaxAccount: data.propertyTaxAccount || null,
+      propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
+      // Marriage Information
+      maritalStatus: data.maritalStatus || null,
+      spouseName: data.spouseName || null,
+      spouseRfc: data.spouseRfc || null,
+      spouseCurp: data.spouseCurp || null,
+      // Additional info
+      additionalInfo: data.additionalInfo || null,
+      // Address IDs
+      ...addressUpdates,
+    };
+
+    // Update aval
+    const updatedAval = await prisma.aval.update({
+      where: { id: aval.id },
+      data: updateData
+    });
+
+    // Save references if provided
+    if (data.references || data.commercialReferences) {
+      await saveReferences(aval.id, data);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Información guardada exitosamente',
+      data: updatedAval
+    });
+
+  } catch (error) {
+    console.error('Aval partial save error:', error);
+    return NextResponse.json(
+      { error: 'Error al guardar la información', details: error },
+      { status: 500 }
+    );
+  }
+}
+
+// POST handler for final submission
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -24,53 +278,72 @@ export async function POST(
 
     const { aval } = validation;
 
-    // Update aval information
+    // Upsert addresses
+    const addressUpdates = await upsertAddresses(aval.id, data);
+
+    // Prepare update data with completion
+    const updateData: any = {
+      // Type
+      isCompany: data.isCompany,
+      // Individual Information
+      fullName: data.fullName,
+      nationality: data.nationality,
+      curp: data.curp || null,
+      rfc: data.rfc || null,
+      passport: data.passport || null,
+      relationshipToTenant: data.relationshipToTenant || null,
+      // Company Information
+      companyName: data.companyName || null,
+      companyRfc: data.companyRfc || null,
+      legalRepName: data.legalRepName || null,
+      legalRepId: data.legalRepId || null,
+      legalRepPosition: data.legalRepPosition || null,
+      legalRepRfc: data.legalRepRfc || null,
+      legalRepPhone: data.legalRepPhone || null,
+      legalRepEmail: data.legalRepEmail || null,
+      // Contact Information
+      email: data.email,
+      phone: data.phone,
+      workPhone: data.workPhone || null,
+      personalEmail: data.personalEmail || null,
+      workEmail: data.workEmail || null,
+      // Employment (for individuals)
+      employmentStatus: data.employmentStatus || null,
+      occupation: data.occupation || null,
+      employerName: data.employerName || null,
+      employerAddress: data.employerAddress || null,
+      position: data.position || null,
+      monthlyIncome: data.monthlyIncome || null,
+      incomeSource: data.incomeSource || null,
+      // Property Guarantee Information (MANDATORY for Aval)
+      propertyAddress: data.propertyAddress || null,
+      propertyValue: data.propertyValue || null,
+      propertyDeedNumber: data.propertyDeedNumber || null,
+      propertyRegistry: data.propertyRegistry || null,
+      propertyTaxAccount: data.propertyTaxAccount || null,
+      propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
+      // Marriage Information
+      maritalStatus: data.maritalStatus || null,
+      spouseName: data.spouseName || null,
+      spouseRfc: data.spouseRfc || null,
+      spouseCurp: data.spouseCurp || null,
+      // Additional info
+      additionalInfo: data.additionalInfo || null,
+      // Mark as complete
+      informationComplete: true,
+      completedAt: new Date(),
+      // Address IDs
+      ...addressUpdates,
+    };
+
+    // Update aval
     const updatedAval = await prisma.aval.update({
       where: { id: aval.id },
-      data: {
-        fullName: data.fullName,
-        nationality: data.nationality,
-        curp: data.curp || null,
-        passport: data.passport || null,
-        address: data.address || null,
-        employmentStatus: data.employmentStatus,
-        occupation: data.occupation,
-        companyName: data.companyName,
-        position: data.position,
-        monthlyIncome: data.monthlyIncome,
-        incomeSource: data.incomeSource,
-        // Property information
-        propertyAddress: data.propertyAddress,
-        propertyValue: data.propertyValue,
-        propertyDeedNumber: data.propertyDeedNumber || null,
-        propertyRegistry: data.propertyRegistry || null,
-        informationComplete: true,
-        completedAt: new Date(),
-        additionalInfo: data.additionalInfo,
-      }
+      data: updateData
     });
 
     // Save references
-    if (data.references && data.references.length > 0) {
-      // Delete existing references
-      await prisma.personalReference.deleteMany({
-        where: { avalId: aval.id }
-      });
-
-      // Create new references
-      await prisma.personalReference.createMany({
-        data: data.references.map((ref: any) => ({
-          avalId: aval.id,
-          name: ref.name,
-          phone: ref.phone,
-          email: ref.email || null,
-          relationship: ref.relationship,
-          occupation: ref.occupation || null,
-        }))
-      });
-    }
-
-
+    await saveReferences(aval.id, data);
 
     // Log activity
     await logPolicyActivity({
@@ -79,7 +352,7 @@ export async function POST(
       description: 'Aval information completed',
       details: {
         avalId: aval.id,
-        avalName: data.fullName,
+        avalName: data.fullName || data.companyName,
         propertyValue: data.propertyValue,
         completedAt: new Date()
       },
@@ -110,7 +383,7 @@ export async function POST(
   } catch (error) {
     console.error('Aval submit error:', error);
     return NextResponse.json(
-      { error: 'Error al guardar la información' },
+      { error: 'Error al guardar la información', details: error },
       { status: 500 }
     );
   }

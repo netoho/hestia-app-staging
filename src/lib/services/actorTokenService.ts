@@ -151,7 +151,7 @@ export async function validateJointObligorToken(token: string): Promise<{ valid:
 /**
  * Validate an aval token
  */
-export async function validateAvalToken(token: string): Promise<{ valid: boolean; aval?: any; message?: string }> {
+export async function validateAvalToken(token: string): Promise<{ valid: boolean; aval?: any; message?: string; completed?: boolean }> {
   const aval = await prisma.aval.findFirst({
     where: {
       accessToken: token
@@ -159,7 +159,11 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
     include: {
       policy: true,
       documents: true,
-      references: true
+      references: true,
+      commercialReferences: true,
+      addressDetails: true,
+      employerAddressDetails: true,
+      guaranteePropertyDetails: true
     }
   });
 
@@ -172,7 +176,7 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
   }
 
   if (aval.informationComplete) {
-    return { valid: false, message: 'La información ya fue completada' };
+    return { valid: true, aval, completed: true, message: 'La información ya fue completada y está en proceso de revisión' };
   }
 
   return { valid: true, aval };
