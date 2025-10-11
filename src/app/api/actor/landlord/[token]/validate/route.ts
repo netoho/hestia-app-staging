@@ -67,7 +67,7 @@ export async function GET(
           category: doc.category,
           documentType: doc.documentType,
           fileName: doc.fileName,
-          uploadedAt: doc.createdAt,
+          createdAt: doc.createdAt,
         })),
         additionalInfo: landlord.additionalInfo,
       },

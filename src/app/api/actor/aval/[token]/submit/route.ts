@@ -126,7 +126,6 @@ export async function PUT(
       companyName: data.companyName || null,
       companyRfc: data.companyRfc || null,
       legalRepName: data.legalRepName || null,
-      legalRepId: data.legalRepId || null,
       legalRepPosition: data.legalRepPosition || null,
       legalRepRfc: data.legalRepRfc || null,
       legalRepPhone: data.legalRepPhone || null,
@@ -157,6 +156,9 @@ export async function PUT(
       spouseName: data.spouseName || null,
       spouseRfc: data.spouseRfc || null,
       spouseCurp: data.spouseCurp || null,
+      // Guarantee Method
+      guaranteeMethod: data.guaranteeMethod || null,
+      hasPropertyGuarantee: data.hasPropertyGuarantee ?? true,
       // Additional info
       additionalInfo: data.additionalInfo || null,
       // Address IDs
@@ -227,7 +229,6 @@ export async function POST(
       companyName: data.companyName || null,
       companyRfc: data.companyRfc || null,
       legalRepName: data.legalRepName || null,
-      legalRepId: data.legalRepId || null,
       legalRepPosition: data.legalRepPosition || null,
       legalRepRfc: data.legalRepRfc || null,
       legalRepPhone: data.legalRepPhone || null,
@@ -258,6 +259,9 @@ export async function POST(
       spouseName: data.spouseName || null,
       spouseRfc: data.spouseRfc || null,
       spouseCurp: data.spouseCurp || null,
+      // Guarantee Method
+      guaranteeMethod: data.guaranteeMethod || null,
+      hasPropertyGuarantee: data.hasPropertyGuarantee ?? true,
       // Additional info
       additionalInfo: data.additionalInfo || null,
       // Mark as complete

@@ -25,7 +25,7 @@ export async function GET(
             id: true,
             category: true,
             originalName: true,
-            uploadedAt: true,
+            createdAt: true,
           },
         },
       },

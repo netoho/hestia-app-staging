@@ -123,7 +123,7 @@ export async function POST(
         originalName: document.originalName,
         fileSize: document.fileSize,
         mimeType: document.mimeType,
-        uploadedAt: document.createdAt
+        createdAt: document.createdAt
       }
     });
 
@@ -173,7 +173,7 @@ export async function GET(
           originalName: doc.originalName,
           fileSize: doc.fileSize,
           mimeType: doc.mimeType,
-          uploadedAt: doc.createdAt,
+          createdAt: doc.createdAt,
           verifiedAt: doc.verifiedAt,
           rejectionReason: doc.rejectionReason
         }))

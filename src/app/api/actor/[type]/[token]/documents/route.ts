@@ -6,16 +6,18 @@ import { DocumentCategory } from '@prisma/client';
 const ALLOWED_ACTOR_TYPES = ['tenant', 'joint-obligor', 'aval', 'landlord'] as const;
 type ActorType = typeof ALLOWED_ACTOR_TYPES[number];
 
-// Map document types to categories
-const documentCategoryMap: Record<string, DocumentCategory> = {
-  'identification': DocumentCategory.IDENTIFICATION,
-  'income_proof': DocumentCategory.INCOME_PROOF,
-  'address_proof': DocumentCategory.ADDRESS_PROOF,
-  'property_deed': DocumentCategory.PROPERTY_DEED,
-  'bank_statement': DocumentCategory.BANK_STATEMENT,
-  'tax_return': DocumentCategory.TAX_RETURN,
-  'employment_letter': DocumentCategory.EMPLOYMENT_LETTER,
-};
+// Helper to map snake_case to DocumentCategory enum
+function getCategoryFromString(categoryStr: string): DocumentCategory | null {
+  // Convert snake_case to UPPER_CASE to match enum
+  const upperCategory = categoryStr.toUpperCase();
+
+  // Check if it exists in DocumentCategory enum
+  if (upperCategory in DocumentCategory) {
+    return DocumentCategory[upperCategory as keyof typeof DocumentCategory];
+  }
+
+  return null;
+}
 
 export async function POST(
   req: NextRequest,
@@ -64,11 +66,11 @@ export async function POST(
       );
     }
 
-    // Map document category
-    const documentCategory = documentCategoryMap[category];
+    // Map document category using enum
+    const documentCategory = getCategoryFromString(category);
     if (!documentCategory) {
       return NextResponse.json(
-        { success: false, error: 'Invalid document category' },
+        { success: false, error: `Invalid document category: ${category}` },
         { status: 400 }
       );
     }
@@ -174,14 +176,31 @@ export async function POST(
       },
     });
 
+    // Fetch the created document to return complete data
+    const createdDocument = await prisma.actorDocument.findUnique({
+      where: { id: result.documentId },
+    });
+
+    if (!createdDocument) {
+      return NextResponse.json(
+        { success: false, error: 'Document created but not found' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       data: {
-        documentId: result.documentId,
-        s3Key: result.s3Key,
-        fileName: file.name,
-        documentType,
-        category,
+        id: createdDocument.id,
+        category: createdDocument.category,
+        documentType: createdDocument.documentType,
+        fileName: createdDocument.originalName,
+        originalName: createdDocument.originalName,
+        fileSize: createdDocument.fileSize,
+        mimeType: createdDocument.mimeType,
+        createdAt: createdDocument.createdAt,
+        verifiedAt: createdDocument.verifiedAt,
+        rejectionReason: createdDocument.rejectionReason,
       },
     });
   } catch (error) {
@@ -266,7 +285,7 @@ export async function GET(
       documentType: doc.documentType,
       fileName: doc.originalName,
       fileSize: doc.fileSize,
-      uploadedAt: doc.createdAt,
+      createdAt: doc.createdAt,
       verifiedAt: doc.verifiedAt,
       rejectionReason: doc.rejectionReason,
     }));

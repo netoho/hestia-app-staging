@@ -101,7 +101,7 @@ export async function POST(
         category: document.category,
         originalName: document.originalName,
         fileSize: document.fileSize,
-        uploadedAt: document.uploadedAt
+        createdAt: document.createdAt
       }
     });
 

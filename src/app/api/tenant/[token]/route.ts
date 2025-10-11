@@ -79,7 +79,7 @@ export async function GET(
         category: doc.category,
         originalName: doc.originalName,
         fileSize: doc.fileSize,
-        uploadedAt: doc.uploadedAt
+        createdAt: doc.createdAt
       }))
     });
 
