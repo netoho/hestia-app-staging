@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,6 @@ export default function JointObligorFormWizard({
   policy,
   onComplete,
 }: JointObligorFormWizardProps) {
-  const router = useRouter();
   const { toast } = useToast();
 
   // Form hooks
@@ -222,10 +220,6 @@ export default function JointObligorFormWizard({
 
       if (onComplete) {
         onComplete();
-      } else {
-        setTimeout(() => {
-          router.push('/success');
-        }, 2000);
       }
     } catch (error) {
       console.error('Submit error:', error);

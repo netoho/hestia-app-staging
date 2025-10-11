@@ -53,7 +53,7 @@ export function DocumentListItem({
           <p className="text-xs text-gray-500">
             {formatFileSize(document.fileSize)}
             {' • '}
-            {formatDate(document.uploadedAt)}
+            {formatDate(document.createdAt)}
           </p>
         </div>
       </div>

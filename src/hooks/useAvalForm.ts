@@ -50,9 +50,6 @@ export interface AvalFormData {
   propertyAddress?: string;
   guaranteePropertyDetails?: any;
   propertyValue?: number;
-  propertyDeedNumber?: string;
-  propertyRegistry?: string;
-  propertyTaxAccount?: string;
   propertyUnderLegalProceeding?: boolean;
 
   // Marriage Information
@@ -165,9 +162,6 @@ export function useAvalForm(initialData: Partial<AvalFormData> = {}) {
     }
     if (!formData.propertyValue || formData.propertyValue <= 0) {
       newErrors.propertyValue = 'Valor de la propiedad debe ser mayor a 0';
-    }
-    if (!formData.propertyDeedNumber) {
-      newErrors.propertyDeedNumber = 'Número de escritura es requerido';
     }
 
     setErrors(newErrors);

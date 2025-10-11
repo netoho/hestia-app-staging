@@ -96,20 +96,6 @@ export default function AvalDocumentsSection({
           required: true
         },
         {
-          category: DocumentCategory.PROPERTY_DEED,
-          type: 'property_deed',
-          title: 'Escritura de la Propiedad en Garantía',
-          description: 'Escritura pública de la propiedad que se ofrece como garantía',
-          required: true
-        },
-        {
-          category: DocumentCategory.PROPERTY_TAX_STATEMENT,
-          type: 'property_tax_statement',
-          title: 'Boleta Predial',
-          description: 'Último recibo de impuesto predial de la propiedad en garantía',
-          required: true
-        },
-        {
           category: DocumentCategory.PROPERTY_REGISTRY,
           type: 'property_registry',
           title: 'Certificado de Libertad de Gravamen',
@@ -154,20 +140,6 @@ export default function AvalDocumentsSection({
           required: true
         },
         {
-          category: DocumentCategory.PROPERTY_DEED,
-          type: 'property_deed',
-          title: 'Escritura de la Propiedad en Garantía',
-          description: 'Escritura pública de la propiedad que se ofrece como garantía',
-          required: true
-        },
-        {
-          category: DocumentCategory.PROPERTY_TAX_STATEMENT,
-          type: 'property_tax_statement',
-          title: 'Boleta Predial',
-          description: 'Último recibo de impuesto predial de la propiedad en garantía',
-          required: true
-        },
-        {
           category: DocumentCategory.PROPERTY_REGISTRY,
           type: 'property_registry',
           title: 'Certificado de Libertad de Gravamen',
@@ -208,16 +180,6 @@ export default function AvalDocumentsSection({
 
   return (
     <div className="space-y-4">
-      {/* Property Guarantee Alert */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800">
-          <strong>Documentos de la Propiedad en Garantía</strong>
-          <p className="mt-2">
-            Como aval, es obligatorio proporcionar la escritura y documentación de la propiedad que sirve como garantía. Estos documentos son esenciales para el procesamiento de su solicitud.
-          </p>
-        </AlertDescription>
-      </Alert>
 
       {/* Additional Info Card */}
       <Card>
@@ -280,7 +242,7 @@ export default function AvalDocumentsSection({
         <Alert className="border-orange-200 bg-orange-50">
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
-            Por favor cargue todos los documentos requeridos antes de enviar su información. Recuerde que la escritura y boleta predial de la propiedad en garantía son obligatorias.
+            Por favor cargue todos los documentos requeridos antes de enviar su información.
           </AlertDescription>
         </Alert>
       )}

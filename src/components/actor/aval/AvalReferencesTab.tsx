@@ -113,18 +113,6 @@ export default function AvalReferencesTab({
                         disabled={disabled}
                       />
                     </div>
-
-                    {/* Address */}
-                    <div className="md:col-span-2">
-                      <Label htmlFor={`personal-address-${index}`}>Dirección</Label>
-                      <Input
-                        id={`personal-address-${index}`}
-                        value={ref.address || ''}
-                        onChange={(e) => onPersonalReferenceChange(index, 'address', e.target.value)}
-                        placeholder="Dirección completa"
-                        disabled={disabled}
-                      />
-                    </div>
                   </div>
 
                   {errors[`personalReference${index}`] && (
@@ -139,14 +127,15 @@ export default function AvalReferencesTab({
         </Card>
       )}
 
-      {/* Commercial References - For Both Individuals and Companies */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Referencias Comerciales</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Proporcione 3 referencias comerciales (proveedores, clientes, instituciones financieras)
-          </p>
-        </CardHeader>
+      {/* Commercial References - Only for Companies */}
+      {isCompany && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Referencias Comerciales</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Proporcione 3 referencias comerciales (proveedores, clientes, instituciones financieras)
+            </p>
+          </CardHeader>
         <CardContent>
           <div className="space-y-6">
             {commercialReferences.map((ref, index) => (
@@ -251,6 +240,7 @@ export default function AvalReferencesTab({
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

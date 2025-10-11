@@ -345,6 +345,9 @@ export default function AvalFormWizard({
             onFieldChange={updateField}
             errors={errors}
             disabled={savingTab === 'property'}
+            token={token}
+            avalId={formData.id}
+            initialDocuments={initialData.documents || []}
           />
 
           <div className="flex justify-end">

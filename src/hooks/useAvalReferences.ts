@@ -6,7 +6,6 @@ export interface PersonalReference {
   email?: string;
   relationship: string;
   occupation?: string;
-  address?: string;
 }
 
 export interface CommercialReference {
@@ -26,9 +25,9 @@ export function useAvalReferences(
     initialPersonal.length > 0
       ? initialPersonal
       : [
-          { name: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
-          { name: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
-          { name: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
+          { name: '', phone: '', email: '', relationship: '', occupation: '' },
+          { name: '', phone: '', email: '', relationship: '', occupation: '' },
+          { name: '', phone: '', email: '', relationship: '', occupation: '' },
         ]
   );
 

@@ -11,7 +11,7 @@ export interface Document {
   originalName?: string;
   fileSize: number;
   mimeType?: string;
-  uploadedAt: string;
+  createdAt: string;
   uploadedBy?: string;
   verifiedAt?: string | null;
   rejectionReason?: string | null;
