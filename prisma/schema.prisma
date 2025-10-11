@@ -347,6 +347,8 @@ model Tenant {
   occupation        String?
   employerName      String?
   employerAddress   String?
+  employerAddressId String?     @unique
+  employerAddressDetails PropertyAddress? @relation("TenantEmployerAddress", fields: [employerAddressId], references: [id])
   position          String?
   monthlyIncome     Float?
   incomeSource      String?
@@ -357,6 +359,8 @@ model Tenant {
   previousLandlordEmail String?
   previousRentAmount Float?
   previousRentalAddress String?
+  previousRentalAddressId String? @unique
+  previousRentalAddressDetails PropertyAddress? @relation("TenantPreviousRentalAddress", fields: [previousRentalAddressId], references: [id])
   rentalHistoryYears Int?
 
   // Payment Preferences
@@ -653,6 +657,8 @@ model PropertyAddress {
   propertyDetails   PropertyDetails? // New relation to PropertyDetails
   landlord          Landlord?   @relation("LandlordAddress")
   tenant            Tenant?     @relation("TenantAddress")
+  tenantEmployer    Tenant?     @relation("TenantEmployerAddress")
+  tenantPreviousRental Tenant?  @relation("TenantPreviousRentalAddress")
   jointObligor      JointObligor? @relation("JointObligorAddress")
   avalPersonal      Aval?       @relation("AvalAddress")
   avalProperty      Aval?       @relation("AvalPropertyAddress")
