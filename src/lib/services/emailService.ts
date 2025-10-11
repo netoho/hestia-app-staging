@@ -648,8 +648,7 @@ Importante: Este enlace expirará ${data.expiryDate ? `el ${new Date(data.expiry
 
 Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
 
-© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
-    `.trim();
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.`;
 
     return await EmailProvider.sendEmail({
       to: data.email,
