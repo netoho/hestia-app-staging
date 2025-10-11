@@ -17,9 +17,10 @@ export async function GET(
       );
     }
 
-    const { landlord } = validation;
+    const { landlord, completed } = validation;
 
     return NextResponse.json({
+      completed,
       landlord: {
         id: landlord.id,
         isCompany: landlord.isCompany,
@@ -55,7 +56,7 @@ export async function GET(
         monthlyIncome: landlord.monthlyIncome,
         // Property management
         propertyDeedNumber: landlord.propertyDeedNumber,
-        propertyRegistryFolio: landlord.propertyRegistryFolio,
+        propertyRegistryFolio: landlord.policy.propertyRegistryFolio,
         requiresCFDI: landlord.requiresCFDI,
         cfdiData: landlord.cfdiData,
         // Status
