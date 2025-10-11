@@ -225,20 +225,33 @@ export default function LandlordFormWizard({
         return;
       }
 
-      toast({
-        title: "✓ Guardado",
-        description: `Información ${tabName === 'personal' ? 'personal' : tabName === 'property' ? 'de la propiedad' : 'fiscal'} guardada exitosamente`,
-      });
+      // Handle final submission differently
+      if (tabName === 'final') {
+        toast({
+          title: "✓ Información Enviada",
+          description: 'Tu información ha sido enviada exitosamente. Gracias por completar el formulario.',
+        });
 
-      setTabSaved(prev => ({ ...prev, [tabName]: true }));
+        // Call onComplete callback if provided
+        if (onComplete) {
+          setTimeout(() => onComplete(), 1500);
+        }
+      } else {
+        toast({
+          title: "✓ Guardado",
+          description: `Información ${tabName === 'personal' ? 'personal' : tabName === 'property' ? 'de la propiedad' : 'fiscal'} guardada exitosamente`,
+        });
 
-      // Auto advance to next tab
-      if (tabName === 'personal') {
-        setTimeout(() => setActiveTab('property'), 1000);
-      } else if (tabName === 'property') {
-        setTimeout(() => setActiveTab('financial'), 1000);
-      } else if (tabName === 'financial') {
-        setTimeout(() => setActiveTab('documents'), 1000);
+        setTabSaved(prev => ({ ...prev, [tabName]: true }));
+
+        // Auto advance to next tab
+        if (tabName === 'personal') {
+          setTimeout(() => setActiveTab('property'), 1000);
+        } else if (tabName === 'property') {
+          setTimeout(() => setActiveTab('financial'), 1000);
+        } else if (tabName === 'financial') {
+          setTimeout(() => setActiveTab('documents'), 1000);
+        }
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -460,13 +473,31 @@ export default function LandlordFormWizard({
         </TabsContent>
 
         {/* Documents Tab */}
-        <TabsContent value="documents">
+        <TabsContent value="documents" className="space-y-4">
           <DocumentsSection
             landlordId={formData.id}
             token={token}
             isCompany={isCompany}
             allTabsSaved={tabSaved.personal && tabSaved.property && tabSaved.financial}
           />
+
+          <div className="flex justify-end">
+            <Button
+              onClick={() => handleSaveTab('final', false)}
+              disabled={savingTab === 'final'}
+              className="w-full sm:w-auto"
+              size="lg"
+            >
+              {savingTab === 'final' ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar Información'
+              )}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
