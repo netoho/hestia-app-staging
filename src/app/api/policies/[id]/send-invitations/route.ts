@@ -20,6 +20,10 @@ export async function POST(
     try {
       const { id } = await params;
 
+      // Parse request body
+      const body = await req.json().catch(() => ({}));
+      const { actors, resend = false } = body as { actors?: string[], resend?: boolean };
+
       // Use Prisma
       const policy = await prisma.policy.findUnique({
         where: { id },
@@ -48,8 +52,14 @@ export async function POST(
 
       const invitations = [];
 
+      // Helper to check if actor type should be processed
+      const shouldProcessActor = (actorType: string) => {
+        return !actors || actors.length === 0 || actors.includes(actorType);
+      };
+
       // Log actors found for debugging
       console.log('Sending invitations for policy:', policy.policyNumber);
+      console.log('Request parameters:', { targetedActors: actors, resend });
       console.log('Actors found:', {
         landlord: policy.landlord ? `${policy.landlord.email} (completed: ${policy.landlord.informationComplete})` : 'none',
         tenant: policy.tenant ? `${policy.tenant.email} (completed: ${policy.tenant.informationComplete})` : 'none',
@@ -58,7 +68,7 @@ export async function POST(
       });
 
       // Generate token for landlord
-      if (policy.landlord && policy.landlord.email && !policy.landlord.informationComplete) {
+      if (shouldProcessActor('landlord') && policy.landlord && policy.landlord.email && (resend || !policy.landlord.informationComplete)) {
         const tokenData = await generateLandlordToken(policy.landlord.id);
 
         const sent = await sendActorInvitation({
@@ -84,7 +94,7 @@ export async function POST(
       }
 
       // Generate token for tenant
-      if (policy.tenant && policy.tenant.email && !policy.tenant.informationComplete) {
+      if (shouldProcessActor('tenant') && policy.tenant && policy.tenant.email && (resend || !policy.tenant.informationComplete)) {
         const tokenData = await generateTenantToken(policy.tenant.id);
 
         const sent = await sendActorInvitation({
@@ -111,7 +121,7 @@ export async function POST(
 
       // Generate tokens for joint obligors
       for (const jo of policy.jointObligors) {
-        if (jo.email && !jo.informationComplete) {
+        if (shouldProcessActor('joint_obligor') && jo.email && (resend || !jo.informationComplete)) {
           const tokenData = await generateJointObligorToken(jo.id);
 
           const sent = await sendActorInvitation({
@@ -139,7 +149,7 @@ export async function POST(
 
       // Generate tokens for avals
       for (const aval of policy.avals) {
-        if (aval.email && !aval.informationComplete) {
+        if (shouldProcessActor('aval') && aval.email && (resend || !aval.informationComplete)) {
           const tokenData = await generateAvalToken(aval.id);
 
           const sent = await sendActorInvitation({
@@ -189,6 +199,8 @@ export async function POST(
 
       // Log summary for debugging
       console.log('Invitations sent summary:', {
+        targetedActors: actors || 'all',
+        resendMode: resend,
         total: invitations.length,
         landlord: invitations.filter(i => i.actorType === 'landlord').length,
         tenant: invitations.filter(i => i.actorType === 'tenant').length,
