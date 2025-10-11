@@ -11,102 +11,33 @@ async function upsertAddresses(avalId: string, data: any) {
 
   // Upsert current address
   if (data.addressDetails) {
+    const { id, createdAt, updatedAt, ...cleanAddressData } = data.addressDetails as any;
     const currentAddress = await prisma.propertyAddress.upsert({
       where: { id: data.addressDetails.id || '' },
-      create: {
-        street: data.addressDetails.street,
-        exteriorNumber: data.addressDetails.exteriorNumber,
-        interiorNumber: data.addressDetails.interiorNumber,
-        neighborhood: data.addressDetails.neighborhood,
-        municipality: data.addressDetails.municipality,
-        state: data.addressDetails.state,
-        postalCode: data.addressDetails.postalCode,
-        country: data.addressDetails.country || 'México',
-        latitude: data.addressDetails.latitude,
-        longitude: data.addressDetails.longitude,
-        formattedAddress: data.addressDetails.formattedAddress,
-      },
-      update: {
-        street: data.addressDetails.street,
-        exteriorNumber: data.addressDetails.exteriorNumber,
-        interiorNumber: data.addressDetails.interiorNumber,
-        neighborhood: data.addressDetails.neighborhood,
-        municipality: data.addressDetails.municipality,
-        state: data.addressDetails.state,
-        postalCode: data.addressDetails.postalCode,
-        country: data.addressDetails.country || 'México',
-        latitude: data.addressDetails.latitude,
-        longitude: data.addressDetails.longitude,
-        formattedAddress: data.addressDetails.formattedAddress,
-      },
+      create: cleanAddressData,
+      update: cleanAddressData,
     });
     updates.addressId = currentAddress.id;
   }
 
   // Upsert employer address
   if (data.employerAddressDetails) {
+    const { id, createdAt, updatedAt, ...cleanAddressData } = data.employerAddressDetails as any;
     const employerAddress = await prisma.propertyAddress.upsert({
       where: { id: data.employerAddressDetails.id || '' },
-      create: {
-        street: data.employerAddressDetails.street,
-        exteriorNumber: data.employerAddressDetails.exteriorNumber,
-        interiorNumber: data.employerAddressDetails.interiorNumber,
-        neighborhood: data.employerAddressDetails.neighborhood,
-        municipality: data.employerAddressDetails.municipality,
-        state: data.employerAddressDetails.state,
-        postalCode: data.employerAddressDetails.postalCode,
-        country: data.employerAddressDetails.country || 'México',
-        latitude: data.employerAddressDetails.latitude,
-        longitude: data.employerAddressDetails.longitude,
-        formattedAddress: data.employerAddressDetails.formattedAddress,
-      },
-      update: {
-        street: data.employerAddressDetails.street,
-        exteriorNumber: data.employerAddressDetails.exteriorNumber,
-        interiorNumber: data.employerAddressDetails.interiorNumber,
-        neighborhood: data.employerAddressDetails.neighborhood,
-        municipality: data.employerAddressDetails.municipality,
-        state: data.employerAddressDetails.state,
-        postalCode: data.employerAddressDetails.postalCode,
-        country: data.employerAddressDetails.country || 'México',
-        latitude: data.employerAddressDetails.latitude,
-        longitude: data.employerAddressDetails.longitude,
-        formattedAddress: data.employerAddressDetails.formattedAddress,
-      },
+      create: cleanAddressData,
+      update: cleanAddressData,
     });
     updates.employerAddressId = employerAddress.id;
   }
 
   // Upsert guarantee property address (MANDATORY for Aval)
   if (data.guaranteePropertyDetails) {
+    const { id, createdAt, updatedAt, ...cleanAddressData } = data.guaranteePropertyDetails as any;
     const guaranteePropertyAddress = await prisma.propertyAddress.upsert({
       where: { id: data.guaranteePropertyDetails.id || '' },
-      create: {
-        street: data.guaranteePropertyDetails.street,
-        exteriorNumber: data.guaranteePropertyDetails.exteriorNumber,
-        interiorNumber: data.guaranteePropertyDetails.interiorNumber,
-        neighborhood: data.guaranteePropertyDetails.neighborhood,
-        municipality: data.guaranteePropertyDetails.municipality,
-        state: data.guaranteePropertyDetails.state,
-        postalCode: data.guaranteePropertyDetails.postalCode,
-        country: data.guaranteePropertyDetails.country || 'México',
-        latitude: data.guaranteePropertyDetails.latitude,
-        longitude: data.guaranteePropertyDetails.longitude,
-        formattedAddress: data.guaranteePropertyDetails.formattedAddress,
-      },
-      update: {
-        street: data.guaranteePropertyDetails.street,
-        exteriorNumber: data.guaranteePropertyDetails.exteriorNumber,
-        interiorNumber: data.guaranteePropertyDetails.interiorNumber,
-        neighborhood: data.guaranteePropertyDetails.neighborhood,
-        municipality: data.guaranteePropertyDetails.municipality,
-        state: data.guaranteePropertyDetails.state,
-        postalCode: data.guaranteePropertyDetails.postalCode,
-        country: data.guaranteePropertyDetails.country || 'México',
-        latitude: data.guaranteePropertyDetails.latitude,
-        longitude: data.guaranteePropertyDetails.longitude,
-        formattedAddress: data.guaranteePropertyDetails.formattedAddress,
-      },
+      create: cleanAddressData,
+      update: cleanAddressData,
     });
     updates.guaranteePropertyAddressId = guaranteePropertyAddress.id;
   }
