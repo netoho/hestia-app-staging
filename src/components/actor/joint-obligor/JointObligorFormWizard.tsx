@@ -357,6 +357,9 @@ export default function JointObligorFormWizard({
                 onFieldChange={updateField}
                 errors={errors}
                 disabled={saving}
+                token={token}
+                jointObligorId={formData.id}
+                initialDocuments={initialData?.documents}
               />
               <div className="flex justify-between mt-4">
                 <Button

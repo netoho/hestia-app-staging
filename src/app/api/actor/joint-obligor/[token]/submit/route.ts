@@ -31,8 +31,16 @@ async function upsertAddresses(jointObligorId: string, data: any) {
     updates.employerAddressId = employerAddress.id;
   }
 
-  // Note: JointObligor schema doesn't support structured property guarantee address
-  // Property guarantee info is stored as simple fields: propertyAddress (string), propertyValue, propertyDeedNumber, etc.
+  // Upsert property guarantee address (for property-based guarantee)
+  if (data.guaranteePropertyDetails) {
+    const { id, createdAt, updatedAt, ...cleanAddressData } = data.guaranteePropertyDetails as any;
+    const guaranteePropertyAddress = await prisma.propertyAddress.upsert({
+      where: { id: data.guaranteePropertyDetails.id || '' },
+      create: cleanAddressData,
+      update: cleanAddressData,
+    });
+    updates.guaranteePropertyAddressId = guaranteePropertyAddress.id;
+  }
 
   return updates;
 }
@@ -149,9 +157,17 @@ export async function PUT(
       // Guarantee Method (UNIQUE to Joint Obligor)
       guaranteeMethod: data.guaranteeMethod || null, // 'income' or 'property'
       hasPropertyGuarantee: data.hasPropertyGuarantee ?? false,
+      // Property Guarantee Information
+      propertyAddress: data.propertyAddress || null,
+      propertyValue: data.propertyValue || null,
+      propertyDeedNumber: data.propertyDeedNumber || null,
+      propertyRegistry: data.propertyRegistry || null,
+      propertyTaxAccount: data.propertyTaxAccount || null,
       propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
-      // Note: Property guarantee detail fields (propertyValue, propertyDeedNumber, etc.)
-      // are NOT in JointObligor schema currently - stored as string in propertyAddress field
+      // Financial Information (income guarantee)
+      bankName: data.bankName || null,
+      accountHolder: data.accountHolder || null,
+      hasProperties: data.hasProperties ?? false,
       // Marriage Information (for property guarantee)
       maritalStatus: data.maritalStatus || null,
       spouseName: data.spouseName || null,
@@ -250,9 +266,17 @@ export async function POST(
       // Guarantee Method (UNIQUE to Joint Obligor)
       guaranteeMethod: data.guaranteeMethod || null, // 'income' or 'property'
       hasPropertyGuarantee: data.hasPropertyGuarantee ?? false,
+      // Property Guarantee Information
+      propertyAddress: data.propertyAddress || null,
+      propertyValue: data.propertyValue || null,
+      propertyDeedNumber: data.propertyDeedNumber || null,
+      propertyRegistry: data.propertyRegistry || null,
+      propertyTaxAccount: data.propertyTaxAccount || null,
       propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
-      // Note: Property guarantee detail fields (propertyValue, propertyDeedNumber, etc.)
-      // are NOT in JointObligor schema currently - stored as string in propertyAddress field
+      // Financial Information (income guarantee)
+      bankName: data.bankName || null,
+      accountHolder: data.accountHolder || null,
+      hasProperties: data.hasProperties ?? false,
       // Marriage Information (for property guarantee)
       maritalStatus: data.maritalStatus || null,
       spouseName: data.spouseName || null,

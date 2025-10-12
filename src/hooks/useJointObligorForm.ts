@@ -203,9 +203,7 @@ export function useJointObligorForm(initialData: Partial<JointObligorFormData> =
       if (!formData.propertyValue || formData.propertyValue <= 0) {
         newErrors.propertyValue = 'Valor de la propiedad debe ser mayor a 0';
       }
-      if (!formData.propertyDeedNumber) {
-        newErrors.propertyDeedNumber = 'Número de escritura es requerido';
-      }
+      // Note: propertyDeedNumber, propertyRegistry, propertyTaxAccount are now extracted from documents by internal team
     } else if (formData.guaranteeMethod === 'income') {
       // For income-based, validate that income info exists
       if (!formData.isCompany && (!formData.monthlyIncome || formData.monthlyIncome <= 0)) {

@@ -94,7 +94,7 @@ export default function JointObligorDocumentsSection({
       .filter(doc => doc.required)
       .map(doc => doc.category);
 
-    const uploadedCategories = new Set(documents.map(doc => doc.category));
+    const uploadedCategories = new Set(Object.values(documents).flat().map(doc => doc.category));
     const allRequiredUploaded = requiredCategories.every(cat => uploadedCategories.has(cat));
 
     if (onRequiredDocsChange) {
@@ -162,7 +162,7 @@ export default function JointObligorDocumentsSection({
       {/* Document Upload Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {documentCategories.map((docType) => {
-          const categoryDocs = documents.filter(d => d.category === docType.category);
+          const categoryDocs = Object.values(documents).flat().filter(d => d.category === docType.category);
           return (
             <DocumentUploadCard
               key={docType.category}

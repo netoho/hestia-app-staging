@@ -123,6 +123,8 @@ class EmailProvider {
       text: data.text
     };
 
+    console.log('Sending email via SMTP to:', mailOptions);
+
     const result = await smtpTransporter.sendMail(mailOptions);
     return true;
   }
@@ -526,7 +528,7 @@ Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamie
 
 // Actor invitation data
 export interface ActorInvitationData {
-  actorType: 'landlord' | 'tenant' | 'joint_obligor' | 'aval';
+  actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval';
   email: string;
   name?: string;
   token: string;
@@ -556,7 +558,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     const actorTypeNames = {
       'landlord': 'Arrendador',
       'tenant': 'Inquilino',
-      'joint_obligor': 'Obligado Solidario',
+      'jointObligor': 'Obligado Solidario',
       'aval': 'Aval'
     };
 
@@ -649,6 +651,9 @@ Importante: Este enlace expirará ${data.expiryDate ? `el ${new Date(data.expiry
 Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.`;
+
+
+    console.log('Sending actor invitation to:', data.email);
 
     return await EmailProvider.sendEmail({
       to: data.email,

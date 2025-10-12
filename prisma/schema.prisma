@@ -448,7 +448,21 @@ model JointObligor {
   // Guarantee Method
   guaranteeMethod   String?     // property or income
   hasPropertyGuarantee Boolean  @default(false)
+
+  // Property Guarantee Information (for property-based guarantee)
+  propertyAddress   String?     // Legacy field for guarantee property
+  guaranteePropertyAddressId String? @unique
+  guaranteePropertyDetails PropertyAddress? @relation("JointObligorPropertyAddress", fields: [guaranteePropertyAddressId], references: [id])
+  propertyValue     Float?
+  propertyDeedNumber String?
+  propertyRegistry  String?
+  propertyTaxAccount String?    // Property tax account number
   propertyUnderLegalProceeding Boolean @default(false)
+
+  // Financial Information (for income-based guarantee)
+  bankName          String?
+  accountHolder     String?
+  hasProperties     Boolean     @default(false)
 
   // Marriage Information (for property guarantee)
   maritalStatus     String?     // single, married_joint, married_separate
@@ -665,6 +679,7 @@ model PropertyAddress {
   tenantPreviousRental Tenant?  @relation("TenantPreviousRentalAddress")
   jointObligor      JointObligor? @relation("JointObligorAddress")
   jointObligorEmployer JointObligor? @relation("JointObligorEmployerAddress")
+  jointObligorProperty JointObligor? @relation("JointObligorPropertyAddress")
   avalPersonal      Aval?       @relation("AvalAddress")
   avalEmployer      Aval?       @relation("AvalEmployerAddress")
   avalProperty      Aval?       @relation("AvalPropertyAddress")

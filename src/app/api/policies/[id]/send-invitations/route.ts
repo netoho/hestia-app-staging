@@ -121,11 +121,13 @@ export async function POST(
 
       // Generate tokens for joint obligors
       for (const jo of policy.jointObligors) {
-        if (shouldProcessActor('joint_obligor') && jo.email && (resend || !jo.informationComplete)) {
+          console.log('Processing joint obligor:', jo.email, 'info complete:', jo.informationComplete);
+          console.log(shouldProcessActor('jointObligor'), policy.jointObligors)
+        if (shouldProcessActor('jointObligor') && jo.email && (resend || !jo.informationComplete)) {
           const tokenData = await generateJointObligorToken(jo.id);
 
           const sent = await sendActorInvitation({
-            actorType: 'joint_obligor',
+            actorType: 'jointObligor',
             email: jo.email,
             name: jo.fullName || 'Obligado Solidario',
             token: tokenData.token,

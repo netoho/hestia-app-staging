@@ -129,7 +129,11 @@ export async function validateJointObligorToken(token: string): Promise<{ valid:
     include: {
       policy: true,
       documents: true,
-      references: true
+      references: true,
+      commercialReferences: true,
+      addressDetails: true,
+      employerAddressDetails: true,
+      guaranteePropertyDetails: true
     }
   });
 

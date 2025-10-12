@@ -7,15 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CreditCard, Home, Info } from 'lucide-react';
+import { CreditCard, Home, Info, Shield } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { JointObligorFormData } from '@/hooks/useJointObligorForm';
+import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
+import { DocumentCategory } from '@/types/policy';
+import { Document } from '@/types/documents';
+import { useDocumentManagement } from '@/hooks/useDocumentManagement';
 
 interface JointObligorGuaranteeTabProps {
   formData: JointObligorFormData;
   onFieldChange: (field: string, value: any) => void;
   errors: Record<string, string>;
   disabled: boolean;
+  token: string;
+  jointObligorId?: string;
+  initialDocuments?: Document[];
 }
 
 export default function JointObligorGuaranteeTab({
@@ -23,7 +30,24 @@ export default function JointObligorGuaranteeTab({
   onFieldChange,
   errors,
   disabled,
+  token,
+  jointObligorId,
+  initialDocuments = [],
 }: JointObligorGuaranteeTabProps) {
+  const {
+    documents,
+    uploadingFiles,
+    uploadErrors,
+    deletingFiles,
+    uploadDocument,
+    downloadDocument,
+    deleteDocument,
+  } = useDocumentManagement({
+    token,
+    actorType: 'joint-obligor',
+    initialDocuments
+  });
+
   return (
     <div className="space-y-4">
       {/* Guarantee Method Selection */}
@@ -134,6 +158,43 @@ export default function JointObligorGuaranteeTab({
         </Card>
       )}
 
+      {/* Income Proof Documents */}
+      {formData.guaranteeMethod === 'income' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Comprobante de Ingresos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Alert className="border-blue-200 bg-blue-50">
+                <Shield className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  Debe cargar comprobantes de sus ingresos para validar su capacidad de pago.
+                </AlertDescription>
+              </Alert>
+
+              <DocumentUploadCard
+                category={DocumentCategory.INCOME_PROOF}
+                title="Comprobante de Ingresos"
+                description="Recibos de nómina, estados de cuenta bancarios, o declaración de impuestos"
+                documentType="income_proof"
+                documents={documents[DocumentCategory.INCOME_PROOF] || []}
+                required={true}
+                allowMultiple={true}
+                onUpload={(file) => uploadDocument(file, DocumentCategory.INCOME_PROOF, 'income_proof')}
+                onDelete={deleteDocument}
+                onDownload={downloadDocument}
+                uploading={uploadingFiles[`${DocumentCategory.INCOME_PROOF}-upload`]}
+                uploadError={uploadErrors[`${DocumentCategory.INCOME_PROOF}-upload`]}
+                deletingDocumentId={Object.keys(deletingFiles).find(id =>
+                  (documents[DocumentCategory.INCOME_PROOF] || []).some(doc => doc.id === id && deletingFiles[id])
+                ) || null}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Property-Based Guarantee Information */}
       {formData.guaranteeMethod === 'property' && (
         <>
@@ -181,46 +242,6 @@ export default function JointObligorGuaranteeTab({
                       <p className="text-sm text-red-500 mt-1">{errors.propertyValue}</p>
                     )}
                   </div>
-
-                  {/* Property Deed Number */}
-                  <div>
-                    <Label htmlFor="propertyDeedNumber">Número de Escritura *</Label>
-                    <Input
-                      id="propertyDeedNumber"
-                      value={formData.propertyDeedNumber || ''}
-                      onChange={(e) => onFieldChange('propertyDeedNumber', e.target.value)}
-                      placeholder="Número de escritura pública"
-                      required
-                      disabled={disabled}
-                    />
-                    {errors.propertyDeedNumber && (
-                      <p className="text-sm text-red-500 mt-1">{errors.propertyDeedNumber}</p>
-                    )}
-                  </div>
-
-                  {/* Property Registry */}
-                  <div>
-                    <Label htmlFor="propertyRegistry">Folio Real / Registro Público</Label>
-                    <Input
-                      id="propertyRegistry"
-                      value={formData.propertyRegistry || ''}
-                      onChange={(e) => onFieldChange('propertyRegistry', e.target.value)}
-                      placeholder="Folio o número de registro"
-                      disabled={disabled}
-                    />
-                  </div>
-
-                  {/* Property Tax Account */}
-                  <div>
-                    <Label htmlFor="propertyTaxAccount">Cuenta Predial</Label>
-                    <Input
-                      id="propertyTaxAccount"
-                      value={formData.propertyTaxAccount || ''}
-                      onChange={(e) => onFieldChange('propertyTaxAccount', e.target.value)}
-                      placeholder="Número de cuenta predial"
-                      disabled={disabled}
-                    />
-                  </div>
                 </div>
 
                 {/* Property Under Legal Proceeding */}
@@ -235,6 +256,61 @@ export default function JointObligorGuaranteeTab({
                     La propiedad está bajo algún proceso legal
                   </Label>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Property Documents */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Documentos de la Propiedad</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    Los documentos de la propiedad son obligatorios. Nuestro equipo verificará la información de la escritura y el pago de impuestos prediales y extraerá datos como número de escritura, folio real y cuenta predial.
+                  </AlertDescription>
+                </Alert>
+
+                {/* Property Deed */}
+                <DocumentUploadCard
+                  category={DocumentCategory.PROPERTY_DEED}
+                  title="Escritura de la Propiedad"
+                  description="Escritura pública de la propiedad que se ofrece como garantía"
+                  documentType="property_deed"
+                  documents={documents[DocumentCategory.PROPERTY_DEED] || []}
+                  required={true}
+                  allowMultiple={false}
+                  onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
+                  onDelete={deleteDocument}
+                  onDownload={downloadDocument}
+                  uploading={uploadingFiles[`${DocumentCategory.PROPERTY_DEED}-upload`]}
+                  uploadError={uploadErrors[`${DocumentCategory.PROPERTY_DEED}-upload`]}
+                  deletingDocumentId={Object.keys(deletingFiles).find(id =>
+                    (documents[DocumentCategory.PROPERTY_DEED] || []).some(doc => doc.id === id && deletingFiles[id])
+                  ) || null}
+                />
+
+                {/* Property Tax Statement */}
+                <DocumentUploadCard
+                  category={DocumentCategory.PROPERTY_TAX_STATEMENT}
+                  title="Boleta Predial"
+                  description="Último recibo de impuesto predial de la propiedad en garantía"
+                  documentType="property_tax_statement"
+                  documents={documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []}
+                  required={true}
+                  allowMultiple={false}
+                  onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_TAX_STATEMENT, 'property_tax_statement')}
+                  onDelete={deleteDocument}
+                  onDownload={downloadDocument}
+                  uploading={uploadingFiles[`${DocumentCategory.PROPERTY_TAX_STATEMENT}-upload`]}
+                  uploadError={uploadErrors[`${DocumentCategory.PROPERTY_TAX_STATEMENT}-upload`]}
+                  deletingDocumentId={Object.keys(deletingFiles).find(id =>
+                    (documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []).some(doc => doc.id === id && deletingFiles[id])
+                  ) || null}
+                />
               </div>
             </CardContent>
           </Card>

@@ -104,23 +104,12 @@ export default function JointObligorReferencesTab({
                   </div>
 
                   {/* Occupation */}
-                  <div>
+                  <div className="md:col-span-2">
                     <Label>Ocupación</Label>
                     <Input
                       value={ref.occupation}
                       onChange={(e) => onUpdatePersonalReference(index, 'occupation', e.target.value)}
                       placeholder="Profesión u ocupación"
-                      disabled={disabled}
-                    />
-                  </div>
-
-                  {/* Address */}
-                  <div>
-                    <Label>Dirección</Label>
-                    <Input
-                      value={ref.address}
-                      onChange={(e) => onUpdatePersonalReference(index, 'address', e.target.value)}
-                      placeholder="Dirección de contacto"
                       disabled={disabled}
                     />
                   </div>
