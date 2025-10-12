@@ -215,11 +215,11 @@ export default function JointObligorFormWizard({
 
       toast({
         title: '✓ Información Enviada',
-        description: 'Su información ha sido enviada exitosamente',
+        description: 'Tu información ha sido enviada exitosamente',
       });
 
       if (onComplete) {
-        onComplete();
+        setTimeout(() => onComplete(), 1500);
       }
     } catch (error) {
       console.error('Submit error:', error);

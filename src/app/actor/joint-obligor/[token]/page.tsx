@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -12,12 +11,12 @@ export default function JointObligorPortalPage({
 }: {
   params: Promise<{ token: string }>
 }) {
-  const router = useRouter();
   const [token, setToken] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [obligorData, setObligorData] = useState<any>(null);
   const [policy, setPolicy] = useState<any>(null);
+  const [completed, setCompleted] = useState(false);
 
   // Resolve params
   useEffect(() => {
@@ -46,12 +45,7 @@ export default function JointObligorPortalPage({
 
       setPolicy(data.policy);
       setObligorData(data.jointObligor);
-
-      // If already completed, show completion state
-      if (data.completed) {
-        setObligorData({ ...data.jointObligor, informationComplete: true });
-      }
-
+      setCompleted(data.completed || data.jointObligor?.informationComplete || false);
       setLoading(false);
     } catch (error) {
       console.error('Validation error:', error);
@@ -61,7 +55,9 @@ export default function JointObligorPortalPage({
   };
 
   const handleComplete = () => {
-    router.refresh();
+    // Reload data to show completed state
+    setCompleted(true);
+    validateAndLoad();
   };
 
   // Loading state
@@ -88,7 +84,7 @@ export default function JointObligorPortalPage({
   }
 
   // Already completed state
-  if (obligorData?.informationComplete) {
+  if (completed) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="max-w-2xl mx-auto">
@@ -99,7 +95,7 @@ export default function JointObligorPortalPage({
                 <strong>Información Completa</strong>
                 <p className="mt-2">
                   Su información como obligado solidario ha sido enviada y está en proceso de revisión.
-                  Si necesita hacer cambios, por favor contacte a soporte.
+                  Si necesita hacer cambios, por favor contacte a soporte en soporte@hestiaplp.com.mx
                 </p>
               </AlertDescription>
             </Alert>
