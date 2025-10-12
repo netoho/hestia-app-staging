@@ -6,26 +6,33 @@ interface UseDocumentManagementProps {
   token: string | null;
   actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord';
   initialDocuments?: Document[];
+  isAdminEdit?: boolean;
 }
 
 const createEmptyDocumentMap = (): Record<DocumentCategory, Document[]> => ({
   [DocumentCategory.IDENTIFICATION]: [],
-  [DocumentCategory.PASSPORT]: [],
-  [DocumentCategory.TAX_STATUS_CERTIFICATE]: [],
+  [DocumentCategory.INCOME_PROOF]: [],
+  [DocumentCategory.ADDRESS_PROOF]: [],
+  [DocumentCategory.BANK_STATEMENT]: [],
+  [DocumentCategory.PROPERTY_DEED]: [],
+  [DocumentCategory.TAX_RETURN]: [],
+  [DocumentCategory.EMPLOYMENT_LETTER]: [],
+  [DocumentCategory.PROPERTY_TAX_STATEMENT]: [],
+  [DocumentCategory.MARRIAGE_CERTIFICATE]: [],
   [DocumentCategory.COMPANY_CONSTITUTION]: [],
   [DocumentCategory.LEGAL_POWERS]: [],
-  [DocumentCategory.PROPERTY_DEED]: [],
-  [DocumentCategory.PROPERTY_TAX_STATEMENT]: [],
+  [DocumentCategory.TAX_STATUS_CERTIFICATE]: [],
+  [DocumentCategory.CREDIT_REPORT]: [],
   [DocumentCategory.PROPERTY_REGISTRY]: [],
-  [DocumentCategory.BANK_STATEMENT]: [],
-  [DocumentCategory.INCOME_PROOF]: [],
-  [DocumentCategory.TAX_RETURN]: [],
-  [DocumentCategory.ADDRESS_PROOF]: [],
-  [DocumentCategory.EMPLOYMENT_LETTER]: [],
+  [DocumentCategory.PROPERTY_APPRAISAL]: [],
+  [DocumentCategory.PASSPORT]: [],
+  [DocumentCategory.IMMIGRATION_DOCUMENT]: [],
+  [DocumentCategory.UTILITY_BILL]: [],
+  [DocumentCategory.PAYROLL_RECEIPT]: [],
   [DocumentCategory.OTHER]: [],
 });
 
-export function useDocumentManagement({ token, actorType, initialDocuments }: UseDocumentManagementProps) {
+export function useDocumentManagement({ token, actorType, initialDocuments, isAdminEdit = false }: UseDocumentManagementProps) {
   const [documents, setDocuments] = useState<Record<DocumentCategory, Document[]>>(() => {
     if (initialDocuments && initialDocuments.length > 0) {
       const grouped = createEmptyDocumentMap();
@@ -50,7 +57,12 @@ export function useDocumentManagement({ token, actorType, initialDocuments }: Us
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/actor/${actorType}/${token}/documents`);
+      // Use admin endpoint if in admin mode, otherwise use actor endpoint
+      const endpoint = isAdminEdit
+        ? `/api/admin/actors/${actorType}/${token}/documents`
+        : `/api/actor/${actorType}/${token}/documents`;
+
+      const response = await fetch(endpoint);
       const result = await response.json();
 
       if (result.success && result.data.documents) {
@@ -70,7 +82,7 @@ export function useDocumentManagement({ token, actorType, initialDocuments }: Us
     } finally {
       setLoading(false);
     }
-  }, [token, actorType]);
+  }, [token, actorType, isAdminEdit]);
 
   useEffect(() => {
     if (token && actorType) {
@@ -112,7 +124,12 @@ export function useDocumentManagement({ token, actorType, initialDocuments }: Us
       formData.append('documentType', documentType);
       formData.append('category', category);
 
-      const response = await fetch(`/api/actor/${actorType}/${token}/documents`, {
+      // Use admin endpoint if in admin mode, otherwise use actor endpoint
+      const endpoint = isAdminEdit
+        ? `/api/admin/actors/${actorType}/${token}/documents`
+        : `/api/actor/${actorType}/${token}/documents`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
@@ -145,9 +162,12 @@ export function useDocumentManagement({ token, actorType, initialDocuments }: Us
     if (!token) return;
 
     try {
-      const response = await fetch(
-        `/api/actor/${actorType}/${token}/documents/${documentId}/download`
-      );
+      // Use admin endpoint if in admin mode, otherwise use actor endpoint
+      const endpoint = isAdminEdit
+        ? `/api/admin/actors/${actorType}/${token}/documents/${documentId}/download`
+        : `/api/actor/${actorType}/${token}/documents/${documentId}/download`;
+
+      const response = await fetch(endpoint);
 
       if (!response.ok) {
         throw new Error('Error al descargar el documento');
@@ -178,12 +198,14 @@ export function useDocumentManagement({ token, actorType, initialDocuments }: Us
     setDeletingFiles(prev => ({ ...prev, [documentId]: true }));
 
     try {
-      const response = await fetch(
-        `/api/actor/${actorType}/${token}/documents?documentId=${documentId}`,
-        {
-          method: 'DELETE',
-        }
-      );
+      // Use admin endpoint if in admin mode, otherwise use actor endpoint
+      const endpoint = isAdminEdit
+        ? `/api/admin/actors/${actorType}/${token}/documents?documentId=${documentId}`
+        : `/api/actor/${actorType}/${token}/documents?documentId=${documentId}`;
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+      });
 
       const result = await response.json();
 

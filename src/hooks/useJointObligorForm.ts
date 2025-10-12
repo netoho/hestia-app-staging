@@ -74,7 +74,7 @@ export interface JointObligorFormData {
   additionalInfo?: string;
 }
 
-export function useJointObligorForm(initialData: Partial<JointObligorFormData> = {}) {
+export function useJointObligorForm(initialData: Partial<JointObligorFormData> = {}, isAdminEdit: boolean = false) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<JointObligorFormData>({
     isCompany: false,
@@ -246,7 +246,11 @@ export function useJointObligorForm(initialData: Partial<JointObligorFormData> =
         partial: true,
       };
 
-      const response = await fetch(`/api/actor/joint-obligor/${token}/submit`, {
+      const submitUrl = isAdminEdit
+        ? `/api/admin/actors/joint-obligor/${token}/submit`
+        : `/api/actor/joint-obligor/${token}/submit`;
+
+      const response = await fetch(submitUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
@@ -290,7 +294,7 @@ export function useJointObligorForm(initialData: Partial<JointObligorFormData> =
     } finally {
       setSaving(false);
     }
-  }, [formData, toast]);
+  }, [formData, toast, isAdminEdit]);
 
   return {
     formData,

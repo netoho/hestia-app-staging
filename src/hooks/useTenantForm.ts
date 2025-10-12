@@ -61,7 +61,7 @@ export interface TenantFormData {
   informationComplete?: boolean;
 }
 
-export function useTenantForm(initialData: Partial<TenantFormData> = {}) {
+export function useTenantForm(initialData: Partial<TenantFormData> = {}, isAdminEdit: boolean = false) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<TenantFormData>({
     tenantType: 'INDIVIDUAL',
@@ -178,7 +178,11 @@ export function useTenantForm(initialData: Partial<TenantFormData> = {}) {
         partial: true,
       };
 
-      const response = await fetch(`/api/actor/tenant/${token}/submit`, {
+      const submitUrl = isAdminEdit
+        ? `/api/admin/actors/tenant/${token}/submit`
+        : `/api/actor/tenant/${token}/submit`;
+
+      const response = await fetch(submitUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
@@ -222,7 +226,7 @@ export function useTenantForm(initialData: Partial<TenantFormData> = {}) {
     } finally {
       setSaving(false);
     }
-  }, [formData, toast]);
+  }, [formData, toast, isAdminEdit]);
 
   return {
     formData,

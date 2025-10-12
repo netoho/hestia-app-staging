@@ -63,7 +63,7 @@ export interface AvalFormData {
   additionalInfo?: string;
 }
 
-export function useAvalForm(initialData: Partial<AvalFormData> = {}) {
+export function useAvalForm(initialData: Partial<AvalFormData> = {}, isAdminEdit: boolean = false) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<AvalFormData>({
     isCompany: false,
@@ -198,7 +198,11 @@ export function useAvalForm(initialData: Partial<AvalFormData> = {}) {
         partial: true,
       };
 
-      const response = await fetch(`/api/actor/aval/${token}/submit`, {
+      const submitUrl = isAdminEdit
+        ? `/api/admin/actors/aval/${token}/submit`
+        : `/api/actor/aval/${token}/submit`;
+
+      const response = await fetch(submitUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
@@ -242,7 +246,7 @@ export function useAvalForm(initialData: Partial<AvalFormData> = {}) {
     } finally {
       setSaving(false);
     }
-  }, [formData, toast]);
+  }, [formData, toast, isAdminEdit]);
 
   return {
     formData,
