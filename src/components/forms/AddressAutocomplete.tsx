@@ -238,7 +238,7 @@ export function AddressAutocomplete({
       municipality: '',
       city: '',
       state: '',
-      country: 'México',
+      country: '',
     };
     setFormData(emptyAddress);
     setSearchInput('');
