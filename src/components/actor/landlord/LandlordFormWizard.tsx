@@ -30,6 +30,7 @@ interface LandlordFormWizardProps {
   initialData?: Partial<LandlordData>;
   policy?: any;
   onComplete?: () => void;
+  isAdminEdit?: boolean; // New prop to indicate admin mode
 }
 
 export default function LandlordFormWizard({
@@ -37,7 +38,9 @@ export default function LandlordFormWizard({
   initialData = {},
   policy,
   onComplete,
+  isAdminEdit = false, // Default to false for regular actor access
 }: LandlordFormWizardProps) {
+    console.log('Initial Data:', initialData, policy);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('personal');
   const [isCompany, setIsCompany] = useState(initialData.isCompany || false);
@@ -197,7 +200,12 @@ export default function LandlordFormWizard({
         submissionData.landlord = filteredData;
       }
 
-      const response = await fetch(`/api/actor/landlord/${token}/submit`, {
+      // Use admin endpoint if in admin mode, otherwise use regular actor endpoint
+      const submitUrl = isAdminEdit
+        ? `/api/admin/actors/landlord/${token}/submit` // token is actually the actor ID in admin mode
+        : `/api/actor/landlord/${token}/submit`; // token is the access token in regular mode
+
+      const response = await fetch(submitUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
@@ -295,15 +303,15 @@ export default function LandlordFormWizard({
             {tabSaved.personal && <Check className="h-3 w-3 mr-1" />}
             Información Personal
           </TabsTrigger>
-          <TabsTrigger value="property" disabled={!tabSaved.personal}>
+          <TabsTrigger value="property" disabled={!isAdminEdit && !tabSaved.personal}>
             {tabSaved.property && <Check className="h-3 w-3 mr-1" />}
             Detalles Propiedad
           </TabsTrigger>
-          <TabsTrigger value="financial" disabled={!tabSaved.property}>
+          <TabsTrigger value="financial" disabled={!isAdminEdit && !tabSaved.property}>
             {tabSaved.financial && <Check className="h-3 w-3 mr-1" />}
             Información Fiscal
           </TabsTrigger>
-          <TabsTrigger value="documents" disabled={!tabSaved.financial}>Documentos</TabsTrigger>
+          <TabsTrigger value="documents" disabled={!isAdminEdit && !tabSaved.financial}>Documentos</TabsTrigger>
         </TabsList>
 
         {/* Personal Information Tab */}
@@ -478,7 +486,8 @@ export default function LandlordFormWizard({
             landlordId={formData.id}
             token={token}
             isCompany={isCompany}
-            allTabsSaved={tabSaved.personal && tabSaved.property && tabSaved.financial}
+            allTabsSaved={isAdminEdit || (tabSaved.personal && tabSaved.property && tabSaved.financial)}
+            isAdminEdit={isAdminEdit}
           />
 
           <div className="flex justify-end">

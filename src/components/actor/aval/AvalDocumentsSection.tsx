@@ -21,6 +21,7 @@ interface AvalDocumentsSectionProps {
   additionalInfo?: string;
   onAdditionalInfoChange?: (value: string) => void;
   onRequiredDocsChange?: (allUploaded: boolean) => void;
+  isAdminEdit?: boolean;
 }
 
 export default function AvalDocumentsSection({
@@ -33,6 +34,7 @@ export default function AvalDocumentsSection({
   additionalInfo = '',
   onAdditionalInfoChange,
   onRequiredDocsChange,
+  isAdminEdit = false,
 }: AvalDocumentsSectionProps) {
   const [localAdditionalInfo, setLocalAdditionalInfo] = useState(additionalInfo);
 
@@ -47,7 +49,8 @@ export default function AvalDocumentsSection({
   } = useDocumentManagement({
     token,
     actorType: 'aval',
-    initialDocuments
+    initialDocuments,
+    isAdminEdit
   });
 
   const handleAdditionalInfoChange = (value: string) => {

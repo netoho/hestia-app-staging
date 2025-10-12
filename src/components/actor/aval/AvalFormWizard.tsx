@@ -20,6 +20,7 @@ interface AvalFormWizardProps {
   initialData?: any;
   policy?: any;
   onComplete?: () => void;
+  isAdminEdit?: boolean;
 }
 
 export default function AvalFormWizard({
@@ -27,6 +28,7 @@ export default function AvalFormWizard({
   initialData = {},
   policy,
   onComplete,
+  isAdminEdit = false,
 }: AvalFormWizardProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('personal');
@@ -49,7 +51,7 @@ export default function AvalFormWizard({
     validatePersonalTab,
     validatePropertyTab,
     saveTab: saveFormTab,
-  } = useAvalForm(initialData);
+  } = useAvalForm(initialData, isAdminEdit);
 
   const {
     personalReferences,
@@ -179,7 +181,11 @@ export default function AvalFormWizard({
         informationComplete: true,
       };
 
-      const response = await fetch(`/api/actor/aval/${token}/submit`, {
+      const submitUrl = isAdminEdit
+        ? `/api/admin/actors/aval/${token}/submit`
+        : `/api/actor/aval/${token}/submit`;
+
+      const response = await fetch(submitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
@@ -261,7 +267,7 @@ export default function AvalFormWizard({
         <TabsList className={`grid w-full grid-cols-${tabs.length}`}>
           {tabs.map((tab, index) => {
             const previousTab = index > 0 ? tabs[index - 1] : null;
-            const isDisabled = previousTab && previousTab.needsSave && !tabSaved[previousTab.id];
+            const isDisabled = !isAdminEdit && previousTab && previousTab.needsSave && !tabSaved[previousTab.id];
 
             return (
               <TabsTrigger key={tab.id} value={tab.id} disabled={isDisabled}>
@@ -415,11 +421,12 @@ export default function AvalFormWizard({
             token={token}
             isCompany={isCompany}
             nationality={formData.nationality}
-            allTabsSaved={allTabsSaved}
+            allTabsSaved={isAdminEdit || allTabsSaved}
             initialDocuments={initialData.documents || []}
             additionalInfo={formData.additionalInfo}
             onAdditionalInfoChange={(value) => updateField('additionalInfo', value)}
             onRequiredDocsChange={setRequiredDocsUploaded}
+            isAdminEdit={isAdminEdit}
           />
 
           <div className="flex justify-end">

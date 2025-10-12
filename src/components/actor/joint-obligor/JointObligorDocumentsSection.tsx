@@ -20,6 +20,7 @@ interface JointObligorDocumentsSectionProps {
   additionalInfo?: string;
   onAdditionalInfoChange?: (value: string) => void;
   onRequiredDocsChange?: (allUploaded: boolean) => void;
+  isAdminEdit?: boolean;
 }
 
 export default function JointObligorDocumentsSection({
@@ -33,6 +34,7 @@ export default function JointObligorDocumentsSection({
   additionalInfo = '',
   onAdditionalInfoChange,
   onRequiredDocsChange,
+  isAdminEdit = false,
 }: JointObligorDocumentsSectionProps) {
   const {
     documents,
@@ -45,7 +47,8 @@ export default function JointObligorDocumentsSection({
   } = useDocumentManagement({
     token,
     actorType: 'joint-obligor',
-    initialDocuments
+    initialDocuments,
+    isAdminEdit
   });
 
   const [checkedDocs, setCheckedDocs] = useState<Set<string>>(new Set());

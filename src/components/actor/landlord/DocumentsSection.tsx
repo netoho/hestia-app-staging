@@ -13,6 +13,7 @@ interface DocumentsSectionProps {
   isCompany: boolean;
   allTabsSaved: boolean;
   initialDocuments?: Document[];
+  isAdminEdit?: boolean;
 }
 
 export default function DocumentsSection({
@@ -21,6 +22,7 @@ export default function DocumentsSection({
   isCompany,
   allTabsSaved,
   initialDocuments = [],
+  isAdminEdit = false,
 }: DocumentsSectionProps) {
   const {
     documents,
@@ -33,7 +35,8 @@ export default function DocumentsSection({
   } = useDocumentManagement({
     token,
     actorType: 'landlord',
-    initialDocuments
+    initialDocuments,
+    isAdminEdit
   });
 
   const documentCategories = isCompany

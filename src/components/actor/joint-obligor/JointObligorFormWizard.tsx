@@ -21,6 +21,7 @@ interface JointObligorFormWizardProps {
   initialData?: any;
   policy?: any;
   onComplete?: () => void;
+  isAdminEdit?: boolean;
 }
 
 export default function JointObligorFormWizard({
@@ -28,6 +29,7 @@ export default function JointObligorFormWizard({
   initialData,
   policy,
   onComplete,
+  isAdminEdit = false,
 }: JointObligorFormWizardProps) {
   const { toast } = useToast();
 
@@ -43,7 +45,7 @@ export default function JointObligorFormWizard({
     validateEmploymentTab,
     validateGuaranteeTab,
     saveTab,
-  } = useJointObligorForm(initialData);
+  } = useJointObligorForm(initialData, isAdminEdit);
 
   const {
     personalReferences,
@@ -110,6 +112,9 @@ export default function JointObligorFormWizard({
 
   // Check if tab can be accessed
   const canAccessTab = (tabId: string) => {
+    // Admin can access all tabs
+    if (isAdminEdit) return true;
+
     const tabIndex = tabs.findIndex(t => t.id === tabId);
     if (tabIndex === 0) return true;
 
@@ -201,7 +206,11 @@ export default function JointObligorFormWizard({
         informationComplete: true,
       };
 
-      const response = await fetch(`/api/actor/joint-obligor/${token}/submit`, {
+      const submitUrl = isAdminEdit
+        ? `/api/admin/actors/joint-obligor/${token}/submit`
+        : `/api/actor/joint-obligor/${token}/submit`;
+
+      const response = await fetch(submitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData),
@@ -430,11 +439,12 @@ export default function JointObligorFormWizard({
                 isCompany={formData.isCompany}
                 guaranteeMethod={formData.guaranteeMethod}
                 nationality={formData.nationality}
-                allTabsSaved={allTabsSaved}
+                allTabsSaved={isAdminEdit || allTabsSaved}
                 initialDocuments={initialData?.documents}
                 additionalInfo={formData.additionalInfo}
                 onAdditionalInfoChange={(value) => updateField('additionalInfo', value)}
                 onRequiredDocsChange={setRequiredDocsUploaded}
+                isAdminEdit={isAdminEdit}
               />
               <div className="flex justify-between mt-4">
                 <Button

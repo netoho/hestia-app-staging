@@ -21,6 +21,7 @@ interface TenantDocumentsSectionProps {
   additionalInfo?: string;
   onAdditionalInfoChange?: (value: string) => void;
   onRequiredDocsChange?: (allUploaded: boolean) => void;
+  isAdminEdit?: boolean;
 }
 
 export default function TenantDocumentsSection({
@@ -33,6 +34,7 @@ export default function TenantDocumentsSection({
   additionalInfo = '',
   onAdditionalInfoChange,
   onRequiredDocsChange,
+  isAdminEdit = false,
 }: TenantDocumentsSectionProps) {
   const [localAdditionalInfo, setLocalAdditionalInfo] = useState(additionalInfo);
 
@@ -47,7 +49,8 @@ export default function TenantDocumentsSection({
   } = useDocumentManagement({
     token,
     actorType: 'tenant',
-    initialDocuments
+    initialDocuments,
+    isAdminEdit
   });
 
   const handleAdditionalInfoChange = (value: string) => {
