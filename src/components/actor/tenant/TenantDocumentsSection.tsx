@@ -144,6 +144,8 @@ export default function TenantDocumentsSection({
         },
       ];
 
+  console.log('Document Categories:', documents);
+
   // Check if all required documents are uploaded
   const requiredDocsUploaded = useMemo(() => {
     const requiredCategories = documentCategories

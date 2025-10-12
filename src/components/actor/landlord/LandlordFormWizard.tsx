@@ -40,7 +40,6 @@ export default function LandlordFormWizard({
   onComplete,
   isAdminEdit = false, // Default to false for regular actor access
 }: LandlordFormWizardProps) {
-    console.log('Initial Data:', initialData, policy);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('personal');
   const [isCompany, setIsCompany] = useState(initialData.isCompany || false);
@@ -50,6 +49,7 @@ export default function LandlordFormWizard({
     property: false,
     financial: false,
   });
+  const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
   // Form data state
   const [formData, setFormData] = useState<Partial<LandlordData>>({
@@ -112,7 +112,16 @@ export default function LandlordFormWizard({
 
   // Save tab data
   const handleSaveTab = async (tabName: string, isPartial: boolean = true) => {
-    setSavingTab(tabName);
+      if (!requiredDocsUploaded && tabName === 'final') {
+          toast({
+              title: "Documentos requeridos",
+              description: "Por favor cargue todos los documentos requeridos antes de enviar.",
+              variant: "destructive",
+          });
+          return;
+      }
+
+      setSavingTab(tabName);
     setErrors({});
 
     try {
@@ -186,6 +195,7 @@ export default function LandlordFormWizard({
              'personalEmail', 'workEmail', 'workPhone'];
 
         const filteredData: any = { isCompany };
+
         relevantFields.forEach(field => {
           if ((formData as any)[field] !== undefined) {
             // Clean addressDetails to remove id and timestamps
@@ -455,6 +465,7 @@ export default function LandlordFormWizard({
             policy={policy}
             token={token}
             landlordId={formData.id}
+            isAdminEdit={isAdminEdit}
           />
 
           <div className="flex justify-end">
@@ -487,13 +498,14 @@ export default function LandlordFormWizard({
             token={token}
             isCompany={isCompany}
             allTabsSaved={isAdminEdit || (tabSaved.personal && tabSaved.property && tabSaved.financial)}
+            onRequiredDocsChange={setRequiredDocsUploaded}
             isAdminEdit={isAdminEdit}
           />
 
           <div className="flex justify-end">
             <Button
               onClick={() => handleSaveTab('final', false)}
-              disabled={savingTab === 'final'}
+              disabled={savingTab === 'final' || !requiredDocsUploaded}
               className="w-full sm:w-auto"
               size="lg"
             >

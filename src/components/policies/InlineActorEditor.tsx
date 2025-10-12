@@ -22,7 +22,7 @@ interface InlineActorEditorProps {
   onClose: () => void;
   actor: any;
   actorType: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
-  policyId: string;
+  policy: any;
   onSave?: () => Promise<void>;
 }
 
@@ -31,7 +31,7 @@ export default function InlineActorEditor({
   onClose,
   actor,
   actorType,
-  policyId,
+  policy,
   onSave,
 }: InlineActorEditorProps) {
   const { toast } = useToast();
@@ -79,14 +79,13 @@ export default function InlineActorEditor({
   };
 
   const getFormWizard = () => {
-    // For admin edit, we use the actor's access token if available
-    // Otherwise, use a special admin token (needs implementation in API)
-    const token = actor?.accessToken || `admin-${actor?.id}`;
-
+    // For admin editing, pass the actor ID and indicate admin mode
+    // The form wizards will use admin endpoints instead of token-based endpoints
     const wizardProps = {
-      token,
+      token: actor?.id, // Pass actor ID instead of token
+      isAdminEdit: true, // Flag to indicate this is an admin edit
       initialData: actor,
-      policy: { id: policyId },
+      policy,
       onComplete: handleComplete,
     };
 

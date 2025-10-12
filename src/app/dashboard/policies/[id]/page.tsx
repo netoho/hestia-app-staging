@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,25 +28,48 @@ import {
 import { t } from '@/lib/i18n';
 import { usePolicyPermissions, useIsStaffOrAdmin } from '@/lib/hooks/usePolicyPermissions';
 
-// Import new components
+// Import lightweight components (eager loading)
 import ActorCard from '@/components/policies/details/ActorCard';
-import ActorVerificationCard from '@/components/policies/details/ActorVerificationCard';
 import PropertyCard from '@/components/policies/details/PropertyCard';
 import PricingCard from '@/components/policies/details/PricingCard';
 import TimelineCard from '@/components/policies/details/TimelineCard';
-import DocumentsList from '@/components/policies/details/DocumentsList';
-import ActivityTimeline from '@/components/policies/details/ActivityTimeline';
-
-// Import Phase 2 components
-import InlineActorEditor from '@/components/policies/InlineActorEditor';
 import ActorProgressCard from '@/components/policies/ActorProgressCard';
 import ActorActivityTimeline from '@/components/policies/ActorActivityTimeline';
 
-// Import Phase 3 components
-import ShareInvitationModal from '@/components/policies/ShareInvitationModal';
+// Import skeleton and error components
+import PolicyDetailsSkeleton from '@/components/ui/skeleton/PolicyDetailsSkeleton';
+import ActorCardSkeleton from '@/components/ui/skeleton/ActorCardSkeleton';
+import ProgressCardSkeleton from '@/components/ui/skeleton/ProgressCardSkeleton';
+import TimelineSkeleton from '@/components/ui/skeleton/TimelineSkeleton';
+import DocumentListSkeleton from '@/components/ui/skeleton/DocumentListSkeleton';
+import PolicyErrorState from '@/components/ui/error/PolicyErrorState';
+import ErrorBoundary from '@/components/ui/error/ErrorBoundary';
 
-// Import Phase 4 components
-import ApprovalWorkflow from '@/components/policies/ApprovalWorkflow';
+// Dynamic imports for heavy components (lazy loading)
+const ApprovalWorkflow = dynamic(() => import('@/components/policies/ApprovalWorkflow'), {
+  loading: () => <ActorCardSkeleton />,
+  ssr: false
+});
+
+const ShareInvitationModal = dynamic(() => import('@/components/policies/ShareInvitationModal'), {
+  loading: () => null,
+  ssr: false
+});
+
+const InlineActorEditor = dynamic(() => import('@/components/policies/InlineActorEditor'), {
+  loading: () => null,
+  ssr: false
+});
+
+const DocumentsList = dynamic(() => import('@/components/policies/details/DocumentsList'), {
+  loading: () => <DocumentListSkeleton />,
+  ssr: false
+});
+
+const ActivityTimeline = dynamic(() => import('@/components/policies/details/ActivityTimeline'), {
+  loading: () => <TimelineSkeleton />,
+  ssr: false
+});
 
 interface PolicyDetails {
   id: string;
@@ -129,7 +153,13 @@ export default function PolicyDetailsPage({
   const [policyId, setPolicyId] = useState<string>('');
   const [policy, setPolicy] = useState<PolicyDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<{
+    code?: number;
+    message?: string;
+    type?: 'network' | 'not-found' | 'server' | 'unauthorized' | 'unknown';
+  } | null>(null);
   const [currentTab, setCurrentTab] = useState('overview');
+  const [tabLoading, setTabLoading] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [editingActor, setEditingActor] = useState<{
     type: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
@@ -152,14 +182,33 @@ export default function PolicyDetailsPage({
 
   const fetchPolicyDetails = async () => {
     try {
+      setError(null);
       // Fetch policy with progress calculation
       const response = await fetch(`/api/policies/${policyId}?include=progress`);
-      if (!response.ok) throw new Error('Failed to fetch policy');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 404) {
+          setError({ code: 404, type: 'not-found', message: errorData.message });
+        } else if (response.status === 401 || response.status === 403) {
+          setError({ code: response.status, type: 'unauthorized', message: errorData.message });
+        } else if (response.status >= 500) {
+          setError({ code: response.status, type: 'server', message: errorData.message });
+        } else {
+          setError({ code: response.status, type: 'unknown', message: errorData.message });
+        }
+        return;
+      }
 
       const data = await response.json();
       setPolicy(data.data || data);
     } catch (error) {
       console.error('Error fetching policy:', error);
+      setError({
+        type: 'network',
+        message: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
+      });
     } finally {
       setLoading(false);
     }
@@ -370,36 +419,61 @@ export default function PolicyDetailsPage({
 
   const isStaffOrAdmin = useIsStaffOrAdmin(user);
 
+  // Handle loading state with skeleton
   if (loading) {
+    return <PolicyDetailsSkeleton />;
+  }
+
+  // Handle error state
+  if (error) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <PolicyErrorState
+        error={error}
+        onRetry={() => {
+          setLoading(true);
+          setError(null);
+          fetchPolicyDetails();
+        }}
+        onGoHome={() => router.push('/dashboard/policies')}
+      />
     );
   }
 
+  // Handle not found after loading
   if (!policy) {
     return (
-      <div className="container mx-auto p-6">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Póliza no encontrada</AlertDescription>
-        </Alert>
-      </div>
+      <PolicyErrorState
+        error={{ code: 404, type: 'not-found' }}
+        onRetry={() => {
+          setLoading(true);
+          fetchPolicyDetails();
+        }}
+        onGoHome={() => router.push('/dashboard/policies')}
+      />
     );
   }
 
   const progressPercentage = calculateProgress();
   const allActorsApproved = checkAllActorsApproved();
 
+  // Handle tab change with smooth transition
+  const handleTabChange = (value: string) => {
+    setTabLoading(true);
+    setCurrentTab(value);
+    // Add small delay to show transition
+    setTimeout(() => setTabLoading(false), 150);
+  };
+
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
+    <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
+      <div className="container mx-auto p-6 max-w-7xl animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
             onClick={() => router.push('/dashboard/policies')}
+            className="transition-all hover:scale-105 hover:shadow-md"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
@@ -416,7 +490,7 @@ export default function PolicyDetailsPage({
           {permissions.canApprove && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
             <Button
               onClick={approvePolicy}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 transition-all hover:scale-105 hover:shadow-lg"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {t.pages.policies.approvePolicy}
@@ -429,6 +503,7 @@ export default function PolicyDetailsPage({
               onClick={handleSendInvitations}
               variant="default"
               disabled={sending === 'all'}
+              className="transition-all hover:scale-105 hover:shadow-md disabled:hover:scale-100"
             >
               {sending === 'all' ? (
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -444,6 +519,7 @@ export default function PolicyDetailsPage({
             <Button
               onClick={() => setShowShareModal(true)}
               variant="outline"
+              className="transition-all hover:scale-105 hover:shadow-md"
             >
               <Share2 className="mr-2 h-4 w-4" />
               Compartir Enlaces
@@ -453,7 +529,7 @@ export default function PolicyDetailsPage({
       </div>
 
       {/* Enhanced Progress Overview */}
-      <Card className="mb-6">
+      <Card className="mb-6 transition-all hover:shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -482,33 +558,33 @@ export default function PolicyDetailsPage({
               </div>
               <Progress
                 value={policy.progress?.overall || progressPercentage}
-                className="h-3"
+                className="h-3 transition-all duration-500"
               />
             </div>
 
             {/* Stats Grid */}
             {policy.progress && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
+                <div className="text-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 hover:scale-105">
+                  <div className="text-2xl font-bold text-blue-600 transition-all">
                     {policy.progress.totalActors}
                   </div>
                   <div className="text-xs text-gray-600 mt-1">Actores Totales</div>
                 </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
+                <div className="text-center p-3 bg-green-50 rounded-lg transition-all hover:bg-green-100 hover:scale-105">
+                  <div className="text-2xl font-bold text-green-600 transition-all">
                     {policy.progress.completedActors}
                   </div>
                   <div className="text-xs text-gray-600 mt-1">Completados</div>
                 </div>
-                <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
+                <div className="text-center p-3 bg-orange-50 rounded-lg transition-all hover:bg-orange-100 hover:scale-105">
+                  <div className="text-2xl font-bold text-orange-600 transition-all">
                     {policy.progress.totalActors - policy.progress.completedActors}
                   </div>
                   <div className="text-xs text-gray-600 mt-1">Pendientes</div>
                 </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
+                <div className="text-center p-3 bg-purple-50 rounded-lg transition-all hover:bg-purple-100 hover:scale-105">
+                  <div className="text-2xl font-bold text-purple-600 transition-all">
                     {policy.progress.documentsUploaded}/{policy.progress.documentsRequired}
                   </div>
                   <div className="text-xs text-gray-600 mt-1">Documentos</div>
@@ -536,7 +612,7 @@ export default function PolicyDetailsPage({
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className={`grid w-full ${permissions.canApprove || permissions.canVerifyDocuments ? 'grid-cols-7' : 'grid-cols-6'}`}>
           <TabsTrigger value="overview">General</TabsTrigger>
           <TabsTrigger value="landlord">Arrendador</TabsTrigger>
@@ -551,7 +627,7 @@ export default function PolicyDetailsPage({
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <PropertyCard
               propertyAddress={policy.propertyAddress}
@@ -580,7 +656,7 @@ export default function PolicyDetailsPage({
         </TabsContent>
 
         {/* Landlord Tab */}
-        <TabsContent value="landlord" className="space-y-6">
+        <TabsContent value="landlord" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <ActorCard
@@ -612,7 +688,7 @@ export default function PolicyDetailsPage({
         </TabsContent>
 
         {/* Tenant Tab */}
-        <TabsContent value="tenant" className="space-y-6">
+        <TabsContent value="tenant" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <ActorCard
@@ -644,7 +720,7 @@ export default function PolicyDetailsPage({
         </TabsContent>
 
         {/* Guarantors Tab */}
-        <TabsContent value="guarantors" className="space-y-6">
+        <TabsContent value="guarantors" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           {/* Joint Obligors */}
           {(policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') && (
             <div className="space-y-4">
@@ -753,7 +829,7 @@ export default function PolicyDetailsPage({
 
         {/* Verification Tab - For Staff/Admin */}
         {(permissions.canApprove || permissions.canVerifyDocuments) && (
-          <TabsContent value="verification" className="space-y-6">
+          <TabsContent value="verification" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <ApprovalWorkflow
               policy={policy}
               onApprove={approveActor}
@@ -765,12 +841,12 @@ export default function PolicyDetailsPage({
         )}
 
         {/* Documents Tab */}
-        <TabsContent value="documents" className="space-y-6">
+        <TabsContent value="documents" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <DocumentsList documents={policy.documents} />
         </TabsContent>
 
         {/* Timeline Tab */}
-        <TabsContent value="timeline" className="space-y-6">
+        <TabsContent value="timeline" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <ActivityTimeline activities={policy.activities} />
         </TabsContent>
       </Tabs>
@@ -782,7 +858,7 @@ export default function PolicyDetailsPage({
           onClose={() => setEditingActor(null)}
           actor={editingActor.actor}
           actorType={editingActor.type}
-          policyId={policyId}
+          policy={policy}
           onSave={async () => {
             await fetchPolicyDetails();
             setEditingActor(null);
@@ -798,5 +874,6 @@ export default function PolicyDetailsPage({
         policyNumber={policy.policyNumber}
       />
     </div>
+    </ErrorBoundary>
   );
 }

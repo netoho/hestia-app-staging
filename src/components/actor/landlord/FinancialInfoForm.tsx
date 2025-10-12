@@ -20,6 +20,7 @@ interface FinancialInfoFormProps {
   policy?: any;
   token: string;
   landlordId?: string;
+  isAdminEdit?: boolean;
 }
 
 export default function FinancialInfoForm({
@@ -32,6 +33,7 @@ export default function FinancialInfoForm({
   policy,
   token,
   landlordId,
+  isAdminEdit=false,
 }: FinancialInfoFormProps) {
   const {
     documents,
@@ -43,6 +45,7 @@ export default function FinancialInfoForm({
   } = useDocumentManagement({
     token,
     actorType: 'landlord',
+    isAdminEdit,
   });
 
   const taxCertificateDocs = documents[DocumentCategory.TAX_STATUS_CERTIFICATE] || [];

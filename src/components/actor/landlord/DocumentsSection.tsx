@@ -6,6 +6,7 @@ import { useDocumentManagement } from '@/hooks/useDocumentManagement';
 import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
 import { DocumentCategory } from '@/types/policy';
 import { Document } from '@/types/documents';
+import {useMemo} from "react";
 
 interface DocumentsSectionProps {
   landlordId?: string;
@@ -13,6 +14,7 @@ interface DocumentsSectionProps {
   isCompany: boolean;
   allTabsSaved: boolean;
   initialDocuments?: Document[];
+  onRequiredDocsChange?: (allUploaded: boolean) => void
   isAdminEdit?: boolean;
 }
 
@@ -22,6 +24,7 @@ export default function DocumentsSection({
   isCompany,
   allTabsSaved,
   initialDocuments = [],
+  onRequiredDocsChange,
   isAdminEdit = false,
 }: DocumentsSectionProps) {
   const {
@@ -76,7 +79,7 @@ export default function DocumentsSection({
           type: 'rfc_document',
           title: 'RFC',
           description: 'Registro Federal de Contribuyentes (opcional)',
-          required: false
+          required: true
         },
       ];
 
@@ -105,6 +108,27 @@ export default function DocumentsSection({
   ];
 
   const allDocuments = [...documentCategories, ...commonDocuments];
+
+
+
+    // Check if all required documents are uploaded
+    const requiredDocsUploaded = useMemo(() => {
+        const requiredCategories = documentCategories
+            .filter(doc => doc.required)
+            .map(doc => doc.category);
+
+        return requiredCategories.every(category => {
+            const categoryDocs = documents[category] || [];
+            return categoryDocs.length > 0;
+        });
+    }, [documents, documentCategories]);
+
+    // Notify parent of required docs status
+    useMemo(() => {
+        if (onRequiredDocsChange) {
+            onRequiredDocsChange(requiredDocsUploaded);
+        }
+    }, [requiredDocsUploaded, onRequiredDocsChange]);
 
   if (!allTabsSaved) {
     return (
@@ -146,6 +170,16 @@ export default function DocumentsSection({
           />
         );
       })}
+
+    {/* Warning if required docs not uploaded */}
+    {!requiredDocsUploaded && (
+        <Alert className="border-orange-200 bg-orange-50">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+                Por favor cargue todos los documentos requeridos antes de enviar su información.
+            </AlertDescription>
+        </Alert>
+    )}
     </div>
   );
 }
