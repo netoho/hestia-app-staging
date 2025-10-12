@@ -28,8 +28,6 @@ export async function PUT(
       isPartialSave
     );
 
-    console.log('Landlord submission result:', result);
-
     // Convert result to API response
     if (!result.ok) {
       const response = toServiceResponse(result);
