@@ -318,25 +318,35 @@ export async function getPolicyById(id: string) {
       },
       landlord: {
         include: {
-          documents: true,
+        documents: true,
+        addressDetails: true,
         }
       },
       tenant: {
         include: {
           references: true,
           documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          previousRentalAddressDetails: true,
         }
       },
       jointObligors: {
         include: {
           references: true,
           documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          guaranteePropertyDetails: true,
         }
       },
       avals: {
         include: {
           references: true,
           documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          guaranteePropertyDetails: true,
         }
       },
       propertyDetails: {

@@ -151,8 +151,6 @@ export class LandlordService extends BaseActorService {
       return Result.error(result.error);
     }
 
-    this.log('info', 'Property details saved', { policyId });
-
     // Convert back to PropertyDetailsType for compatibility
     const savedDetails: PropertyDetailsType = {
       propertyAddressDetails: result.value.propertyAddressDetails || undefined,
