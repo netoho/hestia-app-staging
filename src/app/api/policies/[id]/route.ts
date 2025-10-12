@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withPolicyAuth } from '@/lib/middleware/policyAuth';
-import { updatePolicyStatus, logPolicyActivity } from '@/lib/services/policyService';
+import { updatePolicyStatus, logPolicyActivity, getPolicyById } from '@/lib/services/policyService';
+import { calculatePolicyProgress } from '@/lib/services/progressService';
 
 export const GET = withPolicyAuth(async (
   request: NextRequest,
@@ -8,8 +9,38 @@ export const GET = withPolicyAuth(async (
   authResult
 ) => {
   try {
-    // Policy is already loaded and authorized by middleware
-    return NextResponse.json(authResult.policy);
+    const { id } = await params;
+    const url = new URL(request.url);
+
+    // Parse include query parameter for selective includes
+    const includeParams = url.searchParams.get('include')?.split(',') || [];
+    const includeProgress = includeParams.includes('progress') || includeParams.length === 0; // Include progress by default
+
+    // Fetch policy with all necessary data
+    // Note: withPolicyAuth already loads basic policy data, but we need more details
+    const policy = await getPolicyById(id);
+
+    if (!policy) {
+      return NextResponse.json(
+        { error: 'Policy not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calculate progress if requested
+    let progress = null;
+    if (includeProgress) {
+      progress = calculatePolicyProgress(policy);
+    }
+
+    // Return response with calculated data
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...policy,
+        ...(progress && { progress }),
+      },
+    });
 
   } catch (error) {
     console.error('Get policy error:', error);

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
@@ -11,14 +12,48 @@ interface ActorCardProps {
   actorType: 'tenant' | 'landlord' | 'jointObligor' | 'aval';
   policyId: string;
   getVerificationBadge?: (status: string) => React.ReactNode;
+  onEditClick?: () => void;
 }
 
-export default function ActorCard({ actor, actorType, policyId, getVerificationBadge }: ActorCardProps) {
+export default function ActorCard({ actor, actorType, policyId, getVerificationBadge, onEditClick }: ActorCardProps) {
   const router = useRouter();
   const { downloadDocument, downloading } = useDocumentDownload();
   const { data: session } = useSession();
 
   const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
+
+  // Calculate actor progress
+  const calculateProgress = () => {
+    if (!actor) return 0;
+    if (actor.informationComplete) return 100;
+
+    let completed = 0;
+    let total = 10;
+
+    // Check basic fields
+    if (actor.fullName || actor.companyName) completed++;
+    if (actor.email) completed++;
+    if (actor.phone) completed++;
+    if (actor.rfc || actor.companyRfc) completed++;
+    if (actor.address || actor.addressDetails) completed++;
+
+    // Employment/business
+    if (actor.occupation || actor.legalRepName) completed++;
+    if (actor.monthlyIncome) completed++;
+
+    // Additional
+    if (actor.curp || actor.passport) completed++;
+
+    // References
+    if (actor.references?.length > 0 || actor.commercialReferences?.length > 0) completed++;
+
+    // Documents
+    if (actor.documents?.length > 0) completed++;
+
+    return Math.round((completed / total) * 100);
+  };
+
+  const progress = calculateProgress();
 
   const formatCurrency = (amount?: number) => {
     if (!amount) return '$0';
@@ -65,7 +100,9 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
           <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTitle().toLowerCase()}</p>
           {isStaffOrAdmin && (
             <Button onClick={() => {
-              if (actorType === 'landlord') {
+              if (onEditClick) {
+                onEditClick();
+              } else if (actorType === 'landlord') {
                 router.push(`/dashboard/policies/${policyId}/landlord`);
               } else if (actorType === 'tenant') {
                 router.push(`/dashboard/policies/${policyId}/tenant`);
@@ -105,7 +142,9 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  if (actorType === 'landlord') {
+                  if (onEditClick) {
+                    onEditClick();
+                  } else if (actorType === 'landlord') {
                     router.push(`/dashboard/policies/${policyId}/landlord`);
                   } else if (actorType === 'tenant') {
                     router.push(`/dashboard/policies/${policyId}/tenant`);
@@ -124,6 +163,35 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Progress Bar */}
+        {!actor.informationComplete && (
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="font-medium">Progreso de Información</span>
+              <span className="font-bold">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <div className="text-lg font-bold text-purple-600">{actor.documents?.length || 0}</div>
+            <div className="text-xs text-gray-600">Documentos</div>
+          </div>
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <div className="text-lg font-bold text-green-600">
+              {(actor.references?.length || 0) + (actor.commercialReferences?.length || 0)}
+            </div>
+            <div className="text-xs text-gray-600">Referencias</div>
+          </div>
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <div className="text-lg font-bold text-blue-600">{progress}%</div>
+            <div className="text-xs text-gray-600">Completo</div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">

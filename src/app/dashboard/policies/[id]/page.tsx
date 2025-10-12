@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,9 +19,13 @@ import {
   RefreshCw,
   Clock,
   XCircle,
-  Eye
+  Eye,
+  FileText,
+  TrendingUp,
+  Share2
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
+import { usePolicyPermissions, useIsStaffOrAdmin } from '@/lib/hooks/usePolicyPermissions';
 
 // Import new components
 import ActorCard from '@/components/policies/details/ActorCard';
@@ -31,6 +35,17 @@ import PricingCard from '@/components/policies/details/PricingCard';
 import TimelineCard from '@/components/policies/details/TimelineCard';
 import DocumentsList from '@/components/policies/details/DocumentsList';
 import ActivityTimeline from '@/components/policies/details/ActivityTimeline';
+
+// Import Phase 2 components
+import InlineActorEditor from '@/components/policies/InlineActorEditor';
+import ActorProgressCard from '@/components/policies/ActorProgressCard';
+import ActorActivityTimeline from '@/components/policies/ActorActivityTimeline';
+
+// Import Phase 3 components
+import ShareInvitationModal from '@/components/policies/ShareInvitationModal';
+
+// Import Phase 4 components
+import ApprovalWorkflow from '@/components/policies/ApprovalWorkflow';
 
 interface PolicyDetails {
   id: string;
@@ -86,6 +101,22 @@ interface PolicyDetails {
     name?: string;
     email: string;
   };
+
+  // Progress metrics (from API with ?include=progress)
+  progress?: {
+    overall: number;
+    byActor: Record<string, {
+      percentage: number;
+      completedFields: number;
+      totalFields: number;
+      documentsUploaded: number;
+      documentsRequired: number;
+    }>;
+    completedActors: number;
+    totalActors: number;
+    documentsUploaded: number;
+    documentsRequired: number;
+  };
 }
 
 export default function PolicyDetailsPage({
@@ -100,6 +131,11 @@ export default function PolicyDetailsPage({
   const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState('overview');
   const [sending, setSending] = useState<string | null>(null);
+  const [editingActor, setEditingActor] = useState<{
+    type: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
+    actor: any;
+  } | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Resolve params
   useEffect(() => {
@@ -116,7 +152,8 @@ export default function PolicyDetailsPage({
 
   const fetchPolicyDetails = async () => {
     try {
-      const response = await fetch(`/api/policies/${policyId}`);
+      // Fetch policy with progress calculation
+      const response = await fetch(`/api/policies/${policyId}?include=progress`);
       if (!response.ok) throw new Error('Failed to fetch policy');
 
       const data = await response.json();
@@ -317,7 +354,21 @@ export default function PolicyDetailsPage({
     return landlordApproved && tenantApproved && jointObligorsApproved && avalsApproved;
   };
 
-  const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
+  // Use permission hooks
+  const user = session?.user ? {
+    id: (session.user as any).id || '',
+    email: session.user.email || '',
+    role: (session.user as any).role || 'BROKER',
+    name: session.user.name || undefined,
+  } : null;
+
+  const permissions = usePolicyPermissions(user, policy ? {
+    id: policy.id,
+    createdById: policy.createdBy?.id || '',
+    status: policy.status,
+  } : null);
+
+  const isStaffOrAdmin = useIsStaffOrAdmin(user);
 
   if (loading) {
     return (
@@ -361,7 +412,8 @@ export default function PolicyDetailsPage({
         </div>
 
         <div className="flex gap-2">
-          {isStaffOrAdmin && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
+          {/* Policy Approval Button - Only for Staff/Admin */}
+          {permissions.canApprove && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
             <Button
               onClick={approvePolicy}
               className="bg-green-600 hover:bg-green-700"
@@ -371,7 +423,8 @@ export default function PolicyDetailsPage({
             </Button>
           )}
 
-          {(policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
+          {/* Send Invitations Button */}
+          {permissions.canSendInvitations && (policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
             <Button
               onClick={handleSendInvitations}
               variant="default"
@@ -385,45 +438,112 @@ export default function PolicyDetailsPage({
               {t.pages.policies.sendInvitations}
             </Button>
           )}
+
+          {/* Share Links Button */}
+          {permissions.canSendInvitations && (
+            <Button
+              onClick={() => setShowShareModal(true)}
+              variant="outline"
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartir Enlaces
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Progress Overview */}
+      {/* Enhanced Progress Overview */}
       <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm text-gray-600">Progreso de Información</p>
-              <p className="text-2xl font-bold">{progressPercentage}% Completado</p>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-600" />
+              <CardTitle>Progreso General</CardTitle>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">
-                {policy.landlord?.informationComplete ? 1 : 0} +
-                {policy.tenant?.informationComplete ? 1 : 0} +
-                {policy.jointObligors?.filter((jo: any) => jo.informationComplete).length || 0} +
-                {policy.avals?.filter((a: any) => a.informationComplete).length || 0} actores completados
-              </p>
-              {isStaffOrAdmin && (
-                <p className="text-xs text-gray-500 mt-1">
+            {policy.progress && (
+              <Badge variant="outline" className="text-sm">
+                {policy.progress.completedActors} / {policy.progress.totalActors} Actores
+              </Badge>
+            )}
+          </div>
+          <CardDescription>
+            Estado de completitud de información y documentos
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Main Progress Bar */}
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium">Progreso Total</span>
+                <span className="font-bold text-lg">
+                  {policy.progress?.overall || progressPercentage}%
+                </span>
+              </div>
+              <Progress
+                value={policy.progress?.overall || progressPercentage}
+                className="h-3"
+              />
+            </div>
+
+            {/* Stats Grid */}
+            {policy.progress && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {policy.progress.totalActors}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">Actores Totales</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {policy.progress.completedActors}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">Completados</div>
+                </div>
+                <div className="text-center p-3 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {policy.progress.totalActors - policy.progress.completedActors}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">Pendientes</div>
+                </div>
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {policy.progress.documentsUploaded}/{policy.progress.documentsRequired}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">Documentos</div>
+                </div>
+              </div>
+            )}
+
+            {/* Verification Status for Staff/Admin */}
+            {isStaffOrAdmin && (
+              <Alert className={allActorsApproved ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}>
+                {allActorsApproved ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Clock className="h-4 w-4 text-orange-600" />
+                )}
+                <AlertDescription className={allActorsApproved ? 'text-green-700' : 'text-orange-700'}>
                   {allActorsApproved
                     ? t.pages.policies.actorVerification.allActorsApproved
                     : t.pages.policies.actorVerification.pendingActorApprovals}
-                </p>
-              )}
-            </div>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
-          <Progress value={progressPercentage} className="h-3" />
         </CardContent>
       </Card>
 
       {/* Main Content Tabs */}
       <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
-        <TabsList className={`grid w-full ${isStaffOrAdmin ? 'grid-cols-7' : 'grid-cols-6'}`}>
+        <TabsList className={`grid w-full ${permissions.canApprove || permissions.canVerifyDocuments ? 'grid-cols-7' : 'grid-cols-6'}`}>
           <TabsTrigger value="overview">General</TabsTrigger>
           <TabsTrigger value="landlord">Arrendador</TabsTrigger>
           <TabsTrigger value="tenant">Inquilino</TabsTrigger>
           <TabsTrigger value="guarantors">Garantías</TabsTrigger>
-          {isStaffOrAdmin && (
+          {/* Show verification tab only for users with approval/verification permissions */}
+          {(permissions.canApprove || permissions.canVerifyDocuments) && (
             <TabsTrigger value="verification">Verificación</TabsTrigger>
           )}
           <TabsTrigger value="documents">Documentos</TabsTrigger>
@@ -461,22 +581,66 @@ export default function PolicyDetailsPage({
 
         {/* Landlord Tab */}
         <TabsContent value="landlord" className="space-y-6">
-          <ActorCard
-            actor={policy.landlord}
-            actorType="landlord"
-            policyId={policyId}
-            getVerificationBadge={getVerificationBadge}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ActorCard
+                actor={policy.landlord}
+                actorType="landlord"
+                policyId={policyId}
+                getVerificationBadge={getVerificationBadge}
+                onEditClick={() => setEditingActor({ type: 'landlord', actor: policy.landlord })}
+              />
+            </div>
+            <div className="space-y-4">
+              <ActorProgressCard
+                actor={policy.landlord}
+                actorType="landlord"
+                onEdit={() => setEditingActor({ type: 'landlord', actor: policy.landlord })}
+                onSendInvitation={() => sendIndividualInvitation('landlord', policy.landlord?.id)}
+                permissions={{
+                  canEdit: permissions.canEdit,
+                  canSendInvitations: permissions.canSendInvitations,
+                }}
+              />
+              <ActorActivityTimeline
+                activities={policy.activities}
+                actorType="landlord"
+                actorName={policy.landlord?.fullName || policy.landlord?.companyName}
+              />
+            </div>
+          </div>
         </TabsContent>
 
         {/* Tenant Tab */}
         <TabsContent value="tenant" className="space-y-6">
-          <ActorCard
-            actor={policy.tenant}
-            actorType="tenant"
-            policyId={policyId}
-            getVerificationBadge={getVerificationBadge}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ActorCard
+                actor={policy.tenant}
+                actorType="tenant"
+                policyId={policyId}
+                getVerificationBadge={getVerificationBadge}
+                onEditClick={() => setEditingActor({ type: 'tenant', actor: policy.tenant })}
+              />
+            </div>
+            <div className="space-y-4">
+              <ActorProgressCard
+                actor={policy.tenant}
+                actorType="tenant"
+                onEdit={() => setEditingActor({ type: 'tenant', actor: policy.tenant })}
+                onSendInvitation={() => sendIndividualInvitation('tenant', policy.tenant?.id)}
+                permissions={{
+                  canEdit: permissions.canEdit,
+                  canSendInvitations: permissions.canSendInvitations,
+                }}
+              />
+              <ActorActivityTimeline
+                activities={policy.activities}
+                actorType="tenant"
+                actorName={policy.tenant?.fullName || policy.tenant?.companyName}
+              />
+            </div>
+          </div>
         </TabsContent>
 
         {/* Guarantors Tab */}
@@ -484,15 +648,40 @@ export default function PolicyDetailsPage({
           {/* Joint Obligors */}
           {(policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') && (
             <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Obligados Solidarios
+              </h3>
               {policy.jointObligors && policy.jointObligors.length > 0 ? (
                 policy.jointObligors.map((jo: any) => (
-                  <ActorCard
-                    key={jo.id}
-                    actor={jo}
-                    actorType="jointObligor"
-                    policyId={policyId}
-                    getVerificationBadge={getVerificationBadge}
-                  />
+                  <div key={jo.id} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <ActorCard
+                        actor={jo}
+                        actorType="jointObligor"
+                        policyId={policyId}
+                        getVerificationBadge={getVerificationBadge}
+                        onEditClick={() => setEditingActor({ type: 'jointObligor', actor: jo })}
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <ActorProgressCard
+                        actor={jo}
+                        actorType="jointObligor"
+                        onEdit={() => setEditingActor({ type: 'jointObligor', actor: jo })}
+                        onSendInvitation={() => sendIndividualInvitation('jointObligor', jo.id)}
+                        permissions={{
+                          canEdit: permissions.canEdit,
+                          canSendInvitations: permissions.canSendInvitations,
+                        }}
+                      />
+                      <ActorActivityTimeline
+                        activities={policy.activities}
+                        actorId={jo.id}
+                        actorName={jo.fullName || jo.companyName}
+                      />
+                    </div>
+                  </div>
                 ))
               ) : (
                 <Card>
@@ -513,13 +702,34 @@ export default function PolicyDetailsPage({
               </h3>
               {policy.avals && policy.avals.length > 0 ? (
                 policy.avals.map((aval: any) => (
-                  <ActorCard
-                    key={aval.id}
-                    actor={aval}
-                    actorType="aval"
-                    policyId={policyId}
-                    getVerificationBadge={getVerificationBadge}
-                  />
+                  <div key={aval.id} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <ActorCard
+                        actor={aval}
+                        actorType="aval"
+                        policyId={policyId}
+                        getVerificationBadge={getVerificationBadge}
+                        onEditClick={() => setEditingActor({ type: 'aval', actor: aval })}
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <ActorProgressCard
+                        actor={aval}
+                        actorType="aval"
+                        onEdit={() => setEditingActor({ type: 'aval', actor: aval })}
+                        onSendInvitation={() => sendIndividualInvitation('aval', aval.id)}
+                        permissions={{
+                          canEdit: permissions.canEdit,
+                          canSendInvitations: permissions.canSendInvitations,
+                        }}
+                      />
+                      <ActorActivityTimeline
+                        activities={policy.activities}
+                        actorId={aval.id}
+                        actorName={aval.fullName || aval.companyName}
+                      />
+                    </div>
+                  </div>
                 ))
               ) : (
                 <Card>
@@ -542,12 +752,14 @@ export default function PolicyDetailsPage({
         </TabsContent>
 
         {/* Verification Tab - For Staff/Admin */}
-        {isStaffOrAdmin && (
+        {(permissions.canApprove || permissions.canVerifyDocuments) && (
           <TabsContent value="verification" className="space-y-6">
-            <ActorVerificationCard
+            <ApprovalWorkflow
               policy={policy}
               onApprove={approveActor}
               onReject={rejectActor}
+              onApprovePolicy={approvePolicy}
+              canApprovePolicy={permissions.canApprove}
             />
           </TabsContent>
         )}
@@ -562,6 +774,29 @@ export default function PolicyDetailsPage({
           <ActivityTimeline activities={policy.activities} />
         </TabsContent>
       </Tabs>
+
+      {/* Inline Actor Editor Modal */}
+      {editingActor && (
+        <InlineActorEditor
+          isOpen={!!editingActor}
+          onClose={() => setEditingActor(null)}
+          actor={editingActor.actor}
+          actorType={editingActor.type}
+          policyId={policyId}
+          onSave={async () => {
+            await fetchPolicyDetails();
+            setEditingActor(null);
+          }}
+        />
+      )}
+
+      {/* Share Invitation Modal */}
+      <ShareInvitationModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        policyId={policyId}
+        policyNumber={policy.policyNumber}
+      />
     </div>
   );
 }
