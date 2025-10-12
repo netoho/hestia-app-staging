@@ -1,3 +1,15 @@
+/**
+ * Actor endpoint for document management (token-based authentication)
+ *
+ * TODO: REFACTOR - This file duplicates logic from /api/admin/actors/[type]/[id]/documents/route.ts
+ * The only differences are:
+ * 1. Uses token auth instead of session auth
+ * 2. Uses access token instead of actor ID
+ * 3. Logs actor activity instead of admin activity
+ *
+ * Consider creating a shared service for document operations to eliminate duplication.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { uploadActorDocument, validateFile, UploadedFile } from '@/lib/services/fileUploadService';
