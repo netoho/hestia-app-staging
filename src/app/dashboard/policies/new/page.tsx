@@ -387,7 +387,7 @@ export default function NewPolicyPage() {
           <TabsTrigger value="pricing">Precio</TabsTrigger>
           <TabsTrigger value="landlord">Arrendador</TabsTrigger>
           <TabsTrigger value="tenant">Inquilino</TabsTrigger>
-          <TabsTrigger value="guarantors">Garantías</TabsTrigger>
+          <TabsTrigger value="guarantors">Obligado S. / Aval</TabsTrigger>
           <TabsTrigger value="review">Revisar</TabsTrigger>
         </TabsList>
 
@@ -860,10 +860,6 @@ export default function NewPolicyPage() {
                       <span>Precio del Paquete:</span>
                       <span className="font-medium">{formatCurrency(pricing.packagePrice)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Cuota de Investigación:</span>
-                      <span className="font-medium">{formatCurrency(pricing.investigationFee)}</span>
-                    </div>
                     <div className="flex justify-between pt-2 border-t">
                       <span className="font-medium">Total:</span>
                       <span className="font-bold">{formatCurrency(pricing.total)}</span>
@@ -1227,12 +1223,12 @@ export default function NewPolicyPage() {
         <TabsContent value="guarantors">
           <Card>
             <CardHeader>
-              <CardTitle>Garantías</CardTitle>
-              <CardDescription>Configure el tipo de garantía para esta protección</CardDescription>
+              <CardTitle>Obligado S. / Aval</CardTitle>
+              <CardDescription>Añada info de Obligado o Aval</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="guarantorType">Tipo de Garantía</Label>
+                <Label htmlFor="guarantorType">Obligado S. / Aval</Label>
                 <Select
                   value={guarantorType}
                   onValueChange={(value) => setGuarantorType(value as GuarantorType)}

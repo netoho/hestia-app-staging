@@ -22,7 +22,7 @@ const packagesData = [
       'CONTRATO DE ARRENDAMIENTO': [
         'Redacción y entrega de contrato',
         'Elaboración de documentos de garantía',
-        'Asistencia de abogado a Firma'
+        'Asistencia a Firma Virtual'
       ]
     },
     ctaText: 'Comenzar',
@@ -47,7 +47,7 @@ const packagesData = [
       'CONTRATO DE ARRENDAMIENTO': [
         'Redacción y entrega de contrato',
         'Elaboración de documentos de garantía',
-        'Asistencia de abogado a Firma'
+        'Asistencia a Firma Virtual'
       ],
       'GESTIÓN DE INCIDENCIAS': [
         'Mediación entre las partes',

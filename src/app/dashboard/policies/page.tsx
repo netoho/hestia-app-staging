@@ -230,7 +230,7 @@ export default function PoliciesPage() {
                   <TableHead>Propiedad</TableHead>
                   <TableHead>Inquilino</TableHead>
                   <TableHead>Arrendador</TableHead>
-                  <TableHead>Garantías</TableHead>
+                  <TableHead>Obligado S. / Aval</TableHead>
                   <TableHead>Precio Total</TableHead>
                   <TableHead>Progreso</TableHead>
                   <TableHead>Acciones</TableHead>

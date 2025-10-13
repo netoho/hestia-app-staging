@@ -617,7 +617,7 @@ export default function PolicyDetailsPage({
           <TabsTrigger value="overview">General</TabsTrigger>
           <TabsTrigger value="landlord">Arrendador</TabsTrigger>
           <TabsTrigger value="tenant">Inquilino</TabsTrigger>
-          <TabsTrigger value="guarantors">Garantías</TabsTrigger>
+          <TabsTrigger value="guarantors">Obligado S. / Aval</TabsTrigger>
           {/* Show verification tab only for users with approval/verification permissions */}
           {(permissions.canApprove || permissions.canVerifyDocuments) && (
             <TabsTrigger value="verification">Verificación</TabsTrigger>
