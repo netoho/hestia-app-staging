@@ -44,7 +44,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
     {
       "text-white": isPremium,
       "text-foreground": !isPremium,
-      "text-6xl": !packageItem.percentage,
+      "xl:text-6xl md:text-5xl max-md:text-6xl": !packageItem.percentage,
       "text-4xl": packageItem.percentage,
     }
   );
