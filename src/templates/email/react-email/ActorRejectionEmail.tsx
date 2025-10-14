@@ -11,36 +11,37 @@ import {
   Hr,
   Img,
 } from '@react-email/components';
-import { PolicyInvitationData } from '@/lib/services/emailService';
-import { generatePolicyUrl } from '@/lib/utils/tokenUtils';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
 
-interface PolicyInvitationEmailProps {
-  tenantEmail: string;
-  tenantName?: string;
-  propertyAddress?: string;
-  accessToken: string;
-  expiryDate: Date;
-  initiatorName: string;
+export interface ActorRejectionEmailProps {
+  to: string;
+  actorName: string;
+  actorType: string;
+  rejectionReason: string;
+  policyNumber: string;
 }
 
-export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
-  tenantEmail,
-  tenantName,
-  propertyAddress,
-  accessToken,
-  expiryDate,
-  initiatorName,
+export const ActorRejectionEmail: React.FC<ActorRejectionEmailProps> = ({
+  to,
+  actorName,
+  actorType,
+  rejectionReason,
+  policyNumber,
 }) => {
-  const policyUrl = generatePolicyUrl(accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-  const expiryDateFormatted = new Date(expiryDate).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const actorTypeLabels: Record<string, string> = {
+    landlord: 'Arrendador',
+    tenant: 'Inquilino',
+    jointObligor: 'Obligado Solidario',
+    aval: 'Aval',
+  };
 
-  return (
+  const actorTypeLabel = actorTypeLabels[actorType] || actorType;
+
+  const privacyUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.privacy}`;
+  const termsUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.terms}`;
+
+
+    return (
     <Html>
       <Head />
       <Body style={{ backgroundColor: brandColors.background, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
@@ -51,7 +52,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
         }}>
           {/* Header */}
           <Section style={{
-            background: `linear-gradient(135deg, ${brandColors.email.headerGradientStart} 0%, ${brandColors.email.headerGradientEnd} 100%)`,
+            background: `linear-gradient(135deg, ${brandColors.danger} 0%, ${brandColors.warning} 100%)`,
             padding: '30px',
             textAlign: 'center',
             borderRadius: '12px 12px 0 0',
@@ -70,7 +71,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               fontWeight: '700',
               letterSpacing: '-0.025em'
             }}>
-              Solicitud de Protección de Arrendamiento
+              Información Rechazada
             </Heading>
             <Text style={{
               margin: '8px 0 0 0',
@@ -78,7 +79,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              Completa tu aplicación en minutos
+              Póliza #{policyNumber}
             </Text>
           </Section>
 
@@ -97,7 +98,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               fontSize: '24px',
               fontWeight: '600'
             }}>
-              Hola{tenantName ? ` ${tenantName}` : ''},
+              Hola {actorName},
             </Heading>
 
             <Text style={{
@@ -106,11 +107,29 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              <strong>{initiatorName}</strong> ha iniciado una solicitud de protección de arrendamiento para ti
-              {propertyAddress && (
-                <> para la propiedad ubicada en <strong>{propertyAddress}</strong></>
-              )}.
+              Tu información como <strong>{actorTypeLabel}</strong> para la póliza <strong>{policyNumber}</strong> ha sido rechazada.
             </Text>
+
+            {/* Rejection Reason Box */}
+            <Section style={{
+              backgroundColor: '#fee2e2',
+              border: '2px solid #fecaca',
+              padding: '20px',
+              borderRadius: '8px',
+              margin: '20px 0'
+            }}>
+              <Heading style={{
+                margin: '0 0 10px 0',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: brandColors.danger
+              }}>
+                Razón del rechazo:
+              </Heading>
+              <Text style={{ margin: 0, color: '#7f1d1d', lineHeight: '1.5' }}>
+                {rejectionReason}
+              </Text>
+            </Section>
 
             <Text style={{
               fontSize: '16px',
@@ -118,14 +137,35 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Para completar tu solicitud, haz clic en el botón de abajo y sigue el proceso paso a paso:
+              Por favor, revisa y actualiza tu información según las observaciones proporcionadas. Puedes acceder nuevamente usando el enlace que te fue enviado anteriormente.
             </Text>
+
+            {/* Info Box */}
+            <Section style={{
+              backgroundColor: brandColors.email.infoBackground,
+              border: `2px solid ${brandColors.email.infoBorder}`,
+              padding: '20px',
+              borderRadius: '8px',
+              margin: '20px 0'
+            }}>
+              <Heading style={{
+                margin: '0 0 10px 0',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: brandColors.textPrimary
+              }}>
+                💡 ¿Necesitas ayuda?
+              </Heading>
+              <Text style={{ margin: 0, color: brandColors.textPrimary, lineHeight: '1.5' }}>
+                Si tienes preguntas o necesitas asistencia para actualizar tu información, nuestro equipo de soporte está disponible para ayudarte.
+              </Text>
+            </Section>
 
             <Section style={{ textAlign: 'center', margin: '30px 0' }}>
               <Button
-                href={policyUrl}
+                href={`mailto:${brandInfo.infoEmail}`}
                 style={{
-                  backgroundColor: brandColors.primary,
+                  backgroundColor: brandColors.secondary,
                   color: brandColors.white,
                   padding: '16px 32px',
                   borderRadius: '8px',
@@ -138,87 +178,21 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
                   display: 'inline-block'
                 }}
               >
-                ✨ Completar Mi Solicitud
+                📧 Contactar Soporte
               </Button>
             </Section>
 
-            {/* Warning Box */}
-            <Section style={{
-              backgroundColor: brandColors.email.warningBackground,
-              border: `2px solid ${brandColors.email.warningBorder}`,
-              padding: '20px',
-              borderRadius: '8px',
-              margin: '20px 0'
-            }}>
-              <Heading style={{
-                margin: '0 0 10px 0',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: brandColors.warning
-              }}>
-                ⚠️ Importante
-              </Heading>
-              <Text style={{ margin: 0, color: brandColors.textPrimary }}>
-                Este enlace expirará el <strong>{expiryDateFormatted}</strong>.
-                Por favor completa tu solicitud antes de esta fecha.
-              </Text>
-            </Section>
-
-            <Heading style={{
-              color: brandColors.textPrimary,
-              fontSize: '20px',
-              fontWeight: '600',
-              marginTop: '30px',
-              marginBottom: '16px'
-            }}>
-              Lo que necesitarás:
-            </Heading>
+            <Hr style={{ margin: '30px 0', borderColor: brandColors.border }} />
 
             <Text style={{
-              fontSize: '16px',
+              fontSize: '14px',
               lineHeight: '1.6',
-              color: brandColors.textPrimary,
-              margin: '8px 0'
+              color: brandColors.textSecondary,
+              textAlign: 'center',
+              margin: '20px 0 0 0'
             }}>
-              • Identificación válida (CURP mexicana o pasaporte)
+              Este es un correo automático. Por favor, no respondas a este mensaje.
             </Text>
-            <Text style={{
-              fontSize: '16px',
-              lineHeight: '1.6',
-              color: brandColors.textPrimary,
-              margin: '8px 0'
-            }}>
-              • Información laboral y comprobantes de ingresos
-            </Text>
-            <Text style={{
-              fontSize: '16px',
-              lineHeight: '1.6',
-              color: brandColors.textPrimary,
-              margin: '8px 0'
-            }}>
-              • Información de contacto de referencias personales
-            </Text>
-            <Text style={{
-              fontSize: '16px',
-              lineHeight: '1.6',
-              color: brandColors.textPrimary,
-              margin: '8px 0'
-            }}>
-              • Documentos adicionales (opcional)
-            </Text>
-
-            {/* Info Box */}
-            <Section style={{
-              backgroundColor: brandColors.email.infoBackground,
-              border: `2px solid ${brandColors.email.infoBorder}`,
-              padding: '20px',
-              borderRadius: '8px',
-              margin: '20px 0'
-            }}>
-              <Text style={{ margin: 0, color: brandColors.textPrimary }}>
-                💡 <strong>Tip:</strong> El proceso de solicitud toma típicamente 15-20 minutos en completarse.
-              </Text>
-            </Section>
           </Section>
 
           {/* Footer */}
@@ -288,7 +262,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
                     fontSize: '11px',
                     color: brandColors.textMuted
                   }}>
-                    Todos los derechos reservados | <a href="${process.env.NEXT_PUBLIC_APP_URL}/privacy" style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href="${process.env.NEXT_PUBLIC_APP_URL}/terms" style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
+                    Todos los derechos reservados | <a href={privacyUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href={termsUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
                   </Text>
                 </td>
               </tr>
@@ -300,4 +274,4 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
   );
 };
 
-export default PolicyInvitationEmail;
+export default ActorRejectionEmail;

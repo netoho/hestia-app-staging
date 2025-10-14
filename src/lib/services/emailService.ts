@@ -117,13 +117,13 @@ class EmailProvider {
 
     const mailOptions = {
       from: FROM_EMAIL,
-      to: data.to,
+      to: 'ehuerta@iadgroup.mx',
       subject: data.subject,
       html: data.html,
       text: data.text
     };
 
-    console.log('Sending email via SMTP to:', mailOptions);
+    // console.log('Sending email via SMTP to:', mailOptions);
 
     const result = await smtpTransporter.sendMail(mailOptions);
     return true;
@@ -529,6 +529,7 @@ Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamie
 // Actor invitation data
 export interface ActorInvitationData {
   actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval';
+  isCompany: boolean;
   email: string;
   name?: string;
   token: string;
@@ -552,8 +553,11 @@ export interface JoinUsNotificationData {
 
 export const sendActorInvitation = async (data: ActorInvitationData): Promise<boolean> => {
   try {
-    // Use the URL provided directly from the token service
-    const actorUrl = data.url;
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { ActorInvitationEmail } = await import('../../templates/email/react-email/ActorInvitationEmail');
+
+    const html = await render(ActorInvitationEmail(data));
 
     const actorTypeNames = {
       'landlord': 'Arrendador',
@@ -565,69 +569,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     const actorTypeName = actorTypeNames[data.actorType];
     const subject = `Acción Requerida: Completa tu información como ${actorTypeName} - Póliza ${data.policyNumber}`;
 
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #6d28d9 0%, #a855f7 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
-    .content { background-color: #ffffff; padding: 40px 30px; border: 1px solid #e9ecef; border-radius: 0 0 12px 12px; }
-    .button { display: inline-block; padding: 14px 30px; background-color: #10b981; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-    .info-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center; font-size: 14px; color: #6c757d; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 style="margin: 0; color: #ffffff;">Hestia</h1>
-      <p style="margin: 10px 0 0 0; color: #ffffff;">Sistema de Pólizas de Garantía</p>
-    </div>
-    <div class="content">
-      <h2>Hola${data.name ? ` ${data.name}` : ''},</h2>
-
-      <p>${data.initiatorName || 'El administrador'} te ha designado como <strong>${actorTypeName}</strong> en una protección de arrendamiento.</p>
-
-      <div class="info-box">
-        <p style="margin: 0;"><strong>Número de Póliza:</strong> ${data.policyNumber}</p>
-        <p style="margin: 10px 0 0 0;"><strong>Propiedad:</strong> ${data.propertyAddress}</p>
-      </div>
-
-      <p>Para continuar con el proceso, necesitamos que completes tu información y documentación:</p>
-
-      <div style="text-align: center;">
-        <a href="${actorUrl}" class="button">Completar Mi Información</a>
-      </div>
-
-      <h3>¿Qué necesitarás?</h3>
-      <ul>
-        <li>Identificación oficial (INE o pasaporte)</li>
-        <li>Información laboral y comprobantes de ingresos</li>
-        <li>3 referencias personales con datos de contacto</li>
-        ${data.actorType === 'aval' ? '<li>Información de la propiedad en garantía</li>' : ''}
-      </ul>
-
-      <p><strong>Importante:</strong> Este enlace expirará el ${data.expiryDate ? new Date(data.expiryDate).toLocaleDateString('es-MX', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }) : 'en 7 días'}.</p>
-
-      <div class="footer">
-        <p>Si tienes preguntas, contacta a: <a href="mailto:soporte@hestiaplp.com.mx">soporte@hestiaplp.com.mx</a></p>
-        <p>&copy; ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-    `;
-
+    // Generate plain text version
     const text = `
 Hola${data.name ? ` ${data.name}` : ''},
 
@@ -638,7 +580,7 @@ Propiedad: ${data.propertyAddress}
 
 Para continuar con el proceso, necesitamos que completes tu información y documentación.
 
-Accede aquí: ${actorUrl}
+Accede aquí: ${data.url}
 
 ¿Qué necesitarás?
 - Identificación oficial (INE o pasaporte)
@@ -650,8 +592,8 @@ Importante: Este enlace expirará ${data.expiryDate ? `el ${new Date(data.expiry
 
 Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
 
-© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.`;
-
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
 
     console.log('Sending actor invitation to:', data.email);
 
@@ -731,7 +673,11 @@ export interface ActorRejectionData {
 
 export const sendActorRejectionEmail = async (params: ActorRejectionData): Promise<boolean> => {
   try {
-    const { to, actorName, actorType, rejectionReason, policyNumber } = params;
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { ActorRejectionEmail } = await import('../../templates/email/react-email/ActorRejectionEmail');
+
+    const html = await render(ActorRejectionEmail(params));
 
     const actorTypeLabels: Record<string, string> = {
       landlord: 'Arrendador',
@@ -740,66 +686,31 @@ export const sendActorRejectionEmail = async (params: ActorRejectionData): Promi
       aval: 'Aval',
     };
 
-    const subject = `Información Rechazada - Póliza ${policyNumber}`;
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
-        <div style="background-color: #ef4444; color: white; padding: 24px; text-align: center;">
-          <h1 style="margin: 0; font-size: 24px;">Información Rechazada</h1>
-        </div>
+    const subject = `Información Rechazada - Póliza ${params.policyNumber}`;
 
-        <div style="padding: 32px;">
-          <p style="color: #333; font-size: 16px; line-height: 1.5;">Hola <strong>${actorName}</strong>,</p>
-
-          <p style="color: #333; font-size: 16px; line-height: 1.5;">
-            Tu información como <strong>${actorTypeLabels[actorType] || actorType}</strong> para la póliza
-            <strong>${policyNumber}</strong> ha sido rechazada.
-          </p>
-
-          <div style="background-color: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
-            <p style="margin: 0; color: #991b1b; font-weight: bold;">Razón del rechazo:</p>
-            <p style="margin: 8px 0 0 0; color: #7f1d1d;">${rejectionReason}</p>
-          </div>
-
-          <p style="color: #333; font-size: 16px; line-height: 1.5;">
-            Por favor, revisa y actualiza tu información según las observaciones proporcionadas.
-            Puedes acceder nuevamente usando el enlace que te fue enviado anteriormente.
-          </p>
-
-          <p style="color: #333; font-size: 16px; line-height: 1.5; margin-top: 24px;">
-            Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en
-            <a href="mailto:${SUPPORT_EMAIL}" style="color: #3b82f6; text-decoration: none;">${SUPPORT_EMAIL}</a>
-          </p>
-        </div>
-
-        <div style="background-color: #f3f4f6; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 12px; margin: 0;">
-            Este es un correo automático. Por favor, no respondas a este mensaje.
-          </p>
-        </div>
-      </div>
-    `;
-
+    // Generate plain text version
     const text = `
-      Hola ${actorName},
+Hola ${params.actorName},
 
-      Tu información como ${actorTypeLabels[actorType] || actorType} para la póliza ${policyNumber} ha sido rechazada.
+Tu información como ${actorTypeLabels[params.actorType] || params.actorType} para la póliza ${params.policyNumber} ha sido rechazada.
 
-      Razón del rechazo:
-      ${rejectionReason}
+Razón del rechazo:
+${params.rejectionReason}
 
-      Por favor, revisa y actualiza tu información según las observaciones proporcionadas.
+Por favor, revisa y actualiza tu información según las observaciones proporcionadas.
+Puedes acceder nuevamente usando el enlace que te fue enviado anteriormente.
 
-      Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en ${SUPPORT_EMAIL}.
-    `;
+Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en ${SUPPORT_EMAIL}.
 
-    const result = await sendEmail({
-      to,
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: params.to,
       subject,
       text,
       html,
     });
-
-    return true;
   } catch (error) {
     console.error('Failed to send actor rejection email:', error);
     return false;

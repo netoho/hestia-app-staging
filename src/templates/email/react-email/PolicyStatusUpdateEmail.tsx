@@ -9,24 +9,12 @@ import {
   Heading,
   Button,
   Hr,
+  Img,
 } from '@react-email/components';
 import { PolicyStatusUpdateData } from '@/lib/services/emailService';
+import {brandColors, brandInfo, brandUrls} from '@/lib/config/brand';
 
 interface PolicyStatusUpdateEmailProps extends PolicyStatusUpdateData {}
-
-// Hestia brand colors
-const brandColors = {
-  primary: '#1a365d',
-  secondary: '#2b77e6',
-  success: '#38a169',
-  warning: '#d69e2e',
-  danger: '#e53e3e',
-  textPrimary: '#2d3748',
-  textSecondary: '#4a5568',
-  textMuted: '#718096',
-  background: '#f8fafc',
-  white: '#ffffff',
-};
 
 export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = ({
   tenantEmail,
@@ -50,14 +38,21 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
         }}>
           {/* Header */}
           <Section style={{
-            background: `linear-gradient(135deg, ${headerColor} 0%, ${brandColors.secondary} 100%)`,
-            padding: '40px 30px',
+            background: `linear-gradient(135deg, ${headerColor} 0%, ${brandColors.email.headerGradientEnd} 100%)`,
+            padding: '30px',
             textAlign: 'center',
             borderRadius: '12px 12px 0 0',
           }}>
+              <img
+                  src={`${brandUrls.production}/images/logo-hestia-azul-top.png`}
+                  alt={brandInfo.name}
+                  width="150"
+                  height="50"
+                  style={{ margin: '0 auto' }}
+              />
             <Heading style={{
               margin: 0,
-              color: brandColors.white,
+              color: brandColors.textPrimary,
               fontSize: '28px',
               fontWeight: '700',
               letterSpacing: '-0.025em'
@@ -66,7 +61,7 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
             </Heading>
             <Text style={{
               margin: '8px 0 0 0',
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: brandColors.textSecondary,
               fontSize: '16px',
               fontWeight: '400'
             }}>
@@ -262,44 +257,74 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
           <Section style={{
             marginTop: '40px',
             paddingTop: '30px',
-            borderTop: '2px solid #f7fafc',
-            textAlign: 'center'
+            borderTop: `2px solid ${brandColors.border}`,
           }}>
-            <Text style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: brandColors.primary,
-              marginBottom: '10px'
-            }}>
-              Hestia
-            </Text>
-            <Text style={{
-              margin: '5px 0',
-              fontSize: '14px',
-              color: brandColors.textMuted
-            }}>
-              Protegiendo tu tranquilidad en cada arrendamiento.
-            </Text>
-            <Text style={{
-              margin: '15px 0 5px 0',
-              fontSize: '14px',
-              color: brandColors.textMuted
-            }}>
-              ¿Tienes preguntas? Contáctanos en{' '}
-              <a
-                href="mailto:soporte@hestiaplp.com.mx"
-                style={{ color: brandColors.secondary, textDecoration: 'none' }}
-              >
-                soporte@hestiaplp.com.mx
-              </a>
-            </Text>
-            <Text style={{
-              margin: '5px 0 0 0',
-              fontSize: '12px',
-              color: brandColors.textMuted
-            }}>
-              © {new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
-            </Text>
+            <table style={{ width: '100%' }}>
+              <tr>
+                <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                  <Img
+                    src={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/images/logo-hestia-azul-top.png`}
+                    alt="Hestia Logo"
+                    width="140"
+                    height="40"
+                    style={{ margin: '0 auto', display: 'block' }}
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td style={{ textAlign: 'center', paddingBottom: '15px' }}>
+                  <Text style={{
+                    margin: '0',
+                    fontSize: '14px',
+                    color: brandColors.textMuted,
+                    fontStyle: 'italic'
+                  }}>
+                    {brandInfo.tagline}
+                  </Text>
+                </td>
+              </tr>
+              <tr>
+                <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                  <table style={{ margin: '0 auto' }}>
+                    <tr>
+                      <td style={{ padding: '0 15px' }}>
+                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                          📧 {brandInfo.supportEmail}
+                        </Text>
+                      </td>
+                      <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
+                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                          📱 {brandInfo.supportPhone}
+                        </Text>
+                      </td>
+                      <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
+                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                          📍 {brandInfo.location}
+                        </Text>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style={{ textAlign: 'center', paddingTop: '15px', borderTop: `1px solid ${brandColors.border}` }}>
+                  <Text style={{
+                    margin: '10px 0 0 0',
+                    fontSize: '12px',
+                    color: brandColors.textMuted
+                  }}>
+                    © {new Date().getFullYear()} {brandInfo.companyLegalName}
+                  </Text>
+                  <Text style={{
+                    margin: '5px 0 0 0',
+                    fontSize: '11px',
+                    color: brandColors.textMuted
+                  }}>
+                    Todos los derechos reservados | <a href={`${process.env.NEXT_PUBLIC_APP_URL}/privacy`} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href={`${process.env.NEXT_PUBLIC_APP_URL}/terms`} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
+                  </Text>
+                </td>
+              </tr>
+            </table>
           </Section>
         </Container>
       </Body>
