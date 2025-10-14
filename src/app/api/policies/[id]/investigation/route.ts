@@ -125,12 +125,13 @@ export async function POST(
         data: {
           policyId: id,
           action: 'investigation_started',
+          description: 'Investigation started',
           details: {
             investigatorId: user.id,
             priority,
             notes,
           },
-          performedBy: user.id,
+          performedById: user.id,
         },
       });
 
@@ -219,11 +220,12 @@ export async function PUT(
           data: {
             policyId: id,
             action: 'investigation_completed',
+            description: `Investigation completed with recommendation: ${data.recommendation}`,
             details: {
               recommendation: data.recommendation,
               investigatorId: user.id,
             },
-            performedBy: user.id,
+            performedById: user.id,
           },
         });
       } else {
@@ -232,8 +234,9 @@ export async function PUT(
           data: {
             policyId: id,
             action: 'investigation_updated',
+            description: 'Investigation updated',
             details: data,
-            performedBy: user.id,
+            performedById: user.id,
           },
         });
       }

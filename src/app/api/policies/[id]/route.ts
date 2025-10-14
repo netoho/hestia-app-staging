@@ -33,10 +33,10 @@ export const GET = withPolicyAuth(async (
       progress = calculatePolicyProgress(policy);
     }
 
-    console.log('Policy fetched:', {
-        ...policy,
-        ...(progress && { progress }),
-    });
+    // console.log('Policy fetched:', {
+    //     ...policy,
+    //     ...(progress && { progress }),
+    // });
 
     // Return response with calculated data
     return NextResponse.json({

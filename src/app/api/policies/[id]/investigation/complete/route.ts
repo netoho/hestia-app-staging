@@ -58,12 +58,12 @@ export async function PUT(
           throw new Error('No investigation found for this policy');
         }
 
-        if (policy.status !== 'INVESTIGATION_IN_PROGRESS') {
+        if (policy.status !== 'UNDER_INVESTIGATION') {
           throw new Error('Policy is not under investigation');
         }
 
-        // Calculate response time
-        const startTime = policy.investigationStartedAt || new Date();
+        // Calculate response time - use investigation.createdAt as start time
+        const startTime = policy.investigation.createdAt;
         const responseTimeHours = Math.round((completedAt.getTime() - startTime.getTime()) / (1000 * 60 * 60));
 
         // Update investigation
@@ -75,7 +75,7 @@ export async function PUT(
             rejectedBy: verdict === 'REJECTED' ? 'STAFF' : null,
             rejectionReason: verdict === 'REJECTED' ? rejectionReason : null,
             rejectedAt: verdict === 'REJECTED' ? completedAt : null,
-            completedBy: authResult.user.id,
+            completedBy: authResult.user?.id,
             completedAt: completedAt,
             responseTimeHours: responseTimeHours,
             notes: notes || policy.investigation.notes,
@@ -91,9 +91,8 @@ export async function PUT(
         // Update policy status
         await tx.policy.update({
           where: { id: policyId },
-          data: { 
-            status: newStatus as any,
-            investigationCompletedAt: completedAt
+          data: {
+            status: newStatus as any
           }
         });
 
@@ -102,14 +101,15 @@ export async function PUT(
           data: {
             policyId: policyId,
             action: 'investigation_completed',
-            details: { 
+            description: `Investigation completed with verdict: ${verdict}`,
+            details: {
               verdict: verdict,
               riskLevel: riskLevel,
               rejectionReason: rejectionReason,
               responseTimeHours: responseTimeHours,
               notes: notes || null
             },
-            performedBy: authResult.user.id,
+            performedById: authResult.user?.id,
             ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
           }
         });

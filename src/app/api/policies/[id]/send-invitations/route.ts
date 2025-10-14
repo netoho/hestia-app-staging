@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TenantType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';
@@ -58,14 +59,14 @@ export async function POST(
       };
 
       // Log actors found for debugging
-      console.log('Sending invitations for policy:', policy.policyNumber);
-      console.log('Request parameters:', { targetedActors: actors, resend });
-      console.log('Actors found:', {
-        landlord: policy.landlord ? `${policy.landlord.email} (completed: ${policy.landlord.informationComplete})` : 'none',
-        tenant: policy.tenant ? `${policy.tenant.email} (completed: ${policy.tenant.informationComplete})` : 'none',
-        jointObligors: policy.jointObligors.map(jo => `${jo.email} (completed: ${jo.informationComplete})`),
-        avals: policy.avals.map(a => `${a.email} (completed: ${a.informationComplete})`)
-      });
+      // console.log('Sending invitations for policy:', policy.policyNumber);
+      // console.log('Request parameters:', { targetedActors: actors, resend });
+      // console.log('Actors found:', {
+      //   landlord: policy.landlord ? `${policy.landlord.email} (completed: ${policy.landlord.informationComplete})` : 'none',
+      //   tenant: policy.tenant ? `${policy.tenant.email} (completed: ${policy.tenant.informationComplete})` : 'none',
+      //   jointObligors: policy.jointObligors.map(jo => `${jo.email} (completed: ${jo.informationComplete})`),
+      //   avals: policy.avals.map(a => `${a.email} (completed: ${a.informationComplete})`)
+      // });
 
       // Generate token for landlord
       if (shouldProcessActor('landlord') && policy.landlord && policy.landlord.email && (resend || !policy.landlord.informationComplete)) {
@@ -73,6 +74,7 @@ export async function POST(
 
         const sent = await sendActorInvitation({
           actorType: 'landlord' as any,
+          isCompany: policy.landlord.isCompany,
           email: policy.landlord.email,
           name: policy.landlord.fullName || policy.landlord.companyName || 'Arrendador',
           token: tokenData.token,
@@ -99,6 +101,7 @@ export async function POST(
 
         const sent = await sendActorInvitation({
           actorType: 'tenant',
+          isCompany: policy.tenant.tenantType === TenantType.COMPANY,
           email: policy.tenant.email,
           name: policy.tenant.fullName || 'Inquilino',
           token: tokenData.token,
@@ -128,6 +131,7 @@ export async function POST(
 
           const sent = await sendActorInvitation({
             actorType: 'jointObligor',
+            isCompany: jo.isCompany,
             email: jo.email,
             name: jo.fullName || 'Obligado Solidario',
             token: tokenData.token,
@@ -156,6 +160,7 @@ export async function POST(
 
           const sent = await sendActorInvitation({
             actorType: 'aval',
+            isCompany: aval.isCompany,
             email: aval.email,
             name: aval.fullName || 'Aval',
             token: tokenData.token,
@@ -200,16 +205,16 @@ export async function POST(
       });
 
       // Log summary for debugging
-      console.log('Invitations sent summary:', {
-        targetedActors: actors || 'all',
-        resendMode: resend,
-        total: invitations.length,
-        landlord: invitations.filter(i => i.actorType === 'landlord').length,
-        tenant: invitations.filter(i => i.actorType === 'tenant').length,
-        jointObligors: invitations.filter(i => i.actorType === 'jointObligor').length,
-        avals: invitations.filter(i => i.actorType === 'aval').length,
-        details: invitations.map(i => ({ type: i.actorType, email: i.email, sent: i.sent }))
-      });
+      // console.log('Invitations sent summary:', {
+      //   targetedActors: actors || 'all',
+      //   resendMode: resend,
+      //   total: invitations.length,
+      //   landlord: invitations.filter(i => i.actorType === 'landlord').length,
+      //   tenant: invitations.filter(i => i.actorType === 'tenant').length,
+      //   jointObligors: invitations.filter(i => i.actorType === 'jointObligor').length,
+      //   avals: invitations.filter(i => i.actorType === 'aval').length,
+      //   details: invitations.map(i => ({ type: i.actorType, email: i.email, sent: i.sent }))
+      // });
 
       return NextResponse.json({
         success: true,

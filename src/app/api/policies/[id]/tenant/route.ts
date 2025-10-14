@@ -351,36 +351,3 @@ export async function POST(
     );
   }
 }
-
-// Endpoint to get tenant references
-export async function GET_REFERENCES(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string, tenantId: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { tenantId } = await params;
-
-    const references = await prisma.personalReference.findMany({
-      where: { tenantId },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: references,
-    });
-  } catch (error) {
-    console.error('Error fetching references:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch references' },
-      { status: 500 }
-    );
-  }
-}

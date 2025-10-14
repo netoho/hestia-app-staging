@@ -44,8 +44,9 @@ export async function PUT(
         }
 
         // Check if policy has an uploaded contract
-        if (policy.status !== 'CONTRACT_UPLOADED') {
-          throw new Error('Contract must be uploaded before it can be marked as signed');
+        const allowedStatuses = ['CONTRACT_PENDING'];
+        if (!allowedStatuses.includes(policy.status)) {
+          throw new Error('Contract must be in CONTRACT_PENDING status before it can be marked as signed');
         }
 
         if (policy.contracts.length === 0) {
@@ -53,7 +54,7 @@ export async function PUT(
         }
 
         // Check if already signed
-        if (policy.contractSignedAt) {
+        if (policy.status === 'CONTRACT_SIGNED') {
           throw new Error('Contract is already marked as signed');
         }
 
@@ -61,13 +62,24 @@ export async function PUT(
         const policyExpiresAt = new Date();
         policyExpiresAt.setMonth(policyExpiresAt.getMonth() + policy.contractLength);
 
+        // Update contract to mark as signed
+        await tx.contract.updateMany({
+          where: {
+            policyId: policyId,
+            isCurrent: true
+          },
+          data: {
+            signedAt: signedAt,
+            signedBy: JSON.stringify([authResult.user!.email])
+          }
+        });
+
         // Update policy status
         const updatedPolicy = await tx.policy.update({
           where: { id: policyId },
-          data: { 
+          data: {
             status: 'CONTRACT_SIGNED',
-            contractSignedAt: signedAt,
-            policyExpiresAt: policyExpiresAt
+            expiresAt: policyExpiresAt
           }
         });
 
@@ -76,13 +88,14 @@ export async function PUT(
           data: {
             policyId: policyId,
             action: 'contract_signed',
-            details: { 
+            description: 'Contract marked as signed',
+            details: {
               signedAt: signedAt,
               contractLength: policy.contractLength,
               expiresAt: policyExpiresAt,
-              markedBy: authResult.user.email
+              markedBy: authResult.user!.email
             },
-            performedBy: authResult.user.id,
+            performedById: authResult.user!.id,
             ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
           }
         });

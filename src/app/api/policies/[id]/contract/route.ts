@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
-import { UserRole, PolicyStatus, ContractStatus } from '@/types/policy';
+import { UserRole, PolicyStatus } from '@/types/policy';
 import { uploadPolicyDocument, getDocumentUrl } from '@/lib/services/fileUploadService';
-import { v4 as uuidv4 } from 'uuid';
 
 // GET contract information
 export async function GET(
@@ -18,16 +17,10 @@ export async function GET(
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
-          contract: {
-            include: {
-              generatedBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
+          contracts: {
+            where: { isCurrent: true },
+            orderBy: { version: 'desc' },
+            take: 1,
           },
         },
       });
@@ -47,31 +40,25 @@ export async function GET(
         );
       }
 
+      // Get current contract
+      const currentContract = policy.contracts?.[0] || null;
+
       // Generate signed URLs for contract documents if they exist
       let contractUrl = null;
-      let signedContractUrl = null;
 
-      if (policy.contract?.contractS3Key) {
+      if (currentContract?.s3Key) {
         contractUrl = await getDocumentUrl(
-          policy.contract.contractS3Key,
+          currentContract.s3Key,
           `contrato_${policy.policyNumber}.pdf`
-        );
-      }
-
-      if (policy.contract?.signedContractS3Key) {
-        signedContractUrl = await getDocumentUrl(
-          policy.contract.signedContractS3Key,
-          `contrato_firmado_${policy.policyNumber}.pdf`
         );
       }
 
       return NextResponse.json({
         success: true,
         data: {
-          contract: policy.contract ? {
-            ...policy.contract,
+          contract: currentContract ? {
+            ...currentContract,
             contractUrl,
-            signedContractUrl,
           } : null,
           policy: {
             id: policy.id,
@@ -105,7 +92,9 @@ export async function POST(
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
-          contract: true,
+          contracts: {
+            where: { isCurrent: true },
+          },
           landlord: true,
           tenant: true,
           jointObligors: true,
@@ -129,7 +118,7 @@ export async function POST(
       }
 
       // Check if contract already exists
-      if (policy.contract) {
+      if (policy.contracts && policy.contracts.length > 0) {
         return NextResponse.json(
           { success: false, error: 'Contract already exists' },
           { status: 400 }
@@ -165,22 +154,15 @@ export async function POST(
       const contract = await prisma.contract.create({
         data: {
           policyId: id,
-          contractNumber: `CON-${policy.policyNumber}`,
-          status: ContractStatus.DRAFT,
-          template: template || 'standard',
-          customClauses: customClauses || [],
-          generatedAt: new Date(),
-          generatedById: user.id,
-          contractS3Key: uploadResult.s3Key!,
-        },
-        include: {
-          generatedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          version: 1,
+          fileName: `contrato_${policy.policyNumber}.pdf`,
+          fileSize: contractBuffer.length,
+          mimeType: 'application/pdf',
+          s3Key: uploadResult.s3Key!,
+          s3Bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
+          s3Region: process.env.AWS_REGION || 'us-east-1',
+          isCurrent: true,
+          uploadedBy: user.id,
         },
       });
 
@@ -195,18 +177,19 @@ export async function POST(
         data: {
           policyId: id,
           action: 'contract_generated',
+          description: 'Contract generated',
           details: {
-            contractNumber: contract.contractNumber,
+            version: contract.version,
             template,
             generatedBy: user.email,
           },
-          performedBy: user.id,
+          performedById: user.id,
         },
       });
 
       // Get signed URL for the contract
       const contractUrl = await getDocumentUrl(
-        contract.contractS3Key,
+        contract.s3Key,
         `contrato_${policy.policyNumber}.pdf`
       );
 
@@ -238,29 +221,34 @@ export async function PUT(
     try {
       const { id } = await params;
       const formData = await request.formData();
-      const status = formData.get('status') as ContractStatus;
       const signedFile = formData.get('signedContract') as File | null;
 
-      // Use Prisma
-      const contract = await prisma.contract.findUnique({
-        where: { policyId: id },
+      // Get current contract
+      const currentContract = await prisma.contract.findFirst({
+        where: {
+          policyId: id,
+          isCurrent: true,
+        },
       });
 
-      if (!contract) {
+      if (!currentContract) {
         return NextResponse.json(
           { success: false, error: 'Contract not found' },
           { status: 404 }
         );
       }
 
-      const updateData: any = {
-        status,
-        updatedAt: new Date(),
-      };
-
       // Handle signed contract upload
-      if (status === ContractStatus.SIGNED && signedFile) {
+      if (signedFile) {
         const buffer = Buffer.from(await signedFile.arrayBuffer());
+
+        const policy = await prisma.policy.findUnique({ where: { id } });
+        if (!policy) {
+          return NextResponse.json(
+            { success: false, error: 'Policy not found' },
+            { status: 404 }
+          );
+        }
 
         const uploadResult = await uploadPolicyDocument(
           {
@@ -270,10 +258,10 @@ export async function PUT(
             size: signedFile.size,
           },
           id,
-          contract.contractNumber,
+          policy.policyNumber,
           'SIGNED_CONTRACT',
           user.id,
-          2 // Version 2 for signed contract
+          currentContract.version + 1
         );
 
         if (!uploadResult.success) {
@@ -283,13 +271,34 @@ export async function PUT(
           );
         }
 
-        updateData.signedAt = new Date();
-        updateData.signedContractS3Key = uploadResult.s3Key;
+        // Mark current contract as not current
+        await prisma.contract.update({
+          where: { id: currentContract.id },
+          data: { isCurrent: false },
+        });
 
-        // Update policy status to active
+        // Create new signed contract version
+        const signedContract = await prisma.contract.create({
+          data: {
+            policyId: id,
+            version: currentContract.version + 1,
+            fileName: signedFile.name,
+            fileSize: signedFile.size,
+            mimeType: signedFile.type,
+            s3Key: uploadResult.s3Key!,
+            s3Bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
+            s3Region: process.env.AWS_REGION || 'us-east-1',
+            isCurrent: true,
+            signedAt: new Date(),
+            signedBy: JSON.stringify([user.email]),
+            uploadedBy: user.id,
+          },
+        });
+
+        // Update policy status to CONTRACT_SIGNED
         await prisma.policy.update({
           where: { id },
-          data: { status: PolicyStatus.ACTIVE },
+          data: { status: PolicyStatus.CONTRACT_SIGNED },
         });
 
         // Log activity
@@ -297,64 +306,36 @@ export async function PUT(
           data: {
             policyId: id,
             action: 'contract_signed',
+            description: 'Contract signed and uploaded',
             details: {
-              contractNumber: contract.contractNumber,
+              version: signedContract.version,
               signedBy: user.email,
             },
-            performedBy: user.id,
+            performedById: user.id,
           },
         });
-      } else if (status === ContractStatus.SENT) {
-        updateData.sentAt = new Date();
 
-        // Log activity
-        await prisma.policyActivity.create({
+        // Get signed URL
+        const contractUrl = await getDocumentUrl(
+          signedContract.s3Key,
+          `contrato_firmado_${policy.policyNumber}.pdf`
+        );
+
+        return NextResponse.json({
+          success: true,
           data: {
-            policyId: id,
-            action: 'contract_sent',
-            details: {
-              contractNumber: contract.contractNumber,
-              sentBy: user.email,
+            contract: {
+              ...signedContract,
+              contractUrl,
             },
-            performedBy: user.id,
           },
         });
       }
 
-      // Update contract
-      const updatedContract = await prisma.contract.update({
-        where: { id: contract.id },
-        data: updateData,
-      });
-
-      // Get signed URLs if documents exist
-      let contractUrl = null;
-      let signedContractUrl = null;
-
-      if (updatedContract.contractS3Key) {
-        contractUrl = await getDocumentUrl(
-          updatedContract.contractS3Key,
-          `contrato_${contract.contractNumber}.pdf`
-        );
-      }
-
-      if (updatedContract.signedContractS3Key) {
-        signedContractUrl = await getDocumentUrl(
-          updatedContract.signedContractS3Key,
-          `contrato_firmado_${contract.contractNumber}.pdf`
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          contract: {
-            ...updatedContract,
-            contractUrl,
-            signedContractUrl,
-          },
-        },
-      });
+      return NextResponse.json(
+        { success: false, error: 'No signed contract file provided' },
+        { status: 400 }
+      );
     } catch (error) {
       console.error('Update contract error:', error);
       return NextResponse.json(

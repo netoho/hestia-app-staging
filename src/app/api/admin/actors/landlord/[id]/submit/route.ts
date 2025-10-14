@@ -78,7 +78,7 @@ export async function PUT(
         return NextResponse.json(
           {
             error: saveResult.error.message,
-            details: saveResult.error.details
+            details: saveResult.error.context
           },
           { status: saveResult.error.statusCode || 400 }
         );
@@ -95,7 +95,7 @@ export async function PUT(
           return NextResponse.json(
             {
               error: propertyResult.error.message,
-              details: propertyResult.error.details
+              details: propertyResult.error.context
             },
             { status: propertyResult.error.statusCode || 400 }
           );
@@ -125,7 +125,7 @@ export async function PUT(
             return NextResponse.json(
               {
                 error: financialResult.error.message,
-                details: financialResult.error.details
+                details: financialResult.error.context
               },
               { status: financialResult.error.statusCode || 400 }
             );
@@ -147,7 +147,7 @@ export async function PUT(
     await logPolicyActivity({
       policyId: landlord.policy.id,
       action: 'admin_edited_landlord',
-      performedBy: userId,
+      performedById: userId,
       description: `Admin ${session.user.email} edited landlord information for policy ${landlord.policy.policyNumber}`,
       details: {
         landlordId,

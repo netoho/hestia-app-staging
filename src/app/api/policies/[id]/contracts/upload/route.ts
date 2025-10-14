@@ -71,9 +71,9 @@ export async function POST(
         }
 
         // Check if policy can have contract uploaded
-        const allowedStatuses = ['CONTRACT_PENDING', 'CONTRACT_UPLOADED'];
+        const allowedStatuses = ['APPROVED', 'CONTRACT_PENDING'];
         if (!allowedStatuses.includes(policy.status)) {
-          throw new Error('Contract can only be uploaded for policies in CONTRACT_PENDING or CONTRACT_UPLOADED status');
+          throw new Error('Contract can only be uploaded for policies in APPROVED or CONTRACT_PENDING status');
         }
 
         // Get next version number
@@ -88,29 +88,31 @@ export async function POST(
         });
 
         // TODO: Upload file to secure storage (Firebase Storage, AWS S3, etc.)
-        // For now, we'll use a placeholder URL
-        const fileUrl = `/secure/contracts/${policyId}-v${nextVersion}-${Date.now()}.${file.name.split('.').pop()}`;
+        // For now, we'll use a placeholder S3 key
+        const s3Key = `contracts/${policyId}/v${nextVersion}-${Date.now()}.${file.name.split('.').pop()}`;
+        const s3Bucket = process.env.AWS_S3_BUCKET || 'hestia-app-contracts';
 
         // Create new contract record
         const newContract = await tx.contract.create({
           data: {
             policyId: policyId,
             version: nextVersion,
-            fileUrl: fileUrl,
+            s3Key: s3Key,
+            s3Bucket: s3Bucket,
+            s3Region: process.env.AWS_REGION,
             fileName: file.name,
             fileSize: file.size,
             mimeType: file.type,
             isCurrent: true,
-            uploadedBy: authResult.user.id,
+            uploadedBy: authResult.user!.id,
           }
         });
 
-        // Update policy status
+        // Update policy status to CONTRACT_PENDING if not already
         await tx.policy.update({
           where: { id: policyId },
-          data: { 
-            status: 'CONTRACT_UPLOADED',
-            contractUploadedAt: new Date()
+          data: {
+            status: 'CONTRACT_PENDING'
           }
         });
 
@@ -119,13 +121,14 @@ export async function POST(
           data: {
             policyId: policyId,
             action: 'contract_uploaded',
-            details: { 
+            description: 'Contract uploaded',
+            details: {
               fileName: file.name,
               fileSize: file.size,
               version: nextVersion,
-              uploadedBy: authResult.user.email
+              uploadedBy: authResult.user!.email
             },
-            performedBy: authResult.user.id,
+            performedById: authResult.user!.id,
             ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
           }
         });

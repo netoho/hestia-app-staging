@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { uploadActorDocument, validateFile, UploadedFile } from '@/lib/services/fileUploadService';
-import { DocumentCategory } from '@prisma/client';
+import { DocumentCategory } from '@/types/policy';
 
 const ALLOWED_ACTOR_TYPES = ['tenant', 'joint-obligor', 'aval', 'landlord'] as const;
 type ActorType = typeof ALLOWED_ACTOR_TYPES[number];
@@ -92,7 +92,7 @@ export async function POST(
     let actorId: string;
     let policyId: string;
     let policyNumber: string;
-    let dbActorType: 'tenant' | 'jointObligor' | 'aval' | 'landlord';
+    let dbActorType: 'tenant' | 'jointObligor' | 'aval' | 'landlord' = 'tenant';
 
     switch (type) {
       case 'tenant':
@@ -242,7 +242,7 @@ export async function GET(
 
     // Find the actor by token
     let actor;
-    let documents;
+    let documents: any[] = [];
 
     switch (type) {
       case 'tenant':

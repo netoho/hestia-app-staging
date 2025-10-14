@@ -347,7 +347,8 @@ export async function DELETE(
     });
 
     // Log activity
-    await logPolicyActivity(id, {
+    await logPolicyActivity({
+      policyId: id,
       action: 'aval_deleted',
       description: 'Aval deleted',
       performedById: user.id,

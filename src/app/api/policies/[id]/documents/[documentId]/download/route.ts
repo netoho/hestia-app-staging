@@ -38,7 +38,7 @@ export async function GET(
         policy: {
           select: {
             id: true,
-            tenantEmail: true,
+            policyNumber: true,
           }
         }
       }
@@ -52,19 +52,20 @@ export async function GET(
     }
 
     // Generate a signed URL with very short expiration (5 minutes)
-    const signedUrl = await getSignedDownloadUrl(document.fileName, 300); // 5 minutes
+    const signedUrl = await getSignedDownloadUrl(document.s3Key, document.originalName, 300); // 5 minutes
 
     // Log the download activity
     await prisma.policyActivity.create({
       data: {
         policyId: id,
         action: 'document_downloaded',
+        description: `Document downloaded: ${document.originalName}`,
         details: {
           documentId: document.id,
           fileName: document.originalName,
           downloadedBy: authResult.user.email,
         },
-        performedBy: authResult.user.id,
+        performedById: authResult.user.id,
         ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
       }
     });

@@ -16,7 +16,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
 import prisma from '@/lib/prisma';
 import { uploadActorDocument, validateFile, UploadedFile, deleteDocument as deleteDocumentService } from '@/lib/services/fileUploadService';
-import { DocumentCategory } from '@prisma/client';
+import { DocumentCategory } from '@/types/policy';
 
 // Helper to map snake_case to DocumentCategory enum
 function getCategoryFromString(categoryStr: string): DocumentCategory | null {

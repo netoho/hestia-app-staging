@@ -357,8 +357,8 @@ export default function ShareInvitationModal({
                         </div>
 
                         {/* URL Display */}
-                        <div className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs font-mono">
-                          <span className="flex-1 truncate">{link.url}</span>
+                        <div className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs font-mono max-w-md">
+                          <span className="flex-1 truncate">{link.url} jiii</span>
                         </div>
 
                         {/* Action Buttons */}
@@ -423,7 +423,7 @@ export default function ShareInvitationModal({
                             </span>
                           ) : (
                             <span>
-                              Token válido hasta: {new Date(link.tokenExpiry).toLocaleDateString()} a las{' '}
+                              Enlace válida hasta: {new Date(link.tokenExpiry).toLocaleDateString()} a las{' '}
                               {new Date(link.tokenExpiry).toLocaleTimeString()}
                             </span>
                           )}

@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { ActorVerificationStatus } from '@prisma/client';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth, requireRole } from '@/lib/auth';
@@ -49,9 +50,11 @@ export async function POST(
     let actorName = '';
 
     const updateData = {
-      verificationStatus: action === 'approve' ? 'APPROVED' : 'REJECTED',
+      verificationStatus: action === 'approve'
+        ? ActorVerificationStatus.APPROVED
+        : ActorVerificationStatus.REJECTED,
       verifiedAt: action === 'approve' ? new Date() : null,
-      verifiedBy: action === 'approve' ? authResult.user.id : null,
+      verifiedBy: action === 'approve' ? authResult.user.id : undefined,
       rejectedAt: action === 'reject' ? new Date() : null,
       rejectionReason: action === 'reject' ? reason : null,
     };
@@ -63,7 +66,7 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName;
+        actorName = updateResult.fullName || updateResult.companyName || '';
         break;
 
       case 'tenant':
@@ -81,7 +84,7 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName;
+        actorName = updateResult.fullName || updateResult.companyName || '';
         break;
 
       case 'aval':
@@ -90,7 +93,7 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName;
+        actorName = updateResult.fullName || updateResult.companyName || '';
         break;
 
       default:
@@ -158,16 +161,16 @@ async function checkAndUpdatePolicyStatus(policyId: string) {
     if (!policy) return;
 
     // Check if all actors are approved
-    const landlordApproved = policy.landlord?.verificationStatus === 'APPROVED';
-    const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
+    const landlordApproved = policy.landlord?.verificationStatus === ActorVerificationStatus.APPROVED;
+    const tenantApproved = policy.tenant?.verificationStatus === ActorVerificationStatus.APPROVED;
 
     const jointObligorsApproved =
       !policy.jointObligors.length ||
-      policy.jointObligors.every(jo => jo.verificationStatus === 'APPROVED');
+      policy.jointObligors.every(jo => jo.verificationStatus === ActorVerificationStatus.APPROVED);
 
     const avalsApproved =
       !policy.avals.length ||
-      policy.avals.every(a => a.verificationStatus === 'APPROVED');
+      policy.avals.every(a => a.verificationStatus === ActorVerificationStatus.APPROVED);
 
     const allActorsApproved = landlordApproved && tenantApproved &&
                               jointObligorsApproved && avalsApproved;
