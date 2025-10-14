@@ -1,7 +1,7 @@
 
 
 // Import Package from prisma client for consistency
-export { Package } from '@prisma/client';
+export type { Package } from '@prisma/client';
 
 export interface Testimonial {
   id: string;
