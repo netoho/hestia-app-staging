@@ -101,6 +101,7 @@ export function isCompanyActor(actor: ActorData): actor is CompanyActorData {
 // Landlord-specific extensions
 export interface LandlordData extends BaseActorData {
   policyId: string;
+  isPrimary?: boolean;
 
   // Property management specific
   propertyDeedNumber?: string;
@@ -160,7 +161,7 @@ export interface LandlordFormData extends LandlordData {
 }
 
 export interface LandlordSubmissionData {
-  landlord: LandlordFormData;
+  landlords: LandlordFormData[];
   propertyDetails?: PropertyDetails;
   partial?: boolean;
 }

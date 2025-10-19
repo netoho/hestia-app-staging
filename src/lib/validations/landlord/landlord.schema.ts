@@ -51,14 +51,14 @@ export const partialLandlordSchema = z.discriminatedUnion('isCompany', [
 
 // Request schema for API submissions
 export const landlordSubmissionSchema = z.object({
-  landlord: landlordSchema,
+  landlords: z.array(landlordSchema).min(1),
   propertyDetails: propertyDetailsSchema.optional(),
   partial: z.boolean().optional().default(false),
 });
 
 // Partial request schema
 export const partialLandlordSubmissionSchema = z.object({
-  landlord: partialLandlordSchema,
+  landlords: z.array(partialLandlordSchema).min(1),
   propertyDetails: partialPropertyDetailsSchema.optional(),
   partial: z.literal(true),
 });

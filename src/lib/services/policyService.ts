@@ -100,8 +100,9 @@ export async function createPolicy(data: CreatePolicyData) {
       createdById: policyData.createdById,
       status: 'DRAFT',
       // Create related actors
-      landlord: {
+      landlords: {
         create: {
+          isPrimary: true, // First landlord is always primary
           fullName: `${policyData.landlord.firstName} ${policyData.landlord.lastName}`,
           email: policyData.landlord.email,
           phone: policyData.landlord.phone || '',
@@ -123,7 +124,7 @@ export async function createPolicy(data: CreatePolicyData) {
       }
     },
     include: {
-      landlord: true,
+      landlords: true,
       tenant: true,
     }
   });
@@ -210,8 +211,8 @@ export async function getPolicies(params?: {
       { propertyAddress: { contains: params.search, mode: 'insensitive' } },
       { tenant: { fullName: { contains: params.search, mode: 'insensitive' } } },
       { tenant: { email: { contains: params.search, mode: 'insensitive' } } },
-      { landlord: { fullName: { contains: params.search, mode: 'insensitive' } } },
-      { landlord: { email: { contains: params.search, mode: 'insensitive' } } },
+      { landlords: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      { landlords: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
     ];
   }
 
@@ -235,7 +236,12 @@ export async function getPolicies(params?: {
             name: true,
           }
         },
-        landlord: true,
+        landlords: {
+          orderBy: [
+            { isPrimary: 'desc' },
+            { createdAt: 'asc' }
+          ]
+        },
         tenant: true,
         jointObligors: true,
         avals: true,
@@ -316,11 +322,15 @@ export async function getPolicyById(id: string) {
           name: true,
         }
       },
-      landlord: {
+      landlords: {
         include: {
-        documents: true,
-        addressDetails: true,
-        }
+          documents: true,
+          addressDetails: true,
+        },
+        orderBy: [
+          { isPrimary: 'desc' },
+          { createdAt: 'asc' }
+        ]
       },
       tenant: {
         include: {

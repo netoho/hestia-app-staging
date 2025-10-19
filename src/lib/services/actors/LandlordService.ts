@@ -213,19 +213,35 @@ export class LandlordService extends BaseActorService {
         );
       }
 
+      // Validate that landlords array exists
+      if (!data.landlords || !Array.isArray(data.landlords) || data.landlords.length === 0) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.VALIDATION_ERROR,
+            'At least one landlord is required',
+            400
+          )
+        );
+      }
+
       // Start transaction
       const result = await this.executeTransaction(async (tx) => {
         const { landlord, policy } = tokenValidation;
 
-        // Save landlord information
-        const landlordResult = await this.saveLandlordInformation(
-          landlord!.id,
-          data.landlord as LandlordData,
-          partial
-        );
+        // Save all landlords in the array
+        for (const landlordData of data.landlords) {
+          // Only save landlords that belong to this policy
+          if (landlordData.id && landlordData.policyId === landlord!.policyId) {
+            const landlordResult = await this.saveLandlordInformation(
+              landlordData.id,
+              landlordData as LandlordData,
+              partial
+            );
 
-        if (!landlordResult.ok) {
-          throw landlordResult.error;
+            if (!landlordResult.ok) {
+              throw landlordResult.error;
+            }
+          }
         }
 
         // Save property details if provided
@@ -277,7 +293,8 @@ export class LandlordService extends BaseActorService {
           performedByActor: 'landlord',
           details: {
             landlordId: landlord!.id,
-            isCompany: data.landlord.isCompany,
+            isCompany: data.landlords[0]?.isCompany,
+            landlordCount: data.landlords.length,
             partial,
           },
         });
@@ -316,14 +333,21 @@ export class LandlordService extends BaseActorService {
   }
 
   /**
-   * Get landlord by policy ID
+   * Get landlord by policy ID (returns primary landlord for backward compatibility)
    */
   async getLandlordByPolicyId(policyId: string): AsyncResult<LandlordData> {
+    return this.getPrimaryLandlord(policyId);
+  }
+
+  /**
+   * Get primary landlord for a policy
+   */
+  async getPrimaryLandlord(policyId: string): AsyncResult<LandlordData> {
     return this.executeDbOperation(async () => {
-      const landlord = await this.prisma.landlord.findUnique({
-        where: { policyId },
+      const landlord = await this.prisma.landlord.findFirst({
+        where: { policyId, isPrimary: true },
         include: {
-          address: true,
+          addressDetails: true,
           documents: true,
           policy: {
             include: {
@@ -340,13 +364,150 @@ export class LandlordService extends BaseActorService {
       if (!landlord) {
         throw new ServiceError(
           ErrorCode.NOT_FOUND,
-          'Landlord not found for policy',
+          'Primary landlord not found for policy',
           404
         );
       }
 
       return landlord as LandlordData;
-    }, 'getLandlordByPolicyId');
+    }, 'getPrimaryLandlord');
+  }
+
+  /**
+   * Get all landlords for a policy
+   */
+  async getAllLandlords(policyId: string): AsyncResult<LandlordData[]> {
+    return this.executeDbOperation(async () => {
+      const landlords = await this.prisma.landlord.findMany({
+        where: { policyId },
+        include: {
+          addressDetails: true,
+          documents: true,
+        },
+        orderBy: [
+          { isPrimary: 'desc' }, // Primary first
+          { createdAt: 'asc' },
+        ],
+      });
+
+      return landlords as LandlordData[];
+    }, 'getAllLandlords');
+  }
+
+  /**
+   * Create a new landlord for a policy
+   */
+  async createLandlord(
+    policyId: string,
+    data: Partial<LandlordData>,
+    isPrimary: boolean = false
+  ): AsyncResult<LandlordData> {
+    return this.executeTransaction(async (tx) => {
+      // If setting as primary, unmark existing primary
+      if (isPrimary) {
+        await tx.landlord.updateMany({
+          where: { policyId, isPrimary: true },
+          data: { isPrimary: false },
+        });
+      }
+
+      // Create new landlord
+      const landlord = await tx.landlord.create({
+        data: {
+          policyId,
+          isPrimary,
+          isCompany: data.isCompany || false,
+          email: data.email || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          fullName: data.fullName,
+          rfc: data.rfc,
+          curp: data.curp,
+          companyName: data.companyName,
+          companyRfc: data.companyRfc,
+          legalRepName: data.legalRepName,
+          legalRepPosition: data.legalRepPosition,
+          legalRepRfc: data.legalRepRfc,
+          legalRepPhone: data.legalRepPhone,
+          legalRepEmail: data.legalRepEmail,
+          workPhone: data.workPhone,
+          personalEmail: data.personalEmail,
+          workEmail: data.workEmail,
+          occupation: data.occupation,
+          employerName: data.employerName,
+          monthlyIncome: data.monthlyIncome,
+          bankName: data.bankName,
+          accountNumber: data.accountNumber,
+          clabe: data.clabe,
+          accountHolder: data.accountHolder,
+          propertyDeedNumber: data.propertyDeedNumber,
+          propertyRegistryFolio: data.propertyRegistryFolio,
+          requiresCFDI: data.requiresCFDI,
+          cfdiData: data.cfdiData,
+        },
+        include: {
+          addressDetails: true,
+          documents: true,
+        },
+      });
+
+      this.log('info', 'Landlord created', { landlordId: landlord.id, policyId, isPrimary });
+      return landlord as LandlordData;
+    });
+  }
+
+  /**
+   * Remove a landlord (only if not primary)
+   */
+  async removeLandlord(landlordId: string): AsyncResult<void> {
+    return this.executeDbOperation(async () => {
+      const landlord = await this.prisma.landlord.findUnique({
+        where: { id: landlordId },
+        select: { isPrimary: true },
+      });
+
+      if (!landlord) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Landlord not found',
+          404
+        );
+      }
+
+      if (landlord.isPrimary) {
+        throw new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Cannot remove primary landlord',
+          400
+        );
+      }
+
+      await this.prisma.landlord.delete({
+        where: { id: landlordId },
+      });
+
+      this.log('info', 'Landlord removed', { landlordId });
+    }, 'removeLandlord');
+  }
+
+  /**
+   * Check if all landlords for a policy have completed their information
+   */
+  async areAllLandlordsComplete(policyId: string): AsyncResult<boolean> {
+    return this.executeDbOperation(async () => {
+      const landlords = await this.prisma.landlord.findMany({
+        where: { policyId },
+        select: { informationComplete: true, verificationStatus: true },
+      });
+
+      if (landlords.length === 0) {
+        return false;
+      }
+
+      return landlords.every(
+        l => l.informationComplete && l.verificationStatus === 'APPROVED'
+      );
+    }, 'areAllLandlordsComplete');
   }
 
   /**
