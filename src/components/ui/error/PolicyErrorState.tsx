@@ -38,8 +38,8 @@ export default function PolicyErrorState({
     if (code === 404 || type === 'not-found') {
       return {
         icon: FileQuestion,
-        title: 'Póliza no encontrada',
-        description: 'La póliza que buscas no existe o no tienes permisos para verla.',
+        title: 'Protección no encontrada',
+        description: 'La protección que buscas no existe o no tienes permisos para verla.',
         color: 'text-orange-600',
         bgColor: 'bg-orange-50',
         borderColor: 'border-orange-200'
@@ -50,7 +50,7 @@ export default function PolicyErrorState({
       return {
         icon: ShieldAlert,
         title: 'Acceso denegado',
-        description: 'No tienes permisos para acceder a esta póliza.',
+        description: 'No tienes permisos para acceder a esta protección.',
         color: 'text-red-600',
         bgColor: 'bg-red-50',
         borderColor: 'border-red-200'

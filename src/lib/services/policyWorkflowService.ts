@@ -308,7 +308,7 @@ export async function getPolicyWorkflowProgress(policyId: string): Promise<{
     {
       name: 'Creación',
       statuses: ['DRAFT'],
-      description: 'Póliza creada'
+      description: 'Protección creada'
     },
     {
       name: 'Recolección de Información',
@@ -333,7 +333,7 @@ export async function getPolicyWorkflowProgress(policyId: string): Promise<{
     {
       name: 'Activación',
       statuses: ['ACTIVE'],
-      description: 'Póliza activa'
+      description: 'Protección activa'
     }
   ];
 
@@ -379,7 +379,7 @@ export async function getPolicyWorkflowProgress(policyId: string): Promise<{
       nextActions.push('Revisar y reiniciar investigación');
       break;
     case 'PENDING_APPROVAL':
-      nextActions.push('Aprobar o rechazar póliza');
+      nextActions.push('Aprobar o rechazar protección');
       break;
     case 'APPROVED':
       nextActions.push('Generar contrato');

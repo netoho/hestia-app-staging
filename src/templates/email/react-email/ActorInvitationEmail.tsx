@@ -217,7 +217,7 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              {actorTypeName} - Póliza #{policyNumber}
+              {actorTypeName} - Protección #{policyNumber}
             </Text>
           </Section>
 
@@ -257,7 +257,7 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
               margin: '20px 0'
             }}>
               <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
-                <strong>Número de Póliza:</strong> {policyNumber}
+                <strong>No. Protección:</strong> {policyNumber}
               </Text>
               <Text style={{ margin: 0, color: brandColors.textPrimary }}>
                 <strong>Propiedad:</strong> {propertyAddress}

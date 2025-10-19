@@ -106,7 +106,7 @@ export default function ShareInvitationModal({
   };
 
   const handleWhatsApp = (phone: string, url: string, actorName: string) => {
-    const message = `Hola ${actorName}, te compartimos el enlace para completar tu información de la póliza ${policyNumber}: ${url}`;
+    const message = `Hola ${actorName}, te compartimos el enlace para completar tu información de la protección ${policyNumber}: ${url}`;
     const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -239,7 +239,7 @@ export default function ShareInvitationModal({
         <DialogHeader>
           <DialogTitle>Compartir Enlaces de Invitación</DialogTitle>
           <DialogDescription>
-            Comparte los enlaces de acceso con los actores de la póliza {policyNumber}
+            Comparte los enlaces de acceso con los actores de la protección {policyNumber}
           </DialogDescription>
         </DialogHeader>
 

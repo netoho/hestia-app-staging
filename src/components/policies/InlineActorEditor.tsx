@@ -109,7 +109,7 @@ export default function InlineActorEditor({
         <DialogHeader>
           <DialogTitle>Editar {getActorTypeLabel()}</DialogTitle>
           <DialogDescription>
-            Actualice la información del {getActorTypeLabel().toLowerCase()} para esta póliza
+            Actualice la información del {getActorTypeLabel().toLowerCase()} para esta protección
           </DialogDescription>
         </DialogHeader>
 

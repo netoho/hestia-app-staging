@@ -59,14 +59,14 @@ async function testEmailTemplates() {
     const statusDeniedData = {
       ...policyStatusUpdateData,
       status: 'denied' as const,
-      reason: 'Los ingresos declarados no cumplen con los requisitos mínimos de la póliza.'
+      reason: 'Los ingresos declarados no cumplen con los requisitos mínimos de la protección.'
     };
     const statusDeniedHtml = await render(PolicyStatusUpdateEmail(statusDeniedData));
     console.log(`✅ Policy Status Update (Denied) rendered successfully (${statusDeniedHtml.length} characters)`);
 
     console.log('\n🎉 All React Email templates tested successfully!');
     console.log('\n📧 Templates are ready for production use with SMTP, Resend, or Mailgun providers.');
-    
+
   } catch (error) {
     console.error('❌ Error testing email templates:', error);
     process.exit(1);

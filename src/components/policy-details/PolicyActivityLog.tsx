@@ -1,12 +1,12 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Clock, 
-  User, 
-  CheckCircle, 
-  XCircle, 
-  FileText, 
+import {
+  Clock,
+  User,
+  CheckCircle,
+  XCircle,
+  FileText,
   Download,
   CreditCard,
   AlertCircle
@@ -62,7 +62,7 @@ export function PolicyActivityLog({ activities }: PolicyActivityLogProps) {
   const getActivityDescription = (activity: Activity) => {
     switch (activity.action) {
       case 'created':
-        return 'Solicitud de póliza creada';
+        return 'Solicitud de protección creada';
       case 'sent':
         return 'Invitación enviada al inquilino';
       case 'resent':
@@ -116,8 +116,8 @@ export function PolicyActivityLog({ activities }: PolicyActivityLogProps) {
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {activity.performedBy === 'tenant' ? t.pages.policies.details.activity.performedBy.tenant : 
-                   activity.performedBy === 'system' ? t.pages.policies.details.activity.performedBy.system : 
+                  {activity.performedBy === 'tenant' ? t.pages.policies.details.activity.performedBy.tenant :
+                   activity.performedBy === 'system' ? t.pages.policies.details.activity.performedBy.system :
                    activity.performedBy ? t.pages.policies.details.activity.performedBy.staff : t.pages.policies.details.activity.performedBy.system}
                 </p>
                 {activity.details && (

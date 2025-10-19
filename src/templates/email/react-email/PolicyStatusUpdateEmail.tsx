@@ -93,7 +93,7 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Tu solicitud de póliza de garantía ha sido revisada por <strong>{reviewerName}</strong>.
+              Tu solicitud de protección de garantía ha sido revisada por <strong>{reviewerName}</strong>.
             </Text>
 
             {/* Status Box */}
@@ -141,7 +141,7 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
                   color: brandColors.textPrimary,
                   margin: '16px 0'
                 }}>
-                  Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu póliza.
+                  Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu protección.
                 </Text>
 
                 {/* Next Steps Box */}
@@ -161,7 +161,7 @@ export const PolicyStatusUpdateEmail: React.FC<PolicyStatusUpdateEmailProps> = (
                     Próximos Pasos
                   </Heading>
                   <Text style={{ margin: '8px 0', color: brandColors.textPrimary }}>
-                    • Recibirás los documentos de la póliza por correo electrónico
+                    • Recibirás los documentos de la protección por correo electrónico
                   </Text>
                   <Text style={{ margin: '8px 0', color: brandColors.textPrimary }}>
                     • Un representante te contactará para finalizar los detalles

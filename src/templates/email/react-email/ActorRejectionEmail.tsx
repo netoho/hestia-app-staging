@@ -79,7 +79,7 @@ export const ActorRejectionEmail: React.FC<ActorRejectionEmailProps> = ({
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              Póliza #{policyNumber}
+              Protección #{policyNumber}
             </Text>
           </Section>
 
@@ -107,7 +107,7 @@ export const ActorRejectionEmail: React.FC<ActorRejectionEmailProps> = ({
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Tu información como <strong>{actorTypeLabel}</strong> para la póliza <strong>{policyNumber}</strong> ha sido rechazada.
+              Tu información como <strong>{actorTypeLabel}</strong> para la protección <strong>{policyNumber}</strong> ha sido rechazada.
             </Text>
 
             {/* Rejection Reason Box */}

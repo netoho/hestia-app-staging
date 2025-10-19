@@ -414,7 +414,7 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
     const { PolicyInvitationEmail } = await import('../../templates/email/react-email/PolicyInvitationEmail');
 
     const html = await render(PolicyInvitationEmail(data));
-    const subject = 'Acción Requerida: Completa tu Solicitud de Póliza Hestia';
+    const subject = 'Acción Requerida: Completa tu Solicitud de Protección Hestia';
 
     // Generate plain text version
     const policyUrl = generatePolicyUrl(data.accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
@@ -473,7 +473,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const { PolicySubmissionEmail } = await import('../../templates/email/react-email/PolicySubmissionEmail');
 
     const html = await render(PolicySubmissionEmail(data));
-    const subject = `Solicitud Recibida - Póliza Hestia #${data.policyId}`;
+    const subject = `Solicitud Recibida - Protección Hestia #${data.policyId}`;
 
     // Generate plain text version
     const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
@@ -567,7 +567,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     };
 
     const actorTypeName = actorTypeNames[data.actorType];
-    const subject = `Acción Requerida: Completa tu información como ${actorTypeName} - Póliza ${data.policyNumber}`;
+    const subject = `Acción Requerida: Completa tu información como ${actorTypeName} - Protección ${data.policyNumber}`;
 
     // Generate plain text version
     const text = `
@@ -575,7 +575,7 @@ Hola${data.name ? ` ${data.name}` : ''},
 
 ${data.initiatorName || 'El administrador'} te ha designado como ${actorTypeName} en una protección de arrendamiento.
 
-Número de Póliza: ${data.policyNumber}
+Número de Protección: ${data.policyNumber}
 Propiedad: ${data.propertyAddress}
 
 Para continuar con el proceso, necesitamos que completes tu información y documentación.
@@ -686,13 +686,13 @@ export const sendActorRejectionEmail = async (params: ActorRejectionData): Promi
       aval: 'Aval',
     };
 
-    const subject = `Información Rechazada - Póliza ${params.policyNumber}`;
+    const subject = `Información Rechazada - Protección ${params.policyNumber}`;
 
     // Generate plain text version
     const text = `
 Hola ${params.actorName},
 
-Tu información como ${actorTypeLabels[params.actorType] || params.actorType} para la póliza ${params.policyNumber} ha sido rechazada.
+Tu información como ${actorTypeLabels[params.actorType] || params.actorType} para la protección ${params.policyNumber} ha sido rechazada.
 
 Razón del rechazo:
 ${params.rejectionReason}
@@ -726,7 +726,7 @@ export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Prom
     const html = await render(PolicyStatusUpdateEmail(data));
     const isApproved = data.status === 'approved';
     const statusText = isApproved ? 'Aprobada' : 'Rechazada';
-    const subject = `Solicitud de Póliza ${statusText} - Hestia`;
+    const subject = `Solicitud de Protección ${statusText} - Hestia`;
 
     // Generate plain text version
     const text = `
@@ -738,10 +738,10 @@ Estado: ${statusText}
 ${data.reason ? `Motivo: ${data.reason}` : ''}
 
 ${isApproved ? 
-  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu póliza.
+  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu protección.
 
 Próximos Pasos:
-- Recibirás los documentos de la póliza por correo electrónico
+- Recibirás los documentos de la protección por correo electrónico
 - Un representante te contactará para finalizar los detalles
 - Tu garantía estará activa una vez completado el proceso` :
   `Si crees que esta decisión fue tomada por error o te gustaría discutir tu solicitud, puedes contactar a nuestro equipo de soporte.

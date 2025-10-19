@@ -102,7 +102,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
 
   const fetchPolicies = async () => {
     if (!isAuthenticated) return;
-    
+
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -254,7 +254,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Pólizas</p>
+                  <p className="text-sm text-muted-foreground">Total Protecciones</p>
                   <p className="text-2xl font-bold">{summaryStats.total}</p>
                 </div>
                 <FileText className="h-8 w-8 text-muted-foreground/20" />
@@ -396,8 +396,8 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <PolicyStatusBadge 
-                            status={policy.status} 
+                          <PolicyStatusBadge
+                            status={policy.status}
                             showIcon={true}
                             size="md"
                           />
@@ -484,7 +484,7 @@ export function PolicyTable({ refreshTrigger }: PolicyTableProps) {
         )}
         </CardContent>
       </Card>
-      
+
       {/* Resend Invitation Dialog */}
       {selectedPolicy && (
         <ResendInvitationDialog

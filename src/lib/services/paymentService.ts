@@ -167,8 +167,8 @@ export class PaymentService {
           price_data: {
             currency: currency.toLowerCase(),
             product_data: {
-              name: policy?.packageName || 'Póliza de Garantía',
-              description: `Pago de póliza para ${policy?.tenantEmail || 'inquilino'}`,
+              name: policy?.packageName || 'Protección de Garantía',
+              description: `Pago de protección para ${policy?.tenantEmail || 'inquilino'}`,
             },
             unit_amount: Math.round(amount * 100), // Convert to cents
           },
