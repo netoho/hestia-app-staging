@@ -188,7 +188,7 @@ async function checkAndUpdatePolicyStatus(policyId: string) {
       await logPolicyActivity({
         policyId,
         action: 'all_actors_approved',
-        description: 'Todos los actores han sido aprobados. La póliza está lista para aprobación final.',
+        description: 'Todos los actores han sido aprobados. La protección está lista para aprobación final.',
         performedById: 'system'
       });
     }

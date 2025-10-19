@@ -256,7 +256,7 @@ export default function LandlordInformationPage({
         <Alert className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            No se pudo cargar la información de la póliza.
+            No se pudo cargar la información de la protección.
           </AlertDescription>
         </Alert>
       </div>
@@ -277,7 +277,7 @@ export default function LandlordInformationPage({
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Volver a la póliza
+        Volver a la protección
       </Button>
 
       <Card className="max-w-4xl mx-auto">
@@ -289,7 +289,7 @@ export default function LandlordInformationPage({
           {policy && (
             <Alert className="mt-4">
               <AlertDescription>
-                <strong>Póliza:</strong> {policy.policyNumber}<br />
+                <strong>Protección:</strong> {policy.policyNumber}<br />
                 <strong>Propiedad:</strong> {policy.propertyAddress}
               </AlertDescription>
             </Alert>

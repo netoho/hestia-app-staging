@@ -194,7 +194,7 @@ export default function PolicyProgressPage({
         <Alert className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            No se pudo cargar el progreso de la póliza.
+            No se pudo cargar el progreso de la protección.
           </AlertDescription>
         </Alert>
       </div>
@@ -209,13 +209,13 @@ export default function PolicyProgressPage({
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Volver a la póliza
+        Volver a la protección
       </Button>
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Progreso de la Póliza</h1>
+        <h1 className="text-3xl font-bold">Progreso de la protección</h1>
         <p className="text-gray-600 mt-2">
-          Póliza: {policyProgress.policyNumber} • {policyProgress.propertyAddress}
+          Protección: {policyProgress.policyNumber} • {policyProgress.propertyAddress}
         </p>
       </div>
 
@@ -451,7 +451,7 @@ export default function PolicyProgressPage({
             <CardHeader>
               <CardTitle>Registro de Actividad</CardTitle>
               <CardDescription>
-                Historial de acciones realizadas en esta póliza
+                Historial de acciones
               </CardDescription>
             </CardHeader>
             <CardContent>

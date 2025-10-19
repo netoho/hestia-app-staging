@@ -27,9 +27,9 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documentos de la Póliza</CardTitle>
+        <CardTitle>Documentos de la Protección</CardTitle>
         <CardDescription>
-          Todos los documentos relacionados con esta póliza
+          Todos los documentos relacionados con esta protección
         </CardDescription>
       </CardHeader>
       <CardContent>

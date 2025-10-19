@@ -293,7 +293,7 @@ export default function ActorInformationForm({
         {policyData && (
           <Alert className="mt-4">
             <AlertDescription>
-              <strong>Póliza:</strong> {policyData.policyNumber}<br />
+              <strong>Protección:</strong> {policyData.policyNumber}<br />
               <strong>Propiedad:</strong> {policyData.propertyAddress}
             </AlertDescription>
           </Alert>

@@ -138,7 +138,7 @@ export default function AvalPortalPage({
           {policy && (
             <Alert className="mt-4">
               <AlertDescription>
-                <strong>Póliza:</strong> {policy.policyNumber}<br />
+                <strong>No. Protección:</strong> {policy.policyNumber}<br />
                 <strong>Propiedad:</strong> {policy.propertyAddress}<br />
                 <strong>Renta mensual:</strong> ${policy.rentAmount?.toLocaleString('es-MX')}
               </AlertDescription>

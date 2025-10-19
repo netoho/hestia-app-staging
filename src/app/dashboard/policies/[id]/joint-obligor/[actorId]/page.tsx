@@ -335,19 +335,19 @@ export default function JointObligorEditPage({
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Volver a la póliza
+        Volver a la protección
       </Button>
 
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle>Información del Obligado Solidario</CardTitle>
           <CardDescription>
-            Editar la información del obligado solidario para la póliza
+            Editar la información del obligado solidario
           </CardDescription>
           {policyInfo && (
             <Alert className="mt-4">
               <AlertDescription>
-                <strong>Póliza:</strong> {policyInfo.policyNumber}<br />
+                <strong>Protección:</strong> {policyInfo.policyNumber}<br />
                 <strong>Propiedad:</strong> {policyInfo.propertyAddress}
               </AlertDescription>
             </Alert>

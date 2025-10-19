@@ -256,7 +256,7 @@ export default function JointObligorFormWizard({
           {policy && (
             <Alert className="mt-4">
               <AlertDescription>
-                <strong>Póliza:</strong> {policy.policyNumber}<br />
+                <strong>Protección:</strong> {policy.policyNumber}<br />
                 <strong>Propiedad:</strong> {policy.propertyAddress}<br />
                 <strong>Renta mensual:</strong> ${policy.rentAmount?.toLocaleString('es-MX')}
               </AlertDescription>

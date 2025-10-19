@@ -192,7 +192,7 @@ export default function PropertyEditPage({
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Volver a la póliza
+        Volver a la protección
       </Button>
 
       <Card className="max-w-2xl mx-auto">
@@ -202,12 +202,12 @@ export default function PropertyEditPage({
             Información del Inmueble
           </CardTitle>
           <CardDescription>
-            Editar la información de la propiedad para la póliza
+            Editar la información de la propiedad para la protección
           </CardDescription>
           {policyInfo && (
             <Alert className="mt-4">
               <AlertDescription>
-                <strong>Póliza:</strong> {policyInfo.policyNumber}
+                <strong>Protección:</strong> {policyInfo.policyNumber}
               </AlertDescription>
             </Alert>
           )}

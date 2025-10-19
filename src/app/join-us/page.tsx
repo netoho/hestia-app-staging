@@ -38,7 +38,7 @@ export default function JoinUsPage() {
                     <div>
                       <h4 className="font-semibold">Herramientas Profesionales</h4>
                       <p className="text-sm text-muted-foreground">
-                        Acceso a nuestra plataforma completa para gestionar pólizas y clientes
+                        Acceso a nuestra plataforma completa para gestionar protecciones y clientes
                       </p>
                     </div>
                   </div>
@@ -81,7 +81,7 @@ export default function JoinUsPage() {
                 <ul className="space-y-2">
                   <li className="flex items-center space-x-2">
                     <span className="text-primary">✓</span>
-                    <span className="text-sm">Comisiones competitivas por cada póliza</span>
+                    <span className="text-sm">Comisiones competitivas por cada protección de arrendamiento</span>
                   </li>
                   <li className="flex items-center space-x-2">
                     <span className="text-primary">✓</span>

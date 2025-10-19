@@ -144,7 +144,7 @@ export default function ActorActivityTimeline({
         <CardDescription>
           {actorId || actorType
             ? 'Registro de acciones realizadas por este actor'
-            : 'Registro de todas las acciones realizadas en esta póliza'}
+            : 'Registro de todas las acciones realizadas'}
         </CardDescription>
       </CardHeader>
       <CardContent>

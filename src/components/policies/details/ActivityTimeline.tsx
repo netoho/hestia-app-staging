@@ -28,7 +28,7 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
       <CardHeader>
         <CardTitle>Historial de Actividad</CardTitle>
         <CardDescription>
-          Registro de todas las acciones realizadas en esta póliza
+          Registro de todas las acciones realizadas en esta protección
         </CardDescription>
       </CardHeader>
       <CardContent>

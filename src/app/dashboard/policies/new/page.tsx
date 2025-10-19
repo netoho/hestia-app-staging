@@ -378,7 +378,7 @@ export default function NewPolicyPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver
         </Button>
-        <h1 className="text-3xl font-bold">Nueva Póliza</h1>
+        <h1 className="text-3xl font-bold">Nueva Protección</h1>
       </div>
 
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
@@ -1558,7 +1558,7 @@ export default function NewPolicyPage() {
                   Anterior
                 </Button>
                 <Button onClick={handleSubmit} disabled={loading}>
-                  {loading ? 'Creando...' : 'Crear Póliza'}
+                  {loading ? 'Creando...' : 'Crear Protección'}
                 </Button>
               </div>
             </CardContent>

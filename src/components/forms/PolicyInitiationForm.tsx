@@ -37,34 +37,34 @@ const policyInitiateSchema = z.object({
   tenantType: z.enum(['individual', 'company'], {
     required_error: "Por favor seleccione el tipo de inquilino",
   }),
-  
+
   // Common fields
   tenantEmail: z.string().email('Correo electrónico inválido'),
   tenantPhone: z.string().optional(),
-  
+
   // Individual tenant fields
   tenantName: z.string().optional(),
-  
+
   // Company tenant fields
   companyName: z.string().optional(),
   companyRfc: z.string().optional(),
   legalRepresentativeName: z.string().optional(),
   legalRepresentativeId: z.string().optional(),
   companyAddress: z.string().optional(),
-  
+
   // Property information
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
-  
+
   // Package and pricing
   packageId: z.string().min(1, 'Por favor seleccione un paquete'),
   price: z.coerce.number().min(0, 'El precio debe ser un número positivo'),
   investigationFee: z.coerce.number().min(0, 'La tarifa de investigación debe ser un número positivo').default(200),
-  
+
   // Payment split
   tenantPaymentPercent: z.coerce.number().min(0).max(100, 'El porcentaje debe estar entre 0 y 100').default(100),
   landlordPaymentPercent: z.coerce.number().min(0).max(100, 'El porcentaje debe estar entre 0 y 100').default(0),
-  
+
   // Contract details
   contractLength: z.coerce.number().min(1).max(60, 'La duración del contrato debe estar entre 1 y 60 meses').default(12),
 }).superRefine((data, ctx) => {
@@ -76,7 +76,7 @@ const policyInitiateSchema = z.object({
       path: ["tenantPaymentPercent"],
     });
   }
-  
+
   // Validate required fields based on tenant type
   if (data.tenantType === 'individual') {
     if (!data.tenantName) {
@@ -206,16 +206,16 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Error al iniciar la póliza');
+        throw new Error(error.error || 'Error al iniciar la protección');
       }
 
       const result = await response.json();
 
       toast({
-        title: 'Póliza iniciada exitosamente',
-        description: result.emailSent 
+        title: 'Protección iniciada exitosamente',
+        description: result.emailSent
           ? `Se ha enviado un correo de invitación a ${values.tenantEmail}`
-          : 'La póliza ha sido creada pero no se pudo enviar el correo de invitación',
+          : 'La protección ha sido creada pero no se pudo enviar el correo de invitación',
         variant: result.emailSent ? 'default' : 'destructive',
       });
 
@@ -224,7 +224,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
       console.error('Policy initiation error:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al iniciar la póliza',
+        description: error instanceof Error ? error.message : 'Error al iniciar la protección',
         variant: 'destructive',
       });
     } finally {
@@ -259,8 +259,8 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                         <FormControl>
                           <RadioGroupItem value="individual" />
                         </FormControl>
-                        <label 
-                          htmlFor="individual" 
+                        <label
+                          htmlFor="individual"
                           className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -276,8 +276,8 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                         <FormControl>
                           <RadioGroupItem value="company" />
                         </FormControl>
-                        <label 
-                          htmlFor="company" 
+                        <label
+                          htmlFor="company"
                           className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -575,7 +575,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
               name="packageId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Paquete de Póliza *</FormLabel>
+                  <FormLabel>Paquete de Protección *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingPackages}>
                     <FormControl>
                       <SelectTrigger>
@@ -591,7 +591,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Seleccione el tipo de póliza según el perfil del inquilino
+                    Seleccione el tipo de protección según el perfil del inquilino
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -614,7 +614,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                     />
                   </FormControl>
                   <FormDescription>
-                    Precio total de la póliza (se actualiza automáticamente al seleccionar un paquete)
+                    Precio total de la protección
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -673,7 +673,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
 
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Distribución de Pago</h4>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -725,8 +725,8 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  Los porcentajes de pago deben sumar exactamente 100%. 
-                  La configuración predeterminada es que el inquilino pague el 100% de la póliza.
+                  Los porcentajes de pago deben sumar exactamente 100%.
+                  La configuración predeterminada es que el inquilino pague el 100% de la protección.
                 </AlertDescription>
               </Alert>
             </div>
@@ -743,12 +743,12 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creando Póliza...
+                Creando Protección...
               </>
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Iniciar Póliza
+                Iniciar Protección
               </>
             )}
           </Button>
