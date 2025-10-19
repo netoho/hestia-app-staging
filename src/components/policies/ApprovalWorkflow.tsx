@@ -52,12 +52,13 @@ interface Actor {
   verificationStatus?: string;
   rejectionReason?: string;
   documents?: any[];
+  isPrimary?: boolean;  // For landlords
 }
 
 interface PolicyData {
   id: string;
   status: string;
-  landlord?: Actor;
+  landlords?: Actor[];
   tenant?: Actor;
   jointObligors?: Actor[];
   avals?: Actor[];
@@ -150,19 +151,20 @@ export default function ApprovalWorkflow({
   const buildActorsList = (): ActorWithChecklist[] => {
     const actors: ActorWithChecklist[] = [];
 
-    if (policy.landlord) {
+    // Add all landlords
+    policy.landlords?.forEach((landlord, index) => {
       actors.push({
-        actor: policy.landlord,
+        actor: landlord,
         actorType: 'landlord',
-        displayName: policy.landlord.fullName || policy.landlord.companyName || 'Arrendador',
+        displayName: `${landlord.fullName || landlord.companyName || 'Arrendador'}${landlord.isPrimary ? ' (Principal)' : ` (Co-propietario ${index})`}`,
         icon: Building,
-        checklist: checklists[policy.landlord.id] || {
-          infoComplete: policy.landlord.informationComplete || false,
+        checklist: checklists[landlord.id] || {
+          infoComplete: landlord.informationComplete || false,
           docsVerified: false,
           referencesChecked: false,
         },
       });
-    }
+    });
 
     if (policy.tenant) {
       actors.push({
@@ -281,31 +283,32 @@ export default function ApprovalWorkflow({
     });
   };
 
-  // Render actor verification row
+  // Render actor verification row - Mobile Responsive
   const renderActorRow = ({ actor, actorType, displayName, icon: Icon, checklist }: ActorWithChecklist) => {
     const isPending = actor.verificationStatus === 'PENDING' && actor.informationComplete;
     const isApproved = actor.verificationStatus === 'APPROVED';
     const isRejected = actor.verificationStatus === 'REJECTED';
 
     return (
-      <div key={actor.id} className="border rounded-lg p-4 space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+      <div key={actor.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+        {/* Header - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-start sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 mt-1 sm:mt-0">
               <Checkbox
                 checked={selectedActors.has(actor.id)}
                 onCheckedChange={() => toggleActorSelection(actor.id)}
                 disabled={!isPending}
+                className="h-5 w-5"
               />
-              <Icon className="h-5 w-5 text-gray-600" />
+              <Icon className="h-5 w-5 text-gray-600 flex-shrink-0" />
             </div>
-            <div>
-              <p className="font-medium">{displayName}</p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-sm sm:text-base truncate">{displayName}</p>
               <p className="text-xs text-gray-500">{actorType === 'landlord' ? 'Arrendador' : actorType === 'tenant' ? 'Inquilino' : actorType === 'jointObligor' ? 'Obligado Solidario' : 'Aval'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             {getVerificationBadge(actor.verificationStatus)}
           </div>
         </div>
@@ -360,13 +363,13 @@ export default function ApprovalWorkflow({
           </Alert>
         )}
 
-        {/* Actions */}
+        {/* Actions - Mobile Responsive */}
         {isPending && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               size="sm"
               variant="outline"
-              className="text-green-600 border-green-600 hover:bg-green-50"
+              className="text-green-600 border-green-600 hover:bg-green-50 flex-1 sm:flex-initial"
               onClick={() =>
                 setApproveDialog({
                   open: true,
@@ -382,12 +385,12 @@ export default function ApprovalWorkflow({
               ) : (
                 <Check className="h-4 w-4" />
               )}
-              {t.pages.policies.actorVerification.approve}
+              <span className="ml-1">{t.pages.policies.actorVerification.approve}</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-red-600 border-red-600 hover:bg-red-50"
+              className="text-red-600 border-red-600 hover:bg-red-50 flex-1 sm:flex-initial"
               onClick={() =>
                 setRejectDialog({
                   open: true,
@@ -398,7 +401,7 @@ export default function ApprovalWorkflow({
               }
             >
               <X className="h-4 w-4" />
-              {t.pages.policies.actorVerification.reject}
+              <span className="ml-1">{t.pages.policies.actorVerification.reject}</span>
             </Button>
           </div>
         )}
@@ -452,7 +455,7 @@ export default function ApprovalWorkflow({
                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
                 <AlertTitle className="text-blue-800">Listo para aprobación final</AlertTitle>
                 <AlertDescription className="text-blue-700">
-                  Todos los actores han sido verificados y aprobados. Puedes proceder con la aprobación final de la póliza.
+                  Todos los actores han sido verificados y aprobados. Puedes proceder con la aprobación final de la protección.
                 </AlertDescription>
               </Alert>
               <Button
@@ -572,10 +575,10 @@ export default function ApprovalWorkflow({
       <AlertDialog open={approvePolicyDialog} onOpenChange={setApprovePolicyDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Aprobar Póliza</AlertDialogTitle>
+            <AlertDialogTitle>Aprobar Protección</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que deseas aprobar esta póliza? Todos los actores han sido verificados
-              y la póliza avanzará al siguiente estado en el proceso.
+              ¿Estás seguro de que deseas aprobar esta protección? Todos los actores han sido verificados
+              y la protección avanzará al siguiente estado en el proceso.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -590,7 +593,7 @@ export default function ApprovalWorkflow({
               ) : (
                 <CheckCircle2 className="mr-2 h-4 w-4" />
               )}
-              Aprobar Póliza
+              Aprobar Protección
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

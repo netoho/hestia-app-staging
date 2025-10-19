@@ -174,21 +174,21 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
           </div>
         )}
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="text-center p-2 bg-gray-50 rounded-lg">
-            <div className="text-lg font-bold text-purple-600">{actor.documents?.length || 0}</div>
-            <div className="text-xs text-gray-600">Documentos</div>
+        {/* Quick Stats - Responsive */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+          <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+            <div className="text-base sm:text-lg font-bold text-purple-600">{actor.documents?.length || 0}</div>
+            <div className="text-[10px] sm:text-xs text-gray-600">Documentos</div>
           </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg">
-            <div className="text-lg font-bold text-green-600">
+          <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+            <div className="text-base sm:text-lg font-bold text-green-600">
               {(actor.references?.length || 0) + (actor.commercialReferences?.length || 0)}
             </div>
-            <div className="text-xs text-gray-600">Referencias</div>
+            <div className="text-[10px] sm:text-xs text-gray-600">Referencias</div>
           </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg">
-            <div className="text-lg font-bold text-blue-600">{progress}%</div>
-            <div className="text-xs text-gray-600">Completo</div>
+          <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+            <div className="text-base sm:text-lg font-bold text-blue-600">{progress}%</div>
+            <div className="text-[10px] sm:text-xs text-gray-600">Completo</div>
           </div>
         </div>
 
@@ -353,8 +353,8 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
             <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
               Información Adicional
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <p className="text-xs text-gray-600">{actor.additionalInfo}</p>
+            <div>
+              <p className="text-sm text-gray-600">{actor.additionalInfo}</p>
             </div>
           </div>
         )}
@@ -365,13 +365,13 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
             <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
               Referencias Personales
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {actor.references.map((ref: any, index: number) => (
                 <Card key={index} className="p-3">
                   <p className="font-medium text-sm">{ref.name}</p>
                   <p className="text-xs text-gray-600">{ref.relationship}</p>
                   <p className="text-xs text-gray-600">{ref.phone}</p>
-                  {ref.email && <p className="text-xs text-gray-600">{ref.email}</p>}
+                  {ref.email && <p className="text-xs text-gray-600 truncate">{ref.email}</p>}
                 </Card>
               ))}
             </div>
@@ -384,20 +384,20 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
             <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
               Documentos
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {actor.documents.map((doc: any) => (
                 <div
                   key={doc.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center gap-2 flex-1">
-                    <FileText className="h-4 w-4 text-gray-500" />
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{doc.documentType}</p>
                       <p className="text-xs text-gray-500 truncate">{doc.originalName}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-2">
+                  <div className="flex items-center gap-1 sm:gap-2 ml-2 flex-shrink-0">
                     {doc.verifiedAt && <CheckCircle2 className="h-4 w-4 text-green-500" />}
                     <Button
                       size="sm"

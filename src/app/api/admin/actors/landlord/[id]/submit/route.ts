@@ -65,12 +65,29 @@ export async function PUT(
     const landlordService = new LandlordService();
     const isPartialSave = body.partial === true;
 
+    // Extract landlord data from array
+    if (!body.landlords || !Array.isArray(body.landlords)) {
+      return NextResponse.json(
+        { error: 'Invalid request: landlords array is required' },
+        { status: 400 }
+      );
+    }
+
+    // Find the landlord matching this ID
+    const landlordData = body.landlords.find((l: any) => l.id === landlordId);
+    if (!landlordData) {
+      return NextResponse.json(
+        { error: 'Landlord not found in submission data' },
+        { status: 400 }
+      );
+    }
+
     // Directly save without token validation (admin already authenticated)
     try {
       // Save landlord information
       const saveResult = await landlordService.saveLandlordInformation(
         landlordId,
-        body.landlord,
+        landlordData,
         isPartialSave
       );
 

@@ -143,20 +143,20 @@ export default function ActorProgressCard({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
+            <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
               {getActorIcon()}
             </div>
-            <div>
-              <h3 className="font-semibold">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold truncate">
                 {actor.fullName || actor.companyName || getActorTypeLabel()}
               </h3>
-              <p className="text-sm text-gray-600">{actor.email || 'Sin email'}</p>
+              <p className="text-sm text-gray-600 truncate">{actor.email || 'Sin email'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {getVerificationStatusBadge(actor.verificationStatus || 'PENDING')}
             {actor.informationComplete ? (
               <Badge className="bg-green-500 text-white">Completo</Badge>
@@ -164,8 +164,9 @@ export default function ActorProgressCard({
               <Badge className="bg-orange-500 text-white">Pendiente</Badge>
             )}
             {permissions.canEdit && (
-              <Button size="sm" variant="outline" onClick={onEdit}>
+              <Button size="sm" variant="outline" onClick={onEdit} className="h-8 w-8 p-0 sm:w-auto sm:px-3">
                 <Edit className="h-4 w-4" />
+                <span className="hidden sm:inline-block sm:ml-1">Editar</span>
               </Button>
             )}
           </div>
@@ -182,19 +183,19 @@ export default function ActorProgressCard({
             <Progress value={progress} className="h-2" />
           </div>
 
-          {/* Quick Stats */}
+          {/* Quick Stats - Responsive */}
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{completedFields}/10</div>
-              <div className="text-xs text-gray-600 mt-1">Campos</div>
+            <div className="p-2 sm:p-3 bg-gray-50 rounded-lg">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600">{completedFields}/10</div>
+              <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Campos</div>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{documentsCount}</div>
-              <div className="text-xs text-gray-600 mt-1">Documentos</div>
+            <div className="p-2 sm:p-3 bg-gray-50 rounded-lg">
+              <div className="text-lg sm:text-2xl font-bold text-purple-600">{documentsCount}</div>
+              <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Documentos</div>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{referencesCount}</div>
-              <div className="text-xs text-gray-600 mt-1">Referencias</div>
+            <div className="p-2 sm:p-3 bg-gray-50 rounded-lg">
+              <div className="text-lg sm:text-2xl font-bold text-green-600">{referencesCount}</div>
+              <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Referencias</div>
             </div>
           </div>
 

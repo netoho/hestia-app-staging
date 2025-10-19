@@ -19,11 +19,14 @@ export async function GET(
 
     const { id } = await params;
 
-    // Fetch policy with landlord information
+    // Fetch policy with primary landlord information (backward compatibility)
     const policy = await prisma.policy.findUnique({
       where: { id },
       include: {
-        landlord: true,
+        landlords: {
+          where: { isPrimary: true },
+          take: 1,
+        },
       },
     });
 
@@ -56,7 +59,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: policy.landlord,
+      data: policy.landlords[0] || null, // Return primary landlord or null
     });
   } catch (error) {
     console.error('Error fetching landlord information:', error);
@@ -83,11 +86,11 @@ export async function POST(
     const { id } = await params;
     const body = await req.json();
 
-    // Fetch policy
+    // Fetch policy with all landlords
     const policy = await prisma.policy.findUnique({
       where: { id },
       include: {
-        landlord: true,
+        landlords: true,
       },
     });
 
@@ -166,12 +169,14 @@ export async function POST(
       );
     }
 
-    // Create or update landlord information
+    // Create or update primary landlord information
     let landlord;
-    if (policy.landlord) {
-      // Update existing landlord
+    const primaryLandlord = policy.landlords.find(l => l.isPrimary);
+
+    if (primaryLandlord) {
+      // Update existing primary landlord
       landlord = await prisma.landlord.update({
-        where: { id: policy.landlord.id },
+        where: { id: primaryLandlord.id },
         data: {
           isCompany: body.isCompany || false,
           fullName: body.fullName,
@@ -190,10 +195,11 @@ export async function POST(
         },
       });
     } else {
-      // Create new landlord
+      // Create new primary landlord
       landlord = await prisma.landlord.create({
         data: {
           policyId: id,
+          isPrimary: true, // Always create as primary when using this endpoint
           isCompany: body.isCompany || false,
           fullName: body.fullName,
           rfc: body.rfc,
@@ -215,10 +221,10 @@ export async function POST(
     // Log activity
     await logPolicyActivity({
       policyId: id,
-      action: policy.landlord ? 'landlord_updated' : 'landlord_created',
-      description: policy.landlord
-        ? 'Landlord information updated'
-        : 'Landlord information created',
+      action: primaryLandlord ? 'landlord_updated' : 'landlord_created',
+      description: primaryLandlord
+        ? 'Primary landlord information updated'
+        : 'Primary landlord information created',
       performedById: user.id,
       details: {
         landlordId: landlord.id,
@@ -234,7 +240,7 @@ export async function POST(
       const updatedPolicy = await prisma.policy.findUnique({
         where: { id },
         include: {
-          landlord: true,
+          landlords: true,
           tenant: true,
           jointObligors: true,
           avals: true,
@@ -244,9 +250,16 @@ export async function POST(
       if (updatedPolicy) {
         let allActorsComplete = true;
 
-        // Check landlord
-        if (!updatedPolicy.landlord?.informationComplete) {
+        // Check ALL landlords
+        if (updatedPolicy.landlords.length === 0) {
           allActorsComplete = false;
+        } else {
+          for (const landlord of updatedPolicy.landlords) {
+            if (!landlord.informationComplete || landlord.verificationStatus !== 'APPROVED') {
+              allActorsComplete = false;
+              break;
+            }
+          }
         }
 
         // Check tenant
@@ -332,21 +345,21 @@ export async function DELETE(
       );
     }
 
-    // Find and delete landlord
+    // Find and delete primary landlord
     const policy = await prisma.policy.findUnique({
       where: { id },
-      include: { landlord: true },
+      include: { landlords: { where: { isPrimary: true }, take: 1 } },
     });
 
-    if (!policy || !policy.landlord) {
+    if (!policy || policy.landlords.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Landlord not found' },
+        { success: false, error: 'Primary landlord not found' },
         { status: 404 }
       );
     }
 
     await prisma.landlord.delete({
-      where: { id: policy.landlord.id },
+      where: { id: policy.landlords[0].id },
     });
 
     // Log activity

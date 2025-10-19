@@ -51,11 +51,14 @@ export default function LandlordFormWizard({
   });
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
-  // Form data state
-  const [formData, setFormData] = useState<Partial<LandlordData>>({
-    ...initialData,
-    isCompany,
-  });
+  // Form data state - support multiple landlords
+  const [landlords, setLandlords] = useState<Partial<LandlordData>[]>([
+    {
+      ...initialData,
+      isCompany,
+      isPrimary: true, // First landlord is always primary
+    }
+  ]);
 
   const [propertyData, setPropertyData] = useState<Partial<PropertyDetails>>({
     isFurnished: false,
@@ -91,15 +94,39 @@ export default function LandlordFormWizard({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Handle form field changes
-  const handleFormChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Handle form field changes for specific landlord
+  const handleFormChange = useCallback((landlordIndex: number, field: string, value: any) => {
+    setLandlords(prev => {
+      const updated = [...prev];
+      updated[landlordIndex] = { ...updated[landlordIndex], [field]: value };
+      return updated;
+    });
     // Clear error for this field
     setErrors(prev => {
       const newErrors = { ...prev };
-      delete newErrors[field];
+      delete newErrors[`${landlordIndex}_${field}`];
       return newErrors;
     });
+  }, []);
+
+  // Add co-owner landlord
+  const addCoOwner = useCallback(() => {
+    setLandlords(prev => [
+      ...prev,
+      {
+        isCompany: false,
+        isPrimary: false,
+        email: '',
+        phone: '',
+        address: '',
+      }
+    ]);
+  }, []);
+
+  // Remove co-owner landlord
+  const removeCoOwner = useCallback((index: number) => {
+    if (index === 0) return; // Can't remove primary landlord
+    setLandlords(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   const handlePropertyChange = useCallback((field: string, value: any) => {
@@ -125,12 +152,15 @@ export default function LandlordFormWizard({
     setErrors({});
 
     try {
-      // Clean addressDetails to remove id and timestamps
-      const cleanFormData = { ...formData };
-      if (cleanFormData.addressDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddress } = cleanFormData.addressDetails as any;
-        cleanFormData.addressDetails = cleanAddress;
-      }
+      // Clean addressDetails for all landlords
+      const cleanedLandlords = landlords.map(landlord => {
+        const cleaned = { ...landlord };
+        if (cleaned.addressDetails) {
+          const { id, createdAt, updatedAt, ...cleanAddress } = cleaned.addressDetails as any;
+          cleaned.addressDetails = cleanAddress;
+        }
+        return cleaned;
+      });
 
       // Clean propertyAddressDetails if present
       let cleanPropertyData = { ...propertyData };
@@ -154,60 +184,28 @@ export default function LandlordFormWizard({
         : cleanPropertyData;
 
       // Prepare submission data based on tab
+      // For personal tab, submit all landlords
       let submissionData: any = {
-        landlord: {
-          ...cleanFormData,
-          isCompany,
-        },
+        landlords: cleanedLandlords, // Send array of landlords
         propertyDetails: (tabName === 'property' || tabName === 'financial') ? propertyWithFinancial : undefined,
         partial: isPartial,
       };
 
-      // For property tab saves, only send minimal landlord data
+      // For property tab saves, only send primary landlord minimal data
       if (tabName === 'property') {
-        submissionData.landlord = {
-          isCompany,
-          // Only include essential fields needed for validation
-          email: formData.email || '',
-          phone: formData.phone || '',
-          fullName: isCompany ? undefined : formData.fullName,
-          companyName: isCompany ? formData.companyName : undefined,
-        };
+        submissionData.landlords = [{
+          ...cleanedLandlords[0],
+          isPrimary: true,
+        }];
       }
 
-      // For financial tab saves, include requiresCFDI
+      // For financial tab saves, include requiresCFDI on primary landlord only
       if (tabName === 'financial') {
-        submissionData.landlord = {
-          ...submissionData.landlord,
-          requiresCFDI: formData.requiresCFDI,
-        };
-      }
-
-      // For partial saves, only send relevant fields
-      if (isPartial && tabName === 'personal') {
-        // Filter to only personal/company fields
-        const relevantFields = isCompany
-          ? ['isCompany', 'companyName', 'companyRfc', 'legalRepName', 'legalRepPosition',
-             'legalRepRfc', 'legalRepPhone', 'legalRepEmail', 'email', 'phone',
-             'address', 'addressDetails', 'workPhone', 'workEmail']
-          : ['isCompany', 'fullName', 'rfc', 'curp', 'email', 'phone', 'address',
-             'addressDetails', 'occupation', 'employerName', 'monthlyIncome',
-             'personalEmail', 'workEmail', 'workPhone'];
-
-        const filteredData: any = { isCompany };
-
-        relevantFields.forEach(field => {
-          if ((formData as any)[field] !== undefined) {
-            // Clean addressDetails to remove id and timestamps
-            if (field === 'addressDetails' && (formData as any)[field]) {
-              const { id, createdAt, updatedAt, ...cleanAddress } = (formData as any)[field];
-              filteredData[field] = cleanAddress;
-            } else {
-              filteredData[field] = (formData as any)[field];
-            }
-          }
-        });
-        submissionData.landlord = filteredData;
+        submissionData.landlords = [{
+          ...cleanedLandlords[0],
+          isPrimary: true,
+          requiresCFDI: cleanedLandlords[0].requiresCFDI,
+        }];
       }
 
       // Use admin endpoint if in admin mode, otherwise use regular actor endpoint
@@ -336,7 +334,7 @@ export default function LandlordFormWizard({
                 onValueChange={(value) => {
                   const newIsCompany = value === 'company';
                   setIsCompany(newIsCompany);
-                  setFormData(prev => ({ ...prev, isCompany: newIsCompany }));
+                  handleFormChange(0, 'isCompany', newIsCompany);
                 }}
               >
                 <div className="flex items-center space-x-2">
@@ -357,44 +355,78 @@ export default function LandlordFormWizard({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Información {isCompany ? 'de la Empresa' : 'Personal'}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isCompany ? (
-                <CompanyInformation
-                  data={formData as Partial<CompanyActorData>}
-                  onChange={handleFormChange}
-                  errors={errors}
-                  disabled={savingTab === 'personal'}
-                  showAdditionalContact
-                />
-              ) : (
-                <PersonInformation
-                  data={formData as Partial<PersonActorData>}
-                  onChange={handleFormChange}
-                  errors={errors}
-                  disabled={savingTab === 'personal'}
-                  showEmploymentInfo
-                  showAdditionalContact
-                />
-              )}
+          {/* Render all landlords */}
+          {landlords.map((landlord, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>
+                    {index === 0 ? 'Arrendador Principal (Contacto Principal)' : `Co-propietario ${index}`}
+                  </CardTitle>
+                  {index > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCoOwner(index)}
+                      disabled={savingTab === 'personal'}
+                    >
+                      ✕ Eliminar
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {landlord.isCompany ? (
+                  <CompanyInformation
+                    data={landlord as Partial<CompanyActorData>}
+                    onChange={(field, value) => handleFormChange(index, field, value)}
+                    errors={errors}
+                    disabled={savingTab === 'personal'}
+                    showAdditionalContact={index === 0} // Only show for primary
+                  />
+                ) : (
+                  <PersonInformation
+                    data={landlord as Partial<PersonActorData>}
+                    onChange={(field, value) => handleFormChange(index, field, value)}
+                    errors={errors}
+                    disabled={savingTab === 'personal'}
+                    showEmploymentInfo={index === 0} // Only show for primary
+                    showAdditionalContact={index === 0} // Only show for primary
+                  />
+                )}
 
-              <div className="mt-4">
-                <AddressAutocomplete
-                  label="Dirección *"
-                  value={formData.addressDetails || {}}
-                  onChange={(addressData) => {
-                    handleFormChange('addressDetails', addressData);
-                    handleFormChange('address',
-                      `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
-                    );
-                  }}
-                  required
-                  disabled={savingTab === 'personal'}
-                />
-              </div>
+                <div className="mt-4">
+                  <AddressAutocomplete
+                    label="Dirección *"
+                    value={landlord.addressDetails || {}}
+                    onChange={(addressData) => {
+                      handleFormChange(index, 'addressDetails', addressData);
+                      handleFormChange(index, 'address',
+                        `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
+                      );
+                    }}
+                    required
+                    disabled={savingTab === 'personal'}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Add Co-owner Button */}
+          <Card>
+            <CardContent className="pt-6">
+              <Button
+                variant="outline"
+                onClick={addCoOwner}
+                disabled={savingTab === 'personal'}
+                className="w-full"
+              >
+                + Agregar Co-propietario
+              </Button>
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Agregue co-propietarios si la propiedad tiene múltiples dueños (ej: cónyuges, socios)
+              </p>
             </CardContent>
           </Card>
 
@@ -453,18 +485,18 @@ export default function LandlordFormWizard({
           </div>
         </TabsContent>
 
-        {/* Financial Information Tab */}
+        {/* Financial Information Tab - Only for Primary Landlord */}
         <TabsContent value="financial" className="space-y-4">
           <FinancialInfoForm
-            landlordData={formData}
+            landlordData={landlords[0]}
             policyFinancialData={policyFinancialData}
-            onLandlordChange={handleFormChange}
+            onLandlordChange={(field, value) => handleFormChange(0, field, value)}
             onPolicyFinancialChange={handlePolicyFinancialChange}
             errors={errors}
             disabled={savingTab === 'financial'}
             policy={policy}
             token={token}
-            landlordId={formData.id}
+            landlordId={landlords[0].id}
             isAdminEdit={isAdminEdit}
           />
 
@@ -491,12 +523,18 @@ export default function LandlordFormWizard({
           </div>
         </TabsContent>
 
-        {/* Documents Tab */}
+        {/* Documents Tab - Only for Primary Landlord */}
         <TabsContent value="documents" className="space-y-4">
+          <Alert className="mb-4">
+            <AlertDescription>
+              Los documentos (escrituras, información bancaria, CFDI) solo son requeridos del arrendador principal.
+              Los co-propietarios solo necesitan proporcionar identificación.
+            </AlertDescription>
+          </Alert>
           <DocumentsSection
-            landlordId={formData.id}
+            landlordId={landlords[0].id} // Primary landlord only
             token={token}
-            isCompany={isCompany}
+            isCompany={landlords[0].isCompany || false}
             allTabsSaved={isAdminEdit || (tabSaved.personal && tabSaved.property && tabSaved.financial)}
             onRequiredDocsChange={setRequiredDocsUploaded}
             isAdminEdit={isAdminEdit}

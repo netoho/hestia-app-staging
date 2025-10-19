@@ -43,15 +43,17 @@ interface Policy {
     informationComplete: boolean;
     completedAt?: string;
   };
-  landlord?: {
+  landlords?: Array<{
     id: string;
-    fullName: string;
+    fullName?: string;
+    companyName?: string;
     email: string;
     phone?: string;
     isCompany?: boolean;
+    isPrimary?: boolean;
     informationComplete: boolean;
     completedAt?: string;
-  };
+  }>;
   jointObligors?: Array<{
     id: string;
     fullName: string;
@@ -159,41 +161,48 @@ export default function PoliciesPage() {
     }
   };
 
-  const filteredPolicies = policies.filter(policy =>
-    policy.policyNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.tenant?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.landlord?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.landlord?.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPolicies = policies.filter(policy => {
+    const primaryLandlord = policy.landlords?.find(l => l.isPrimary) || policy.landlords?.[0];
+    return (
+      policy.policyNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      policy.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      policy.tenant?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      policy.tenant?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      primaryLandlord?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      primaryLandlord?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      primaryLandlord?.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Gestión de Pólizas</h1>
-        <Button onClick={() => router.push('/dashboard/policies/new')}>
+    <div className="container mx-auto p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Gestión de Protecciones</h1>
+        <Button
+          onClick={() => router.push('/dashboard/policies/new')}
+          className="w-full sm:w-auto"
+        >
           <Plus className="mr-2 h-4 w-4" />
-          Nueva Póliza
+          Nueva Protección
         </Button>
       </div>
 
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg md:text-xl">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <Input
-                placeholder="Buscar por número de póliza, dirección o email..."
+                placeholder="Buscar protección, dirección o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
@@ -210,22 +219,218 @@ export default function PoliciesPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredPolicies.length === 0 ? (
-            <div className="text-center py-12">
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : filteredPolicies.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
               <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">No se encontraron pólizas</p>
+              <p className="text-gray-500">No se encontraron protecciones</p>
             </div>
-          ) : (
-            <Table>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredPolicies.map((policy) => {
+              // Calculate completion progress
+              let completedActors = 0;
+              let totalActors = 0;
+
+              // Count all landlords
+              const landlordCount = policy.landlords?.length || 1;
+              totalActors += landlordCount;
+              completedActors += policy.landlords?.filter(l => l.informationComplete).length || 0;
+
+              if (policy.tenant) {
+                totalActors++;
+                if (policy.tenant.informationComplete) completedActors++;
+              } else {
+                totalActors++;
+              }
+
+              // Count guarantors based on type
+              if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {
+                const joCount = policy.jointObligors?.length || 0;
+                totalActors += joCount || 1;
+                completedActors += policy.jointObligors?.filter(jo => jo.informationComplete).length || 0;
+              }
+
+              if (policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') {
+                const avalCount = policy.avals?.length || 0;
+                totalActors += avalCount || 1;
+                completedActors += policy.avals?.filter(a => a.informationComplete).length || 0;
+              }
+
+              const progressPercentage = totalActors > 0 ? Math.round((completedActors / totalActors) * 100) : 0;
+              const primaryLandlord = policy.landlords?.find(l => l.isPrimary) || policy.landlords?.[0];
+
+              return (
+                <Card key={policy.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base truncate">{policy.policyNumber}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {policy.createdAt && format(new Date(policy.createdAt), 'dd/MM/yyyy', { locale: es })}
+                        </p>
+                      </div>
+                      {getStatusBadge(policy.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Property Info */}
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Propiedad</p>
+                      <p className="text-sm font-medium">{policy.propertyAddress}</p>
+                      {policy.propertyType && (
+                        <p className="text-xs text-muted-foreground">{policy.propertyType}</p>
+                      )}
+                      <p className="text-sm mt-1">
+                        ${policy.rentAmount?.toLocaleString('es-MX')} /mes
+                      </p>
+                    </div>
+
+                    {/* Actors Info Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Tenant */}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Inquilino</p>
+                        {policy.tenant ? (
+                          <div>
+                            <p className="text-sm truncate">
+                              {policy.tenant.fullName || policy.tenant.companyName || 'Sin nombre'}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {policy.tenant.informationComplete ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Clock className="h-3 w-3 text-orange-500" />
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {policy.tenant.informationComplete ? 'Completo' : 'Pendiente'}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Pendiente</p>
+                        )}
+                      </div>
+
+                      {/* Landlord */}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Arrendador</p>
+                        {primaryLandlord ? (
+                          <div>
+                            <p className="text-sm truncate">
+                              {primaryLandlord.fullName || primaryLandlord.companyName || 'Sin nombre'}
+                              {(policy.landlords?.length || 0) > 1 && (
+                                <span className="text-xs text-muted-foreground"> (+{(policy.landlords?.length || 0) - 1})</span>
+                              )}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {primaryLandlord.informationComplete ? (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Clock className="h-3 w-3 text-orange-500" />
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {policy.landlords?.filter(l => l.informationComplete).length || 0}/{policy.landlords?.length || 0} completos
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Pendiente</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-medium text-muted-foreground">Progreso</span>
+                        <span className="text-xs font-semibold">{progressPercentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            progressPercentage === 100
+                              ? 'bg-green-500'
+                              : progressPercentage > 0
+                              ? 'bg-blue-500'
+                              : 'bg-gray-300'
+                          }`}
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {completedActors}/{totalActors} actores completados
+                      </p>
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Precio Total</p>
+                        <p className="text-sm font-semibold">
+                          ${policy.totalPrice?.toLocaleString('es-MX')}
+                        </p>
+                        {policy.package && (
+                          <p className="text-xs text-muted-foreground">{policy.package.name}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/dashboard/policies/${policy.id}`)}
+                        className="flex-1"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/dashboard/policies/${policy.id}/progress`)}
+                        className="flex-1"
+                      >
+                        <Clock className="h-4 w-4 mr-1" />
+                        Progreso
+                      </Button>
+                      {(policy.status === PolicyStatus.DRAFT || policy.status === PolicyStatus.COLLECTING_INFO) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSendInvitations(policy.id)}
+                          className="flex-1"
+                        >
+                          <Send className="h-4 w-4 mr-1" />
+                          Enviar
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Número de Póliza</TableHead>
+                  <TableHead>No. Protección</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Propiedad</TableHead>
                   <TableHead>Inquilino</TableHead>
@@ -242,12 +447,10 @@ export default function PoliciesPage() {
                   let completedActors = 0;
                   let totalActors = 0;
 
-                  if (policy.landlord) {
-                    totalActors++;
-                    if (policy.landlord.informationComplete) completedActors++;
-                  } else {
-                    totalActors++; // Landlord is required
-                  }
+                  // Count all landlords
+                  const landlordCount = policy.landlords?.length || 1; // At least 1 required
+                  totalActors += landlordCount;
+                  completedActors += policy.landlords?.filter(l => l.informationComplete).length || 0;
 
                   if (policy.tenant) {
                     totalActors++;
@@ -311,19 +514,35 @@ export default function PoliciesPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {policy.landlord ? (
-                          <div>
-                            <div className="text-sm">{policy.landlord.fullName}</div>
-                            <div className="text-xs text-gray-500">{policy.landlord.email}</div>
-                            {policy.landlord.informationComplete ? (
-                              <CheckCircle className="inline h-3 w-3 text-green-500 mt-1" />
-                            ) : (
-                              <Clock className="inline h-3 w-3 text-orange-500 mt-1" />
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">Pendiente</span>
-                        )}
+                        {(() => {
+                          const primaryLandlord = policy.landlords?.find(l => l.isPrimary) || policy.landlords?.[0];
+                          const landlordCount = policy.landlords?.length || 0;
+
+                          if (primaryLandlord) {
+                            return (
+                              <div>
+                                <div className="text-sm">
+                                  {primaryLandlord.fullName || primaryLandlord.companyName || 'Sin nombre'}
+                                  {landlordCount > 1 && (
+                                    <span className="text-xs text-gray-500"> (+{landlordCount - 1})</span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500">{primaryLandlord.email}</div>
+                                {primaryLandlord.informationComplete ? (
+                                  <CheckCircle className="inline h-3 w-3 text-green-500 mt-1" />
+                                ) : (
+                                  <Clock className="inline h-3 w-3 text-orange-500 mt-1" />
+                                )}
+                                {landlordCount > 1 && (
+                                  <div className="text-xs text-gray-500">
+                                    {policy.landlords?.filter(l => l.informationComplete).length}/{landlordCount} completos
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          return <span className="text-gray-400">Pendiente</span>;
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -424,10 +643,12 @@ export default function PoliciesPage() {
                   );
                 })}
               </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-6">

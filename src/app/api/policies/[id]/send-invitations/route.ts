@@ -25,11 +25,14 @@ export async function POST(
       const body = await req.json().catch(() => ({}));
       const { actors, resend = false } = body as { actors?: string[], resend?: boolean };
 
-      // Use Prisma
+      // Use Prisma - only include primary landlord for invitations
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
-          landlord: true,
+          landlords: {
+            where: { isPrimary: true },
+            take: 1,
+          },
           tenant: true,
           jointObligors: true,
           avals: true,
@@ -58,25 +61,16 @@ export async function POST(
         return !actors || actors.length === 0 || actors.includes(actorType);
       };
 
-      // Log actors found for debugging
-      // console.log('Sending invitations for policy:', policy.policyNumber);
-      // console.log('Request parameters:', { targetedActors: actors, resend });
-      // console.log('Actors found:', {
-      //   landlord: policy.landlord ? `${policy.landlord.email} (completed: ${policy.landlord.informationComplete})` : 'none',
-      //   tenant: policy.tenant ? `${policy.tenant.email} (completed: ${policy.tenant.informationComplete})` : 'none',
-      //   jointObligors: policy.jointObligors.map(jo => `${jo.email} (completed: ${jo.informationComplete})`),
-      //   avals: policy.avals.map(a => `${a.email} (completed: ${a.informationComplete})`)
-      // });
-
-      // Generate token for landlord
-      if (shouldProcessActor('landlord') && policy.landlord && policy.landlord.email && (resend || !policy.landlord.informationComplete)) {
-        const tokenData = await generateLandlordToken(policy.landlord.id);
+      // Generate token for primary landlord only
+      const primaryLandlord = policy.landlords[0]; // We already filtered for isPrimary=true
+      if (shouldProcessActor('landlord') && primaryLandlord && primaryLandlord.email && (resend || !primaryLandlord.informationComplete)) {
+        const tokenData = await generateLandlordToken(primaryLandlord.id);
 
         const sent = await sendActorInvitation({
           actorType: 'landlord' as any,
-          isCompany: policy.landlord.isCompany,
-          email: policy.landlord.email,
-          name: policy.landlord.fullName || policy.landlord.companyName || 'Arrendador',
+          isCompany: primaryLandlord.isCompany,
+          email: primaryLandlord.email,
+          name: primaryLandlord.fullName || primaryLandlord.companyName || 'Arrendador',
           token: tokenData.token,
           url: tokenData.url,
           policyNumber: policy.policyNumber,
@@ -87,7 +81,7 @@ export async function POST(
 
         invitations.push({
           actorType: 'landlord',
-          email: policy.landlord.email,
+          email: primaryLandlord.email,
           sent,
           token: tokenData.token,
           url: tokenData.url,
@@ -124,8 +118,6 @@ export async function POST(
 
       // Generate tokens for joint obligors
       for (const jo of policy.jointObligors) {
-          console.log('Processing joint obligor:', jo.email, 'info complete:', jo.informationComplete);
-          console.log(shouldProcessActor('jointObligor'), policy.jointObligors)
         if (shouldProcessActor('jointObligor') && jo.email && (resend || !jo.informationComplete)) {
           const tokenData = await generateJointObligorToken(jo.id);
 

@@ -102,7 +102,7 @@ interface PolicyDetails {
   landlordPercentage?: number;
 
   // Actors with verification status
-  landlord?: any;
+  landlords?: any[];
   tenant?: any;
   jointObligors?: any[];
   avals?: any[];
@@ -302,7 +302,7 @@ export default function PolicyDetailsPage({
   };
 
   const approvePolicy = async () => {
-    if (!confirm('¿Estás seguro de que deseas aprobar esta póliza?')) return;
+    if (!confirm('¿Estás seguro de que deseas aprobar esta protección?')) return;
 
     try {
       const response = await fetch(`/api/policies/${policyId}`, {
@@ -315,11 +315,11 @@ export default function PolicyDetailsPage({
 
       if (!response.ok) throw new Error('Failed to approve policy');
 
-      alert('Póliza aprobada exitosamente');
+      alert('Protección aprobada exitosamente');
       await fetchPolicyDetails();
     } catch (error) {
       console.error('Error approving policy:', error);
-      alert('Error al aprobar la póliza');
+      alert('Error al aprobar');
     }
   };
 
@@ -370,9 +370,15 @@ export default function PolicyDetailsPage({
     if (!policy) return 0;
 
     let completedActors = 0;
-    let totalActors = 2; // Landlord and Tenant are always required
+    let totalActors = 0;
 
-    if (policy.landlord?.informationComplete) completedActors++;
+    // Count all landlords
+    const landlordCount = policy.landlords?.length || 1;
+    totalActors += landlordCount;
+    completedActors += policy.landlords?.filter((l: any) => l.informationComplete).length || 0;
+
+    // Count tenant
+    totalActors += 1;
     if (policy.tenant?.informationComplete) completedActors++;
 
     if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {
@@ -391,7 +397,10 @@ export default function PolicyDetailsPage({
   const checkAllActorsApproved = () => {
     if (!policy) return false;
 
-    const landlordApproved = policy.landlord?.verificationStatus === 'APPROVED';
+    // Check all landlords are approved
+    const landlordsApproved = policy.landlords?.length > 0 &&
+      policy.landlords.every((l: any) => l.verificationStatus === 'APPROVED');
+
     const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
 
     const jointObligorsApproved = !policy.jointObligors?.length ||
@@ -400,7 +409,7 @@ export default function PolicyDetailsPage({
     const avalsApproved = !policy.avals?.length ||
       policy.avals.every((a: any) => a.verificationStatus === 'APPROVED');
 
-    return landlordApproved && tenantApproved && jointObligorsApproved && avalsApproved;
+    return landlordsApproved && tenantApproved && jointObligorsApproved && avalsApproved;
   };
 
   // Use permission hooks
@@ -466,26 +475,28 @@ export default function PolicyDetailsPage({
 
   return (
     <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
-      <div className="container mx-auto p-6 max-w-7xl animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="container mx-auto p-4 md:p-6 max-w-7xl animate-in fade-in duration-300">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Button
             variant="outline"
             onClick={() => router.push('/dashboard/policies')}
-            className="transition-all hover:scale-105 hover:shadow-md"
+            className="transition-all hover:scale-105 hover:shadow-md w-fit"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver
+            <span className="hidden sm:inline">Volver</span>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Póliza {policy.policyNumber}</h1>
-            <p className="text-gray-600 mt-1">{policy.propertyAddress}</p>
+          <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Protección {policy.policyNumber}</h1>
+              {getStatusBadge(policy.status)}
+            </div>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">{policy.propertyAddress}</p>
           </div>
-          {getStatusBadge(policy.status)}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {/* Policy Approval Button - Only for Staff/Admin */}
           {permissions.canApprove && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
             <Button
@@ -611,20 +622,26 @@ export default function PolicyDetailsPage({
         </CardContent>
       </Card>
 
-      {/* Main Content Tabs */}
+      {/* Main Content Tabs - Mobile Scrollable */}
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList className={`grid w-full ${permissions.canApprove || permissions.canVerifyDocuments ? 'grid-cols-7' : 'grid-cols-6'}`}>
-          <TabsTrigger value="overview">General</TabsTrigger>
-          <TabsTrigger value="landlord">Arrendador</TabsTrigger>
-          <TabsTrigger value="tenant">Inquilino</TabsTrigger>
-          <TabsTrigger value="guarantors">Obligado S. / Aval</TabsTrigger>
-          {/* Show verification tab only for users with approval/verification permissions */}
-          {(permissions.canApprove || permissions.canVerifyDocuments) && (
-            <TabsTrigger value="verification">Verificación</TabsTrigger>
-          )}
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="timeline">Actividad</TabsTrigger>
-        </TabsList>
+        <div className="relative">
+          <div className="overflow-x-auto pb-2">
+            <TabsList className={`inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max min-w-full md:w-full ${permissions.canApprove || permissions.canVerifyDocuments ? 'md:grid md:grid-cols-7' : 'md:grid md:grid-cols-6'}`}>
+              <TabsTrigger value="overview" className="whitespace-nowrap">General</TabsTrigger>
+              <TabsTrigger value="landlord" className="whitespace-nowrap">Arrendador</TabsTrigger>
+              <TabsTrigger value="tenant" className="whitespace-nowrap">Inquilino</TabsTrigger>
+              <TabsTrigger value="guarantors" className="whitespace-nowrap">Obligado S. / Aval</TabsTrigger>
+              {/* Show verification tab only for users with approval/verification permissions */}
+              {(permissions.canApprove || permissions.canVerifyDocuments) && (
+                <TabsTrigger value="verification" className="whitespace-nowrap">Verificación</TabsTrigger>
+              )}
+              <TabsTrigger value="documents" className="whitespace-nowrap">Documentos</TabsTrigger>
+              <TabsTrigger value="timeline" className="whitespace-nowrap">Actividad</TabsTrigger>
+            </TabsList>
+          </div>
+          {/* Scroll indicator for mobile */}
+          <div className="absolute right-0 top-0 h-10 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none md:hidden" />
+        </div>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -657,34 +674,51 @@ export default function PolicyDetailsPage({
 
         {/* Landlord Tab */}
         <TabsContent value="landlord" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <ActorCard
-                actor={policy.landlord}
-                actorType="landlord"
-                policyId={policyId}
-                getVerificationBadge={getVerificationBadge}
-                onEditClick={() => setEditingActor({ type: 'landlord', actor: policy.landlord })}
-              />
-            </div>
-            <div className="space-y-4">
-              <ActorProgressCard
-                actor={policy.landlord}
-                actorType="landlord"
-                onEdit={() => setEditingActor({ type: 'landlord', actor: policy.landlord })}
-                onSendInvitation={() => sendIndividualInvitation('landlord', policy.landlord?.id)}
-                permissions={{
-                  canEdit: permissions.canEdit,
-                  canSendInvitations: permissions.canSendInvitations,
-                }}
-              />
-              <ActorActivityTimeline
-                activities={policy.activities}
-                actorType="landlord"
-                actorName={policy.landlord?.fullName || policy.landlord?.companyName}
-              />
-            </div>
-          </div>
+          {policy.landlords && policy.landlords.length > 0 ? (
+            policy.landlords.map((landlord: any, index: number) => (
+              <div key={landlord.id} className="space-y-4">
+                {index > 0 && <hr className="my-6" />}
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  {landlord.isPrimary ? 'Arrendador Principal' : `Co-propietario ${index}`}
+                  {landlord.isPrimary && <Badge variant="outline" className="ml-2">Principal</Badge>}
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <ActorCard
+                      actor={landlord}
+                      actorType="landlord"
+                      policyId={policyId}
+                      getVerificationBadge={getVerificationBadge}
+                      onEditClick={() => setEditingActor({ type: 'landlord', actor: landlord })}
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <ActorProgressCard
+                      actor={landlord}
+                      actorType="landlord"
+                      onEdit={() => setEditingActor({ type: 'landlord', actor: landlord })}
+                      onSendInvitation={() => sendIndividualInvitation('landlord', landlord.id)}
+                      permissions={{
+                        canEdit: permissions.canEdit,
+                        canSendInvitations: permissions.canSendInvitations,
+                      }}
+                    />
+                    <ActorActivityTimeline
+                      activities={policy.activities}
+                      actorId={landlord.id}
+                      actorName={landlord.fullName || landlord.companyName}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-gray-600">No se ha registrado información del arrendador</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tenant Tab */}
@@ -821,7 +855,7 @@ export default function PolicyDetailsPage({
             <Card>
               <CardContent className="py-12 text-center">
                 <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Esta póliza no requiere garantías adicionales</p>
+                <p className="text-gray-600">Esta protección no requiere garantías adicionales</p>
               </CardContent>
             </Card>
           )}
