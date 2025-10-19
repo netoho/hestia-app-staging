@@ -110,7 +110,7 @@ export function useShareLinks(policyId: string): UseShareLinksReturn {
     actorName: string,
     policyNumber: string
   ): string => {
-    const message = `Hola ${actorName}, te compartimos el enlace para completar tu información de la póliza ${policyNumber}: ${url}`;
+    const message = `Hola ${actorName}, te compartimos el enlace para completar tu información de la protección ${policyNumber}: ${url}`;
     const cleanPhone = phone.replace(/\D/g, '');
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   }, []);

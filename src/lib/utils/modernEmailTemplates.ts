@@ -154,7 +154,7 @@ export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailCo
     day: 'numeric'
   });
 
-  const subject = 'Acción Requerida: Completa tu Solicitud de Póliza Hestia';
+  const subject = 'Acción Requerida: Completa tu Solicitud de Protección Hestia';
 
   const html = `
 <!DOCTYPE html>
@@ -163,7 +163,7 @@ export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailCo
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="x-apple-disable-message-reformatting">
-  <title>Solicitud de Póliza</title>
+  <title>Solicitud de Protección</title>
   <style>
     :root { --header-color: ${BRAND_COLORS.primary}; }
     ${getBaseStyles()}
@@ -172,13 +172,13 @@ export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailCo
 <body>
   <div class="container">
     <div class="header">
-      <h1>Solicitud de Póliza</h1>
+      <h1>Solicitud de Protección</h1>
       <p>Completa tu aplicación de garantía</p>
     </div>
     <div class="content">
       <h2>Hola${data.tenantName ? ` ${data.tenantName}` : ''},</h2>
       
-      <p><strong>${data.initiatorName}</strong> ha iniciado una solicitud de póliza de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en <strong>${data.propertyAddress}</strong>` : ''}.</p>
+      <p><strong>${data.initiatorName}</strong> ha iniciado una solicitud de protección de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en <strong>${data.propertyAddress}</strong>` : ''}.</p>
       
       <p>Para completar tu solicitud, haz clic en el botón de abajo y sigue el proceso paso a paso:</p>
       
@@ -220,7 +220,7 @@ export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailCo
   const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
-${data.initiatorName} ha iniciado una solicitud de póliza de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
+${data.initiatorName} ha iniciado una solicitud de protección de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
 
 Para completar tu solicitud, visita: ${policyUrl}
 
@@ -252,7 +252,7 @@ export function renderPolicySubmissionEmail(data: PolicySubmissionData): EmailCo
     minute: '2-digit'
   });
 
-  const subject = `Solicitud Recibida - Póliza Hestia #${data.policyId}`;
+  const subject = `Solicitud Recibida - Protección Hestia #${data.policyId}`;
 
   const html = `
 <!DOCTYPE html>
@@ -276,7 +276,7 @@ export function renderPolicySubmissionEmail(data: PolicySubmissionData): EmailCo
     <div class="content">
       <h2>¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!</h2>
       
-      <p>Hemos recibido exitosamente tu solicitud de póliza de garantía.</p>
+      <p>Hemos recibido exitosamente tu solicitud de protección de garantía.</p>
       
       <div class="info-box success">
         <h3>Detalles de tu Solicitud</h3>
@@ -314,7 +314,7 @@ export function renderPolicySubmissionEmail(data: PolicySubmissionData): EmailCo
   const text = `
 ¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!
 
-Hemos recibido exitosamente tu solicitud de póliza de garantía.
+Hemos recibido exitosamente tu solicitud de protección de garantía.
 
 ID de Solicitud: #${data.policyId}
 Enviada el: ${submittedDate}
@@ -341,7 +341,7 @@ export function renderPolicyStatusUpdateEmail(data: PolicyStatusUpdateData): Ema
   const statusText = isApproved ? 'Aprobada' : 'Rechazada';
   const headerColor = isApproved ? BRAND_COLORS.success : BRAND_COLORS.danger;
 
-  const subject = `Solicitud de Póliza ${statusText} - Hestia`;
+  const subject = `Solicitud de Protección ${statusText} - Hestia`;
 
   const html = `
 <!DOCTYPE html>
@@ -365,7 +365,7 @@ export function renderPolicyStatusUpdateEmail(data: PolicyStatusUpdateData): Ema
     <div class="content">
       <h2>Hola${data.tenantName ? ` ${data.tenantName}` : ''},</h2>
       
-      <p>Tu solicitud de póliza de garantía ha sido revisada por <strong>${data.reviewerName}</strong>.</p>
+      <p>Tu solicitud de protección de garantía ha sido revisada por <strong>${data.reviewerName}</strong>.</p>
       
       <div class="info-box ${isApproved ? 'success' : 'danger'}">
         <h3>Estado: ${statusText}</h3>
@@ -377,12 +377,12 @@ export function renderPolicyStatusUpdateEmail(data: PolicyStatusUpdateData): Ema
       
       ${isApproved ? `
         <h3>🎉 ¡Felicidades!</h3>
-        <p>Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu póliza.</p>
+        <p>Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu protección.</p>
         
         <div class="info-box info">
           <h3>Próximos Pasos</h3>
           <ul style="margin: 0; padding-left: 20px;">
-            <li>Recibirás los documentos de la póliza por correo electrónico</li>
+            <li>Recibirás los documentos de la protección por correo electrónico</li>
             <li>Un representante te contactará para finalizar los detalles</li>
             <li>Tu garantía estará activa una vez completado el proceso</li>
           </ul>
@@ -426,16 +426,16 @@ export function renderPolicyStatusUpdateEmail(data: PolicyStatusUpdateData): Ema
   const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
-Tu solicitud de póliza de garantía ha sido revisada por ${data.reviewerName}.
+Tu solicitud de protección de garantía ha sido revisada por ${data.reviewerName}.
 
 Estado: ${statusText}
 ${data.reason ? `Motivo: ${data.reason}` : ''}
 
 ${isApproved ? 
-  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu póliza.
+  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu protección.
 
 Próximos Pasos:
-- Recibirás los documentos de la póliza por correo electrónico
+- Recibirás los documentos de la protección por correo electrónico
 - Un representante te contactará para finalizar los detalles
 - Tu garantía estará activa una vez completado el proceso` :
   `Si crees que esta decisión fue tomada por error o te gustaría discutir tu solicitud, puedes contactar a nuestro equipo de soporte.
