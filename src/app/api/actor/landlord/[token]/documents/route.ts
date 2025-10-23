@@ -105,7 +105,7 @@ export async function POST(
       policyId: validation.landlord.policyId,
       action: 'document_uploaded',
       description: `Documento ${documentType} cargado por el arrendador`,
-      performedByActor: 'landlord',
+      performedByType: 'landlord',
       details: {
         documentId: document.id,
         documentType,
@@ -243,7 +243,7 @@ export async function DELETE(
       policyId: validation.landlord.policyId,
       action: 'document_deleted',
       description: `Landlord deleted ${document.documentType} document`,
-      performedByActor: 'landlord',
+      performedByType: 'landlord',
       details: {
         documentId,
         fileName: document.originalName,
