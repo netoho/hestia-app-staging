@@ -33,7 +33,6 @@ model User {
   sessions      Session[]
   createdPolicies Policy[]      @relation("CreatedByUser")
   managedPolicies Policy[]      @relation("ManagedByUser")
-  activities    PolicyActivity[]
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -169,7 +168,7 @@ model Policy {
   rejectionReason   String?     @db.Text
 
   // Related Actors
-  landlord          Landlord?
+  landlords         Landlord[]
   tenant            Tenant?
   jointObligors     JointObligor[]
   avals             Aval[]
@@ -231,7 +230,8 @@ model PropertyDetails {
 
 model Landlord {
   id                String      @id @default(cuid())
-  policyId          String      @unique
+  policyId          String
+  isPrimary         Boolean     @default(false)
 
   // Type
   isCompany         Boolean     @default(false)
@@ -303,6 +303,9 @@ model Landlord {
   updatedAt         DateTime    @updatedAt
 
   additionalInfo   String? @db.Char(1000)
+
+  @@index([policyId])
+  @@index([policyId, isPrimary])
 }
 
 model Tenant {
@@ -772,9 +775,9 @@ model PolicyActivity {
   description       String
   details           Json?
 
-  performedById     String?
-  performedBy       User?       @relation(fields: [performedById], references: [id])
-  performedByActor  String?     // tenant, landlord, joint_obligor, aval
+  // Polymorphic fields - NO foreign key constraints
+  performedById     String?     // Stores User ID OR Actor ID (no FK constraint)
+  performedByType   String?     // "user", "landlord", "tenant", "aval", "joint_obligor"
 
   ipAddress         String?
   userAgent         String?
@@ -782,6 +785,9 @@ model PolicyActivity {
   policy            Policy      @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime    @default(now())
+
+  @@index([performedById, performedByType])
+  @@index([policyId])
 }
 
 model Investigation {
