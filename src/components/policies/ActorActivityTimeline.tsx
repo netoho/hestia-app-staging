@@ -26,7 +26,7 @@ interface ActivityItem {
     name?: string;
     email: string;
   };
-  performedByActor?: string;
+  performedByType?: string;
   details?: any;
 }
 
@@ -109,8 +109,8 @@ export default function ActorActivityTimeline({
         return typeMatches;
       }
 
-      // Check if activity mentions this actor in performedByActor
-      if (actorName && activity.performedByActor === actorName) {
+      // Check if activity mentions this actor in performedByType
+      if (actorName && activity.performedByType === actorName) {
         return true;
       }
 
@@ -166,7 +166,7 @@ export default function ActorActivityTimeline({
                   <p className="text-xs text-gray-600">
                     {activity.performedBy?.name ||
                       activity.performedBy?.email ||
-                      activity.performedByActor ||
+                      activity.performedByType ||
                       'Sistema'}{' '}
                     • {formatDateTime(activity.createdAt)}
                   </p>
