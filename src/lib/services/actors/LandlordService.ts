@@ -290,7 +290,8 @@ export class LandlordService extends BaseActorService {
           description: partial
             ? 'El arrendador guardó información parcial'
             : 'El arrendador completó su información',
-          performedByActor: 'landlord',
+          performedById: landlord!.id,
+          performedByType: 'landlord',
           details: {
             landlordId: landlord!.id,
             isCompany: data.landlords[0]?.isCompany,

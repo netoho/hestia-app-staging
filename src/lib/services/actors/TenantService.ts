@@ -135,7 +135,8 @@ export class TenantService extends BaseActorService {
         description: isPartial
           ? 'El inquilino guardó información parcial'
           : 'El inquilino completó su información',
-        performedByActor: 'tenant',
+        performedById: tokenValidation.tenant.id,
+        performedByType: 'tenant',
         details: {
           tenantId: tokenValidation.tenant.id,
           isCompany: data.tenant.isCompany,

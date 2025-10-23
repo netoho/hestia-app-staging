@@ -261,16 +261,18 @@ export abstract class BaseActorService extends BaseService {
     policyId: string,
     action: string,
     description: string,
+    actorId?: string,
     details?: any
   ): AsyncResult<void> {
     try {
-      await this.prisma.activityLog.create({
+      await this.prisma.policyActivity.create({
         data: {
           policyId,
           action,
           description,
-          performedByActor: this.actorType,
-          details: details ? JSON.stringify(details) : null,
+          performedById: actorId,
+          performedByType: this.actorType,
+          details: details || undefined,
         },
       });
       return Result.ok(undefined);
