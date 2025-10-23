@@ -429,7 +429,7 @@ export interface PolicyActivity {
   details?: any;
   performedById?: string;
   performedBy?: any;
-  performedByActor?: string;
+  performedByType?: string;
   ipAddress?: string;
   userAgent?: string;
   createdAt: Date;
