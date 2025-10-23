@@ -178,7 +178,7 @@ export async function POST(
         policyId,
         action: 'document_uploaded',
         description: `${type} uploaded ${documentType} document`,
-        performedByActor: type,
+        performedByType: type,
         details: {
           documentId: result.documentId,
           documentType,
@@ -429,7 +429,7 @@ export async function DELETE(
         policyId: actor.policy.id,
         action: 'document_deleted',
         description: `${type} deleted a document`,
-        performedByActor: type,
+        performedByType: type,
         details: {
           documentId,
         },

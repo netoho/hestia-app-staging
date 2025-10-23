@@ -98,7 +98,7 @@ export async function GET(
         policyId: actor.policy.id,
         action: 'document_downloaded',
         description: `${type} downloaded ${document.documentType} document`,
-        performedByActor: type,
+        performedByType: type,
         details: {
           documentId,
           fileName: document.originalName,

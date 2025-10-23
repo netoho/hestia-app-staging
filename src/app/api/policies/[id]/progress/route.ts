@@ -47,14 +47,6 @@ export async function GET(
             createdAt: 'desc',
           },
           take: 20, // Last 20 activities
-          include: {
-            performedBy: {
-              select: {
-                name: true,
-                email: true,
-              },
-            },
-          },
         },
       },
     });
@@ -220,26 +212,26 @@ export async function GET(
       description: activity.description,
       createdAt: activity.createdAt.toISOString(),
       performedBy: activity.performedBy?.name || activity.performedBy?.email,
-      performedByActor: activity.performedByActor,
+      performedByType: activity.performedByType,
     }));
 
     // Get last activity timestamp for each actor
     const actorActivities = await prisma.policyActivity.findMany({
       where: {
         policyId: id,
-        performedByActor: { not: null },
+        performedByType: { not: null },
       },
       orderBy: {
         createdAt: 'desc',
       },
-      distinct: ['performedByActor'],
+      distinct: ['performedByType'],
     });
 
     // Add last activity to actors
     actors.forEach(actor => {
       const lastActivity = actorActivities.find(a =>
-        a.performedByActor === actor.type ||
-        (actor.type === 'jointObligor' && a.performedByActor === 'joint-obligor')
+        a.performedByType === actor.type ||
+        (actor.type === 'jointObligor' && a.performedByType === 'joint-obligor')
       );
       if (lastActivity) {
         actor.lastActivity = lastActivity.createdAt.toISOString();

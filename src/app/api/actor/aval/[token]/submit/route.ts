@@ -291,7 +291,7 @@ export async function POST(
         propertyValue: data.propertyValue,
         completedAt: new Date()
       },
-      performedByActor: 'aval',
+      performedByType: 'aval',
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 

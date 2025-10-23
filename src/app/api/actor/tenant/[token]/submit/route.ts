@@ -313,7 +313,7 @@ export async function POST(
         tenantName: data.fullName,
         completedAt: new Date()
       },
-      performedByActor: 'tenant',
+      performedByType: 'tenant',
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 

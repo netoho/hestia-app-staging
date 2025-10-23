@@ -102,7 +102,7 @@ export const PUT = withPolicyAuth(async (
         managedBy: authResult.user.email,
       },
       performedById: authResult.user.id,
-      performedByActor: undefined,
+      performedByType: undefined,
       ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     });
 

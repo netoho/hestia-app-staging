@@ -311,7 +311,7 @@ export async function POST(
         guaranteeMethod: data.guaranteeMethod,
         completedAt: new Date()
       },
-      performedByActor: 'joint_obligor',
+      performedByType: 'joint_obligor',
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
