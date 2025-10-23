@@ -396,26 +396,6 @@ export default function PoliciesPage() {
                         <Eye className="h-4 w-4 mr-1" />
                         Ver
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => router.push(`/dashboard/policies/${policy.id}/progress`)}
-                        className="flex-1"
-                      >
-                        <Clock className="h-4 w-4 mr-1" />
-                        Progreso
-                      </Button>
-                      {(policy.status === PolicyStatus.DRAFT || policy.status === PolicyStatus.COLLECTING_INFO) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleSendInvitations(policy.id)}
-                          className="flex-1"
-                        >
-                          <Send className="h-4 w-4 mr-1" />
-                          Enviar
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
