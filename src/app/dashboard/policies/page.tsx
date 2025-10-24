@@ -599,24 +599,6 @@ export default function PoliciesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => router.push(`/dashboard/policies/${policy.id}/progress`)}
-                            title="Ver progreso"
-                          >
-                            <Clock className="h-4 w-4" />
-                          </Button>
-                          {(policy.status === PolicyStatus.DRAFT || policy.status === PolicyStatus.COLLECTING_INFO) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSendInvitations(policy.id)}
-                              title="Enviar invitaciones"
-                            >
-                              <Send className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
