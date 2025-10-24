@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { useDocumentManagement } from '@/hooks/useDocumentManagement';
-import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
+import { useDocumentOperations } from '@/hooks/useDocumentOperations';
+import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { DocumentCategory } from '@/types/policy';
 import { Document } from '@/types/documents';
 
@@ -40,17 +40,16 @@ export default function TenantDocumentsSection({
 
   const {
     documents,
-    uploadingFiles,
-    uploadErrors,
-    deletingFiles,
+    operations,
     uploadDocument,
     downloadDocument,
     deleteDocument,
-  } = useDocumentManagement({
+    getCategoryOperations,
+  } = useDocumentOperations({
     token,
     actorType: 'tenant',
     initialDocuments,
-    isAdminEdit
+    isAdminEdit,
   });
 
   const handleAdditionalInfoChange = (value: string) => {
@@ -144,8 +143,6 @@ export default function TenantDocumentsSection({
         },
       ];
 
-  console.log('Document Categories:', documents);
-
   // Check if all required documents are uploaded
   const requiredDocsUploaded = useMemo(() => {
     const requiredCategories = documentCategories
@@ -207,12 +204,10 @@ export default function TenantDocumentsSection({
       <div className="space-y-4">
         {documentCategories.map(({ category, type, title, description, required }) => {
           const categoryDocs = documents[category] || [];
-          const uploadKey = `${category}-upload`;
-          const isUploading = uploadingFiles[uploadKey];
-          const error = uploadErrors[uploadKey];
+          const categoryOps = getCategoryOperations(category);
 
           return (
-            <DocumentUploadCard
+            <DocumentManagerCard
               key={category}
               category={category}
               title={title}
@@ -224,11 +219,7 @@ export default function TenantDocumentsSection({
               onUpload={(file) => uploadDocument(file, category, type)}
               onDelete={deleteDocument}
               onDownload={downloadDocument}
-              uploading={isUploading}
-              uploadError={error}
-              deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                categoryDocs.some(doc => doc.id === id && deletingFiles[id])
-              ) || null}
+              operations={categoryOps}
             />
           );
         })}
