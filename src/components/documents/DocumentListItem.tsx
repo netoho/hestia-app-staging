@@ -5,6 +5,8 @@ import { FileText, Image, Download, Trash2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Document } from '@/types/documents';
+import { DocumentOperation } from '@/lib/documentManagement/types';
+import { DocumentProgress } from './DocumentProgress';
 
 interface DocumentListItemProps {
   document: Document;
@@ -13,6 +15,7 @@ interface DocumentListItemProps {
   onDelete?: (documentId: string) => void | Promise<void>;
   deleting?: boolean;
   downloading?: boolean;
+  operation?: DocumentOperation;
 }
 
 export function DocumentListItem({
@@ -22,6 +25,7 @@ export function DocumentListItem({
   onDelete,
   deleting = false,
   downloading = false,
+  operation,
 }: DocumentListItemProps) {
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
@@ -44,54 +48,74 @@ export function DocumentListItem({
 
   const displayName = document.originalName || document.fileName;
 
+  // Check if there's an active operation
+  const hasActiveOperation = operation && operation.status === 'pending';
+  const isDeleting = deleting || (operation?.type === 'delete' && operation.status === 'pending');
+  const isDownloading = downloading || (operation?.type === 'download' && operation.status === 'pending');
+
   return (
-    <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        {getFileIcon()}
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{displayName}</p>
-          <p className="text-xs text-gray-500">
-            {formatFileSize(document.fileSize)}
-            {' • '}
-            {formatDate(document.createdAt)}
-          </p>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {getFileIcon()}
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{displayName}</p>
+            <p className="text-xs text-gray-500">
+              {formatFileSize(document.fileSize)}
+              {' • '}
+              {formatDate(document.createdAt)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 ml-4">
+          {onDownload && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDownload(document.id, displayName)}
+              disabled={isDownloading || isDeleting}
+              title="Descargar documento"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+
+          {!readOnly && onDelete && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDelete(document.id)}
+              disabled={isDownloading || isDeleting}
+              title="Eliminar documento"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="flex gap-2 ml-4">
-        {onDownload && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onDownload(document.id, displayName)}
-            disabled={downloading || deleting}
-            title="Descargar documento"
-          >
-            {downloading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
-        )}
-
-        {!readOnly && onDelete && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onDelete(document.id)}
-            disabled={downloading || deleting}
-            title="Eliminar documento"
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            {deleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
-        )}
-      </div>
+      {/* Show progress for active operations */}
+      {hasActiveOperation && (
+        <div className="px-3">
+          <DocumentProgress
+            progress={operation.progress}
+            status={operation.status}
+            error={operation.error}
+            variant="compact"
+            showBytes={operation.type === 'download'}
+          />
+        </div>
+      )}
     </div>
   );
 }
