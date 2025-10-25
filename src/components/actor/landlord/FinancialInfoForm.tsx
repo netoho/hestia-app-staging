@@ -7,8 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LandlordData, PolicyFinancialDetails } from '@/lib/types/actor';
 import { DocumentCategory } from '@/types/policy';
-import { InlineDocumentUpload } from '@/components/documents/InlineDocumentUpload';
-import { useDocumentManagement } from '@/hooks/useDocumentManagement';
+import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
+import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 
 interface FinancialInfoFormProps {
   landlordData: Partial<LandlordData>;
@@ -35,21 +35,11 @@ export default function FinancialInfoForm({
   landlordId,
   isAdminEdit=false,
 }: FinancialInfoFormProps) {
-  const {
-    documents,
-    uploadingFiles,
-    deletingFiles,
-    uploadDocument,
-    downloadDocument,
-    deleteDocument,
-  } = useDocumentManagement({
+  const { documents, operations } = useDocumentOperations({
     token,
     actorType: 'landlord',
     isAdminEdit,
   });
-
-  const taxCertificateDocs = documents[DocumentCategory.TAX_STATUS_CERTIFICATE] || [];
-  const propertyDeedDocs = documents[DocumentCategory.PROPERTY_DEED] || [];
 
   return (
     <>
@@ -130,18 +120,13 @@ export default function FinancialInfoForm({
           {landlordData.requiresCFDI && (
             <div className="mt-4 space-y-3">
               <Label className="text-sm font-medium">Constancia de Situación Fiscal</Label>
-              <InlineDocumentUpload
+              <InlineDocumentManager
+                category={DocumentCategory.TAX_STATUS_CERTIFICATE}
+                token={token}
+                actorType="landlord"
+                isAdminEdit={isAdminEdit}
                 label="Constancia de Situación Fiscal"
-                documentType="rfc_document"
-                documents={taxCertificateDocs}
                 allowMultiple={true}
-                onUpload={(file) => uploadDocument(file, DocumentCategory.TAX_STATUS_CERTIFICATE, 'rfc_document')}
-                onDelete={deleteDocument}
-                onDownload={downloadDocument}
-                uploading={uploadingFiles[`${DocumentCategory.TAX_STATUS_CERTIFICATE}-${Date.now()}`]}
-                deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                  taxCertificateDocs.some(doc => doc.id === id && deletingFiles[id])
-                ) || null}
                 disabled={disabled}
               />
             </div>
@@ -149,18 +134,13 @@ export default function FinancialInfoForm({
 
           <div className="mt-6 space-y-3">
             <Label className="text-base font-medium">Escritura de la Propiedad</Label>
-            <InlineDocumentUpload
+            <InlineDocumentManager
+              category={DocumentCategory.PROPERTY_DEED}
+              token={token}
+              actorType="landlord"
+              isAdminEdit={isAdminEdit}
               label="Escritura de la Propiedad"
-              documentType="property_deed"
-              documents={propertyDeedDocs}
               allowMultiple={true}
-              onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
-              onDelete={deleteDocument}
-              onDownload={downloadDocument}
-              uploading={Object.values(uploadingFiles).some(Boolean)}
-              deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                propertyDeedDocs.some(doc => doc.id === id && deletingFiles[id])
-              ) || null}
               disabled={disabled}
             />
           </div>

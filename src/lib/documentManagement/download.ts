@@ -15,12 +15,12 @@ export async function downloadWithProgress(config: DownloadConfig): Promise<void
 
     const data = await response.json();
 
-    if (!data.success || !data.url) {
+    if (!data.success || !data.data?.downloadUrl) {
       throw new Error(data.error || 'Invalid response from server');
     }
 
     // Now download the file from the signed URL
-    const downloadResponse = await fetch(data.url, {
+    const downloadResponse = await fetch(data.data.downloadUrl, {
       signal: config.signal,
     });
 
@@ -106,14 +106,14 @@ export async function downloadFile(
 
     const data = await response.json();
 
-    if (!data.success || !data.url) {
+    if (!data.success || !data.data?.downloadUrl) {
       throw new Error(data.error || 'Invalid response from server');
     }
 
     // Open download URL in new window/tab
     // The browser will handle the download
     const link = document.createElement('a');
-    link.href = data.url;
+    link.href = data.data.downloadUrl;
     link.download = fileName;
     link.target = '_blank';
     link.style.display = 'none';
