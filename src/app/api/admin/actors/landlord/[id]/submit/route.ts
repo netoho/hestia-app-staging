@@ -85,10 +85,12 @@ export async function PUT(
     // Directly save without token validation (admin already authenticated)
     try {
       // Save landlord information
+      // Skip validation for admin endpoints
       const saveResult = await landlordService.saveLandlordInformation(
         landlordId,
         landlordData,
-        isPartialSave
+        isPartialSave,
+        true  // skipValidation for admin
       );
 
       if (!saveResult.ok) {

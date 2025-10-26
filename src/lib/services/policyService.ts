@@ -269,14 +269,7 @@ export async function getPolicies(params?: {
             description: true,
             details: true,
             performedById: true,
-            performedBy: {
-              select: {
-                id: true,
-                email: true,
-                name: true,
-              }
-            },
-            performedByActor: true,
+            performedByType: true,
             ipAddress: true,
             createdAt: true,
           },
@@ -383,14 +376,7 @@ export async function getPolicyById(id: string) {
           description: true,
           details: true,
           performedById: true,
-          performedBy: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            }
-          },
-          performedByActor: true,
+          performedByType: true,
           ipAddress: true,
           createdAt: true,
         },
@@ -442,8 +428,8 @@ interface logPolicyActivityParams {
   action: string;
   description: string;
   details?: any;
-  performedById?: string;
-  performedByActor?: string;
+  performedById?: string;      // User ID or Actor ID
+  performedByType?: string;     // "user", "landlord", "tenant", "aval", "joint_obligor"
   ipAddress?: string;
 }
 
@@ -454,7 +440,7 @@ export async function logPolicyActivity(data: logPolicyActivityParams) {
     description,
     details,
     performedById,
-    performedByActor,
+    performedByType,
     ipAddress
   } = data;
   return prisma.policyActivity.create({
@@ -463,8 +449,8 @@ export async function logPolicyActivity(data: logPolicyActivityParams) {
       action,
       description,
       details,
-      performedById,
-      performedByActor,
+      performedById: performedById || undefined,
+      performedByType: performedByType || undefined,
       ipAddress,
     }
   });

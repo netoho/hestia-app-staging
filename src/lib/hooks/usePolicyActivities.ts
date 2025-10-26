@@ -8,7 +8,7 @@ export interface Activity {
   description: string;
   createdAt: string;
   performedBy?: string;
-  performedByActor?: string;
+  performedByType?: string;
   details?: any;
 }
 
@@ -36,7 +36,7 @@ export function usePolicyActivities(policyId: string | null, options?: {
 
     if (options?.actorType) {
       filtered = filtered.filter(activity => {
-        return activity.performedByActor === options.actorType ||
+        return activity.performedByType === options.actorType ||
           activity.details?.actorType === options.actorType;
       });
     }

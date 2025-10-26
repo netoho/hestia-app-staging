@@ -206,8 +206,9 @@ async function main() {
       createdById: brokerUser.id,
       status: 'DRAFT',
       // Create landlord with enhanced fields
-      landlord: {
+      landlords: {
         create: {
+          isPrimary: true,
           isCompany: false,
           fullName: 'Juan Pérez García',
           email: 'juan.perez@example.com',
@@ -250,7 +251,7 @@ async function main() {
       },
     },
     include: {
-      landlord: true,
+      landlords: true,
       tenant: true,
     }
   });
@@ -346,25 +347,38 @@ async function main() {
       approvedAt: new Date('2024-01-20'),
       activatedAt: new Date('2024-02-01'),
       packageId: 'premium',
-      // Create company landlord
-      landlord: {
-        create: {
-          isCompany: true,
-          companyName: 'Inmobiliaria Polanco SA de CV',
-          companyRfc: 'IPO990101ABC',
-          legalRepName: 'Roberto Sánchez Villa',
-          legalRepPosition: 'Director General',
-          legalRepRfc: 'SAVR780202XYZ',
-          legalRepPhone: '5511112222',
-          legalRepEmail: 'roberto@inmopolanco.com',
-          email: 'contacto@inmopolanco.com',
-          phone: '5599887766',
-          address: 'Bosques de las Lomas, CDMX',
-          bankName: 'Santander',
-          accountNumber: '9876543210',
-          clabe: '014180987654321098',
-          requiresCFDI: true,
-        }
+      // Create company landlord with co-owner
+      landlords: {
+        create: [
+          {
+            isPrimary: true,
+            isCompany: true,
+            companyName: 'Inmobiliaria Polanco SA de CV',
+            companyRfc: 'IPO990101ABC',
+            legalRepName: 'Roberto Sánchez Villa',
+            legalRepPosition: 'Director General',
+            legalRepRfc: 'SAVR780202XYZ',
+            legalRepPhone: '5511112222',
+            legalRepEmail: 'roberto@inmopolanco.com',
+            email: 'contacto@inmopolanco.com',
+            phone: '5599887766',
+            address: 'Bosques de las Lomas, CDMX',
+            bankName: 'Santander',
+            accountNumber: '9876543210',
+            clabe: '014180987654321098',
+            requiresCFDI: true,
+          },
+          {
+            isPrimary: false,
+            isCompany: false,
+            fullName: 'Laura Sánchez Villa',
+            email: 'laura.sanchez@example.com',
+            phone: '5544332211',
+            rfc: 'SAVL850515ABC',
+            curp: 'SAVL850515MDFNLL01',
+            address: 'Bosques de las Lomas, CDMX',
+          }
+        ]
       },
       // Create tenant company
       tenant: {
@@ -385,7 +399,7 @@ async function main() {
       },
     },
     include: {
-      landlord: true,
+      landlords: true,
       tenant: true,
     }
   });

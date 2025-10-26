@@ -80,7 +80,8 @@ export class LandlordService extends BaseActorService {
   async saveLandlordInformation(
     landlordId: string,
     data: LandlordData,
-    isPartial: boolean = false
+    isPartial: boolean = false,
+    skipValidation: boolean = false
   ): AsyncResult<LandlordData> {
     // Fetch existing landlord to get current addressId
     const existingLandlord = await this.prisma.landlord.findUnique({
@@ -98,7 +99,7 @@ export class LandlordService extends BaseActorService {
       cfdiData: data.cfdiData,
     };
 
-    return this.saveActorData('landlord', landlordId, saveData as any, isPartial);
+    return this.saveActorData('landlord', landlordId, saveData as any, isPartial, skipValidation);
   }
 
   /**
@@ -190,7 +191,7 @@ export class LandlordService extends BaseActorService {
       if (!tokenValidation.valid || !tokenValidation.landlord) {
         return Result.error(
           new ServiceError(
-            ErrorCode.UNAUTHORIZED,
+            ErrorCode.INVALID_TOKEN,
             tokenValidation.message || 'Invalid token',
             401
           )
@@ -226,12 +227,11 @@ export class LandlordService extends BaseActorService {
 
       // Start transaction
       const result = await this.executeTransaction(async (tx) => {
-        const { landlord, policy } = tokenValidation;
+        const { landlord } = tokenValidation;
 
         // Save all landlords in the array
         for (const landlordData of data.landlords) {
-          // Only save landlords that belong to this policy
-          if (landlordData.id && landlordData.policyId === landlord!.policyId) {
+          if (landlordData.id) {
             const landlordResult = await this.saveLandlordInformation(
               landlordData.id,
               landlordData as LandlordData,
@@ -290,7 +290,8 @@ export class LandlordService extends BaseActorService {
           description: partial
             ? 'El arrendador guardó información parcial'
             : 'El arrendador completó su información',
-          performedByActor: 'landlord',
+          performedById: landlord!.id,
+          performedByType: 'landlord',
           details: {
             landlordId: landlord!.id,
             isCompany: data.landlords[0]?.isCompany,

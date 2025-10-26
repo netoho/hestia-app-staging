@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
 import Logo from '@/components/Logo';
@@ -28,8 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from 'react';
-import { signOut, Session } from 'next-auth/react';
-import { DefaultUser } from 'next-auth';
+import { signOut } from 'next-auth/react';
 
 interface DashboardSidebarProps {
   user: {
@@ -88,11 +88,8 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
-      <SidebarHeader className="h-20 flex items-center justify-between p-2 sticky top-0 bg-sidebar z-10 border-b border-sidebar-border">
+      <SidebarHeader className="h-20 flex items-center justify-center p-2 sticky top-0 bg-sidebar z-10 border-b border-sidebar-border">
         <Logo iconOnly={!isMobile && useSidebar().state === 'collapsed'} />
-        <div className="md:hidden">
-         <SidebarTrigger />
-        </div>
       </SidebarHeader>
       <SidebarContent className="flex-1 overflow-y-auto">
         <SidebarMenu>
@@ -139,6 +136,7 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

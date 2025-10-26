@@ -47,7 +47,7 @@ export async function GET(
         policyId: validation.landlord.policyId,
         action: 'document_downloaded',
         description: `Landlord downloaded ${document.documentType} document`,
-        performedByActor: 'landlord',
+        performedByType: 'landlord',
         details: {
           documentId,
           fileName: document.originalName,

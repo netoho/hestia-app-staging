@@ -10,10 +10,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CreditCard, Home, Info, Shield } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { JointObligorFormData } from '@/hooks/useJointObligorForm';
-import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
+import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { DocumentCategory } from '@/types/policy';
 import { Document } from '@/types/documents';
-import { useDocumentManagement } from '@/hooks/useDocumentManagement';
+import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 
 interface JointObligorGuaranteeTabProps {
   formData: JointObligorFormData;
@@ -34,15 +34,7 @@ export default function JointObligorGuaranteeTab({
   jointObligorId,
   initialDocuments = [],
 }: JointObligorGuaranteeTabProps) {
-  const {
-    documents,
-    uploadingFiles,
-    uploadErrors,
-    deletingFiles,
-    uploadDocument,
-    downloadDocument,
-    deleteDocument,
-  } = useDocumentManagement({
+  const { documents, operations } = useDocumentOperations({
     token,
     actorType: 'joint-obligor',
     initialDocuments
@@ -173,22 +165,14 @@ export default function JointObligorGuaranteeTab({
                 </AlertDescription>
               </Alert>
 
-              <DocumentUploadCard
+              <DocumentManagerCard
                 category={DocumentCategory.INCOME_PROOF}
                 title="Comprobante de Ingresos"
                 description="Recibos de nómina, estados de cuenta bancarios, o declaración de impuestos"
-                documentType="income_proof"
-                documents={documents[DocumentCategory.INCOME_PROOF] || []}
+                token={token}
+                actorType="joint-obligor"
                 required={true}
                 allowMultiple={true}
-                onUpload={(file) => uploadDocument(file, DocumentCategory.INCOME_PROOF, 'income_proof')}
-                onDelete={deleteDocument}
-                onDownload={downloadDocument}
-                uploading={uploadingFiles[`${DocumentCategory.INCOME_PROOF}-upload`]}
-                uploadError={uploadErrors[`${DocumentCategory.INCOME_PROOF}-upload`]}
-                deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                  (documents[DocumentCategory.INCOME_PROOF] || []).some(doc => doc.id === id && deletingFiles[id])
-                ) || null}
               />
             </div>
           </CardContent>
@@ -275,41 +259,25 @@ export default function JointObligorGuaranteeTab({
                 </Alert>
 
                 {/* Property Deed */}
-                <DocumentUploadCard
+                <DocumentManagerCard
                   category={DocumentCategory.PROPERTY_DEED}
                   title="Escritura de la Propiedad"
                   description="Escritura pública de la propiedad que se ofrece como garantía"
-                  documentType="property_deed"
-                  documents={documents[DocumentCategory.PROPERTY_DEED] || []}
+                  token={token}
+                  actorType="joint-obligor"
                   required={true}
                   allowMultiple={false}
-                  onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
-                  onDelete={deleteDocument}
-                  onDownload={downloadDocument}
-                  uploading={uploadingFiles[`${DocumentCategory.PROPERTY_DEED}-upload`]}
-                  uploadError={uploadErrors[`${DocumentCategory.PROPERTY_DEED}-upload`]}
-                  deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                    (documents[DocumentCategory.PROPERTY_DEED] || []).some(doc => doc.id === id && deletingFiles[id])
-                  ) || null}
                 />
 
                 {/* Property Tax Statement */}
-                <DocumentUploadCard
+                <DocumentManagerCard
                   category={DocumentCategory.PROPERTY_TAX_STATEMENT}
                   title="Boleta Predial"
                   description="Último recibo de impuesto predial de la propiedad en garantía"
-                  documentType="property_tax_statement"
-                  documents={documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []}
+                  token={token}
+                  actorType="joint-obligor"
                   required={true}
                   allowMultiple={false}
-                  onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_TAX_STATEMENT, 'property_tax_statement')}
-                  onDelete={deleteDocument}
-                  onDownload={downloadDocument}
-                  uploading={uploadingFiles[`${DocumentCategory.PROPERTY_TAX_STATEMENT}-upload`]}
-                  uploadError={uploadErrors[`${DocumentCategory.PROPERTY_TAX_STATEMENT}-upload`]}
-                  deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                    (documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []).some(doc => doc.id === id && deletingFiles[id])
-                  ) || null}
                 />
               </div>
             </CardContent>

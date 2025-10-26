@@ -89,9 +89,10 @@ export class TenantService extends BaseActorService {
   async saveTenantInformation(
     tenantId: string,
     data: any,
-    isPartial: boolean = false
+    isPartial: boolean = false,
+    skipValidation: boolean = false
   ): AsyncResult<any> {
-    return this.saveActorData('tenant', tenantId, data, isPartial);
+    return this.saveActorData('tenant', tenantId, data, isPartial, skipValidation);
   }
 
   /**
@@ -110,7 +111,7 @@ export class TenantService extends BaseActorService {
       if (!tokenValidation.valid || !tokenValidation.tenant) {
         return Result.error(
           new ServiceError(
-            ErrorCode.UNAUTHORIZED,
+            ErrorCode.INVALID_TOKEN,
             'Invalid token',
             401
           )
@@ -135,7 +136,8 @@ export class TenantService extends BaseActorService {
         description: isPartial
           ? 'El inquilino guardó información parcial'
           : 'El inquilino completó su información',
-        performedByActor: 'tenant',
+        performedById: tokenValidation.tenant.id,
+        performedByType: 'tenant',
         details: {
           tenantId: tokenValidation.tenant.id,
           isCompany: data.tenant.isCompany,

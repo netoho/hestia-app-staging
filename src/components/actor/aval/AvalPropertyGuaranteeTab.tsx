@@ -9,10 +9,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { AvalFormData } from '@/hooks/useAvalForm';
-import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
+import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { DocumentCategory } from '@/types/policy';
 import { Document } from '@/types/documents';
-import { useDocumentManagement } from '@/hooks/useDocumentManagement';
+import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 
 interface AvalPropertyGuaranteeTabProps {
   formData: AvalFormData;
@@ -33,15 +33,7 @@ export default function AvalPropertyGuaranteeTab({
   avalId,
   initialDocuments = [],
 }: AvalPropertyGuaranteeTabProps) {
-  const {
-    documents,
-    uploadingFiles,
-    uploadErrors,
-    deletingFiles,
-    uploadDocument,
-    downloadDocument,
-    deleteDocument,
-  } = useDocumentManagement({
+  const { documents, operations } = useDocumentOperations({
     token,
     actorType: 'aval',
     initialDocuments
@@ -135,41 +127,25 @@ export default function AvalPropertyGuaranteeTab({
             </Alert>
 
             {/* Property Deed */}
-            <DocumentUploadCard
+            <DocumentManagerCard
               category={DocumentCategory.PROPERTY_DEED}
               title="Escritura de la Propiedad"
               description="Escritura pública de la propiedad que se ofrece como garantía"
-              documentType="property_deed"
-              documents={documents[DocumentCategory.PROPERTY_DEED] || []}
+              token={token}
+              actorType="aval"
               required={true}
               allowMultiple={false}
-              onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
-              onDelete={deleteDocument}
-              onDownload={downloadDocument}
-              uploading={uploadingFiles[`${DocumentCategory.PROPERTY_DEED}-upload`]}
-              uploadError={uploadErrors[`${DocumentCategory.PROPERTY_DEED}-upload`]}
-              deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                (documents[DocumentCategory.PROPERTY_DEED] || []).some(doc => doc.id === id && deletingFiles[id])
-              ) || null}
             />
 
             {/* Property Tax Statement */}
-            <DocumentUploadCard
+            <DocumentManagerCard
               category={DocumentCategory.PROPERTY_TAX_STATEMENT}
               title="Boleta Predial"
               description="Último recibo de impuesto predial de la propiedad en garantía"
-              documentType="property_tax_statement"
-              documents={documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []}
+              token={token}
+              actorType="aval"
               required={true}
               allowMultiple={false}
-              onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_TAX_STATEMENT, 'property_tax_statement')}
-              onDelete={deleteDocument}
-              onDownload={downloadDocument}
-              uploading={uploadingFiles[`${DocumentCategory.PROPERTY_TAX_STATEMENT}-upload`]}
-              uploadError={uploadErrors[`${DocumentCategory.PROPERTY_TAX_STATEMENT}-upload`]}
-              deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                (documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []).some(doc => doc.id === id && deletingFiles[id])
-              ) || null}
             />
           </div>
         </CardContent>

@@ -13,7 +13,7 @@ async function upsertAddresses(jointObligorId: string, data: any) {
   if (data.addressDetails) {
     const { id, createdAt, updatedAt, ...cleanAddressData } = data.addressDetails as any;
     const currentAddress = await prisma.propertyAddress.upsert({
-      where: { id: data.addressDetails.id || '' },
+      where: { id: data.addressDetails?.id || '' },
       create: cleanAddressData,
       update: cleanAddressData,
     });
@@ -24,7 +24,7 @@ async function upsertAddresses(jointObligorId: string, data: any) {
   if (data.employerAddressDetails) {
     const { id, createdAt, updatedAt, ...cleanAddressData } = data.employerAddressDetails as any;
     const employerAddress = await prisma.propertyAddress.upsert({
-      where: { id: data.employerAddressDetails.id || '' },
+      where: { id: data.employerAddressDetails?.id || '' },
       create: cleanAddressData,
       update: cleanAddressData,
     });
@@ -35,7 +35,7 @@ async function upsertAddresses(jointObligorId: string, data: any) {
   if (data.guaranteePropertyDetails) {
     const { id, createdAt, updatedAt, ...cleanAddressData } = data.guaranteePropertyDetails as any;
     const guaranteePropertyAddress = await prisma.propertyAddress.upsert({
-      where: { id: data.guaranteePropertyDetails.id || '' },
+      where: { id: data.guaranteePropertyDetails?.id || '' },
       create: cleanAddressData,
       update: cleanAddressData,
     });
@@ -198,8 +198,14 @@ export async function PUT(
 
   } catch (error) {
     console.error('Joint obligor partial save error:', error);
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return NextResponse.json(
-      { error: 'Error al guardar la información', details: error },
+      {
+        error: 'Error al guardar la información',
+        details: error instanceof Error ? { message: error.message } : error
+      },
       { status: 500 }
     );
   }
@@ -311,7 +317,7 @@ export async function POST(
         guaranteeMethod: data.guaranteeMethod,
         completedAt: new Date()
       },
-      performedByActor: 'joint_obligor',
+      performedByType: 'joint_obligor',
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
@@ -337,8 +343,14 @@ export async function POST(
 
   } catch (error) {
     console.error('Joint obligor submit error:', error);
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return NextResponse.json(
-      { error: 'Error al guardar la información', details: error },
+      {
+        error: 'Error al guardar la información',
+        details: error instanceof Error ? { message: error.message } : error
+      },
       { status: 500 }
     );
   }

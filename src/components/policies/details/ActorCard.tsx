@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Download } from 'lucide-react';
+import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Download, Send, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 import { useSession } from 'next-auth/react';
@@ -13,14 +13,26 @@ interface ActorCardProps {
   policyId: string;
   getVerificationBadge?: (status: string) => React.ReactNode;
   onEditClick?: () => void;
+  onSendInvitation?: () => void;
+  canEdit?: boolean;
+  sending?: boolean;
 }
 
-export default function ActorCard({ actor, actorType, policyId, getVerificationBadge, onEditClick }: ActorCardProps) {
+export default function ActorCard({
+  actor,
+  actorType,
+  policyId,
+  getVerificationBadge,
+  onEditClick,
+  onSendInvitation,
+  canEdit,
+  sending
+}: ActorCardProps) {
   const router = useRouter();
   const { downloadDocument, downloading } = useDocumentDownload();
   const { data: session } = useSession();
 
-  const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
+  const isStaffOrAdmin = canEdit !== undefined ? canEdit : (session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF');
 
   // Calculate actor progress
   const calculateProgress = () => {
@@ -123,44 +135,81 @@ export default function ActorCard({ actor, actorType, policyId, getVerificationB
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {getActorIcon()}
-            <span className="text-base">
-              {actorType === 'tenant' || actorType === 'landlord' ? getActorTitle() : displayName}
-            </span>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0 mt-1">
+              {getActorIcon()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-lg">
+                {actorType === 'tenant' || actorType === 'landlord' ? getActorTitle() : displayName}
+              </h3>
+              <p className="text-sm text-gray-600">{actor.email || 'Sin email'}</p>
+              {actor.phone && (
+                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                  <Phone className="h-3 w-3" />
+                  {actor.phone}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {getVerificationBadge && getVerificationBadge(actor.verificationStatus || 'PENDING')}
-            {actor.informationComplete ? (
-              <Badge className="bg-green-500 text-white">Completo</Badge>
-            ) : (
-              <Badge className="bg-orange-500 text-white">Pendiente</Badge>
-            )}
-            {isStaffOrAdmin && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (onEditClick) {
-                    onEditClick();
-                  } else if (actorType === 'landlord') {
-                    router.push(`/dashboard/policies/${policyId}/landlord`);
-                  } else if (actorType === 'tenant') {
-                    router.push(`/dashboard/policies/${policyId}/tenant`);
-                  } else if (actorType === 'jointObligor') {
-                    router.push(`/dashboard/policies/${policyId}/joint-obligor/${actor.id}`);
-                  } else if (actorType === 'aval') {
-                    router.push(`/dashboard/policies/${policyId}/aval/${actor.id}`);
-                  }
-                }}
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                Editar
-              </Button>
-            )}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {getVerificationBadge && getVerificationBadge(actor.verificationStatus || 'PENDING')}
+              {actor.informationComplete ? (
+                <Badge className="bg-green-500 text-white">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Completo
+                </Badge>
+              ) : (
+                <Badge className="bg-orange-500 text-white">Pendiente</Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {!actor.informationComplete && onSendInvitation && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onSendInvitation}
+                  disabled={sending}
+                  className="transition-all hover:scale-105"
+                >
+                  {sending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Invitar</span>
+                    </>
+                  )}
+                </Button>
+              )}
+              {isStaffOrAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (onEditClick) {
+                      onEditClick();
+                    } else if (actorType === 'landlord') {
+                      router.push(`/dashboard/policies/${policyId}/landlord`);
+                    } else if (actorType === 'tenant') {
+                      router.push(`/dashboard/policies/${policyId}/tenant`);
+                    } else if (actorType === 'jointObligor') {
+                      router.push(`/dashboard/policies/${policyId}/joint-obligor/${actor.id}`);
+                    } else if (actorType === 'aval') {
+                      router.push(`/dashboard/policies/${policyId}/aval/${actor.id}`);
+                    }
+                  }}
+                  className="transition-all hover:scale-105"
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Editar</span>
+                </Button>
+              )}
+            </div>
           </div>
-        </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         {/* Progress Bar */}

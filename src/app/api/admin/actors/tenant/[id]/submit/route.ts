@@ -65,11 +65,13 @@ export async function PUT(
     const tenantService = new TenantService();
     const isPartialSave = body.partial === true;
 
-    // Save tenant information
+    // Save tenant information (data is directly in body, not body.tenant)
+    // Skip validation for admin endpoints
     const saveResult = await tenantService.saveTenantInformation(
       tenantId,
-      body.tenant,
-      isPartialSave
+      body,
+      isPartialSave,
+      true  // skipValidation for admin
     );
 
     if (!saveResult.ok) {
@@ -110,10 +112,14 @@ export async function PUT(
 
   } catch (error) {
     console.error('Admin tenant submission error:', error);
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? { message: error.message } : error
       },
       { status: 500 }
     );

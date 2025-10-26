@@ -6,8 +6,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Info, AlertCircle } from 'lucide-react';
-import { DocumentUploadCard } from '@/components/documents/DocumentUploadCard';
-import { useDocumentManagement } from '@/hooks/useDocumentManagement';
+import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
+import { useDocumentOperations } from '@/hooks/useDocumentOperations';
+import { DocumentCategory } from '@/types/policy';
 
 interface JointObligorDocumentsSectionProps {
   obligorId?: string;
@@ -38,17 +39,16 @@ export default function JointObligorDocumentsSection({
 }: JointObligorDocumentsSectionProps) {
   const {
     documents,
-    uploadingFiles,
-    uploadErrors,
-    deletingFiles,
+    operations,
     uploadDocument,
     downloadDocument,
     deleteDocument,
-  } = useDocumentManagement({
+    getCategoryOperations,
+  } = useDocumentOperations({
     token,
     actorType: 'joint-obligor',
     initialDocuments,
-    isAdminEdit
+    isAdminEdit,
   });
 
   const [checkedDocs, setCheckedDocs] = useState<Set<string>>(new Set());
@@ -57,22 +57,22 @@ export default function JointObligorDocumentsSection({
   // Note: INCOME_PROOF, PROPERTY_DEED, and PROPERTY_TAX_STATEMENT are uploaded in Guarantee tab
   const getDocumentCategories = () => {
     const baseIndividualDocs = [
-      { category: 'IDENTIFICATION', title: 'Identificación Oficial', required: true },
-      { category: 'ADDRESS_PROOF', title: 'Comprobante de Domicilio', required: true },
-      { category: 'BANK_STATEMENT', title: 'Estados de Cuenta', required: true },
+      { category: DocumentCategory.IDENTIFICATION, title: 'Identificación Oficial', required: true },
+      { category: DocumentCategory.ADDRESS_PROOF, title: 'Comprobante de Domicilio', required: true },
+      { category: DocumentCategory.BANK_STATEMENT, title: 'Estados de Cuenta', required: true },
     ];
 
     const baseCompanyDocs = [
-      { category: 'COMPANY_CONSTITUTION', title: 'Acta Constitutiva', required: true },
-      { category: 'LEGAL_POWERS', title: 'Poderes Representante Legal', required: true },
-      { category: 'IDENTIFICATION', title: 'ID Representante', required: true },
-      { category: 'TAX_STATUS_CERTIFICATE', title: 'Constancia Situación Fiscal', required: true },
-      { category: 'BANK_STATEMENT', title: 'Estados de Cuenta', required: true },
+      { category: DocumentCategory.COMPANY_CONSTITUTION, title: 'Acta Constitutiva', required: true },
+      { category: DocumentCategory.LEGAL_POWERS, title: 'Poderes Representante Legal', required: true },
+      { category: DocumentCategory.IDENTIFICATION, title: 'ID Representante', required: true },
+      { category: DocumentCategory.TAX_STATUS_CERTIFICATE, title: 'Constancia Situación Fiscal', required: true },
+      { category: DocumentCategory.BANK_STATEMENT, title: 'Estados de Cuenta', required: true },
     ];
 
     // Optional property registry certificate (only for property guarantee)
     const propertyDocs = guaranteeMethod === 'property' ? [
-      { category: 'PROPERTY_REGISTRY', title: 'Certificado Libertad Gravamen', required: false },
+      { category: DocumentCategory.PROPERTY_REGISTRY, title: 'Certificado Libertad Gravamen', required: false },
     ] : [];
 
     if (isCompany) {
@@ -80,7 +80,7 @@ export default function JointObligorDocumentsSection({
     } else {
       const docs = [...baseIndividualDocs];
       if (nationality === 'FOREIGN') {
-        docs.push({ category: 'IMMIGRATION_DOCUMENT', title: 'Documento Migratorio', required: true });
+        docs.push({ category: DocumentCategory.IMMIGRATION_DOCUMENT, title: 'Documento Migratorio', required: true });
       }
       return [...docs, ...propertyDocs];
     }
@@ -93,28 +93,28 @@ export default function JointObligorDocumentsSection({
     const guaranteeDocs = [];
 
     if (guaranteeMethod === 'income') {
-      const incomeDocs = documents['INCOME_PROOF'] || [];
+      const incomeDocs = documents[DocumentCategory.INCOME_PROOF] || [];
       if (incomeDocs.length > 0) {
         guaranteeDocs.push({
-          category: 'INCOME_PROOF',
+          category: DocumentCategory.INCOME_PROOF,
           title: 'Comprobante de Ingresos',
           documents: incomeDocs
         });
       }
     } else if (guaranteeMethod === 'property') {
-      const propertyDeedDocs = documents['PROPERTY_DEED'] || [];
-      const propertyTaxDocs = documents['PROPERTY_TAX_STATEMENT'] || [];
+      const propertyDeedDocs = documents[DocumentCategory.PROPERTY_DEED] || [];
+      const propertyTaxDocs = documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || [];
 
       if (propertyDeedDocs.length > 0) {
         guaranteeDocs.push({
-          category: 'PROPERTY_DEED',
+          category: DocumentCategory.PROPERTY_DEED,
           title: 'Escritura de Propiedad',
           documents: propertyDeedDocs
         });
       }
       if (propertyTaxDocs.length > 0) {
         guaranteeDocs.push({
-          category: 'PROPERTY_TAX_STATEMENT',
+          category: DocumentCategory.PROPERTY_TAX_STATEMENT,
           title: 'Boleta Predial',
           documents: propertyTaxDocs
         });
@@ -143,7 +143,7 @@ export default function JointObligorDocumentsSection({
 
     // Update checked docs for display
     const uploadedCategories = new Set(
-      Object.keys(documents).filter(cat => documents[cat] && documents[cat].length > 0)
+      (Object.keys(documents) as DocumentCategory[]).filter(cat => documents[cat] && documents[cat].length > 0)
     );
     setCheckedDocs(uploadedCategories);
   }, [documents, documentCategories, onRequiredDocsChange]);
@@ -223,26 +223,26 @@ export default function JointObligorDocumentsSection({
               </AlertDescription>
             </Alert>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {guaranteeDocuments.map(({ category, title, documents: docs }) => (
-                <DocumentUploadCard
-                  key={category}
-                  category={category}
-                  title={title}
-                  documents={docs}
-                  required={true}
-                  allowMultiple={category === 'INCOME_PROOF'}
-                  onUpload={() => {}} // Read-only, no upload
-                  onDelete={deleteDocument}
-                  onDownload={downloadDocument}
-                  uploading={false}
-                  uploadError={undefined}
-                  deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                    docs.some(doc => doc.id === id && deletingFiles[id])
-                  ) || null}
-                  documentType={category.toLowerCase()}
-                  description={`Cargado en pestaña de Garantía`}
-                />
-              ))}
+              {guaranteeDocuments.map(({ category, title, documents: docs }) => {
+                const categoryOps = getCategoryOperations(category);
+
+                return (
+                  <DocumentManagerCard
+                    key={category}
+                    category={category}
+                    title={title}
+                    documents={docs}
+                    required={true}
+                    allowMultiple={category === 'INCOME_PROOF'}
+                    onUpload={() => {}} // Read-only, no upload
+                    onDelete={deleteDocument}
+                    onDownload={downloadDocument}
+                    operations={categoryOps}
+                    documentType={category.toLowerCase()}
+                    description={`Cargado en pestaña de Garantía`}
+                  />
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -252,26 +252,21 @@ export default function JointObligorDocumentsSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {documentCategories.map((docType) => {
           const categoryDocs = documents[docType.category] || [];
-          const uploadKey = `${docType.category}-upload`;
-          const isUploading = uploadingFiles[uploadKey];
-          const error = uploadErrors[uploadKey];
+          const categoryOps = getCategoryOperations(docType.category);
 
           return (
-            <DocumentUploadCard
+            <DocumentManagerCard
               key={docType.category}
               category={docType.category}
               title={docType.title}
+              description=""
               documents={categoryDocs}
               required={docType.required}
               allowMultiple={true}
               onUpload={(file) => uploadDocument(file, docType.category, docType.category.toLowerCase())}
               onDelete={deleteDocument}
               onDownload={downloadDocument}
-              uploading={isUploading}
-              uploadError={error}
-              deletingDocumentId={Object.keys(deletingFiles).find(id =>
-                categoryDocs.some(doc => doc.id === id && deletingFiles[id])
-              ) || null}
+              operations={categoryOps}
               documentType={docType.category.toLowerCase()}
             />
           );
