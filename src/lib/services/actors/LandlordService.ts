@@ -191,7 +191,7 @@ export class LandlordService extends BaseActorService {
       if (!tokenValidation.valid || !tokenValidation.landlord) {
         return Result.error(
           new ServiceError(
-            ErrorCode.UNAUTHORIZED,
+            ErrorCode.INVALID_TOKEN,
             tokenValidation.message || 'Invalid token',
             401
           )
@@ -227,12 +227,11 @@ export class LandlordService extends BaseActorService {
 
       // Start transaction
       const result = await this.executeTransaction(async (tx) => {
-        const { landlord, policy } = tokenValidation;
+        const { landlord } = tokenValidation;
 
         // Save all landlords in the array
         for (const landlordData of data.landlords) {
-          // Only save landlords that belong to this policy
-          if (landlordData.id && landlordData.policyId === landlord!.policyId) {
+          if (landlordData.id) {
             const landlordResult = await this.saveLandlordInformation(
               landlordData.id,
               landlordData as LandlordData,

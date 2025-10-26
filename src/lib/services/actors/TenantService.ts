@@ -111,7 +111,7 @@ export class TenantService extends BaseActorService {
       if (!tokenValidation.valid || !tokenValidation.tenant) {
         return Result.error(
           new ServiceError(
-            ErrorCode.UNAUTHORIZED,
+            ErrorCode.INVALID_TOKEN,
             'Invalid token',
             401
           )

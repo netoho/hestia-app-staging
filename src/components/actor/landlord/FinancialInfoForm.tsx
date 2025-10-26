@@ -121,10 +121,7 @@ export default function FinancialInfoForm({
             <div className="mt-4 space-y-3">
               <Label className="text-sm font-medium">Constancia de Situación Fiscal</Label>
               <InlineDocumentManager
-                category={DocumentCategory.TAX_STATUS_CERTIFICATE}
-                token={token}
-                actorType="landlord"
-                isAdminEdit={isAdminEdit}
+                documentType={DocumentCategory.TAX_STATUS_CERTIFICATE}
                 label="Constancia de Situación Fiscal"
                 allowMultiple={true}
                 disabled={disabled}
@@ -135,10 +132,7 @@ export default function FinancialInfoForm({
           <div className="mt-6 space-y-3">
             <Label className="text-base font-medium">Escritura de la Propiedad</Label>
             <InlineDocumentManager
-              category={DocumentCategory.PROPERTY_DEED}
-              token={token}
-              actorType="landlord"
-              isAdminEdit={isAdminEdit}
+              documentType={DocumentCategory.PROPERTY_DEED}
               label="Escritura de la Propiedad"
               allowMultiple={true}
               disabled={disabled}
