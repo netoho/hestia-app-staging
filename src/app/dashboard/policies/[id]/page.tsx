@@ -23,7 +23,8 @@ import {
   Eye,
   FileText,
   TrendingUp,
-  Share2
+  Share2,
+  FileCheck
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
 import { usePolicyPermissions, useIsStaffOrAdmin } from '@/lib/hooks/usePolicyPermissions';
@@ -522,6 +523,18 @@ export default function PolicyDetailsPage({
                 <Send className="mr-2 h-4 w-4" />
               )}
               {t.pages.policies.sendInvitations}
+            </Button>
+          )}
+
+          {/* Review Information Button - Only for Staff/Admin */}
+          {isStaffOrAdmin && (
+            <Button
+              onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
+              variant="outline"
+              className="transition-all hover:scale-105 hover:shadow-md"
+            >
+              <FileCheck className="mr-2 h-4 w-4" />
+              Revisar Información
             </Button>
           )}
 
