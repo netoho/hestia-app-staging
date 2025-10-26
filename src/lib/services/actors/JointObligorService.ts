@@ -107,7 +107,8 @@ export class JointObligorService extends BaseActorService {
   async saveJointObligorInformation(
     jointObligorId: string,
     data: any,
-    isPartial: boolean = false
+    isPartial: boolean = false,
+    skipValidation: boolean = false
   ): AsyncResult<any> {
     // Fetch existing joint obligor to get current addressId
     const existingJointObligor = await this.prisma.jointObligor.findUnique({
@@ -145,7 +146,7 @@ export class JointObligorService extends BaseActorService {
       spouseCurp: data.spouseCurp,
     };
 
-    return this.saveActorData('jointObligor', jointObligorId, saveData as any, isPartial);
+    return this.saveActorData('jointObligor', jointObligorId, saveData as any, isPartial, skipValidation);
   }
 
   /**

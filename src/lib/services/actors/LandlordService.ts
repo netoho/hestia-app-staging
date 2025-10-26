@@ -80,7 +80,8 @@ export class LandlordService extends BaseActorService {
   async saveLandlordInformation(
     landlordId: string,
     data: LandlordData,
-    isPartial: boolean = false
+    isPartial: boolean = false,
+    skipValidation: boolean = false
   ): AsyncResult<LandlordData> {
     // Fetch existing landlord to get current addressId
     const existingLandlord = await this.prisma.landlord.findUnique({
@@ -98,7 +99,7 @@ export class LandlordService extends BaseActorService {
       cfdiData: data.cfdiData,
     };
 
-    return this.saveActorData('landlord', landlordId, saveData as any, isPartial);
+    return this.saveActorData('landlord', landlordId, saveData as any, isPartial, skipValidation);
   }
 
   /**

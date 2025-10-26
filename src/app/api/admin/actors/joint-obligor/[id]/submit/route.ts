@@ -65,11 +65,13 @@ export async function PUT(
     const isPartialSave = body.partial === true;
     const jointObligorService = new JointObligorService();
 
-    // Save joint obligor information
+    // Save joint obligor information (data is directly in body, not body.jointObligor)
+    // Skip validation for admin endpoints
     const saveResult = await jointObligorService.saveJointObligorInformation(
       jointObligorId,
-      body.jointObligor,
-      isPartialSave
+      body,
+      isPartialSave,
+      true  // skipValidation for admin
     );
 
     if (!saveResult.ok) {
@@ -182,10 +184,14 @@ export async function PUT(
 
   } catch (error) {
     console.error('Admin joint obligor submission error:', error);
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? { message: error.message } : error
       },
       { status: 500 }
     );

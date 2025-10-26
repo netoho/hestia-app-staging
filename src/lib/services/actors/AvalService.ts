@@ -106,7 +106,8 @@ export class AvalService extends BaseActorService {
   async saveAvalInformation(
     avalId: string,
     data: any,
-    isPartial: boolean = false
+    isPartial: boolean = false,
+    skipValidation: boolean = false
   ): AsyncResult<any> {
     return this.executeTransaction(async (tx) => {
       // Fetch existing aval to get current address IDs
@@ -339,6 +340,162 @@ export class AvalService extends BaseActorService {
 
       this.log('info', 'Commercial references saved', { avalId, count: references.length });
     }, 'saveCommercialReferences');
+  }
+
+  /**
+   * Validate token and save aval data
+   * Main entry point for actor endpoints
+   */
+  async validateAndSave(
+    token: string,
+    data: any,
+    isPartialSave: boolean = false
+  ): AsyncResult<any> {
+    return this.executeTransaction(async (tx) => {
+      // Validate token
+      const avalResult = await this.executeDbOperation(async () => {
+        const aval = await tx.aval.findFirst({
+          where: { accessToken: token },
+          include: {
+            policy: {
+              select: {
+                id: true,
+                policyNumber: true,
+                status: true
+              }
+            }
+          }
+        });
+
+        if (!aval) {
+          throw new ServiceError(
+            ErrorCode.INVALID_TOKEN,
+            'Token inválido',
+            400
+          );
+        }
+
+        if (aval.tokenExpiry && aval.tokenExpiry < new Date()) {
+          throw new ServiceError(
+            ErrorCode.TOKEN_EXPIRED,
+            'Token expirado',
+            400
+          );
+        }
+
+        if (aval.informationComplete && !isPartialSave) {
+          throw new ServiceError(
+            ErrorCode.ALREADY_COMPLETED,
+            'La información ya fue completada',
+            400
+          );
+        }
+
+        return aval;
+      }, 'validateToken');
+
+      if (!avalResult.ok) {
+        return avalResult;
+      }
+
+      const aval = avalResult.value;
+
+      // Upsert addresses
+      const addressResult = await this.upsertMultipleAddresses({
+        addressDetails: data.addressDetails,
+        employerAddressDetails: data.employerAddressDetails,
+        guaranteePropertyDetails: data.guaranteePropertyDetails
+      });
+
+      if (!addressResult.ok) {
+        return addressResult;
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        // Type
+        isCompany: data.isCompany,
+        // Individual Information
+        fullName: data.fullName,
+        nationality: data.nationality,
+        curp: data.curp || null,
+        rfc: data.rfc || null,
+        passport: data.passport || null,
+        relationshipToTenant: data.relationshipToTenant || null,
+        // Company Information
+        companyName: data.companyName || null,
+        companyRfc: data.companyRfc || null,
+        legalRepName: data.legalRepName || null,
+        legalRepPosition: data.legalRepPosition || null,
+        legalRepRfc: data.legalRepRfc || null,
+        legalRepPhone: data.legalRepPhone || null,
+        legalRepEmail: data.legalRepEmail || null,
+        // Contact Information
+        email: data.email,
+        phone: data.phone,
+        workPhone: data.workPhone || null,
+        personalEmail: data.personalEmail || null,
+        workEmail: data.workEmail || null,
+        // Employment (for individuals)
+        employmentStatus: data.employmentStatus || null,
+        occupation: data.occupation || null,
+        employerName: data.employerName || null,
+        employerAddress: data.employerAddress || null,
+        position: data.position || null,
+        monthlyIncome: data.monthlyIncome || null,
+        incomeSource: data.incomeSource || null,
+        // Property Guarantee Information
+        propertyAddress: data.propertyAddress || null,
+        propertyValue: data.propertyValue || null,
+        propertyDeedNumber: data.propertyDeedNumber || null,
+        propertyRegistry: data.propertyRegistry || null,
+        propertyTaxAccount: data.propertyTaxAccount || null,
+        propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
+        // Marriage Information
+        maritalStatus: data.maritalStatus || null,
+        spouseName: data.spouseName || null,
+        spouseRfc: data.spouseRfc || null,
+        spouseCurp: data.spouseCurp || null,
+        // Guarantee Method
+        guaranteeMethod: data.guaranteeMethod || null,
+        hasPropertyGuarantee: data.hasPropertyGuarantee ?? true,
+        // Additional info
+        additionalInfo: data.additionalInfo || null,
+        // Address IDs
+        ...addressResult.value,
+      };
+
+      // Mark as complete if not partial save
+      if (!isPartialSave) {
+        updateData.informationComplete = true;
+        updateData.completedAt = new Date();
+      }
+
+      // Update aval
+      const updatedAval = await tx.aval.update({
+        where: { id: aval.id },
+        data: updateData
+      });
+
+      // Save references
+      if (data.references) {
+        await this.savePersonalReferences(aval.id, data.references, 'aval');
+      }
+      if (data.commercialReferences) {
+        await this.saveCommercialReferences(aval.id, data.commercialReferences, 'aval');
+      }
+
+      return {
+        success: true,
+        message: isPartialSave
+          ? 'Información guardada exitosamente'
+          : 'Información completada exitosamente',
+        data: {
+          aval: updatedAval,
+          policyId: aval.policy.id
+        }
+      };
+    });
   }
 
   /**
