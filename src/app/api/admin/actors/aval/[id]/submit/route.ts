@@ -65,11 +65,13 @@ export async function PUT(
     const isPartialSave = body.partial === true;
     const avalService = new AvalService();
 
-    // Save aval information
+    // Save aval information (data is directly in body, not body.aval)
+    // Skip validation for admin endpoints
     const saveResult = await avalService.saveAvalInformation(
       avalId,
-      body.aval,
-      isPartialSave
+      body,
+      isPartialSave,
+      true  // skipValidation for admin
     );
 
     if (!saveResult.ok) {
@@ -164,10 +166,14 @@ export async function PUT(
 
   } catch (error) {
     console.error('Admin aval submission error:', error);
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? { message: error.message } : error
       },
       { status: 500 }
     );

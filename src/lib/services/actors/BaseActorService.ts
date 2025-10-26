@@ -101,6 +101,148 @@ export abstract class BaseActorService extends BaseService {
   }
 
   /**
+   * Upsert multiple addresses at once
+   * Handles address, employer address, and guarantee property address
+   */
+  protected async upsertMultipleAddresses(data: {
+    addressDetails?: any;
+    employerAddressDetails?: any;
+    guaranteePropertyDetails?: any;
+    previousRentalAddressDetails?: any;
+  }): AsyncResult<{
+    addressId?: string;
+    employerAddressId?: string;
+    guaranteePropertyAddressId?: string;
+    previousRentalAddressId?: string;
+  }> {
+    return this.executeDbOperation(async () => {
+      const updates: any = {};
+
+      // Upsert current address
+      if (data.addressDetails) {
+        const { id, createdAt, updatedAt, ...cleanAddressData } = data.addressDetails as any;
+        const currentAddress = await this.prisma.propertyAddress.upsert({
+          where: { id: data.addressDetails?.id || '' },
+          create: cleanAddressData,
+          update: cleanAddressData,
+        });
+        updates.addressId = currentAddress.id;
+      }
+
+      // Upsert employer address
+      if (data.employerAddressDetails) {
+        const { id, createdAt, updatedAt, ...cleanAddressData } = data.employerAddressDetails as any;
+        const employerAddress = await this.prisma.propertyAddress.upsert({
+          where: { id: data.employerAddressDetails?.id || '' },
+          create: cleanAddressData,
+          update: cleanAddressData,
+        });
+        updates.employerAddressId = employerAddress.id;
+      }
+
+      // Upsert guarantee property address
+      if (data.guaranteePropertyDetails) {
+        const { id, createdAt, updatedAt, ...cleanAddressData } = data.guaranteePropertyDetails as any;
+        const guaranteePropertyAddress = await this.prisma.propertyAddress.upsert({
+          where: { id: data.guaranteePropertyDetails?.id || '' },
+          create: cleanAddressData,
+          update: cleanAddressData,
+        });
+        updates.guaranteePropertyAddressId = guaranteePropertyAddress.id;
+      }
+
+      // Upsert previous rental address
+      if (data.previousRentalAddressDetails) {
+        const { id, createdAt, updatedAt, ...cleanAddressData } = data.previousRentalAddressDetails as any;
+        const previousRentalAddress = await this.prisma.propertyAddress.upsert({
+          where: { id: data.previousRentalAddressDetails?.id || '' },
+          create: cleanAddressData,
+          update: cleanAddressData,
+        });
+        updates.previousRentalAddressId = previousRentalAddress.id;
+      }
+
+      return updates;
+    }, 'upsertMultipleAddresses');
+  }
+
+  /**
+   * Save personal references for an actor
+   */
+  protected async savePersonalReferences(
+    actorId: string,
+    references: any[],
+    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
+  ): AsyncResult<void> {
+    return this.executeDbOperation(async () => {
+      // Build where clause based on actor type
+      const whereClause: any = {};
+      whereClause[`${actorType}Id`] = actorId;
+
+      // Delete existing references
+      await this.prisma.personalReference.deleteMany({
+        where: whereClause
+      });
+
+      // Create new references if provided
+      if (references && references.length > 0) {
+        const dataClause: any = {};
+        dataClause[`${actorType}Id`] = actorId;
+
+        await this.prisma.personalReference.createMany({
+          data: references.map((ref: any) => ({
+            ...dataClause,
+            name: ref.name,
+            phone: ref.phone,
+            email: ref.email || null,
+            relationship: ref.relationship,
+            occupation: ref.occupation || null,
+            address: ref.address || null,
+          }))
+        });
+      }
+    }, 'savePersonalReferences');
+  }
+
+  /**
+   * Save commercial references for an actor
+   */
+  protected async saveCommercialReferences(
+    actorId: string,
+    references: any[],
+    actorType: 'aval' | 'jointObligor' | 'landlord'
+  ): AsyncResult<void> {
+    return this.executeDbOperation(async () => {
+      // Build where clause based on actor type
+      const whereClause: any = {};
+      whereClause[`${actorType}Id`] = actorId;
+
+      // Delete existing references
+      await this.prisma.commercialReference.deleteMany({
+        where: whereClause
+      });
+
+      // Create new references if provided
+      if (references && references.length > 0) {
+        const dataClause: any = {};
+        dataClause[`${actorType}Id`] = actorId;
+
+        await this.prisma.commercialReference.createMany({
+          data: references.map((ref: any) => ({
+            ...dataClause,
+            companyName: ref.companyName,
+            contactName: ref.contactName,
+            phone: ref.phone,
+            email: ref.email || null,
+            relationship: ref.relationship,
+            yearsOfRelationship: ref.yearsOfRelationship || null,
+          }))
+        });
+      }
+    }, 'saveCommercialReferences');
+  }
+
+  /**
    * Build update data object from actor data
    */
   protected buildUpdateData(data: ActorData, addressId?: string): any {
@@ -160,12 +302,16 @@ export abstract class BaseActorService extends BaseService {
     tableName: string,
     actorId: string,
     data: T,
-    isPartial: boolean = false
+    isPartial: boolean = false,
+    skipValidation: boolean = false
   ): AsyncResult<T> {
-    // Validate data
-    const validationResult = this.validateActorData(data, isPartial);
-    if (!validationResult.ok) {
-      return Result.error(validationResult.error);
+    // Skip validation if requested (for admin endpoints)
+    if (!skipValidation) {
+      // Validate data
+      const validationResult = this.validateActorData(data, isPartial);
+      if (!validationResult.ok) {
+        return Result.error(validationResult.error);
+      }
     }
 
     return this.executeTransaction(async (tx) => {

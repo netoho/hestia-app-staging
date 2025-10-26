@@ -11,7 +11,7 @@ import { DocumentOperation } from '@/lib/documentManagement/types';
 interface DocumentManagerCardProps {
   category: DocumentCategory;
   title: string;
-  description: string;
+  description?: string;
   documentType: string;
   documents: Document[];
   required?: boolean;
@@ -28,7 +28,7 @@ interface DocumentManagerCardProps {
 export function DocumentManagerCard({
   category,
   title,
-  description,
+  description = '',
   documentType,
   documents,
   required = false,
@@ -57,7 +57,7 @@ export function DocumentManagerCard({
             <CardTitle className="text-lg">
               {title} {required && <span className="text-red-500">*</span>}
             </CardTitle>
-            <CardDescription>{description}</CardDescription>
+            {description && (<CardDescription>{description}</CardDescription>)}
           </div>
           {hasDocuments && (
             <Badge variant="outline">
