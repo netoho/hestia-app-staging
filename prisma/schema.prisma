@@ -181,6 +181,7 @@ model Policy {
   investigation     Investigation?
   contracts         Contract[]
   incidents         Incident[]
+  validationNotes   ReviewNote[]
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -931,6 +932,53 @@ model Incident {
 }
 
 // ============================================
+// REVIEW & VALIDATION
+// ============================================
+
+model ActorSectionValidation {
+  id              String           @id @default(cuid())
+  actorType       String           // "landlord", "tenant", "jointObligor", "aval"
+  actorId         String
+  section         String           // "personal_info", "work_info", "financial_info", "references", "address", "company_info"
+  status          ValidationStatus @default(PENDING)
+  validatedBy     String?          // User ID
+  validatedAt     DateTime?
+  rejectionReason String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([actorType, actorId, section])
+  @@index([actorId, actorType])
+}
+
+model DocumentValidation {
+  id              String           @id @default(cuid())
+  documentId      String           @unique
+  status          ValidationStatus @default(PENDING)
+  validatedBy     String?          // User ID
+  validatedAt     DateTime?
+  rejectionReason String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model ReviewNote {
+  id         String   @id @default(cuid())
+  policyId   String
+  actorType  String?  // optional, if note is actor-specific
+  actorId    String?  // optional, if note is actor-specific
+  documentId String?  // optional, if note is document-specific
+  note       String   @db.Text
+  createdBy  String   // User ID
+  createdAt  DateTime @default(now())
+
+  policy     Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([actorId, actorType])
+}
+
+// ============================================
 // ENUMS
 // ============================================
 
@@ -1068,6 +1116,13 @@ enum IncidentStatus {
 }
 
 enum ActorVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  IN_REVIEW
+}
+
+enum ValidationStatus {
   PENDING
   APPROVED
   REJECTED
