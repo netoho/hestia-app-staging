@@ -1,13 +1,12 @@
 'use client';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PolicyStatus } from '@/types/policy';
-import { calculatePolicyProgress, getPrimaryLandlord, getActorDisplayName } from '@/lib/utils/policyUtils';
+import { calculatePolicyProgress } from '@/lib/utils/policyUtils';
+import ActorsList from './ActorsList';
 
 interface Policy {
   id: string;
@@ -24,18 +23,28 @@ interface Policy {
   tenant?: {
     fullName?: string;
     companyName?: string;
+    email?: string;
+    phone?: string;
     informationComplete: boolean;
   } | null;
   landlords?: Array<{
     fullName?: string;
     companyName?: string;
+    email?: string;
+    phone?: string;
     isPrimary?: boolean;
     informationComplete: boolean;
   }>;
   jointObligors?: Array<{
+    fullName?: string;
+    email?: string;
+    phone?: string;
     informationComplete: boolean;
   }>;
   avals?: Array<{
+    fullName?: string;
+    email?: string;
+    phone?: string;
     informationComplete: boolean;
   }>;
   guarantorType?: string;
@@ -65,15 +74,14 @@ const STATUS_CONFIG = {
  */
 export default function PolicyCard({ policy, onView }: PolicyCardProps) {
   const progress = calculatePolicyProgress(policy);
-  const primaryLandlord = getPrimaryLandlord(policy.landlords);
   const statusConfig = STATUS_CONFIG[policy.status] || { label: policy.status, variant: 'secondary' as const };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden cursor-pointer" onClick={() => onView(policy.id)}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base truncate">{policy.policyNumber}</h3>
+            <h3 className="font-semibold text-base text-blue-600">{policy.policyNumber}</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {policy.createdAt && format(new Date(policy.createdAt), 'dd/MM/yyyy', { locale: es })}
             </p>
@@ -96,58 +104,16 @@ export default function PolicyCard({ policy, onView }: PolicyCardProps) {
           </p>
         </div>
 
-        {/* Actors Info Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Tenant */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Inquilino</p>
-            {policy.tenant ? (
-              <div>
-                <p className="text-sm truncate">
-                  {getActorDisplayName(policy.tenant)}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  {policy.tenant.informationComplete ? (
-                    <CheckCircle className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <Clock className="h-3 w-3 text-orange-500" />
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {policy.tenant.informationComplete ? 'Completo' : 'Pendiente'}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Pendiente</p>
-            )}
-          </div>
-
-          {/* Landlord */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Arrendador</p>
-            {primaryLandlord ? (
-              <div>
-                <p className="text-sm truncate">
-                  {getActorDisplayName(primaryLandlord)}
-                  {(policy.landlords?.length || 0) > 1 && (
-                    <span className="text-xs text-muted-foreground"> (+{(policy.landlords?.length || 0) - 1})</span>
-                  )}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  {primaryLandlord.informationComplete ? (
-                    <CheckCircle className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <Clock className="h-3 w-3 text-orange-500" />
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {policy.landlords?.filter(l => l.informationComplete).length || 0}/{policy.landlords?.length || 0} completos
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Pendiente</p>
-            )}
-          </div>
+        {/* All Actors Combined */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Actores</p>
+          <ActorsList
+            landlords={policy.landlords}
+            tenant={policy.tenant}
+            jointObligors={policy.jointObligors}
+            avals={policy.avals}
+            guarantorType={policy.guarantorType}
+          />
         </div>
 
         {/* Progress */}
@@ -184,19 +150,6 @@ export default function PolicyCard({ policy, onView }: PolicyCardProps) {
               <p className="text-xs text-muted-foreground">{policy.package.name}</p>
             )}
           </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onView(policy.id)}
-            className="flex-1"
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            Detalles
-          </Button>
         </div>
       </CardContent>
     </Card>

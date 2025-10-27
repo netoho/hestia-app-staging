@@ -2,14 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PolicyStatus } from '@/types/policy';
-import { calculatePolicyProgress, getPrimaryLandlord, getActorDisplayName } from '@/lib/utils/policyUtils';
+import { calculatePolicyProgress } from '@/lib/utils/policyUtils';
+import ActorsList from './ActorsList';
 
 interface Policy {
   id: string;
@@ -26,22 +25,28 @@ interface Policy {
   tenant?: {
     fullName?: string;
     companyName?: string;
-    email: string;
+    email?: string;
+    phone?: string;
     informationComplete: boolean;
   } | null;
   landlords?: Array<{
     fullName?: string;
     companyName?: string;
-    email: string;
+    email?: string;
+    phone?: string;
     isPrimary?: boolean;
     informationComplete: boolean;
   }>;
   jointObligors?: Array<{
-    fullName: string;
+    fullName?: string;
+    email?: string;
+    phone?: string;
     informationComplete: boolean;
   }>;
   avals?: Array<{
-    fullName: string;
+    fullName?: string;
+    email?: string;
+    phone?: string;
     informationComplete: boolean;
   }>;
   guarantorType?: string;
@@ -86,26 +91,26 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                 <TableHead>No. Protección</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Propiedad</TableHead>
-                <TableHead>Inquilino</TableHead>
-                <TableHead>Arrendador</TableHead>
-                <TableHead>Obligado S. / Aval</TableHead>
+                <TableHead>Actores</TableHead>
                 <TableHead>Precio Total</TableHead>
                 <TableHead>Progreso</TableHead>
-                <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {policies.map((policy) => {
                 const progress = calculatePolicyProgress(policy);
-                const primaryLandlord = getPrimaryLandlord(policy.landlords);
-                const landlordCount = policy.landlords?.length || 0;
 
                 return (
                   <TableRow key={policy.id}>
-                    {/* Policy Number & Date */}
+                    {/* Policy Number & Date - Clickable */}
                     <TableCell className="font-medium">
                       <div>
-                        <div>{policy.policyNumber}</div>
+                        <button
+                          onClick={() => router.push(`/dashboard/policies/${policy.id}`)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                        >
+                          {policy.policyNumber}
+                        </button>
                         <div className="text-xs text-gray-500">
                           {policy.createdAt && format(new Date(policy.createdAt), 'dd/MM/yyyy', { locale: es })}
                         </div>
@@ -128,87 +133,15 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                       </div>
                     </TableCell>
 
-                    {/* Tenant */}
+                    {/* All Actors Combined */}
                     <TableCell>
-                      {policy.tenant ? (
-                        <div>
-                          <div className="text-sm">
-                            {getActorDisplayName(policy.tenant)}
-                          </div>
-                          <div className="text-xs text-gray-500">{policy.tenant.email}</div>
-                          {policy.tenant.informationComplete ? (
-                            <CheckCircle className="inline h-3 w-3 text-green-500 mt-1" />
-                          ) : (
-                            <Clock className="inline h-3 w-3 text-orange-500 mt-1" />
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">Pendiente</span>
-                      )}
-                    </TableCell>
-
-                    {/* Landlord */}
-                    <TableCell>
-                      {primaryLandlord ? (
-                        <div>
-                          <div className="text-sm">
-                            {getActorDisplayName(primaryLandlord)}
-                            {landlordCount > 1 && (
-                              <span className="text-xs text-gray-500"> (+{landlordCount - 1})</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">{primaryLandlord.email}</div>
-                          {primaryLandlord.informationComplete ? (
-                            <CheckCircle className="inline h-3 w-3 text-green-500 mt-1" />
-                          ) : (
-                            <Clock className="inline h-3 w-3 text-orange-500 mt-1" />
-                          )}
-                          {landlordCount > 1 && (
-                            <div className="text-xs text-gray-500">
-                              {policy.landlords?.filter(l => l.informationComplete).length}/{landlordCount} completos
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">Pendiente</span>
-                      )}
-                    </TableCell>
-
-                    {/* Guarantors */}
-                    <TableCell>
-                      <div className="text-sm">
-                        {policy.guarantorType === 'NONE' && 'Sin garantías'}
-                        {policy.guarantorType === 'JOINT_OBLIGOR' && (
-                          <div>
-                            <span>Obligado S.</span>
-                            {policy.jointObligors && policy.jointObligors.length > 0 && (
-                              <div className="text-xs text-gray-500">
-                                {policy.jointObligors.filter(jo => jo.informationComplete).length}/{policy.jointObligors.length} completos
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {policy.guarantorType === 'AVAL' && (
-                          <div>
-                            <span>Aval</span>
-                            {policy.avals && policy.avals.length > 0 && (
-                              <div className="text-xs text-gray-500">
-                                {policy.avals.filter(a => a.informationComplete).length}/{policy.avals.length} completos
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {policy.guarantorType === 'BOTH' && (
-                          <div>
-                            <span>Ambos</span>
-                            <div className="text-xs text-gray-500">
-                              OS: {policy.jointObligors?.filter(jo => jo.informationComplete).length || 0}/{policy.jointObligors?.length || 0}
-                              {' '}
-                              A: {policy.avals?.filter(a => a.informationComplete).length || 0}/{policy.avals?.length || 0}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <ActorsList
+                        landlords={policy.landlords}
+                        tenant={policy.tenant}
+                        jointObligors={policy.jointObligors}
+                        avals={policy.avals}
+                        guarantorType={policy.guarantorType}
+                      />
                     </TableCell>
 
                     {/* Price */}
@@ -242,20 +175,6 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                         <div className="text-xs text-gray-500 mt-1">
                           {progress.completedActors}/{progress.totalActors} actores
                         </div>
-                      </div>
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => router.push(`/dashboard/policies/${policy.id}`)}
-                          title="Ver detalles"
-                        >
-                          <strong>Detalles</strong>
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
