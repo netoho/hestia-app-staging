@@ -35,7 +35,7 @@ export default function FinancialInfoForm({
   landlordId,
   isAdminEdit=false,
 }: FinancialInfoFormProps) {
-  const { documents, operations } = useDocumentOperations({
+  const { documents, deleteDocument, downloadDocument, uploadDocument, operations } = useDocumentOperations({
     token,
     actorType: 'landlord',
     isAdminEdit,
@@ -121,6 +121,14 @@ export default function FinancialInfoForm({
             <div className="mt-4 space-y-3">
               <Label className="text-sm font-medium">Constancia de Situación Fiscal</Label>
               <InlineDocumentManager
+                documents={documents[DocumentCategory.TAX_STATUS_CERTIFICATE] || []}
+                onUpload={(file) => uploadDocument(
+                  file,
+                  DocumentCategory.TAX_STATUS_CERTIFICATE,
+                  'tax_status_certificate',
+                )}
+                onDelete={deleteDocument}
+                onDownload={downloadDocument}
                 documentType={DocumentCategory.TAX_STATUS_CERTIFICATE}
                 label="Constancia de Situación Fiscal"
                 allowMultiple={true}
@@ -132,7 +140,15 @@ export default function FinancialInfoForm({
           <div className="mt-6 space-y-3">
             <Label className="text-base font-medium">Escritura de la Propiedad</Label>
             <InlineDocumentManager
+              documents={documents[DocumentCategory.PROPERTY_DEED] || []}
               documentType={DocumentCategory.PROPERTY_DEED}
+              onUpload={(file) => uploadDocument(
+                file,
+                DocumentCategory.PROPERTY_DEED,
+                'property_deed',
+              )}
+              onDelete={deleteDocument}
+              onDownload={downloadDocument}
               label="Escritura de la Propiedad"
               allowMultiple={true}
               disabled={disabled}

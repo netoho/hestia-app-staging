@@ -19,6 +19,7 @@ import {
   StorageFileMetadata,
 } from '../types';
 import { Readable } from 'stream';
+import { sanitizeForS3Metadata, encodeFilenameForHeaders } from '@/lib/utils/filename';
 
 export class S3StorageProvider implements StorageProvider {
   private client: S3Client;
@@ -43,15 +44,28 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async upload(options: StorageUploadOptions): Promise<string> {
+    // Sanitize originalName for S3 metadata (ASCII-only)
+    const sanitizedMetadata: Record<string, string> = {};
+
+    // Sanitize originalName
+    if (options.file.originalName) {
+      sanitizedMetadata.originalName = sanitizeForS3Metadata(options.file.originalName);
+    }
+
+    // Sanitize any other metadata values
+    if (options.metadata) {
+      for (const [key, value] of Object.entries(options.metadata)) {
+        // Ensure all metadata values are ASCII-only
+        sanitizedMetadata[key] = value ? sanitizeForS3Metadata(value) : '';
+      }
+    }
+
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: options.path,
       Body: options.file.buffer,
       ContentType: options.contentType || options.file.mimeType,
-      Metadata: {
-        originalName: options.file.originalName,
-        ...options.metadata,
-      },
+      Metadata: sanitizedMetadata,
       // Private by default - no public access
       ACL: 'private',
     });
@@ -141,32 +155,37 @@ export class S3StorageProvider implements StorageProvider {
 
   async getSignedUrl(options: SignedUrlOptions): Promise<string> {
     let command;
-    
+
     switch (options.action) {
       case 'read':
+        let contentDisposition: string | undefined;
+        if (options.responseDisposition === 'attachment') {
+          const filename = options.fileName || options.path.split('/').pop() || 'download';
+          // Use encodeURIComponent for proper URL encoding of non-ASCII characters
+          contentDisposition = `attachment; filename="${encodeURIComponent(filename)}"`;
+        }
+
         command = new GetObjectCommand({
           Bucket: this.bucket,
           Key: options.path,
-          ResponseContentDisposition: options.responseDisposition === 'attachment'
-            ? `attachment; filename="${options.fileName || options.path.split('/').pop()}"`
-            : undefined,
+          ResponseContentDisposition: contentDisposition,
         });
         break;
-      
+
       case 'write':
         command = new PutObjectCommand({
           Bucket: this.bucket,
           Key: options.path,
         });
         break;
-      
+
       case 'delete':
         command = new DeleteObjectCommand({
           Bucket: this.bucket,
           Key: options.path,
         });
         break;
-      
+
       default:
         throw new Error(`Unsupported action: ${options.action}`);
     }
