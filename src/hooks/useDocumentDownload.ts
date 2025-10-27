@@ -22,13 +22,23 @@ export function useDocumentDownload() {
 
       const data = await response.json();
 
-      if (!data.success || !data.url) {
-        throw new Error('Invalid response from server');
+      // Handle both old and new response formats
+      let downloadUrl: string;
+      if (data.data?.downloadUrl) {
+        // New format: { success, data: { downloadUrl, ... } }
+        downloadUrl = data.data.downloadUrl;
+      } else if (data.url) {
+        // Old format: { success, url, ... }
+        downloadUrl = data.url;
+      } else if (!data.success) {
+        throw new Error(data.error || 'Failed to get download URL');
+      } else {
+        throw new Error('Invalid response format from server');
       }
 
       // Create a temporary anchor element and trigger download
       const link = document.createElement('a');
-      link.href = data.url;
+      link.href = downloadUrl;
       link.download = fileName;
       link.style.display = 'none';
 

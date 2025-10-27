@@ -1,8 +1,8 @@
 import { DownloadConfig, OperationProgress } from './types';
 
 /**
- * Download file with progress tracking using Fetch API
- * Uses ReadableStream to track download progress
+ * Download file using direct browser download
+ * Avoids CORS issues with S3 presigned URLs
  */
 export async function downloadWithProgress(config: DownloadConfig): Promise<void> {
   try {
@@ -15,70 +15,44 @@ export async function downloadWithProgress(config: DownloadConfig): Promise<void
 
     const data = await response.json();
 
-    if (!data.success || !data.data?.downloadUrl) {
-      throw new Error(data.error || 'Invalid response from server');
+    // Handle both old and new response formats for backward compatibility
+    let downloadUrl: string;
+    let fileName: string = config.fileName;
+
+    if (data.data?.downloadUrl) {
+      // New format: { success, data: { downloadUrl, fileName, ... } }
+      downloadUrl = data.data.downloadUrl;
+      fileName = data.data.fileName || config.fileName;
+    } else if (data.url) {
+      // Old format: { success, url, fileName, ... }
+      downloadUrl = data.url;
+      fileName = data.fileName || config.fileName;
+    } else if (!data.success) {
+      throw new Error(data.error || 'Failed to get download URL');
+    } else {
+      throw new Error('Invalid response format from server');
     }
 
-    // Now download the file from the signed URL
-    const downloadResponse = await fetch(data.data.downloadUrl, {
-      signal: config.signal,
-    });
-
-    if (!downloadResponse.ok) {
-      throw new Error(`Error al descargar: ${downloadResponse.status}`);
-    }
-
-    // Get content length for progress tracking
-    const contentLength = downloadResponse.headers.get('content-length');
-    const total = contentLength ? parseInt(contentLength, 10) : 0;
-
-    // Read the response body as a stream
-    const reader = downloadResponse.body?.getReader();
-    if (!reader) {
-      throw new Error('No se pudo leer la respuesta');
-    }
-
-    const chunks: Uint8Array[] = [];
-    let loaded = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      chunks.push(value);
-      loaded += value.length;
-
-      // Report progress
-      if (total > 0 && config.onProgress) {
-        const progress: OperationProgress = {
-          loaded,
-          total,
-          percentage: Math.round((loaded / total) * 100),
-        };
-        config.onProgress(progress);
-      }
-    }
-
-    // Create blob from chunks
-    const blob = new Blob(chunks);
-
-    // Create download link
-    const url = window.URL.createObjectURL(blob);
+    // Use direct link download to avoid CORS issues with S3
+    // Create a temporary anchor element and trigger download
     const link = document.createElement('a');
-    link.href = url;
-    link.download = config.fileName;
+    link.href = downloadUrl;
+    link.download = fileName;
     link.style.display = 'none';
 
+    // Some browsers require the link to be in the DOM
     document.body.appendChild(link);
+
+    // Trigger the download
     link.click();
 
     // Cleanup
     setTimeout(() => {
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     }, 100);
 
+    // Call success callback immediately since we can't track actual download progress
+    // The browser handles the download natively
     config.onSuccess?.();
   } catch (error) {
     const errorMessage =
@@ -106,16 +80,29 @@ export async function downloadFile(
 
     const data = await response.json();
 
-    if (!data.success || !data.data?.downloadUrl) {
-      throw new Error(data.error || 'Invalid response from server');
+    // Handle both old and new response formats for backward compatibility
+    let downloadUrl: string;
+    let actualFileName: string = fileName;
+
+    if (data.data?.downloadUrl) {
+      // New format: { success, data: { downloadUrl, fileName, ... } }
+      downloadUrl = data.data.downloadUrl;
+      actualFileName = data.data.fileName || fileName;
+    } else if (data.url) {
+      // Old format: { success, url, fileName, ... }
+      downloadUrl = data.url;
+      actualFileName = data.fileName || fileName;
+    } else if (!data.success) {
+      throw new Error(data.error || 'Failed to get download URL');
+    } else {
+      throw new Error('Invalid response format from server');
     }
 
-    // Open download URL in new window/tab
-    // The browser will handle the download
+    // Direct download without opening new tab
+    // This avoids popup blockers and CORS issues
     const link = document.createElement('a');
-    link.href = data.data.downloadUrl;
-    link.download = fileName;
-    link.target = '_blank';
+    link.href = downloadUrl;
+    link.download = actualFileName;
     link.style.display = 'none';
 
     document.body.appendChild(link);
