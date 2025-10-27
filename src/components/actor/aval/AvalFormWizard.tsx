@@ -116,7 +116,7 @@ export default function AvalFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData, true);
+    return wizard.handleTabSave(tabName, validateTab, saveData);
   }, [
     validatePersonalTab,
     validatePropertyTab,
@@ -179,7 +179,7 @@ export default function AvalFormWizard({
       });
 
       if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
+        onComplete();
       }
     } catch (error) {
       console.error('Submit error:', error);

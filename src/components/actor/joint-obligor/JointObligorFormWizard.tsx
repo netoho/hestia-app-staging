@@ -145,7 +145,7 @@ export default function JointObligorFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData, true);
+    return wizard.handleTabSave(tabName, validateTab, saveData);
   };
 
   // Handle final submission
@@ -197,7 +197,7 @@ export default function JointObligorFormWizard({
       });
 
       if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
+        onComplete();
       }
     } catch (error) {
       console.error('Submit error:', error);

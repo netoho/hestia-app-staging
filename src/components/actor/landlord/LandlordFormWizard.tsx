@@ -115,7 +115,7 @@ export default function LandlordFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData, true);
+    return wizard.handleTabSave(tabName, validateTab, saveData);
   };
 
   // Handle final submission
@@ -142,7 +142,7 @@ export default function LandlordFormWizard({
         });
 
         if (onComplete) {
-          setTimeout(() => onComplete(), 1500);
+          onComplete();
         }
       }
     } catch (error) {
@@ -246,14 +246,14 @@ export default function LandlordFormWizard({
                     onChange={(field, value) => updateLandlordField(index, field, value)}
                     errors={errors}
                     disabled={wizard.savingTab === 'personal'}
-                    showEmploymentInfo={index === 0} // Only show for primary
-                    showAdditionalContact={index === 0} // Only show for primary
+                    // showEmploymentInfo={index === 0} // Only show for primary
+                    // showAdditionalContact={index === 0} // Only show for primary
                   />
                 )}
 
                 <div className="mt-4">
                   <AddressAutocomplete
-                    label="Dirección *"
+                    label="Dirección Residencial"
                     value={landlord.addressDetails || {}}
                     onChange={(addressData) => {
                       updateLandlordField(index, 'addressDetails', addressData);

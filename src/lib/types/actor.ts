@@ -113,6 +113,14 @@ export interface LandlordData extends BaseActorData {
   documents?: Document[];
 }
 
+export interface PersonLandlordData extends LandlordData, PersonActorData {
+    isCompany: false;
+}
+
+export interface CompanyLandlordData extends LandlordData, CompanyActorData {
+    isCompany: true;
+}
+
 // Financial details (now part of Policy, not PropertyDetails)
 export interface PolicyFinancialDetails {
   hasIVA?: boolean;

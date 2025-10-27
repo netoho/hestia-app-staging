@@ -55,9 +55,7 @@ export function useFormWizardTabs({
     if (currentIndex < tabs.length - 1) {
       const nextTab = tabs[currentIndex + 1];
       if (canAccessTab(nextTab.id)) {
-        setTimeout(() => {
-          setActiveTab(nextTab.id);
-        }, autoAdvanceDelay);
+        setActiveTab(nextTab.id);
       }
     }
   }, [activeTab, tabs, canAccessTab, autoAdvanceDelay]);

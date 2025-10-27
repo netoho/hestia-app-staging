@@ -253,7 +253,7 @@ export function AddressAutocomplete({
       <div className="space-y-2">
         {label && (
           <Label htmlFor="address-search">
-            {label} {required && <span className="text-red-500">*</span>}
+            {label} {required && <span className="text-500">*</span>}
           </Label>
         )}
         <div className="relative">

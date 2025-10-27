@@ -113,7 +113,7 @@ export default function TenantFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData, true);
+    return wizard.handleTabSave(tabName, validateTab, saveData);
   }, [
     validatePersonalTab,
     validatePersonalReferences,
@@ -175,7 +175,7 @@ export default function TenantFormWizard({
       });
 
       if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
+        onComplete();
       }
     } catch (error) {
       console.error('Submit error:', error);

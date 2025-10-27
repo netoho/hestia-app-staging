@@ -13,8 +13,8 @@ import {
   LandlordData,
   PropertyDetails,
   PolicyFinancialDetails,
-  PersonActorData,
-  CompanyActorData
+  PersonLandlordData,
+  CompanyLandlordData,
 } from '@/lib/types/actor';
 
 interface UseLandlordFormProps {
@@ -34,7 +34,8 @@ export function useLandlordForm({
   const [saving, setSaving] = useState(false);
 
   // Support multiple landlords (primary + co-owners)
-  const [landlords, setLandlords] = useState<Partial<LandlordData>[]>([
+  const [landlords, setLandlords] = useState<Partial<PersonLandlordData | CompanyLandlordData>[]>([
+
     {
       ...initialData,
       isCompany: initialData.isCompany || false,
@@ -139,25 +140,25 @@ export function useLandlordForm({
 
       if (landlord.isCompany) {
         // Company validation
+        landlord = landlord as CompanyLandlordData;
+
         if (!landlord.companyName || !validateRequired(landlord.companyName)) {
           newErrors[`${prefix}companyName`] = VALIDATION_MESSAGES.required;
           valid = false;
         }
-        if (!landlord.rfc || !validateRequired(landlord.rfc)) {
-          newErrors[`${prefix}rfc`] = VALIDATION_MESSAGES.required;
+        if (!landlord.companyRfc || !validateRequired(landlord.companyRfc)) {
+          newErrors[`${prefix}companyRfc`] = VALIDATION_MESSAGES.required;
           valid = false;
-        } else if (landlord.rfc && !validateRFC(landlord.rfc, true)) {
-          newErrors[`${prefix}rfc`] = VALIDATION_MESSAGES.invalidRFC;
+        } else if (landlord.companyRfc && !validateRFC(landlord.companyRfc, true)) {
+          newErrors[`${prefix}companyRfc`] = VALIDATION_MESSAGES.invalidRFC;
           valid = false;
         }
       } else {
         // Person validation
-        if (!landlord.firstName || !validateRequired(landlord.firstName)) {
-          newErrors[`${prefix}firstName`] = VALIDATION_MESSAGES.required;
-          valid = false;
-        }
-        if (!landlord.lastName1 || !validateRequired(landlord.lastName1)) {
-          newErrors[`${prefix}lastName1`] = VALIDATION_MESSAGES.required;
+        landlord = landlord as PersonLandlordData;
+
+        if (!landlord.fullName || !validateRequired(landlord.fullName)) {
+          newErrors[`${prefix}fullName`] = VALIDATION_MESSAGES.required;
           valid = false;
         }
       }
@@ -193,13 +194,8 @@ export function useLandlordForm({
     const newErrors: Record<string, string> = {};
     let valid = true;
 
-    if (!propertyData.propertyAddress || !validateRequired(propertyData.propertyAddress)) {
+    if (!propertyData.propertyAddressDetails || !validateRequired(propertyData.propertyAddressDetails)) {
       newErrors.propertyAddress = VALIDATION_MESSAGES.required;
-      valid = false;
-    }
-
-    if (!propertyData.propertyRentAmount || !validateRequired(propertyData.propertyRentAmount.toString())) {
-      newErrors.propertyRentAmount = VALIDATION_MESSAGES.required;
       valid = false;
     }
 
