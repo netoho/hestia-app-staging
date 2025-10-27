@@ -129,7 +129,7 @@ export default function LandlordFormWizard({
       return;
     }
 
-    wizard.wizard.setSavingTab('final');
+    wizard.setSavingTab('final');
 
     try {
       // Final submission is just a save with partial=false
@@ -153,7 +153,7 @@ export default function LandlordFormWizard({
         variant: "destructive",
       });
     } finally {
-      wizard.wizard.setSavingTab(null);
+      wizard.setSavingTab(null);
     }
   };
 
@@ -176,7 +176,7 @@ export default function LandlordFormWizard({
         activeTab={wizard.activeTab}
         tabSaved={wizard.tabSaved}
         isAdminEdit={isAdminEdit}
-        onTabChange={wizard.wizard.setActiveTab}
+        onTabChange={wizard.setActiveTab}
       >
 
         {/* Personal Information Tab */}

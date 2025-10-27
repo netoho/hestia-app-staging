@@ -207,7 +207,7 @@ export default function TenantFormWizard({
         activeTab={wizard.activeTab}
         tabSaved={wizard.tabSaved}
         isAdminEdit={isAdminEdit}
-        onTabChange={wizard.wizard.setActiveTab}
+        onTabChange={wizard.setActiveTab}
       >
 
         {/* Personal Tab */}
