@@ -21,7 +21,7 @@ export default function PublicFooter() {
             <div className="space-y-2 text-sm">
               <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {t.contactEmail}</p>
               <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> {t.contactPhone}</p>
-              <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> {t.layout.publicFooter.address}</p>
+              {/* <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> {t.layout.publicFooter.address}</p> */}
             </div>
           </div>
 
