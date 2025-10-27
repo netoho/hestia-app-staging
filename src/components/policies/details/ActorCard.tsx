@@ -2,10 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Download, Send, RefreshCw } from 'lucide-react';
+import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Send, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 import { useSession } from 'next-auth/react';
+import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
+import { useDocumentOperations } from '@/hooks/useDocumentOperations';
+import { DocumentCategory } from '@/types/policy';
+import { useMemo } from 'react';
 
 interface ActorCardProps {
   actor: any;
@@ -29,10 +32,27 @@ export default function ActorCard({
   sending
 }: ActorCardProps) {
   const router = useRouter();
-  const { downloadDocument, downloading } = useDocumentDownload();
   const { data: session } = useSession();
 
   const isStaffOrAdmin = canEdit !== undefined ? canEdit : (session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF');
+
+  // Map actorType to the format expected by useDocumentOperations
+  const documentActorType = useMemo(() => {
+    switch (actorType) {
+      case 'jointObligor':
+        return 'joint-obligor';
+      default:
+        return actorType;
+    }
+  }, [actorType]);
+
+  // Use document operations hook for document management
+  const { documents, downloadDocument, operations } = useDocumentOperations({
+    token: actor?.id || null,
+    actorType: documentActorType as any,
+    initialDocuments: actor?.documents || [],
+    isAdminEdit: true, // Using admin endpoints when viewing from ActorCard
+  });
 
   // Calculate actor progress
   const calculateProgress = () => {
@@ -131,6 +151,20 @@ export default function ActorCard({
 
   const displayName = actor.fullName || actor.companyName || 'Sin nombre';
   const isCompany = actor.tenantType === 'COMPANY' || actor.isCompany;
+
+  // Group documents by category
+  const documentsByCategory = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+
+    // Group all documents from the hook
+    Object.entries(documents).forEach(([category, docs]) => {
+      if (docs && docs.length > 0) {
+        grouped[category] = docs;
+      }
+    });
+
+    return grouped;
+  }, [documents]);
 
   return (
     <Card>
@@ -427,44 +461,52 @@ export default function ActorCard({
           </div>
         )}
 
-        {/* Documents */}
+        {/* Documents Section - Using InlineDocumentManager */}
         {actor.documents && actor.documents.length > 0 && (
           <div className="mt-6">
             <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
               Documentos
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {actor.documents.map((doc: any) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.documentType}</p>
-                      <p className="text-xs text-gray-500 truncate">{doc.originalName}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2 ml-2 flex-shrink-0">
-                    {doc.verifiedAt && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => downloadDocument({
-                        documentId: doc.id,
-                        documentType: 'actor',
-                        fileName: doc.originalName
-                      })}
-                      disabled={downloading === doc.id}
-                      className="h-8 w-8 p-0"
-                      title="Descargar documento"
-                    >
-                      <Download className={`h-4 w-4 ${downloading === doc.id ? 'animate-pulse' : ''}`} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-3">
+              {Object.entries(documentsByCategory).map(([category, docs]) => {
+                const categoryOperations = Object.values(operations).filter(op =>
+                  op.category === category ||
+                  docs.some((doc: any) => doc.id === op.documentId)
+                );
+
+                // Get a display label for the category
+                const getCategoryLabel = (cat: string) => {
+                  const labels: Record<string, string> = {
+                    [DocumentCategory.IDENTIFICATION]: 'Identificación',
+                    [DocumentCategory.INCOME_PROOF]: 'Comprobante de Ingresos',
+                    [DocumentCategory.ADDRESS_PROOF]: 'Comprobante de Domicilio',
+                    [DocumentCategory.EMPLOYMENT_LETTER]: 'Carta Laboral',
+                    [DocumentCategory.BANK_STATEMENT]: 'Estado de Cuenta',
+                    [DocumentCategory.PROPERTY_DEED]: 'Escritura de Propiedad',
+                    [DocumentCategory.TAX_DECLARATION]: 'Declaración de Impuestos',
+                    [DocumentCategory.TAX_STATUS_CERTIFICATE]: 'Constancia de Situación Fiscal',
+                    [DocumentCategory.COMPANY_CONSTITUTION]: 'Escritura Constitutiva',
+                    [DocumentCategory.LEGAL_POWERS]: 'Poderes Legales',
+                    [DocumentCategory.PROPERTY_TAX_STATEMENT]: 'Boleta Predial',
+                    [DocumentCategory.OTHER]: 'Otros',
+                  };
+                  return labels[cat] || cat;
+                };
+
+                return (
+                  <InlineDocumentManager
+                    key={category}
+                    label={getCategoryLabel(category)}
+                    documentType={category}
+                    documents={docs}
+                    readOnly={true}
+                    onDownload={(docId, fileName) => downloadDocument(docId, fileName)}
+                    operations={categoryOperations}
+                    onUpload={() => {}} // Read-only, no upload
+                    allowMultiple={false}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
