@@ -14,8 +14,8 @@ export function sanitizeForS3Metadata(filename: string): string {
   let name = hasExtension ? filename.substring(0, lastDotIndex) : filename;
   const extension = hasExtension ? filename.substring(lastDotIndex) : '';
 
-  // Replace non-ASCII characters with underscores
-  // Allow alphanumeric, spaces, hyphens, underscores, and dots
+  // Replace non-printable and non-ASCII characters with underscores
+  // Allows all printable ASCII characters (0x20-0x7E)
   name = name.replace(/[^\x20-\x7E]/g, '_');
 
   // Clean up multiple underscores
