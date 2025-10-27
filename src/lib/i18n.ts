@@ -81,7 +81,7 @@ const es = {
             closeMenu: "Cerrar menú",
         },
         publicFooter: {
-            description: "Hestia ofrece protecciones de arrendamiento integrales, proporcionando tranquilidad tanto a propietarios como a inquilinos.",
+            description: "Protecciones de arrendamiento integrales, tranquilidad tanto a propietarios como a inquilinos.",
             address: "Calle Segura 123, Ciudad de México, MXCalle Segura 123, Ciudad de México, MéxicoCalle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México",
             quickLinks: "Enlaces Rápidos",
             legal: "Legal",
