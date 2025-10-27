@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { User, Building2 } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import { FieldError } from '@/components/ui/field-error';
 import PersonInformation from '@/components/actor/shared/PersonInformation';
 import CompanyInformation from '@/components/actor/shared/CompanyInformation';
 import { JointObligorFormData } from '@/hooks/useJointObligorForm';
@@ -93,9 +94,7 @@ export default function JointObligorPersonalInfoTab({
               className={errors.relationshipToTenant ? 'border-red-500' : ''}
               required
             />
-            {errors.relationshipToTenant && (
-              <p className="text-red-500 text-sm mt-1">{errors.relationshipToTenant}</p>
-            )}
+            <FieldError error={errors.relationshipToTenant} />
           </div>
 
           {/* Address Autocomplete */}

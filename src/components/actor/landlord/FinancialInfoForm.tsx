@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FieldError } from '@/components/ui/field-error';
 import { LandlordData, PolicyFinancialDetails } from '@/lib/types/actor';
 import { DocumentCategory } from '@/types/policy';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
@@ -80,9 +81,7 @@ export default function FinancialInfoForm({
                 className={errors.clabe ? 'border-red-500' : ''}
                 disabled={disabled}
               />
-              {errors.clabe && (
-                <p className="text-red-500 text-sm mt-1">{errors.clabe}</p>
-              )}
+              <FieldError error={errors.clabe} />
             </div>
             <div>
               <Label htmlFor="accountHolder">Titular de la Cuenta</Label>

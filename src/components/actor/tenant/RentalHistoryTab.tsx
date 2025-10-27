@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import { FieldError } from '@/components/ui/field-error';
 import { TenantFormData } from '@/hooks/useTenantForm';
 
 interface RentalHistoryTabProps {
@@ -43,9 +44,7 @@ export default function RentalHistoryTab({
               className={errors.previousLandlordName ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.previousLandlordName && (
-              <p className="text-red-500 text-sm mt-1">{errors.previousLandlordName}</p>
-            )}
+            <FieldError error={errors.previousLandlordName} />
           </div>
 
           <div>
@@ -58,9 +57,7 @@ export default function RentalHistoryTab({
               className={errors.previousLandlordPhone ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.previousLandlordPhone && (
-              <p className="text-red-500 text-sm mt-1">{errors.previousLandlordPhone}</p>
-            )}
+            <FieldError error={errors.previousLandlordPhone} />
           </div>
 
           <div>
@@ -74,9 +71,7 @@ export default function RentalHistoryTab({
               className={errors.previousLandlordEmail ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.previousLandlordEmail && (
-              <p className="text-red-500 text-sm mt-1">{errors.previousLandlordEmail}</p>
-            )}
+            <FieldError error={errors.previousLandlordEmail} />
           </div>
 
           <div>
@@ -91,9 +86,7 @@ export default function RentalHistoryTab({
               className={errors.previousRentAmount ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.previousRentAmount && (
-              <p className="text-red-500 text-sm mt-1">{errors.previousRentAmount}</p>
-            )}
+            <FieldError error={errors.previousRentAmount} />
           </div>
 
           <div>
@@ -108,9 +101,7 @@ export default function RentalHistoryTab({
               className={errors.rentalHistoryYears ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.rentalHistoryYears && (
-              <p className="text-red-500 text-sm mt-1">{errors.rentalHistoryYears}</p>
-            )}
+            <FieldError error={errors.rentalHistoryYears} />
           </div>
 
           <div className="md:col-span-2">
@@ -126,9 +117,7 @@ export default function RentalHistoryTab({
               }}
               disabled={disabled}
             />
-            {errors.previousRentalAddress && (
-              <p className="text-red-500 text-sm mt-1">{errors.previousRentalAddress}</p>
-            )}
+            <FieldError error={errors.previousRentalAddress} />
           </div>
         </div>
       </CardContent>

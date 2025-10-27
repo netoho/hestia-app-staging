@@ -14,6 +14,25 @@ interface UseFormWizardTabsOptions {
   autoAdvanceDelay?: number;
 }
 
+// Check if a tab can be accessed based on previous tabs
+const canAccessTab = (tabId: string, tabs: Tab[], isAdminEdit: boolean, tabSaved: Record<string, boolean>) => {
+  if (isAdminEdit) return true;
+
+  console.log('Checking access for tab:', tabSaved);
+
+  const tabIndex = tabs.findIndex(t => t.id === tabId);
+  if (tabIndex <= 0) return true;
+
+  // Check if all previous tabs that need saving are saved
+  for (let i = 0; i < tabIndex; i++) {
+    const prevTab = tabs[i];
+    if (prevTab.needsSave && !tabSaved[prevTab.id]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function useFormWizardTabs({
   tabs,
   isAdminEdit = false,
@@ -32,33 +51,19 @@ export function useFormWizardTabs({
   const [savingTab, setSavingTab] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Check if a tab can be accessed based on previous tabs
-  const canAccessTab = useCallback((tabId: string) => {
-    if (isAdminEdit) return true;
-
-    const tabIndex = tabs.findIndex(t => t.id === tabId);
-    if (tabIndex <= 0) return true;
-
-    // Check if all previous tabs that need saving are saved
-    for (let i = 0; i < tabIndex; i++) {
-      const prevTab = tabs[i];
-      if (prevTab.needsSave && !tabSaved[prevTab.id]) {
-        return false;
-      }
-    }
-    return true;
-  }, [tabs, tabSaved, isAdminEdit]);
-
   // Go to the next available tab
-  const goToNextTab = useCallback(() => {
+  const goToNextTab = useCallback((updatedTabSaved?: Record<string, boolean>) => {
+    const currentTabSaved = updatedTabSaved ?? tabSaved;
     const currentIndex = tabs.findIndex(t => t.id === activeTab);
     if (currentIndex < tabs.length - 1) {
       const nextTab = tabs[currentIndex + 1];
-      if (canAccessTab(nextTab.id)) {
+      if (canAccessTab(nextTab.id, tabs, isAdminEdit, currentTabSaved)) {
         setActiveTab(nextTab.id);
+        // Scroll to top smoothly
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
-  }, [activeTab, tabs, canAccessTab, autoAdvanceDelay]);
+  }, [activeTab, tabs, isAdminEdit, tabSaved]);
 
   // Clear error for a specific field
   const clearError = useCallback((field: string) => {
@@ -116,14 +121,12 @@ export function useFormWizardTabs({
       // Save data
       await saveData();
 
-      // Mark tab as saved
-      setTabSaved(prev => ({
-        ...prev,
-        [tabName]: true
-      }));
+      // Mark tab as saved and get fresh state
+      const newTabSaved = { ...tabSaved, [tabName]: true };
+      setTabSaved(newTabSaved);
 
-      // Auto-advance to next tab
-      goToNextTab();
+      // Auto-advance to next tab with fresh state
+      goToNextTab(newTabSaved);
 
       return true;
     } catch (error: any) {

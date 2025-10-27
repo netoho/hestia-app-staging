@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FieldError } from '@/components/ui/field-error';
 import { PersonalReference, CommercialReference } from '@/hooks/useTenantReferences';
 
 interface ReferencesTabProps {
@@ -96,9 +97,7 @@ export default function ReferencesTab({
                   />
                 </div>
               </div>
-              {errors[`reference${index}`] && (
-                <p className="text-red-500 text-sm mt-2">{errors[`reference${index}`]}</p>
-              )}
+              <FieldError error={errors[`reference${index}`]} />
             </CardContent>
           </Card>
         ))}
@@ -197,9 +196,7 @@ export default function ReferencesTab({
                 />
               </div>
             </div>
-            {errors[`commercialReference${index}`] && (
-              <p className="text-red-500 text-sm mt-2">{errors[`commercialReference${index}`]}</p>
-            )}
+            <FieldError error={errors[`commercialReference${index}`]} />
           </CardContent>
         </Card>
       ))}
