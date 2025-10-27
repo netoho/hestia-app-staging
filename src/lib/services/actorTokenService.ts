@@ -27,69 +27,119 @@ export function generateActorUrl(token: string, actorType: 'tenant' | 'joint-obl
 }
 
 /**
- * Create or update token for a tenant
+ * Check if token is still valid (not expired)
  */
-export async function generateTenantToken(tenantId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
+function isTokenValid(accessToken: string | null, tokenExpiry: Date | null): boolean {
+  if (!accessToken || !tokenExpiry) return false;
+  return tokenExpiry >= new Date();
+}
+
+/**
+ * Generate or reuse existing valid token for an actor
+ */
+async function generateOrReuseToken(
+  actorType: 'tenant' | 'joint-obligor' | 'aval' | 'landlord',
+  actorId: string,
+  currentToken: string | null,
+  currentExpiry: Date | null
+): Promise<{ token: string; url: string; expiresAt: Date }> {
+  // If valid token exists, return it
+  if (isTokenValid(currentToken, currentExpiry)) {
+    return {
+      token: currentToken!,
+      url: generateActorUrl(currentToken!, actorType),
+      expiresAt: currentExpiry!
+    };
+  }
+
+  // Generate new token
   const token = generateSecureToken();
   const expiresAt = generateExpiresAt();
 
-  await prisma.tenant.update({
-    where: { id: tenantId },
-    data: {
-      accessToken: token,
-      tokenExpiry: expiresAt
-    }
-  });
+  // Update database based on actor type
+  switch (actorType) {
+    case 'tenant':
+      await prisma.tenant.update({
+        where: { id: actorId },
+        data: { accessToken: token, tokenExpiry: expiresAt }
+      });
+      break;
+    case 'joint-obligor':
+      await prisma.jointObligor.update({
+        where: { id: actorId },
+        data: { accessToken: token, tokenExpiry: expiresAt }
+      });
+      break;
+    case 'aval':
+      await prisma.aval.update({
+        where: { id: actorId },
+        data: { accessToken: token, tokenExpiry: expiresAt }
+      });
+      break;
+    case 'landlord':
+      await prisma.landlord.update({
+        where: { id: actorId },
+        data: { accessToken: token, tokenExpiry: expiresAt }
+      });
+      break;
+  }
 
   return {
     token,
-    url: generateActorUrl(token, 'tenant'),
+    url: generateActorUrl(token, actorType),
     expiresAt
   };
+}
+
+/**
+ * Create or update token for a tenant
+ */
+export async function generateTenantToken(tenantId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { accessToken: true, tokenExpiry: true }
+  });
+
+  return generateOrReuseToken(
+    'tenant',
+    tenantId,
+    tenant?.accessToken || null,
+    tenant?.tokenExpiry || null
+  );
 }
 
 /**
  * Create or update token for a joint obligor
  */
 export async function generateJointObligorToken(jointObligorId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
-  const token = generateSecureToken();
-  const expiresAt = generateExpiresAt();
-
-  await prisma.jointObligor.update({
+  const jointObligor = await prisma.jointObligor.findUnique({
     where: { id: jointObligorId },
-    data: {
-      accessToken: token,
-      tokenExpiry: expiresAt
-    }
+    select: { accessToken: true, tokenExpiry: true }
   });
 
-  return {
-    token,
-    url: generateActorUrl(token, 'joint-obligor'),
-    expiresAt
-  };
+  return generateOrReuseToken(
+    'joint-obligor',
+    jointObligorId,
+    jointObligor?.accessToken || null,
+    jointObligor?.tokenExpiry || null
+  );
 }
 
 /**
  * Create or update token for an aval
  */
 export async function generateAvalToken(avalId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
-  const token = generateSecureToken();
-  const expiresAt = generateExpiresAt();
-
-  await prisma.aval.update({
+  const aval = await prisma.aval.findUnique({
     where: { id: avalId },
-    data: {
-      accessToken: token,
-      tokenExpiry: expiresAt
-    }
+    select: { accessToken: true, tokenExpiry: true }
   });
 
-  return {
-    token,
-    url: generateActorUrl(token, 'aval'),
-    expiresAt
-  };
+  return generateOrReuseToken(
+    'aval',
+    avalId,
+    aval?.accessToken || null,
+    aval?.tokenExpiry || null
+  );
 }
 
 /**
@@ -197,23 +247,17 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
  * Create or update token for a landlord
  */
 export async function generateLandlordToken(landlordId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
-  // If already has a token and it's not expired, return existing token
-  const token = generateSecureToken();
-  const expiresAt = generateExpiresAt();
-
-  await prisma.landlord.update({
+  const landlord = await prisma.landlord.findUnique({
     where: { id: landlordId },
-    data: {
-      accessToken: token,
-      tokenExpiry: expiresAt
-    }
+    select: { accessToken: true, tokenExpiry: true }
   });
 
-  return {
-    token,
-    url: generateActorUrl(token, 'landlord'),
-    expiresAt
-  };
+  return generateOrReuseToken(
+    'landlord',
+    landlordId,
+    landlord?.accessToken || null,
+    landlord?.tokenExpiry || null
+  );
 }
 
 /**
