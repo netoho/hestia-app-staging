@@ -186,12 +186,12 @@ export default function DocumentValidator({
                 <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {format(new Date(document.uploadedAt), "d MMM yyyy", { locale: es })}
+                    {document.uploadedAt && format(new Date(document.uploadedAt), "d MMM yyyy", { locale: es })}
                   </span>
                   {document.validatedAt && (
                     <span className="flex items-center gap-1">
                       <User className="h-3 w-3" />
-                      Validado: {format(new Date(document.validatedAt), "d MMM yyyy", { locale: es })}
+                      Validado: {document.validatedAt && format(new Date(document.validatedAt), "d MMM yyyy", { locale: es })}
                     </span>
                   )}
                 </div>

@@ -116,7 +116,7 @@ export default function AvalFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData);
+    return wizard.handleTabSave(tabName, validateTab, saveData, true);
   }, [
     validatePersonalTab,
     validatePropertyTab,

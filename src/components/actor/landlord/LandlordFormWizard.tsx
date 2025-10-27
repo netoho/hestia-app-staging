@@ -115,7 +115,7 @@ export default function LandlordFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData);
+    return wizard.handleTabSave(tabName, validateTab, saveData, true);
   };
 
   // Handle final submission
@@ -190,7 +190,6 @@ export default function LandlordFormWizard({
                 value={isCompany ? 'company' : 'individual'}
                 onValueChange={(value) => {
                   const newIsCompany = value === 'company';
-                  setIsCompany(newIsCompany);
                   updateLandlordField(0, 'isCompany', newIsCompany);
                 }}
               >

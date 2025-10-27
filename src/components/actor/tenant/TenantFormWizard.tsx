@@ -113,7 +113,7 @@ export default function TenantFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData);
+    return wizard.handleTabSave(tabName, validateTab, saveData, true);
   }, [
     validatePersonalTab,
     validatePersonalReferences,

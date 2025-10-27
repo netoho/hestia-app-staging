@@ -145,7 +145,7 @@ export default function JointObligorFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData);
+    return wizard.handleTabSave(tabName, validateTab, saveData, true);
   };
 
   // Handle final submission

@@ -139,47 +139,47 @@ export function useLandlordForm({
 
       if (landlord.isCompany) {
         // Company validation
-        if (!validateRequired(landlord.companyName)) {
+        if (!landlord.companyName || !validateRequired(landlord.companyName)) {
           newErrors[`${prefix}companyName`] = VALIDATION_MESSAGES.required;
           valid = false;
         }
-        if (!validateRequired(landlord.rfc)) {
+        if (!landlord.rfc || !validateRequired(landlord.rfc)) {
           newErrors[`${prefix}rfc`] = VALIDATION_MESSAGES.required;
           valid = false;
-        } else if (!validateRFC(landlord.rfc!, true)) {
+        } else if (landlord.rfc && !validateRFC(landlord.rfc, true)) {
           newErrors[`${prefix}rfc`] = VALIDATION_MESSAGES.invalidRFC;
           valid = false;
         }
       } else {
         // Person validation
-        if (!validateRequired(landlord.firstName)) {
+        if (!landlord.firstName || !validateRequired(landlord.firstName)) {
           newErrors[`${prefix}firstName`] = VALIDATION_MESSAGES.required;
           valid = false;
         }
-        if (!validateRequired(landlord.lastName1)) {
+        if (!landlord.lastName1 || !validateRequired(landlord.lastName1)) {
           newErrors[`${prefix}lastName1`] = VALIDATION_MESSAGES.required;
           valid = false;
         }
       }
 
       // Common validations
-      if (!validateRequired(landlord.email)) {
+      if (!landlord.email || !validateRequired(landlord.email)) {
         newErrors[`${prefix}email`] = VALIDATION_MESSAGES.required;
         valid = false;
-      } else if (!validateEmail(landlord.email!)) {
+      } else if (!validateEmail(landlord.email)) {
         newErrors[`${prefix}email`] = VALIDATION_MESSAGES.invalidEmail;
         valid = false;
       }
 
-      if (!validateRequired(landlord.phone)) {
+      if (!landlord.phone || !validateRequired(landlord.phone)) {
         newErrors[`${prefix}phone`] = VALIDATION_MESSAGES.required;
         valid = false;
-      } else if (!validatePhone(landlord.phone!)) {
+      } else if (!validatePhone(landlord.phone)) {
         newErrors[`${prefix}phone`] = VALIDATION_MESSAGES.invalidPhone;
         valid = false;
       }
 
-      if (!validateRequired(landlord.address)) {
+      if (!landlord.address || !validateRequired(landlord.address)) {
         newErrors[`${prefix}address`] = VALIDATION_MESSAGES.required;
         valid = false;
       }
@@ -193,12 +193,12 @@ export function useLandlordForm({
     const newErrors: Record<string, string> = {};
     let valid = true;
 
-    if (!validateRequired(propertyData.propertyAddress)) {
+    if (!propertyData.propertyAddress || !validateRequired(propertyData.propertyAddress)) {
       newErrors.propertyAddress = VALIDATION_MESSAGES.required;
       valid = false;
     }
 
-    if (!validateRequired(propertyData.propertyRentAmount)) {
+    if (!propertyData.propertyRentAmount || !validateRequired(propertyData.propertyRentAmount.toString())) {
       newErrors.propertyRentAmount = VALIDATION_MESSAGES.required;
       valid = false;
     }
@@ -211,7 +211,7 @@ export function useLandlordForm({
     const newErrors: Record<string, string> = {};
     let valid = true;
 
-    if (!validateRequired(policyFinancialData.securityDeposit)) {
+    if (policyFinancialData.securityDeposit === undefined || policyFinancialData.securityDeposit === null) {
       newErrors.securityDeposit = VALIDATION_MESSAGES.required;
       valid = false;
     }
