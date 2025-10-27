@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: [
     'https://*.cloudworkstations.dev',
+    '192.168.*.*',
   ],
 
   // Performance optimizations

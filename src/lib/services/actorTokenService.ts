@@ -2,6 +2,16 @@ import { randomBytes } from 'crypto';
 import prisma from '../prisma';
 
 /**
+ * Generate expires at date 1000 days from now
+ */
+export function generateExpiresAt(): Date {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 1000); // 7 days expiration
+
+  return expiresAt;
+}
+
+/**
  * Generate a secure token for actor self-service access
  */
 export function generateSecureToken(): string {
@@ -21,8 +31,7 @@ export function generateActorUrl(token: string, actorType: 'tenant' | 'joint-obl
  */
 export async function generateTenantToken(tenantId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
   const token = generateSecureToken();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+  const expiresAt = generateExpiresAt();
 
   await prisma.tenant.update({
     where: { id: tenantId },
@@ -44,8 +53,7 @@ export async function generateTenantToken(tenantId: string): Promise<{ token: st
  */
 export async function generateJointObligorToken(jointObligorId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
   const token = generateSecureToken();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+  const expiresAt = generateExpiresAt();
 
   await prisma.jointObligor.update({
     where: { id: jointObligorId },
@@ -67,8 +75,7 @@ export async function generateJointObligorToken(jointObligorId: string): Promise
  */
 export async function generateAvalToken(avalId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
   const token = generateSecureToken();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+  const expiresAt = generateExpiresAt();
 
   await prisma.aval.update({
     where: { id: avalId },
@@ -191,8 +198,7 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
  */
 export async function generateLandlordToken(landlordId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
   const token = generateSecureToken();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+  const expiresAt = generateExpiresAt();
 
   await prisma.landlord.update({
     where: { id: landlordId },
@@ -252,8 +258,7 @@ export async function validateLandlordToken(token: string): Promise<{ valid: boo
  */
 export async function renewToken(actorType: 'tenant' | 'jointObligor' | 'aval' | 'landlord', actorId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
   const token = generateSecureToken();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+  const expiresAt = generateExpiresAt();
 
   switch (actorType) {
     case 'tenant':

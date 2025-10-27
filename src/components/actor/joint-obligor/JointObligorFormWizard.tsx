@@ -2,14 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
 import { Check, Loader2, User, Briefcase, Shield, Users, FileText, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useJointObligorForm } from '@/hooks/useJointObligorForm';
 import { useJointObligorReferences } from '@/hooks/useJointObligorReferences';
+import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
+import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
+import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
+import { SaveTabButton } from '@/components/actor/shared/SaveTabButton';
+import { cleanFormAddresses } from '@/lib/utils/addressUtils';
 import JointObligorPersonalInfoTab from './JointObligorPersonalInfoTab';
 import JointObligorEmploymentTab from './JointObligorEmploymentTab';
 import JointObligorGuaranteeTab from './JointObligorGuaranteeTab';
@@ -59,16 +63,26 @@ export default function JointObligorFormWizard({
     initialData?.commercialReferences || []
   );
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState('personal');
-  const [tabSaved, setTabSaved] = useState({
-    personal: false,
-    employment: false,
-    guarantee: false,
-    references: false,
-  });
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
+  // Tab configuration
+  const tabs = formData.isCompany
+    ? [
+        { id: 'personal', label: 'Información', needsSave: true },
+        { id: 'guarantee', label: 'Garantía', needsSave: true },
+        { id: 'references', label: 'Referencias', needsSave: true },
+        { id: 'documents', label: 'Documentos', needsSave: false },
+      ]
+    : [
+        { id: 'personal', label: 'Personal', needsSave: true },
+        { id: 'employment', label: 'Empleo', needsSave: true },
+        { id: 'guarantee', label: 'Garantía', needsSave: true },
+        { id: 'references', label: 'Referencias', needsSave: true },
+        { id: 'documents', label: 'Documentos', needsSave: false },
+      ];
+
+  // Use wizard tabs hook
+  const wizard = useFormWizardTabs({ tabs, isAdminEdit });
 
   // Initialize form data with initial data
   useEffect(() => {
@@ -80,109 +94,58 @@ export default function JointObligorFormWizard({
 
       // Mark tabs as saved if data exists
       if (initialData.fullName || initialData.companyName) {
-        setTabSaved(prev => ({ ...prev, personal: true }));
+        wizard.markTabSaved('personal');
       }
       if (initialData.occupation || initialData.monthlyIncome) {
-        setTabSaved(prev => ({ ...prev, employment: true }));
+        wizard.markTabSaved('employment');
       }
       if (initialData.guaranteeMethod) {
-        setTabSaved(prev => ({ ...prev, guarantee: true }));
+        wizard.markTabSaved('guarantee');
       }
       if (initialData.references?.length > 0 || initialData.commercialReferences?.length > 0) {
-        setTabSaved(prev => ({ ...prev, references: true }));
+        wizard.markTabSaved('references');
       }
     }
   }, [initialData]);
 
-  // Define tabs based on company type
-  const tabs = formData.isCompany
-    ? [
-        { id: 'personal', label: 'Información', icon: User, needsSave: true },
-        { id: 'guarantee', label: 'Garantía', icon: Shield, needsSave: true },
-        { id: 'references', label: 'Referencias', icon: Users, needsSave: true },
-        { id: 'documents', label: 'Documentos', icon: FileText, needsSave: false },
-      ]
-    : [
-        { id: 'personal', label: 'Personal', icon: User, needsSave: true },
-        { id: 'employment', label: 'Empleo', icon: Briefcase, needsSave: true },
-        { id: 'guarantee', label: 'Garantía', icon: Shield, needsSave: true },
-        { id: 'references', label: 'Referencias', icon: Users, needsSave: true },
-        { id: 'documents', label: 'Documentos', icon: FileText, needsSave: false },
-      ];
-
-  // Check if tab can be accessed
-  const canAccessTab = (tabId: string) => {
-    // Admin can access all tabs
-    if (isAdminEdit) return true;
-
-    const tabIndex = tabs.findIndex(t => t.id === tabId);
-    if (tabIndex === 0) return true;
-
-    // Check if all previous tabs are saved
-    for (let i = 0; i < tabIndex; i++) {
-      const prevTab = tabs[i];
-      if (prevTab.needsSave && !tabSaved[prevTab.id as keyof typeof tabSaved]) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  // Calculate progress
-  const savedCount = Object.values(tabSaved).filter(Boolean).length;
-  const totalTabs = tabs.filter(t => t.needsSave).length;
-  const progress = (savedCount / totalTabs) * 100;
-
   // Handle tab save
   const handleSaveTab = async (tabName: string) => {
-    setErrors({});
-
-    // Validate based on tab
-    let valid = false;
-    if (tabName === 'personal') {
-      valid = validatePersonalTab();
-    } else if (tabName === 'employment' && !formData.isCompany) {
-      valid = validateEmploymentTab();
-    } else if (tabName === 'guarantee') {
-      valid = validateGuaranteeTab();
-    } else if (tabName === 'references') {
-      const refValidation = formData.isCompany
-        ? validateCommercialReferences()
-        : validatePersonalReferences();
-      valid = refValidation.valid;
-      if (!valid) {
-        setErrors(refValidation.errors);
-      }
-    }
-
-    if (!valid) {
-      toast({
-        title: 'Error de validación',
-        description: 'Por favor complete todos los campos requeridos',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Save data
-    const additionalData = tabName === 'references'
-      ? {
-          references: formData.isCompany ? undefined : personalReferences,
-          commercialReferences: formData.isCompany ? commercialReferences : undefined,
+    // Validation logic
+    const validateTab = () => {
+      if (tabName === 'personal') {
+        return validatePersonalTab();
+      } else if (tabName === 'employment' && !formData.isCompany) {
+        return validateEmploymentTab();
+      } else if (tabName === 'guarantee') {
+        return validateGuaranteeTab();
+      } else if (tabName === 'references') {
+        const refValidation = formData.isCompany
+          ? validateCommercialReferences()
+          : validatePersonalReferences();
+        if (!refValidation.valid) {
+          setErrors(refValidation.errors);
         }
-      : {};
-
-    const success = await saveTab(token, tabName, additionalData);
-
-    if (success) {
-      setTabSaved(prev => ({ ...prev, [tabName]: true }));
-
-      // Auto-advance to next tab
-      const currentIndex = tabs.findIndex(t => t.id === tabName);
-      if (currentIndex < tabs.length - 1) {
-        setActiveTab(tabs[currentIndex + 1].id);
+        return refValidation.valid;
       }
-    }
+      return true;
+    };
+
+    // Save logic
+    const saveData = async () => {
+      const additionalData = tabName === 'references'
+        ? {
+            references: formData.isCompany ? undefined : personalReferences,
+            commercialReferences: formData.isCompany ? commercialReferences : undefined,
+          }
+        : {};
+
+      const success = await saveTab(token, tabName, additionalData);
+      if (!success) {
+        throw new Error('Failed to save');
+      }
+    };
+
+    return wizard.handleTabSave(tabName, validateTab, saveData);
   };
 
   // Handle final submission
@@ -196,11 +159,17 @@ export default function JointObligorFormWizard({
       return;
     }
 
-    setSubmitting(true);
+    wizard.setSavingTab('final');
 
     try {
+      // Clean address fields before submission
+      const cleanFormData = cleanFormAddresses(
+        { ...formData },
+        ['addressDetails', 'employerAddressDetails', 'propertyAddressDetails']
+      );
+
       const submitData = {
-        ...formData,
+        ...cleanFormData,
         references: formData.isCompany ? undefined : personalReferences,
         commercialReferences: formData.isCompany ? commercialReferences : undefined,
         informationComplete: true,
@@ -238,11 +207,13 @@ export default function JointObligorFormWizard({
         variant: 'destructive',
       });
     } finally {
-      setSubmitting(false);
+      wizard.setSavingTab(null);
     }
   };
 
-  const allTabsSaved = tabs.filter(t => t.needsSave).every(t => tabSaved[t.id as keyof typeof tabSaved]);
+  const { getProgress } = wizard;
+  const progress = getProgress();
+  const allTabsSaved = progress.isComplete;
 
   return (
     <div className="space-y-4">
@@ -263,39 +234,25 @@ export default function JointObligorFormWizard({
             </Alert>
           )}
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Progreso de Completado</span>
-              <span className="text-sm text-muted-foreground">
-                {savedCount} de {totalTabs} secciones guardadas
-              </span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-        </CardContent>
       </Card>
+
+      {/* Progress Indicator */}
+      <FormWizardProgress
+        tabs={tabs}
+        tabSaved={wizard.tabSaved}
+        variant="progress"
+      />
 
       {/* Form Wizard */}
       <Card>
         <CardContent className="pt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
-              {tabs.map(tab => (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  disabled={!canAccessTab(tab.id)}
-                  className="flex items-center gap-1"
-                >
-                  {tabSaved[tab.id as keyof typeof tabSaved] && (
-                    <Check className="h-3 w-3" />
-                  )}
-                  <tab.icon className="h-3 w-3" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+          <FormWizardTabs
+            tabs={tabs}
+            activeTab={wizard.activeTab}
+            tabSaved={wizard.tabSaved}
+            isAdminEdit={isAdminEdit}
+            onTabChange={wizard.setActiveTab}
+          >
 
             {/* Personal/Company Tab */}
             <TabsContent value="personal">
@@ -303,25 +260,14 @@ export default function JointObligorFormWizard({
                 formData={formData}
                 onFieldChange={updateField}
                 errors={errors}
-                disabled={saving}
+                disabled={wizard.savingTab === 'personal'}
               />
-              <div className="flex justify-end mt-4">
-                <Button
-                  onClick={() => handleSaveTab('personal')}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : tabSaved.personal ? (
-                    'Guardado - Continuar'
-                  ) : (
-                    'Guardar y Continuar'
-                  )}
-                </Button>
-              </div>
+              <SaveTabButton
+                tabName="personal"
+                savingTab={wizard.savingTab}
+                isSaved={wizard.tabSaved.personal}
+                onSave={() => handleSaveTab('personal')}
+              />
             </TabsContent>
 
             {/* Employment Tab (Individuals only) */}
@@ -331,31 +277,14 @@ export default function JointObligorFormWizard({
                   formData={formData}
                   onFieldChange={updateField}
                   errors={errors}
-                  disabled={saving}
+                  disabled={wizard.savingTab === 'employment'}
                 />
-                <div className="flex justify-between mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveTab('personal')}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    onClick={() => handleSaveTab('employment')}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Guardando...
-                      </>
-                    ) : tabSaved.employment ? (
-                      'Guardado - Continuar'
-                    ) : (
-                      'Guardar y Continuar'
-                    )}
-                  </Button>
-                </div>
+                <SaveTabButton
+                  tabName="employment"
+                  savingTab={wizard.savingTab}
+                  isSaved={wizard.tabSaved.employment}
+                  onSave={() => handleSaveTab('employment')}
+                />
               </TabsContent>
             )}
 
@@ -365,34 +294,17 @@ export default function JointObligorFormWizard({
                 formData={formData}
                 onFieldChange={updateField}
                 errors={errors}
-                disabled={saving}
+                disabled={wizard.savingTab === 'guarantee'}
                 token={token}
                 jointObligorId={formData.id}
                 initialDocuments={initialData?.documents}
               />
-              <div className="flex justify-between mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setActiveTab(formData.isCompany ? 'personal' : 'employment')}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  onClick={() => handleSaveTab('guarantee')}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : tabSaved.guarantee ? (
-                    'Guardado - Continuar'
-                  ) : (
-                    'Guardar y Continuar'
-                  )}
-                </Button>
-              </div>
+              <SaveTabButton
+                tabName="guarantee"
+                savingTab={wizard.savingTab}
+                isSaved={wizard.tabSaved.guarantee}
+                onSave={() => handleSaveTab('guarantee')}
+              />
             </TabsContent>
 
             {/* References Tab */}
@@ -404,31 +316,14 @@ export default function JointObligorFormWizard({
                 onUpdatePersonalReference={updatePersonalReference}
                 onUpdateCommercialReference={updateCommercialReference}
                 errors={errors}
-                disabled={saving}
+                disabled={wizard.savingTab === 'references'}
               />
-              <div className="flex justify-between mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setActiveTab('guarantee')}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  onClick={() => handleSaveTab('references')}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : tabSaved.references ? (
-                    'Guardado - Continuar'
-                  ) : (
-                    'Guardar y Continuar'
-                  )}
-                </Button>
-              </div>
+              <SaveTabButton
+                tabName="references"
+                savingTab={wizard.savingTab}
+                isSaved={wizard.tabSaved.references}
+                onSave={() => handleSaveTab('references')}
+              />
             </TabsContent>
 
             {/* Documents Tab */}
@@ -446,18 +341,13 @@ export default function JointObligorFormWizard({
                 onRequiredDocsChange={setRequiredDocsUploaded}
                 isAdminEdit={isAdminEdit}
               />
-              <div className="flex justify-between mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setActiveTab('references')}
-                >
-                  Anterior
-                </Button>
+              <div className="flex justify-end mt-4">
                 <Button
                   onClick={handleFinalSubmit}
-                  disabled={submitting || !requiredDocsUploaded || !allTabsSaved}
+                  disabled={wizard.savingTab === 'final' || !requiredDocsUploaded || !allTabsSaved}
+                  size="lg"
                 >
-                  {submitting ? (
+                  {wizard.savingTab === 'final' ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Enviando...
@@ -478,7 +368,7 @@ export default function JointObligorFormWizard({
                 </Alert>
               )}
             </TabsContent>
-          </Tabs>
+          </FormWizardTabs>
         </CardContent>
       </Card>
     </div>

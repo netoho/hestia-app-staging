@@ -85,6 +85,7 @@ export async function uploadActorDocument(
         buffer: file.buffer,
         originalName: file.originalName,
         mimeType: file.mimeType,
+        size: file.size,
       },
       contentType: file.mimeType,
       metadata: {
@@ -162,6 +163,7 @@ export async function uploadPolicyDocument(
         buffer: file.buffer,
         originalName: file.originalName,
         mimeType: file.mimeType,
+        size: file.size,
       },
       contentType: file.mimeType,
       metadata: {
@@ -443,7 +445,7 @@ export async function validatePolicyDocuments(
           documents: true,
         },
       },
-      landlord: {
+      landlords: {
         include: {
           documents: true,
         },
