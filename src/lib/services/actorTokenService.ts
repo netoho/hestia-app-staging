@@ -197,6 +197,7 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
  * Create or update token for a landlord
  */
 export async function generateLandlordToken(landlordId: string): Promise<{ token: string; url: string; expiresAt: Date }> {
+  // If already has a token and it's not expired, return existing token
   const token = generateSecureToken();
   const expiresAt = generateExpiresAt();
 
