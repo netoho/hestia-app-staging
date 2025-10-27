@@ -30,7 +30,14 @@
       "Bash(bun run test:api tenant-workflow -t \"should submit policy successfully\")",
       "Bash(DEMO_MODE=true TEST_EMAIL=test@example.com bun run test:email)",
       "Bash(npx prisma:*)"
+      "Bash(for f in .claude/sessions/*.md)",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(head:*)",
+      "Bash(done)",
+      "Bash(git log:*)",
+      "Bash(npx tsc:*)"
     ],
-    "deny": []
+    "deny": [],
+    "ask": []
   }
 }
