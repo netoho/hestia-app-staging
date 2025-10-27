@@ -78,7 +78,7 @@ export const brandInfo = {
   companyShortName: 'Hestia PLP',
   tagline: 'Tu garantía de confianza en el arrendamiento',
   supportEmail: 'soporte@hestiaplp.com.mx',
-  supportPhone: '55-1234-5678',
+  supportPhone: '55 1277 0883 | 55 2111 7610',
   location: 'Ciudad de México',
   website: 'https://hestiaplp.com.mx',
 } as const;
