@@ -161,8 +161,8 @@ export class S3StorageProvider implements StorageProvider {
         let contentDisposition: string | undefined;
         if (options.responseDisposition === 'attachment') {
           const filename = options.fileName || options.path.split('/').pop() || 'download';
-          // Use encodeURIComponent for proper URL encoding of non-ASCII characters
-          contentDisposition = `attachment; filename="${encodeURIComponent(filename)}"`;
+          // Use RFC 5987 format for proper encoding of non-ASCII characters
+          contentDisposition = `attachment; filename*=UTF-8''${encodeFilenameForHeaders(filename)}`;
         }
 
         command = new GetObjectCommand({
