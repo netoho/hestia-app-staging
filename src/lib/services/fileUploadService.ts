@@ -46,7 +46,9 @@ function generateS3Key(
 
   // Create a safe filename base from the original filename
   const safeFileName = createSafeS3Key(fileName);
-  const nameWithoutExt = safeFileName.substring(0, safeFileName.lastIndexOf('.'));
+  const nameWithoutExt = safeFileName.lastIndexOf('.') > 0
+    ? safeFileName.substring(0, safeFileName.lastIndexOf('.'))
+    : safeFileName;
 
   // Include part of the original filename for readability (limited to 50 chars)
   const fileNamePart = nameWithoutExt.substring(0, 50);
