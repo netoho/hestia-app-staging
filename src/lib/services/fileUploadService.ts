@@ -149,7 +149,9 @@ export async function uploadPolicyDocument(
 
     // Create a safe S3 key from the filename
     const safeFileName = createSafeS3Key(file.originalName);
-    const s3Key = `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}-${safeFileName}`;
+    const ext = getFileExtension(file.originalName);
+    const baseName = safeFileName.endsWith(`.${ext}`) ? safeFileName.slice(0, -ext.length - 1) : safeFileName;
+    const s3Key = `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}-${baseName}.${ext}`;
 
     // Upload to S3
     await s3Provider.upload({
