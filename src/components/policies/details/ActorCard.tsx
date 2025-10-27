@@ -21,6 +21,25 @@ interface ActorCardProps {
   sending?: boolean;
 }
 
+// Get a display label for the category
+const getCategoryLabel = (cat: string) => {
+  const labels: Record<string, string> = {
+    [DocumentCategory.IDENTIFICATION]: 'Identificación',
+    [DocumentCategory.INCOME_PROOF]: 'Comprobante de Ingresos',
+    [DocumentCategory.ADDRESS_PROOF]: 'Comprobante de Domicilio',
+    [DocumentCategory.EMPLOYMENT_LETTER]: 'Carta Laboral',
+    [DocumentCategory.BANK_STATEMENT]: 'Estado de Cuenta',
+    [DocumentCategory.PROPERTY_DEED]: 'Escritura de Propiedad',
+    [DocumentCategory.TAX_RETURN]: 'Declaración de Impuestos',
+    [DocumentCategory.TAX_STATUS_CERTIFICATE]: 'Constancia de Situación Fiscal',
+    [DocumentCategory.COMPANY_CONSTITUTION]: 'Escritura Constitutiva',
+    [DocumentCategory.LEGAL_POWERS]: 'Poderes Legales',
+    [DocumentCategory.PROPERTY_TAX_STATEMENT]: 'Boleta Predial',
+    [DocumentCategory.OTHER]: 'Otros',
+  };
+  return labels[cat] || cat;
+};
+
 export default function ActorCard({
   actor,
   actorType,
@@ -473,25 +492,6 @@ export default function ActorCard({
                   op.category === category ||
                   docs.some((doc: any) => doc.id === op.documentId)
                 );
-
-                // Get a display label for the category
-                const getCategoryLabel = (cat: string) => {
-                  const labels: Record<string, string> = {
-                    [DocumentCategory.IDENTIFICATION]: 'Identificación',
-                    [DocumentCategory.INCOME_PROOF]: 'Comprobante de Ingresos',
-                    [DocumentCategory.ADDRESS_PROOF]: 'Comprobante de Domicilio',
-                    [DocumentCategory.EMPLOYMENT_LETTER]: 'Carta Laboral',
-                    [DocumentCategory.BANK_STATEMENT]: 'Estado de Cuenta',
-                    [DocumentCategory.PROPERTY_DEED]: 'Escritura de Propiedad',
-                    [DocumentCategory.TAX_DECLARATION]: 'Declaración de Impuestos',
-                    [DocumentCategory.TAX_STATUS_CERTIFICATE]: 'Constancia de Situación Fiscal',
-                    [DocumentCategory.COMPANY_CONSTITUTION]: 'Escritura Constitutiva',
-                    [DocumentCategory.LEGAL_POWERS]: 'Poderes Legales',
-                    [DocumentCategory.PROPERTY_TAX_STATEMENT]: 'Boleta Predial',
-                    [DocumentCategory.OTHER]: 'Otros',
-                  };
-                  return labels[cat] || cat;
-                };
 
                 return (
                   <InlineDocumentManager
