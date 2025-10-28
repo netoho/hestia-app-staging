@@ -9,6 +9,7 @@ import { FieldError } from '@/components/ui/field-error';
 import { LandlordData, PolicyFinancialDetails } from '@/lib/types/actor';
 import { DocumentCategory } from '@/types/policy';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
+import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 
 interface FinancialInfoFormProps {
@@ -36,7 +37,7 @@ export default function FinancialInfoForm({
   landlordId,
   isAdminEdit=false,
 }: FinancialInfoFormProps) {
-  const { documents, deleteDocument, downloadDocument, uploadDocument, operations } = useDocumentOperations({
+  const { documents, deleteDocument, downloadDocument, uploadDocument, operations, getCategoryOperations } = useDocumentOperations({
     token,
     actorType: 'landlord',
     isAdminEdit,
@@ -121,6 +122,7 @@ export default function FinancialInfoForm({
               <Label className="text-sm font-medium">Constancia de Situación Fiscal</Label>
               <InlineDocumentManager
                 documents={documents[DocumentCategory.TAX_STATUS_CERTIFICATE] || []}
+                documentType={DocumentCategory.TAX_STATUS_CERTIFICATE}
                 onUpload={(file) => uploadDocument(
                   file,
                   DocumentCategory.TAX_STATUS_CERTIFICATE,
@@ -128,7 +130,7 @@ export default function FinancialInfoForm({
                 )}
                 onDelete={deleteDocument}
                 onDownload={downloadDocument}
-                documentType={DocumentCategory.TAX_STATUS_CERTIFICATE}
+                operations={getCategoryOperations(DocumentCategory.TAX_STATUS_CERTIFICATE)}
                 label="Constancia de Situación Fiscal"
                 allowMultiple={true}
                 disabled={disabled}
@@ -148,6 +150,7 @@ export default function FinancialInfoForm({
               )}
               onDelete={deleteDocument}
               onDownload={downloadDocument}
+              operations={getCategoryOperations(DocumentCategory.PROPERTY_DEED)}
               label="Escritura de la Propiedad"
               allowMultiple={true}
               disabled={disabled}

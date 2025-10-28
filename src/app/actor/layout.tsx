@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import Logo from '@/components/Logo';
+import { brandInfo } from '@/lib/config/brand';
 
 export const metadata: Metadata = {
   title: 'Portal de Actores - Hestia',
@@ -11,32 +13,40 @@ export default function ActorLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Hestia
-            </h1>
-            <p className="text-gray-600 mt-2">Sistema de Protecciones de Arrendamiento</p>
-          </div>
+    <>
+      {/* Header */}
+      <header className="bg-white border-b top-0 z-50" style={{ borderColor: '#d4dae1' }}>
+        <div className="container mx-auto px-4 py-6">
+          <Logo size="lg" className="flex flex-row justify-center items-center"/>
+        </div>
+      </header>
 
-          {/* Main Content */}
-          {children}
+      {children}
 
-          {/* Footer */}
-          <div className="mt-12 text-center text-sm text-gray-500">
-            <p>© {new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
-            <p className="mt-2">
-              ¿Necesitas ayuda? Contacta a{' '}
-              <a href="mailto:soporte@hestiaplp.com.mx" className="text-blue-600 hover:underline">
-                soporte@hestiaplp.com.mx
-              </a>
-            </p>
+      {/* Footer */}
+      <footer className="border-t mt-12" style={{ borderColor: '#d4dae1', backgroundColor: 'white' }}>
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>© {new Date().getFullYear()} {brandInfo.legalName}</p>
+              <p>Todos los derechos reservados.</p>
+              <p className="mt-4">
+                ¿Necesitas ayuda? Contacta a{' '}
+                <a
+                  href={`mailto:${brandInfo.supportEmail}`}
+                  className="font-medium hover:underline"
+                  style={{ color: '#173459' }}
+                >
+                  {brandInfo.supportEmail}
+                </a>
+              </p>
+              <p className="text-xs text-gray-500 mt-3">
+                {brandInfo.supportPhone}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </footer>
+    </>
   );
 }

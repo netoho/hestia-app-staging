@@ -8,26 +8,29 @@ import { DocumentCategory } from '@prisma/client';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const DOCUMENT_CATEGORIES = {
-  // Personal/Company identification
+  'identification': DocumentCategory.IDENTIFICATION,
   'ine': DocumentCategory.IDENTIFICATION,
   'passport': DocumentCategory.PASSPORT,
-  'rfc_document': DocumentCategory.TAX_STATUS_CERTIFICATE,
-
-  // Company documents
-  'company_constitution': DocumentCategory.COMPANY_CONSTITUTION,
-  'legal_powers': DocumentCategory.LEGAL_POWERS,
-
-  // Property documents
+  'proof_of_income': DocumentCategory.INCOME_PROOF,
+  'proof_of_address': DocumentCategory.ADDRESS_PROOF,
+  'bank_statement': DocumentCategory.BANK_STATEMENT,
   'property_deed': DocumentCategory.PROPERTY_DEED,
   'property_tax': DocumentCategory.PROPERTY_TAX_STATEMENT,
-  'property_registry': DocumentCategory.PROPERTY_REGISTRY,
-
-  // Financial documents
-  'bank_statement': DocumentCategory.BANK_STATEMENT,
-  'income_proof': DocumentCategory.INCOME_PROOF,
+  'marriage_certificate': DocumentCategory.MARRIAGE_CERTIFICATE,
   'tax_return': DocumentCategory.TAX_RETURN,
-
-  // Other
+  'company_constitution': DocumentCategory.COMPANY_CONSTITUTION,
+  'legal_powers': DocumentCategory.LEGAL_POWERS,
+  'income_proof': DocumentCategory.INCOME_PROOF,
+  'address_proof': DocumentCategory.ADDRESS_PROOF,
+  'employment_letter': DocumentCategory.EMPLOYMENT_LETTER,
+  'property_tax_statement': DocumentCategory.PROPERTY_TAX_STATEMENT,
+  'tax_status_certificate': DocumentCategory.TAX_STATUS_CERTIFICATE,
+  'credit_report': DocumentCategory.CREDIT_REPORT,
+  'property_registry': DocumentCategory.PROPERTY_REGISTRY,
+  'property_appraisal': DocumentCategory.PROPERTY_APPRAISAL,
+  'immigration_document': DocumentCategory.IMMIGRATION_DOCUMENT,
+  'utility_bill': DocumentCategory.UTILITY_BILL,
+  'payroll_receipt': DocumentCategory.PAYROLL_RECEIPT,
   'other': DocumentCategory.OTHER,
 } as const;
 
@@ -65,7 +68,7 @@ export async function POST(
       );
     }
 
-    const category = DOCUMENT_CATEGORIES[documentType as keyof typeof DOCUMENT_CATEGORIES] || DocumentCategory.OTHER;
+    const category = DOCUMENT_CATEGORIES[documentType.toLowerCase()] || DocumentCategory.OTHER;
 
     // Upload to storage
     const buffer = Buffer.from(await file.arrayBuffer());

@@ -616,6 +616,7 @@ export class AvalService extends BaseActorService {
    */
   private mapDocumentTypeToCategory(documentType: string): DocumentCategory {
     const mapping: Record<string, DocumentCategory> = {
+      'identification': DocumentCategory.IDENTIFICATION,
       'ine': DocumentCategory.IDENTIFICATION,
       'passport': DocumentCategory.PASSPORT,
       'proof_of_income': DocumentCategory.INCOME_PROOF,
@@ -627,9 +628,24 @@ export class AvalService extends BaseActorService {
       'tax_return': DocumentCategory.TAX_RETURN,
       'company_constitution': DocumentCategory.COMPANY_CONSTITUTION,
       'legal_powers': DocumentCategory.LEGAL_POWERS,
+      'income_proof': DocumentCategory.INCOME_PROOF,
+      'address_proof': DocumentCategory.ADDRESS_PROOF,
+      'employment_letter': DocumentCategory.EMPLOYMENT_LETTER,
+      'property_tax_statement': DocumentCategory.PROPERTY_TAX_STATEMENT,
+      'tax_status_certificate': DocumentCategory.TAX_STATUS_CERTIFICATE,
+      'credit_report': DocumentCategory.CREDIT_REPORT,
+      'property_registry': DocumentCategory.PROPERTY_REGISTRY,
+      'property_appraisal': DocumentCategory.PROPERTY_APPRAISAL,
+      'immigration_document': DocumentCategory.IMMIGRATION_DOCUMENT,
+      'utility_bill': DocumentCategory.UTILITY_BILL,
+      'payroll_receipt': DocumentCategory.PAYROLL_RECEIPT,
+      'other': DocumentCategory.OTHER,
     };
 
-    return mapping[documentType] || DocumentCategory.OTHER;
+
+
+
+    return mapping[documentType.toLocaleLowerCase()] || DocumentCategory.OTHER;
   }
 
   /**
