@@ -202,10 +202,6 @@ export async function validateJointObligorToken(token: string): Promise<{ valid:
     return { valid: false, message: 'Token expirado' };
   }
 
-  if (jointObligor.informationComplete) {
-    return { valid: false, message: 'La información ya fue completada' };
-  }
-
   return { valid: true, jointObligor };
 }
 
@@ -234,10 +230,6 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
 
   if (aval.tokenExpiry && aval.tokenExpiry < new Date()) {
     return { valid: false, message: 'Token expirado' };
-  }
-
-  if (aval.informationComplete) {
-    return { valid: true, aval, completed: true, message: 'La información ya fue completada y está en proceso de revisión' };
   }
 
   return { valid: true, aval };

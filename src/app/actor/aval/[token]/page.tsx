@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, Loader2, Home, DollarSign } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Home, DollarSign, Calendar } from 'lucide-react';
 import { brandInfo } from '@/lib/config/brand';
 import AvalFormWizard from '@/components/actor/aval/AvalFormWizard';
 
@@ -12,6 +12,7 @@ interface PolicyData {
   policyNumber: string;
   propertyAddress: string;
   rentAmount: number;
+  contractLength: number;
   status: string;
 }
 
@@ -133,7 +134,7 @@ export default function AvalPortalPage({
             </CardHeader>
             <CardContent className="pt-6">
               {/* Policy Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
                   <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
                   <div>
@@ -147,6 +148,15 @@ export default function AvalPortalPage({
                     <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
                     <p className="text-sm font-medium" style={{ color: '#173459' }}>
                       ${policy.rentAmount?.toLocaleString('es-MX')} MXN
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
+                  <Calendar className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Período</p>
+                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                      {policy.contractLength} meses
                     </p>
                   </div>
                 </div>

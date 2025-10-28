@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle2, AlertCircle, Home, DollarSign } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Home, DollarSign, Calendar } from 'lucide-react';
 import { brandInfo } from '@/lib/config/brand';
 import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard';
 
@@ -113,21 +113,12 @@ export default function JointObligorPortalPage({
             <CardContent className="pt-6">
               {/* Policy Info */}
               {policy && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 gap-4 mb-6">
                   <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
                     <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Propiedad</p>
                       <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
-                    <DollarSign className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
-                      <p className="text-sm font-medium" style={{ color: '#173459' }}>
-                        ${policy.rentAmount?.toLocaleString('es-MX')} MXN
-                      </p>
                     </div>
                   </div>
                 </div>
