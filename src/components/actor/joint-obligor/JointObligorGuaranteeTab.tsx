@@ -34,7 +34,7 @@ export default function JointObligorGuaranteeTab({
   jointObligorId,
   initialDocuments = [],
 }: JointObligorGuaranteeTabProps) {
-  const { documents, operations } = useDocumentOperations({
+  const { documents, operations, uploadDocument, downloadDocument, deleteDocument, getCategoryOperations } = useDocumentOperations({
     token,
     actorType: 'joint-obligor',
     initialDocuments
@@ -169,10 +169,15 @@ export default function JointObligorGuaranteeTab({
                 category={DocumentCategory.INCOME_PROOF}
                 title="Comprobante de Ingresos"
                 description="Recibos de nómina, estados de cuenta bancarios, o declaración de impuestos"
-                token={token}
-                actorType="joint-obligor"
                 required={true}
                 allowMultiple={true}
+                documentType="INCOME_PROOF"
+                documents={documents[DocumentCategory.INCOME_PROOF] || []}
+                onUpload={(file) => uploadDocument(file, DocumentCategory.INCOME_PROOF, 'INCOME_PROOF')}
+                onDownload={downloadDocument}
+                onDelete={deleteDocument}
+                operations={getCategoryOperations(DocumentCategory.INCOME_PROOF)}
+                disabled={disabled}
               />
             </div>
           </CardContent>
@@ -263,10 +268,15 @@ export default function JointObligorGuaranteeTab({
                   category={DocumentCategory.PROPERTY_DEED}
                   title="Escritura de la Propiedad"
                   description="Escritura pública de la propiedad que se ofrece como garantía"
-                  token={token}
-                  actorType="joint-obligor"
+                  documentType="PROPERTY_DEED"
+                  documents={documents[DocumentCategory.PROPERTY_DEED] || []}
                   required={true}
                   allowMultiple={false}
+                  onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'PROPERTY_DEED')}
+                  onDownload={downloadDocument}
+                  onDelete={deleteDocument}
+                  operations={getCategoryOperations(DocumentCategory.PROPERTY_DEED)}
+                  disabled={disabled}
                 />
 
                 {/* Property Tax Statement */}
@@ -274,10 +284,15 @@ export default function JointObligorGuaranteeTab({
                   category={DocumentCategory.PROPERTY_TAX_STATEMENT}
                   title="Boleta Predial"
                   description="Último recibo de impuesto predial de la propiedad en garantía"
-                  token={token}
-                  actorType="joint-obligor"
+                  documentType="PROPERTY_TAX_STATEMENT"
+                  documents={documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []}
                   required={true}
                   allowMultiple={false}
+                  onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_TAX_STATEMENT, 'PROPERTY_TAX_STATEMENT')}
+                  onDownload={downloadDocument}
+                  onDelete={deleteDocument}
+                  operations={getCategoryOperations(DocumentCategory.PROPERTY_TAX_STATEMENT)}
+                  disabled={disabled}
                 />
               </div>
             </CardContent>

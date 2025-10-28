@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
@@ -86,7 +86,7 @@ export default function JointObligorDocumentsSection({
     }
   };
 
-  const documentCategories = getDocumentCategories();
+  const documentCategories = useMemo(() => getDocumentCategories(), [isCompany, nationality, guaranteeMethod]);
 
   // Get guarantee documents uploaded in previous tab
   const getGuaranteeDocuments = () => {
@@ -124,7 +124,7 @@ export default function JointObligorDocumentsSection({
     return guaranteeDocs;
   };
 
-  const guaranteeDocuments = getGuaranteeDocuments();
+  const guaranteeDocuments = useMemo(() => getGuaranteeDocuments(), [guaranteeMethod, documents]);
 
   // Check if all required documents are uploaded
   useEffect(() => {
@@ -222,7 +222,7 @@ export default function JointObligorDocumentsSection({
                 Los siguientes documentos fueron cargados en la pestaña de Garantía. Puede verlos y descargarlos aquí.
               </AlertDescription>
             </Alert>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {guaranteeDocuments.map(({ category, title, documents: docs }) => {
                 const categoryOps = getCategoryOperations(category);
 

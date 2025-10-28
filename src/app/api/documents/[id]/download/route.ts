@@ -135,9 +135,11 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      url: signedUrl,
-      fileName: fileName,
-      expiresIn: 30,
+      data: {
+        downloadUrl: signedUrl,
+        fileName: fileName,
+        expiresIn: 30,
+      }
     });
 
   } catch (error) {

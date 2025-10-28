@@ -30,7 +30,7 @@ export function DocumentManagerCard({
   title,
   description = '',
   documentType,
-  documents,
+  documents = [],
   required = false,
   readOnly = false,
   allowMultiple = true,
@@ -41,7 +41,7 @@ export function DocumentManagerCard({
   disabled = false,
   accept = '.pdf,.jpg,.jpeg,.png,.webp',
 }: DocumentManagerCardProps) {
-  const hasDocuments = documents.length > 0;
+  const hasDocuments = documents?.length > 0;
   const canUpload = !readOnly && (allowMultiple || !hasDocuments);
 
   // Get upload operation for this category

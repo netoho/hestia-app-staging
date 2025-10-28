@@ -11,14 +11,6 @@ export const GET = withPolicyAuth(async (
   try {
     const { id } = await params;
 
-    // Only ADMIN, STAFF, and BROKER can access share links
-    if (!['ADMIN', 'STAFF', 'BROKER'].includes(authResult.user.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden: You do not have permission to access share links' },
-        { status: 403 }
-      );
-    }
-
     // Fetch policy with all actors
     const policy = await getPolicyById(id);
 
@@ -32,18 +24,20 @@ export const GET = withPolicyAuth(async (
     // Build share links for all actors
     const shareLinks: any[] = [];
 
-    // Landlord
-    if (policy.landlord?.accessToken) {
-      shareLinks.push({
-        actorId: policy.landlord.id,
-        actorType: 'landlord',
-        actorName: policy.landlord.fullName || policy.landlord.companyName,
-        email: policy.landlord.email,
-        phone: policy.landlord.phone,
-        url: generateActorUrl(policy.landlord.accessToken, 'landlord'),
-        tokenExpiry: policy.landlord.tokenExpiry,
-        informationComplete: policy.landlord.informationComplete,
+    // Landlords
+    for (const landlord of policy.landlords) {
+      if (landlord.accessToken && landlord.isPrimary) {
+        shareLinks.push({
+          actorId: landlord.id,
+          actorType: 'landlord',
+          actorName: landlord.fullName || landlord.companyName,
+          email: landlord.email,
+          phone: landlord.phone,
+          url: generateActorUrl(landlord.accessToken, 'landlord'),
+          tokenExpiry: landlord.tokenExpiry,
+          informationComplete: landlord.informationComplete,
       });
+      }
     }
 
     // Tenant

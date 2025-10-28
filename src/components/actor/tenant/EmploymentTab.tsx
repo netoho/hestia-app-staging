@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import { FieldError } from '@/components/ui/field-error';
 import { TenantFormData } from '@/hooks/useTenantForm';
 
 interface EmploymentTabProps {
@@ -46,9 +47,7 @@ export default function EmploymentTab({
                 <SelectItem value="other">Otro</SelectItem>
               </SelectContent>
             </Select>
-            {errors.employmentStatus && (
-              <p className="text-red-500 text-sm mt-1">{errors.employmentStatus}</p>
-            )}
+            <FieldError error={errors.employmentStatus} />
           </div>
 
           <div>
@@ -61,9 +60,7 @@ export default function EmploymentTab({
               className={errors.occupation ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.occupation && (
-              <p className="text-red-500 text-sm mt-1">{errors.occupation}</p>
-            )}
+            <FieldError error={errors.occupation} />
           </div>
 
           <div>
@@ -76,9 +73,7 @@ export default function EmploymentTab({
               className={errors.employerName ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.employerName && (
-              <p className="text-red-500 text-sm mt-1">{errors.employerName}</p>
-            )}
+            <FieldError error={errors.employerName} />
           </div>
 
           <div>
@@ -91,9 +86,7 @@ export default function EmploymentTab({
               className={errors.position ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.position && (
-              <p className="text-red-500 text-sm mt-1">{errors.position}</p>
-            )}
+            <FieldError error={errors.position} />
           </div>
 
           <div>
@@ -108,9 +101,7 @@ export default function EmploymentTab({
               className={errors.monthlyIncome ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.monthlyIncome && (
-              <p className="text-red-500 text-sm mt-1">{errors.monthlyIncome}</p>
-            )}
+            <FieldError error={errors.monthlyIncome} />
           </div>
 
           <div>
@@ -123,9 +114,7 @@ export default function EmploymentTab({
               className={errors.incomeSource ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.incomeSource && (
-              <p className="text-red-500 text-sm mt-1">{errors.incomeSource}</p>
-            )}
+            <FieldError error={errors.incomeSource} />
           </div>
 
           <div className="md:col-span-2">
@@ -141,9 +130,7 @@ export default function EmploymentTab({
               }}
               disabled={disabled}
             />
-            {errors.employerAddress && (
-              <p className="text-red-500 text-sm mt-1">{errors.employerAddress}</p>
-            )}
+            <FieldError error={errors.employerAddress} />
           </div>
         </div>
       </CardContent>

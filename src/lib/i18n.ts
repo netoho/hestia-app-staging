@@ -8,7 +8,7 @@ const es = {
     siteName: "Hestia",
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
     contactEmail: "info@hestiaplp.com.mx",
-    contactPhone: "+52 55 2111 7610",
+    contactPhone: "55 1277 0883 | 55 2111 7610",
 
     actions: {
         start: "Comenzar",
@@ -81,8 +81,8 @@ const es = {
             closeMenu: "Cerrar menú",
         },
         publicFooter: {
-            description: "Hestia ofrece protecciones de arrendamiento integrales, proporcionando tranquilidad tanto a propietarios como a inquilinos.",
-            address: "Calle Segura 123, Ciudad de México, MX",
+            description: "Protecciones de arrendamiento integrales, tranquilidad tanto a propietarios como a inquilinos.",
+            address: "Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México",
             quickLinks: "Enlaces Rápidos",
             legal: "Legal",
             sitemap: "Mapa del Sitio",
@@ -375,7 +375,7 @@ const es = {
             callUsDesc: "Habla directamente con un miembro de nuestro equipo en horario de oficina.",
             visitUs: "Visítanos",
             visitUsDesc: "Nuestra oficina se encuentra en:",
-            address: "Calle Segura 123, Oficina 4B, Ciudad de México, MX 01234",
+            address: "Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México",
             sendMessage: "Envíanos un Mensaje",
             form: {
                 name: "Nombre Completo",

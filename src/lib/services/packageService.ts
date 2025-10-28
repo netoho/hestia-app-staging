@@ -3,11 +3,10 @@
  * Handles all package-related operations with proper error handling
  */
 
-import { Package } from '@/lib/prisma-types';
+import { Package } from '@prisma/client';
 import { BaseService } from './base/BaseService';
 import { AsyncResult, Result } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';
-import { MockDataService } from './mockDataService';
 
 export interface IPackageService {
   getPackages(): AsyncResult<Package[]>;
@@ -36,6 +35,7 @@ export class PackageService extends BaseService implements IPackageService {
       shortDescription: pkg.shortDescription ?? null,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
+      isActive: pkg.isActive,
     };
   }
 
@@ -44,24 +44,6 @@ export class PackageService extends BaseService implements IPackageService {
    */
   async getPackages(): AsyncResult<Package[]> {
     this.log('info', 'Fetching all packages');
-
-    if (this.enableMock) {
-      this.log('info', 'Mock mode enabled, returning mock packages');
-      try {
-        const mockPackages = await MockDataService.getPackages();
-        return Result.ok(mockPackages.map(this.mapPackageData));
-      } catch (error) {
-        this.log('error', 'Failed to fetch mock packages', error);
-        return Result.error(
-          new ServiceError(
-            ErrorCode.UNKNOWN_ERROR,
-            'Failed to fetch mock packages',
-            500,
-            { error }
-          )
-        );
-      }
-    }
 
     return this.executeDbOperation(
       async () => {
@@ -88,23 +70,6 @@ export class PackageService extends BaseService implements IPackageService {
       return validation;
     }
 
-    if (this.enableMock) {
-      try {
-        const packages = await MockDataService.getPackages();
-        const pkg = packages.find(p => p.id === id);
-        return Result.ok(pkg ? this.mapPackageData(pkg) : null);
-      } catch (error) {
-        this.log('error', 'Failed to fetch mock package', error);
-        return Result.error(
-          new ServiceError(
-            ErrorCode.UNKNOWN_ERROR,
-            'Failed to fetch mock package',
-            500,
-            { error, id }
-          )
-        );
-      }
-    }
 
     return this.executeDbOperation(
       async () => {
@@ -129,24 +94,6 @@ export class PackageService extends BaseService implements IPackageService {
     );
     if (!validation.ok) {
       return validation;
-    }
-
-    if (this.enableMock) {
-      try {
-        const packages = await MockDataService.getPackages();
-        const pkg = packages.find(p => p.name === name);
-        return Result.ok(pkg ? this.mapPackageData(pkg) : null);
-      } catch (error) {
-        this.log('error', 'Failed to fetch mock package by name', error);
-        return Result.error(
-          new ServiceError(
-            ErrorCode.UNKNOWN_ERROR,
-            'Failed to fetch mock package',
-            500,
-            { error, name }
-          )
-        );
-      }
     }
 
     return this.executeDbOperation(

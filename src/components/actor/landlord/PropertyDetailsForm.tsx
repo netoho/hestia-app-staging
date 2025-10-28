@@ -34,7 +34,7 @@ export default function PropertyDetailsForm({
         </CardHeader>
         <CardContent>
           <AddressAutocomplete
-            label="Dirección del Inmueble *"
+            label="Dirección del Inmueble"
             value={data.propertyAddressDetails || {}}
             onChange={(addressData) => onChange('propertyAddressDetails', addressData)}
             required

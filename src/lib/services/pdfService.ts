@@ -613,7 +613,7 @@ export class PDFService {
 
         <div class="footer">
             Hestia Protección Legal y Patrimonial S.A.S de C.V. | RFC: HPL123456789 | info@hestiaplp.com.mx | +52 55 1234 5678<br>
-            Calle Segura 123, Ciudad de México, México | www.hestiaplp.com.mx
+            Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México | www.hestiaplp.com.mx
         </div>
     </body>
     </html>

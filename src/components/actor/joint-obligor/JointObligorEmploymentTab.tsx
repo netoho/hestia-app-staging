@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import { FieldError } from '@/components/ui/field-error';
 import { JointObligorFormData } from '@/hooks/useJointObligorForm';
 
 interface JointObligorEmploymentTabProps {
@@ -60,9 +61,7 @@ export default function JointObligorEmploymentTab({
               className={errors.occupation ? 'border-red-500' : ''}
               required
             />
-            {errors.occupation && (
-              <p className="text-red-500 text-sm mt-1">{errors.occupation}</p>
-            )}
+            <FieldError error={errors.occupation} />
           </div>
 
           {/* Employer Name */}
@@ -104,9 +103,7 @@ export default function JointObligorEmploymentTab({
               className={errors.monthlyIncome ? 'border-red-500' : ''}
               required
             />
-            {errors.monthlyIncome && (
-              <p className="text-red-500 text-sm mt-1">{errors.monthlyIncome}</p>
-            )}
+            <FieldError error={errors.monthlyIncome} />
           </div>
 
           {/* Income Source */}

@@ -1,0 +1,2 @@
+- we use bun, so you can check the build with `bun run build`
+- Remember this is a brand new proyect not yet deployed, we don't care about data migration nor about backwards compatibility

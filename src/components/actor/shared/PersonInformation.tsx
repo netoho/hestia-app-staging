@@ -2,6 +2,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field-error';
 import { PersonActorData } from '@/lib/types/actor';
 
 interface PersonInformationProps {
@@ -42,9 +43,7 @@ export default function PersonInformation({
             disabled={disabled}
             required={isRequired('fullName')}
           />
-          {errors.fullName && (
-            <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
-          )}
+          <FieldError error={errors.fullName} />
         </div>
 
         {/* Email */}
@@ -62,9 +61,7 @@ export default function PersonInformation({
             disabled={disabled}
             required={isRequired('email')}
           />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-          )}
+          <FieldError error={errors.email} />
         </div>
 
         {/* Phone */}
@@ -82,9 +79,7 @@ export default function PersonInformation({
             disabled={disabled}
             required={isRequired('phone')}
           />
-          {errors.phone && (
-            <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-          )}
+          <FieldError error={errors.phone} />
         </div>
 
         {/* RFC */}
@@ -102,9 +97,7 @@ export default function PersonInformation({
             disabled={disabled}
             required={isRequired('rfc')}
           />
-          {errors.rfc && (
-            <p className="text-red-500 text-sm mt-1">{errors.rfc}</p>
-          )}
+          <FieldError error={errors.rfc} />
         </div>
 
         {/* CURP */}
@@ -122,9 +115,7 @@ export default function PersonInformation({
             disabled={disabled}
             required={isRequired('curp')}
           />
-          {errors.curp && (
-            <p className="text-red-500 text-sm mt-1">{errors.curp}</p>
-          )}
+          <FieldError error={errors.curp} />
         </div>
 
         {/* Employment Information */}
@@ -143,9 +134,7 @@ export default function PersonInformation({
                 disabled={disabled}
                 required={isRequired('occupation')}
               />
-              {errors.occupation && (
-                <p className="text-red-500 text-sm mt-1">{errors.occupation}</p>
-              )}
+              <FieldError error={errors.occupation} />
             </div>
 
             <div>
@@ -161,9 +150,7 @@ export default function PersonInformation({
                 disabled={disabled}
                 required={isRequired('employerName')}
               />
-              {errors.employerName && (
-                <p className="text-red-500 text-sm mt-1">{errors.employerName}</p>
-              )}
+              <FieldError error={errors.employerName} />
             </div>
 
             <div>
@@ -180,9 +167,7 @@ export default function PersonInformation({
                 disabled={disabled}
                 required={isRequired('monthlyIncome')}
               />
-              {errors.monthlyIncome && (
-                <p className="text-red-500 text-sm mt-1">{errors.monthlyIncome}</p>
-              )}
+              <FieldError error={errors.monthlyIncome} />
             </div>
           </>
         )}
@@ -203,9 +188,7 @@ export default function PersonInformation({
                 className={errors.workPhone ? 'border-red-500' : ''}
                 disabled={disabled}
               />
-              {errors.workPhone && (
-                <p className="text-red-500 text-sm mt-1">{errors.workPhone}</p>
-              )}
+              <FieldError error={errors.workPhone} />
             </div>
 
             <div>
@@ -221,9 +204,7 @@ export default function PersonInformation({
                 className={errors.personalEmail ? 'border-red-500' : ''}
                 disabled={disabled}
               />
-              {errors.personalEmail && (
-                <p className="text-red-500 text-sm mt-1">{errors.personalEmail}</p>
-              )}
+              <FieldError error={errors.personalEmail} />
             </div>
 
             <div>
@@ -239,9 +220,7 @@ export default function PersonInformation({
                 className={errors.workEmail ? 'border-red-500' : ''}
                 disabled={disabled}
               />
-              {errors.workEmail && (
-                <p className="text-red-500 text-sm mt-1">{errors.workEmail}</p>
-              )}
+              <FieldError error={errors.workEmail} />
             </div>
           </>
         )}

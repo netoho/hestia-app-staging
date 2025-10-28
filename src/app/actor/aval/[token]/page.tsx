@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Home, DollarSign, Calendar } from 'lucide-react';
+import { brandInfo } from '@/lib/config/brand';
 import AvalFormWizard from '@/components/actor/aval/AvalFormWizard';
 
 interface PolicyData {
@@ -11,6 +12,7 @@ interface PolicyData {
   policyNumber: string;
   propertyAddress: string;
   rentAmount: number;
+  contractLength: number;
   status: string;
 }
 
@@ -70,9 +72,9 @@ export default function AvalPortalPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <Loader2 className="h-12 w-12 animate-spin mx-auto" style={{ color: '#173459' }} />
           <p className="mt-4 text-gray-600">Validando acceso...</p>
         </div>
       </div>
@@ -81,26 +83,30 @@ export default function AvalPortalPage({
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Alert className="max-w-md">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-          </AlertDescription>
-        </Alert>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50">
+        <div className="max-w-md w-full mx-4">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {error}. Contacte a {brandInfo.supportEmail}
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
 
   if (!policy) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            No se pudo cargar la información de la protección.
-          </AlertDescription>
-        </Alert>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50">
+        <div className="max-w-md w-full mx-4">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              No se pudo cargar la información de la protección. Contacte a {brandInfo.supportEmail}
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
@@ -108,53 +114,130 @@ export default function AvalPortalPage({
   // If already completed
   if (completed) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="pt-6">
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                <strong>Información Completa</strong>
-                <p className="mt-2">
-                  Ya has completado tu información para esta protección. Si necesitas hacer cambios,
-                  por favor contacta a soporte en soporte@hestiaplp.com.mx
-                </p>
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-b from-white to-blue-50">
+        <div className="container mx-auto px-4 py-12 max-w-4xl">
+          <Card className="shadow-lg border-0">
+            <CardHeader style={{ background: 'linear-gradient(to bottom, #ffffff, #f0f9ff)', borderBottom: '1px solid #d4dae1' }}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#173459' }}>
+                  <CheckCircle2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="font-headline text-2xl" style={{ color: '#173459' }}>
+                    Portal del Aval
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Protección #{policy.policyNumber}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {/* Policy Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
+                  <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Propiedad</p>
+                    <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
+                  <DollarSign className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
+                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                      ${policy.rentAmount?.toLocaleString('es-MX')} MXN
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
+                  <Calendar className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Período</p>
+                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                      {policy.contractLength} meses
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Success Message */}
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <div className="font-semibold mb-2">✅ Información Completa</div>
+                  <p className="text-sm">
+                    Ya has completado tu información para esta protección. Si necesitas hacer cambios,
+                    por favor contacta a {brandInfo.supportEmail}
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle>Información del Aval</CardTitle>
-          <CardDescription>
-            Complete su información para la protección de arrendamiento con garantía de propiedad
-          </CardDescription>
-          {policy && (
-            <Alert className="mt-4">
-              <AlertDescription>
-                <strong>No. Protección:</strong> {policy.policyNumber}<br />
-                <strong>Propiedad:</strong> {policy.propertyAddress}<br />
-                <strong>Renta mensual:</strong> ${policy.rentAmount?.toLocaleString('es-MX')}
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardHeader>
+    <div className="min-h-screen bg-gradient-to-b from-white to-blue-50">
+      {/* Hero Section */}
+      <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)' }} className="border-b" style={{ borderColor: '#d4dae1' }}>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="text-center">
+            <h1 className="font-headline text-3xl md:text-4xl mb-3" style={{ color: '#173459' }}>
+              Bienvenido, Aval
+            </h1>
+            <p className="text-lg text-gray-600 mb-4">
+              Complete su información para la protección de arrendamiento con garantía de propiedad
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
+                 style={{ backgroundColor: '#fff7ed', color: '#FF7F50', border: '1px solid #fed7aa' }}>
+              <AlertCircle className="h-4 w-4" />
+              Protección #{policy.policyNumber}
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <CardContent>
-          <AvalFormWizard
-            token={token}
-            initialData={avalData}
-            policy={policy}
-            onComplete={handleComplete}
-          />
-        </CardContent>
-      </Card>
+      {/* Content */}
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Policy Info Card */}
+        <Card className="mb-6 shadow-lg border-0">
+          <CardHeader style={{ background: 'linear-gradient(to right, #173459, #2b5a8c)', color: 'white' }}>
+            <CardTitle className="font-headline">Detalles de la Protección</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-start gap-3">
+                <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Propiedad</p>
+                  <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <DollarSign className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
+                  <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    ${policy.rentAmount?.toLocaleString('es-MX')} MXN
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Form Wizard */}
+        <AvalFormWizard
+          token={token}
+          initialData={avalData}
+          policy={policy}
+          onComplete={handleComplete}
+        />
+      </div>
     </div>
   );
 }

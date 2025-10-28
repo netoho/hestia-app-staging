@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FieldError } from '@/components/ui/field-error';
 import { PersonalReference, CommercialReference } from '@/hooks/useJointObligorReferences';
 
 interface JointObligorReferencesTabProps {
@@ -70,9 +71,7 @@ export default function JointObligorReferencesTab({
                       disabled={disabled}
                       className={errors[`personalReference${index}Phone`] ? 'border-red-500' : ''}
                     />
-                    {errors[`personalReference${index}Phone`] && (
-                      <p className="text-red-500 text-sm mt-1">{errors[`personalReference${index}Phone`]}</p>
-                    )}
+                    <FieldError error={errors[`personalReference${index}Phone`]} />
                   </div>
 
                   {/* Email */}
@@ -86,9 +85,7 @@ export default function JointObligorReferencesTab({
                       disabled={disabled}
                       className={errors[`personalReference${index}Email`] ? 'border-red-500' : ''}
                     />
-                    {errors[`personalReference${index}Email`] && (
-                      <p className="text-red-500 text-sm mt-1">{errors[`personalReference${index}Email`]}</p>
-                    )}
+                    <FieldError error={errors[`personalReference${index}Email`]} />
                   </div>
 
                   {/* Relationship */}
@@ -115,9 +112,7 @@ export default function JointObligorReferencesTab({
                   </div>
                 </div>
 
-                {errors[`personalReference${index}`] && (
-                  <p className="text-red-500 text-sm mt-2">{errors[`personalReference${index}`]}</p>
-                )}
+                <FieldError error={errors[`personalReference${index}`]} />
               </CardContent>
             </Card>
           ))}
@@ -170,9 +165,7 @@ export default function JointObligorReferencesTab({
                       disabled={disabled}
                       className={errors[`commercialReference${index}Phone`] ? 'border-red-500' : ''}
                     />
-                    {errors[`commercialReference${index}Phone`] && (
-                      <p className="text-red-500 text-sm mt-1">{errors[`commercialReference${index}Phone`]}</p>
-                    )}
+                    <FieldError error={errors[`commercialReference${index}Phone`]} />
                   </div>
 
                   {/* Email */}
@@ -186,9 +179,7 @@ export default function JointObligorReferencesTab({
                       disabled={disabled}
                       className={errors[`commercialReference${index}Email`] ? 'border-red-500' : ''}
                     />
-                    {errors[`commercialReference${index}Email`] && (
-                      <p className="text-red-500 text-sm mt-1">{errors[`commercialReference${index}Email`]}</p>
-                    )}
+                    <FieldError error={errors[`commercialReference${index}Email`]} />
                   </div>
 
                   {/* Relationship */}
@@ -225,9 +216,7 @@ export default function JointObligorReferencesTab({
                   </div>
                 </div>
 
-                {errors[`commercialReference${index}`] && (
-                  <p className="text-red-500 text-sm mt-2">{errors[`commercialReference${index}`]}</p>
-                )}
+                <FieldError error={errors[`commercialReference${index}`]} />
               </CardContent>
             </Card>
           ))}

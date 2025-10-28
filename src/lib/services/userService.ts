@@ -1,6 +1,5 @@
 import prisma from '../prisma'; // Assuming your Prisma client is exported from this file
 import { hashPassword } from '../auth'; // Assuming password hashing utility
-import { MockDataService } from './mockDataService';
 
 interface GetUsersOptions {
   role?: string;

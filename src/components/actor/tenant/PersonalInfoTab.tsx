@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Building2, User } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import { FieldError } from '@/components/ui/field-error';
 import PersonInformation from '@/components/actor/shared/PersonInformation';
 import CompanyInformation from '@/components/actor/shared/CompanyInformation';
 import { TenantFormData } from '@/hooks/useTenantForm';
@@ -112,9 +113,7 @@ export default function PersonalInfoTab({
                       className={errors.passport ? 'border-red-500' : ''}
                       disabled={disabled}
                     />
-                    {errors.passport && (
-                      <p className="text-red-500 text-sm mt-1">{errors.passport}</p>
-                    )}
+                    <FieldError error={errors.passport} />
                   </div>
                 )}
               </div>

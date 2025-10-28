@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FieldError } from '@/components/ui/field-error';
 import { LandlordData, PolicyFinancialDetails } from '@/lib/types/actor';
 import { DocumentCategory } from '@/types/policy';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
+import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 
 interface FinancialInfoFormProps {
@@ -35,7 +37,7 @@ export default function FinancialInfoForm({
   landlordId,
   isAdminEdit=false,
 }: FinancialInfoFormProps) {
-  const { documents, operations } = useDocumentOperations({
+  const { documents, deleteDocument, downloadDocument, uploadDocument, operations, getCategoryOperations } = useDocumentOperations({
     token,
     actorType: 'landlord',
     isAdminEdit,
@@ -80,9 +82,7 @@ export default function FinancialInfoForm({
                 className={errors.clabe ? 'border-red-500' : ''}
                 disabled={disabled}
               />
-              {errors.clabe && (
-                <p className="text-red-500 text-sm mt-1">{errors.clabe}</p>
-              )}
+              <FieldError error={errors.clabe} />
             </div>
             <div>
               <Label htmlFor="accountHolder">Titular de la Cuenta</Label>
@@ -121,7 +121,16 @@ export default function FinancialInfoForm({
             <div className="mt-4 space-y-3">
               <Label className="text-sm font-medium">Constancia de Situación Fiscal</Label>
               <InlineDocumentManager
+                documents={documents[DocumentCategory.TAX_STATUS_CERTIFICATE] || []}
                 documentType={DocumentCategory.TAX_STATUS_CERTIFICATE}
+                onUpload={(file) => uploadDocument(
+                  file,
+                  DocumentCategory.TAX_STATUS_CERTIFICATE,
+                  'tax_status_certificate',
+                )}
+                onDelete={deleteDocument}
+                onDownload={downloadDocument}
+                operations={getCategoryOperations(DocumentCategory.TAX_STATUS_CERTIFICATE)}
                 label="Constancia de Situación Fiscal"
                 allowMultiple={true}
                 disabled={disabled}
@@ -132,7 +141,16 @@ export default function FinancialInfoForm({
           <div className="mt-6 space-y-3">
             <Label className="text-base font-medium">Escritura de la Propiedad</Label>
             <InlineDocumentManager
+              documents={documents[DocumentCategory.PROPERTY_DEED] || []}
               documentType={DocumentCategory.PROPERTY_DEED}
+              onUpload={(file) => uploadDocument(
+                file,
+                DocumentCategory.PROPERTY_DEED,
+                'property_deed',
+              )}
+              onDelete={deleteDocument}
+              onDownload={downloadDocument}
+              operations={getCategoryOperations(DocumentCategory.PROPERTY_DEED)}
               label="Escritura de la Propiedad"
               allowMultiple={true}
               disabled={disabled}

@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { useAvalForm } from '@/hooks/useAvalForm';
 import { useAvalReferences } from '@/hooks/useAvalReferences';
+import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
+import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
+import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
+import { SaveTabButton } from '@/components/actor/shared/SaveTabButton';
+import { cleanFormAddresses } from '@/lib/utils/addressUtils';
 import AvalPersonalInfoTab from './AvalPersonalInfoTab';
 import AvalEmploymentTab from './AvalEmploymentTab';
 import AvalPropertyGuaranteeTab from './AvalPropertyGuaranteeTab';
@@ -31,17 +35,9 @@ export default function AvalFormWizard({
   isAdminEdit = false,
 }: AvalFormWizardProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('personal');
-  const [savingTab, setSavingTab] = useState<string | null>(null);
-  const [tabSaved, setTabSaved] = useState<Record<string, boolean>>({
-    personal: false,
-    employment: false,
-    property: false,
-    references: false,
-  });
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
-  // Use custom hooks
+  // Use custom form hooks
   const {
     formData,
     updateField,
@@ -67,70 +63,60 @@ export default function AvalFormWizard({
 
   const isCompany = formData.isCompany;
 
+  // Tab configuration
+  const tabs = isCompany
+    ? [
+        { id: 'personal', label: 'Información', needsSave: true },
+        { id: 'property', label: 'Propiedad', needsSave: true },
+        { id: 'references', label: 'Referencias', needsSave: true },
+        { id: 'documents', label: 'Documentos', needsSave: false },
+      ]
+    : [
+        { id: 'personal', label: 'Personal', needsSave: true },
+        { id: 'employment', label: 'Empleo', needsSave: true },
+        { id: 'property', label: 'Propiedad', needsSave: true },
+        { id: 'references', label: 'Referencias', needsSave: true },
+        { id: 'documents', label: 'Documentos', needsSave: false },
+      ];
+
+  // Use wizard tabs hook
+  const wizard = useFormWizardTabs({ tabs, isAdminEdit });
+
   // Save tab handler
   const handleSaveTab = useCallback(async (tabName: string) => {
-    setSavingTab(tabName);
-    setErrors({});
-
-    try {
-      // Validate based on tab
-      let isValid = true;
+    // Validation logic
+    const validateTab = () => {
       if (tabName === 'personal') {
-        isValid = validatePersonalTab();
+        return validatePersonalTab();
       } else if (tabName === 'property') {
-        isValid = validatePropertyTab();
+        return validatePropertyTab();
       } else if (tabName === 'references') {
         const refValidation = isCompany
           ? validateCommercialReferences()
           : validatePersonalReferences();
-        isValid = refValidation.valid;
-        if (!isValid) {
+        if (!refValidation.valid) {
           setErrors(refValidation.errors);
         }
+        return refValidation.valid;
       }
+      return true;
+    };
 
-      if (!isValid) {
-        toast({
-          title: "Error de validación",
-          description: "Por favor complete todos los campos requeridos",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Prepare additional data for save
+    // Save logic
+    const saveData = async () => {
       const additionalData: any = {};
       if (tabName === 'references') {
         additionalData.references = isCompany ? undefined : personalReferences;
         additionalData.commercialReferences = isCompany ? commercialReferences : undefined;
       }
 
-      // Save
       const success = await saveFormTab(token, tabName, additionalData);
-
-      if (success) {
-        setTabSaved(prev => ({ ...prev, [tabName]: true }));
-
-        // Auto advance to next tab
-        const tabs = isCompany
-          ? ['personal', 'property', 'references', 'documents']
-          : ['personal', 'employment', 'property', 'references', 'documents'];
-
-        const currentIndex = tabs.indexOf(tabName);
-        if (currentIndex < tabs.length - 1) {
-          setTimeout(() => setActiveTab(tabs[currentIndex + 1]), 1000);
-        }
+      if (!success) {
+        throw new Error('Failed to save');
       }
-    } catch (error) {
-      console.error('Save error:', error);
-      toast({
-        title: "Error",
-        description: 'Error al guardar la información',
-        variant: "destructive",
-      });
-    } finally {
-      setSavingTab(null);
-    }
+    };
+
+    return wizard.handleTabSave(tabName, validateTab, saveData);
   }, [
     validatePersonalTab,
     validatePropertyTab,
@@ -141,8 +127,8 @@ export default function AvalFormWizard({
     isCompany,
     personalReferences,
     commercialReferences,
-    toast,
     setErrors,
+    wizard
   ]);
 
   // Final submit handler
@@ -156,23 +142,14 @@ export default function AvalFormWizard({
       return;
     }
 
-    setSavingTab('final');
+    wizard.setSavingTab('final');
 
     try {
       // Clean address fields before final submission
-      const cleanFormData = { ...formData };
-      if (cleanFormData.addressDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddress } = cleanFormData.addressDetails as any;
-        cleanFormData.addressDetails = cleanAddress;
-      }
-      if (cleanFormData.employerAddressDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddress } = cleanFormData.employerAddressDetails as any;
-        cleanFormData.employerAddressDetails = cleanAddress;
-      }
-      if (cleanFormData.guaranteePropertyDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddress } = cleanFormData.guaranteePropertyDetails as any;
-        cleanFormData.guaranteePropertyDetails = cleanAddress;
-      }
+      const cleanFormData = cleanFormAddresses(
+        { ...formData },
+        ['addressDetails', 'employerAddressDetails', 'guaranteePropertyDetails']
+      );
 
       const submissionData = {
         ...cleanFormData,
@@ -202,7 +179,7 @@ export default function AvalFormWizard({
       });
 
       if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
+        onComplete();
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -212,71 +189,30 @@ export default function AvalFormWizard({
         variant: "destructive",
       });
     } finally {
-      setSavingTab(null);
+      wizard.setSavingTab(null);
     }
-  }, [formData, isCompany, personalReferences, commercialReferences, token, toast, onComplete, requiredDocsUploaded]);
+  }, [formData, isCompany, personalReferences, commercialReferences, token, toast, onComplete, requiredDocsUploaded, wizard]);
 
-  const tabs = isCompany
-    ? [
-        { id: 'personal', label: 'Información', needsSave: true },
-        { id: 'property', label: 'Propiedad', needsSave: true },
-        { id: 'references', label: 'Referencias', needsSave: true },
-        { id: 'documents', label: 'Documentos', needsSave: false },
-      ]
-    : [
-        { id: 'personal', label: 'Personal', needsSave: true },
-        { id: 'employment', label: 'Empleo', needsSave: true },
-        { id: 'property', label: 'Propiedad', needsSave: true },
-        { id: 'references', label: 'Referencias', needsSave: true },
-        { id: 'documents', label: 'Documentos', needsSave: false },
-      ];
-
-  const allTabsSaved = tabs
-    .filter(tab => tab.needsSave)
-    .every(tab => tabSaved[tab.id]);
+  const { getProgress } = wizard;
+  const progress = getProgress();
+  const allTabsSaved = progress.isComplete;
 
   return (
     <div className="space-y-6">
       {/* Progress Indicator */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Progreso de Completado</span>
-                <span className="text-sm text-muted-foreground">
-                  {Object.values(tabSaved).filter(Boolean).length} de {tabs.filter(t => t.needsSave).length} secciones guardadas
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {tabs.filter(t => t.needsSave).map(tab => (
-                  <div
-                    key={tab.id}
-                    className={`flex-1 h-2 rounded-full ${
-                      tabSaved[tab.id] ? 'bg-green-500' : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <FormWizardProgress
+        tabs={tabs}
+        tabSaved={wizard.tabSaved}
+        variant="bars"
+      />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className={`grid w-full grid-cols-${tabs.length}`}>
-          {tabs.map((tab, index) => {
-            const previousTab = index > 0 ? tabs[index - 1] : null;
-            const isDisabled = !isAdminEdit && previousTab && previousTab.needsSave && !tabSaved[previousTab.id];
-
-            return (
-              <TabsTrigger key={tab.id} value={tab.id} disabled={isDisabled}>
-                {tabSaved[tab.id] && <Check className="h-3 w-3 mr-1" />}
-                {tab.label}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+      <FormWizardTabs
+        tabs={tabs}
+        activeTab={wizard.activeTab}
+        tabSaved={wizard.tabSaved}
+        isAdminEdit={isAdminEdit}
+        onTabChange={wizard.setActiveTab}
+      >
 
         {/* Personal Tab */}
         <TabsContent value="personal" className="space-y-4">
@@ -284,30 +220,15 @@ export default function AvalFormWizard({
             formData={formData}
             onFieldChange={updateField}
             errors={errors}
-            disabled={savingTab === 'personal'}
+            disabled={wizard.savingTab === 'personal'}
           />
 
-          <div className="flex justify-end">
-            <Button
-              onClick={() => handleSaveTab('personal')}
-              disabled={savingTab === 'personal'}
-              className="w-full sm:w-auto"
-            >
-              {savingTab === 'personal' ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : tabSaved.personal ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Guardado - Continuar
-                </>
-              ) : (
-                'Guardar y Continuar'
-              )}
-            </Button>
-          </div>
+          <SaveTabButton
+            tabName="personal"
+            savingTab={wizard.savingTab}
+            isSaved={wizard.tabSaved.personal}
+            onSave={() => handleSaveTab('personal')}
+          />
         </TabsContent>
 
         {/* Employment Tab (Individual only) */}
@@ -317,30 +238,15 @@ export default function AvalFormWizard({
               formData={formData}
               onFieldChange={updateField}
               errors={errors}
-              disabled={savingTab === 'employment'}
+              disabled={wizard.savingTab === 'employment'}
             />
 
-            <div className="flex justify-end">
-              <Button
-                onClick={() => handleSaveTab('employment')}
-                disabled={savingTab === 'employment'}
-                className="w-full sm:w-auto"
-              >
-                {savingTab === 'employment' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : tabSaved.employment ? (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Guardado - Continuar
-                  </>
-                ) : (
-                  'Guardar y Continuar'
-                )}
-              </Button>
-            </div>
+            <SaveTabButton
+              tabName="employment"
+              savingTab={wizard.savingTab}
+              isSaved={wizard.tabSaved.employment}
+              onSave={() => handleSaveTab('employment')}
+            />
           </TabsContent>
         )}
 
@@ -350,33 +256,18 @@ export default function AvalFormWizard({
             formData={formData}
             onFieldChange={updateField}
             errors={errors}
-            disabled={savingTab === 'property'}
+            disabled={wizard.savingTab === 'property'}
             token={token}
             avalId={formData.id}
             initialDocuments={initialData.documents || []}
           />
 
-          <div className="flex justify-end">
-            <Button
-              onClick={() => handleSaveTab('property')}
-              disabled={savingTab === 'property'}
-              className="w-full sm:w-auto"
-            >
-              {savingTab === 'property' ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : tabSaved.property ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Guardado - Continuar
-                </>
-              ) : (
-                'Guardar y Continuar'
-              )}
-            </Button>
-          </div>
+          <SaveTabButton
+            tabName="property"
+            savingTab={wizard.savingTab}
+            isSaved={wizard.tabSaved.property}
+            onSave={() => handleSaveTab('property')}
+          />
         </TabsContent>
 
         {/* References Tab */}
@@ -387,31 +278,16 @@ export default function AvalFormWizard({
             onPersonalReferenceChange={updatePersonalReference}
             onCommercialReferenceChange={updateCommercialReference}
             errors={errors}
-            disabled={savingTab === 'references'}
+            disabled={wizard.savingTab === 'references'}
             isCompany={isCompany}
           />
 
-          <div className="flex justify-end">
-            <Button
-              onClick={() => handleSaveTab('references')}
-              disabled={savingTab === 'references'}
-              className="w-full sm:w-auto"
-            >
-              {savingTab === 'references' ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : tabSaved.references ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Guardado - Continuar
-                </>
-              ) : (
-                'Guardar y Continuar'
-              )}
-            </Button>
-          </div>
+          <SaveTabButton
+            tabName="references"
+            savingTab={wizard.savingTab}
+            isSaved={wizard.tabSaved.references}
+            onSave={() => handleSaveTab('references')}
+          />
         </TabsContent>
 
         {/* Documents Tab */}
@@ -432,11 +308,11 @@ export default function AvalFormWizard({
           <div className="flex justify-end">
             <Button
               onClick={handleFinalSubmit}
-              disabled={savingTab === 'final' || !allTabsSaved || !requiredDocsUploaded}
+              disabled={wizard.savingTab === 'final' || !allTabsSaved || !requiredDocsUploaded}
               className="w-full sm:w-auto"
               size="lg"
             >
-              {savingTab === 'final' ? (
+              {wizard.savingTab === 'final' ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Enviando...
@@ -447,7 +323,7 @@ export default function AvalFormWizard({
             </Button>
           </div>
         </TabsContent>
-      </Tabs>
+      </FormWizardTabs>
     </div>
   );
 }

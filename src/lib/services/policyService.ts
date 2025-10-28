@@ -207,12 +207,35 @@ export async function getPolicies(params?: {
 
   if (params?.search) {
     where.OR = [
+      // Policy and property
       { policyNumber: { contains: params.search, mode: 'insensitive' } },
       { propertyAddress: { contains: params.search, mode: 'insensitive' } },
+
+      // Tenant
       { tenant: { fullName: { contains: params.search, mode: 'insensitive' } } },
+      { tenant: { companyName: { contains: params.search, mode: 'insensitive' } } },
       { tenant: { email: { contains: params.search, mode: 'insensitive' } } },
+      { tenant: { phone: { contains: params.search, mode: 'insensitive' } } },
+
+      // Landlords
       { landlords: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      { landlords: { some: { companyName: { contains: params.search, mode: 'insensitive' } } } },
       { landlords: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
+      { landlords: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
+
+      // Joint Obligors
+      { jointObligors: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      { jointObligors: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
+      { jointObligors: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
+
+      // Avals
+      { avals: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      { avals: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
+      { avals: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
+
+      // Creator
+      { createdBy: { name: { contains: params.search, mode: 'insensitive' } } },
+      { createdBy: { email: { contains: params.search, mode: 'insensitive' } } },
     ];
   }
 

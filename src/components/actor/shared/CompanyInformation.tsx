@@ -2,6 +2,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field-error';
 import { CompanyActorData } from '@/lib/types/actor';
 
 interface CompanyInformationProps {
@@ -51,9 +52,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('companyName')}
             />
-            {errors.companyName && (
-              <p className="text-red-500 text-sm mt-1">{errors.companyName}</p>
-            )}
+            <FieldError error={errors.companyName} />
           </div>
 
           <div>
@@ -70,9 +69,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('companyRfc')}
             />
-            {errors.companyRfc && (
-              <p className="text-red-500 text-sm mt-1">{errors.companyRfc}</p>
-            )}
+            <FieldError error={errors.companyRfc} />
           </div>
 
           <div>
@@ -89,9 +86,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('email')}
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-            )}
+            <FieldError error={errors.email} />
           </div>
 
           <div>
@@ -108,9 +103,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('phone')}
             />
-            {errors.phone && (
-              <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-            )}
+            <FieldError error={errors.phone} />
           </div>
 
           {showAdditionalContact && (
@@ -128,9 +121,7 @@ export default function CompanyInformation({
                   className={errors.workPhone ? 'border-red-500' : ''}
                   disabled={disabled}
                 />
-                {errors.workPhone && (
-                  <p className="text-red-500 text-sm mt-1">{errors.workPhone}</p>
-                )}
+                <FieldError error={errors.workPhone} />
               </div>
 
               <div>
@@ -146,9 +137,7 @@ export default function CompanyInformation({
                   className={errors.workEmail ? 'border-red-500' : ''}
                   disabled={disabled}
                 />
-                {errors.workEmail && (
-                  <p className="text-red-500 text-sm mt-1">{errors.workEmail}</p>
-                )}
+                <FieldError error={errors.workEmail} />
               </div>
             </>
           )}
@@ -172,9 +161,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('legalRepName')}
             />
-            {errors.legalRepName && (
-              <p className="text-red-500 text-sm mt-1">{errors.legalRepName}</p>
-            )}
+            <FieldError error={errors.legalRepName} />
           </div>
 
           <div>
@@ -190,9 +177,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('legalRepPosition')}
             />
-            {errors.legalRepPosition && (
-              <p className="text-red-500 text-sm mt-1">{errors.legalRepPosition}</p>
-            )}
+            <FieldError error={errors.legalRepPosition} />
           </div>
 
           <div>
@@ -208,9 +193,7 @@ export default function CompanyInformation({
               className={errors.legalRepRfc ? 'border-red-500' : ''}
               disabled={disabled}
             />
-            {errors.legalRepRfc && (
-              <p className="text-red-500 text-sm mt-1">{errors.legalRepRfc}</p>
-            )}
+            <FieldError error={errors.legalRepRfc} />
           </div>
 
           <div>
@@ -227,9 +210,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('legalRepPhone')}
             />
-            {errors.legalRepPhone && (
-              <p className="text-red-500 text-sm mt-1">{errors.legalRepPhone}</p>
-            )}
+            <FieldError error={errors.legalRepPhone} />
           </div>
 
           <div>
@@ -246,9 +227,7 @@ export default function CompanyInformation({
               disabled={disabled}
               required={isRequired('legalRepEmail')}
             />
-            {errors.legalRepEmail && (
-              <p className="text-red-500 text-sm mt-1">{errors.legalRepEmail}</p>
-            )}
+            <FieldError error={errors.legalRepEmail} />
           </div>
         </div>
       </div>

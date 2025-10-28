@@ -2,6 +2,7 @@ import { S3StorageProvider } from '@/lib/storage/providers/s3';
 import { DocumentCategory } from '@/types/policy';
 import prisma from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
+import { createSafeS3Key, getFileExtension } from '@/lib/utils/filename';
 
 // Initialize S3 provider only if credentials are available
 let s3Provider: S3StorageProvider | null = null;
@@ -39,9 +40,20 @@ function generateS3Key(
   actorId: string,
   fileName: string
 ): string {
-  const ext = fileName.split('.').pop() || 'pdf';
+  // Use the utility to get the extension safely
+  const ext = getFileExtension(fileName) || 'pdf';
   const uniqueId = uuidv4().slice(0, 8);
-  return `policies/${policyNumber}/${actorType}/${actorId}/${uniqueId}.${ext}`;
+
+  // Create a safe filename base from the original filename
+  const safeFileName = createSafeS3Key(fileName);
+  const nameWithoutExt = safeFileName.lastIndexOf('.') > 0
+    ? safeFileName.substring(0, safeFileName.lastIndexOf('.'))
+    : safeFileName;
+
+  // Include part of the original filename for readability (limited to 50 chars)
+  const fileNamePart = nameWithoutExt.substring(0, 50);
+
+  return `policies/${policyNumber}/${actorType}/${actorId}/${uniqueId}-${fileNamePart}.${ext}`;
 }
 
 /**
@@ -58,6 +70,11 @@ export async function uploadActorDocument(
   uploadedBy?: string
 ): Promise<FileUploadResult> {
   try {
+    // Check if S3 provider is configured
+    if (!s3Provider) {
+      throw new Error('Storage provider not configured. Please check AWS credentials.');
+    }
+
     // Generate S3 key
     const s3Key = generateS3Key(policyNumber, actorType, actorId, file.originalName);
 
@@ -68,6 +85,7 @@ export async function uploadActorDocument(
         buffer: file.buffer,
         originalName: file.originalName,
         mimeType: file.mimeType,
+        size: file.size,
       },
       contentType: file.mimeType,
       metadata: {
@@ -127,7 +145,16 @@ export async function uploadPolicyDocument(
   version?: number
 ): Promise<FileUploadResult> {
   try {
-    const s3Key = `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}_${file.originalName}`;
+    // Check if S3 provider is configured
+    if (!s3Provider) {
+      throw new Error('Storage provider not configured. Please check AWS credentials.');
+    }
+
+    // Create a safe S3 key from the filename
+    const safeFileName = createSafeS3Key(file.originalName);
+    const ext = getFileExtension(file.originalName);
+    const baseName = safeFileName.endsWith(`.${ext}`) ? safeFileName.slice(0, -ext.length - 1) : safeFileName;
+    const s3Key = `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}-${baseName}.${ext}`;
 
     // Upload to S3
     await s3Provider.upload({
@@ -136,6 +163,7 @@ export async function uploadPolicyDocument(
         buffer: file.buffer,
         originalName: file.originalName,
         mimeType: file.mimeType,
+        size: file.size,
       },
       contentType: file.mimeType,
       metadata: {
@@ -200,6 +228,10 @@ export async function getDocumentUrl(
   fileName?: string,
   expiresInSeconds: number = 3600
 ): Promise<string> {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured. Please check AWS credentials.');
+  }
+
   return s3Provider.getSignedUrl({
     path: s3Key,
     action: 'read',
@@ -217,6 +249,10 @@ export async function getDocumentDownloadUrl(
   fileName?: string,
   expiresInSeconds: number = 3600
 ): Promise<string> {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured. Please check AWS credentials.');
+  }
+
   return s3Provider.getSignedUrl({
     path: s3Key,
     action: 'read',
@@ -231,6 +267,10 @@ export async function getDocumentDownloadUrl(
  */
 export async function deleteDocument(documentId: string, isActorDocument: boolean = true): Promise<boolean> {
   try {
+    if (!s3Provider) {
+      throw new Error('Storage provider not configured. Please check AWS credentials.');
+    }
+
     if (isActorDocument) {
       // Get document info
       const document = await prisma.actorDocument.findUnique({
@@ -278,6 +318,10 @@ export async function deleteDocument(documentId: string, isActorDocument: boolea
  * Verify document exists in S3
  */
 export async function verifyDocument(s3Key: string): Promise<boolean> {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured. Please check AWS credentials.');
+  }
+
   return s3Provider.exists(s3Key);
 }
 
@@ -285,6 +329,10 @@ export async function verifyDocument(s3Key: string): Promise<boolean> {
  * Get document metadata
  */
 export async function getDocumentMetadata(s3Key: string) {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured. Please check AWS credentials.');
+  }
+
   return s3Provider.getMetadata(s3Key);
 }
 
@@ -336,6 +384,10 @@ export async function uploadFile(
   path: string,
   metadata?: Record<string, string>
 ): Promise<string> {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured. Please check AWS credentials.');
+  }
+
   return s3Provider.upload({
     path,
     file: {
@@ -393,7 +445,7 @@ export async function validatePolicyDocuments(
           documents: true,
         },
       },
-      landlord: {
+      landlords: {
         include: {
           documents: true,
         },
