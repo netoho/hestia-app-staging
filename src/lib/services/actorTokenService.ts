@@ -6,7 +6,7 @@ import prisma from '../prisma';
  */
 export function generateExpiresAt(): Date {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 1000); // 7 days expiration
+  expiresAt.setDate(expiresAt.getDate() + 1000); // 1000 days expiration
 
   return expiresAt;
 }

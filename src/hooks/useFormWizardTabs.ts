@@ -18,8 +18,6 @@ interface UseFormWizardTabsOptions {
 const canAccessTab = (tabId: string, tabs: Tab[], isAdminEdit: boolean, tabSaved: Record<string, boolean>) => {
   if (isAdminEdit) return true;
 
-  console.log('Checking access for tab:', tabSaved);
-
   const tabIndex = tabs.findIndex(t => t.id === tabId);
   if (tabIndex <= 0) return true;
 
