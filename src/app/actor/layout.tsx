@@ -15,7 +15,7 @@ export default function ActorLayout({
   return (
     <>
       {/* Header */}
-      <header className="bg-white border-b top-0 z-50" style={{ borderColor: '#d4dae1' }}>
+      <header className="bg-white border-b" style={{ borderColor: '#d4dae1' }}>
         <div className="container mx-auto px-4 py-6">
           <Logo size="lg" className="flex flex-row justify-center items-center"/>
         </div>
