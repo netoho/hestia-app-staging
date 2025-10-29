@@ -33,7 +33,8 @@
       "Bash(head:*)",
       "Bash(done)",
       "Bash(git log:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
