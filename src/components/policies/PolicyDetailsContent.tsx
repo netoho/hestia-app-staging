@@ -39,11 +39,6 @@ import TimelineSkeleton from '@/components/ui/skeleton/TimelineSkeleton';
 import DocumentListSkeleton from '@/components/ui/skeleton/DocumentListSkeleton';
 
 // Dynamic imports for heavy components (lazy loading)
-const ApprovalWorkflow = dynamic(() => import('@/components/policies/ApprovalWorkflow'), {
-  loading: () => <ActorCardSkeleton />,
-  ssr: false
-});
-
 const ShareInvitationModal = dynamic(() => import('@/components/policies/ShareInvitationModal'), {
   loading: () => null,
   ssr: false
@@ -349,6 +344,26 @@ export default function PolicyDetailsContent({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {/* Review Information Button - For Staff/Admin */}
+          {(permissions.canApprove || permissions.canVerifyDocuments) && (
+            <Button
+              onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg"
+              disabled={
+                policy.progress &&
+                policy.progress.overall < 100
+              }
+              title={
+                policy.progress && policy.progress.overall < 100
+                  ? "La información de los actores debe estar completa antes de revisar"
+                  : "Revisar información de la póliza"
+              }
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Revisar Información
+            </Button>
+          )}
+
           {/* Policy Approval Button - Only for Staff/Admin */}
           {permissions.canApprove && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
             <Button
@@ -478,15 +493,11 @@ export default function PolicyDetailsContent({
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
         <div className="relative">
           <div className="overflow-x-auto pb-2">
-            <TabsList className={`inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max min-w-full md:w-full ${permissions.canApprove || permissions.canVerifyDocuments ? 'md:grid md:grid-cols-7' : 'md:grid md:grid-cols-6'}`}>
+            <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max min-w-full md:w-full md:grid md:grid-cols-6">
               <TabsTrigger value="overview" className="whitespace-nowrap">General</TabsTrigger>
               <TabsTrigger value="landlord" className="whitespace-nowrap">Arrendador</TabsTrigger>
               <TabsTrigger value="tenant" className="whitespace-nowrap">Inquilino</TabsTrigger>
               <TabsTrigger value="guarantors" className="whitespace-nowrap">Obligado S. / Aval</TabsTrigger>
-              {/* Show verification tab only for users with approval/verification permissions */}
-              {(permissions.canApprove || permissions.canVerifyDocuments) && (
-                <TabsTrigger value="verification" className="whitespace-nowrap">Verificación</TabsTrigger>
-              )}
               <TabsTrigger value="documents" className="whitespace-nowrap">Documentos</TabsTrigger>
               <TabsTrigger value="timeline" className="whitespace-nowrap">Actividad</TabsTrigger>
             </TabsList>
@@ -727,19 +738,6 @@ export default function PolicyDetailsContent({
             </Card>
           )}
         </TabsContent>
-
-        {/* Verification Tab - For Staff/Admin */}
-        {(permissions.canApprove || permissions.canVerifyDocuments) && (
-          <TabsContent value="verification" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <ApprovalWorkflow
-              policy={policy}
-              onApprove={approveActor}
-              onReject={rejectActor}
-              onApprovePolicy={approvePolicy}
-              canApprovePolicy={permissions.canApprove}
-            />
-          </TabsContent>
-        )}
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">

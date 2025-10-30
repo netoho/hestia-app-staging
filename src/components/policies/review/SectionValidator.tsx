@@ -27,18 +27,20 @@ import {
   ChevronUp,
   AlertCircle,
   RefreshCw,
-  User
+  User,
+  Calendar
 } from 'lucide-react';
 import { SectionValidationInfo } from '@/lib/services/reviewService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { ReviewIcon, StatusIconComponent } from '@/types/review';
 
 interface SectionValidatorProps {
   section: SectionValidationInfo;
   actorType: string;
   actorId: string;
   policyId: string;
-  icon: any;
+  icon: ReviewIcon;
   onValidationComplete: () => void;
 }
 
@@ -55,7 +57,7 @@ export default function SectionValidator({
   const [rejectionReason, setRejectionReason] = useState('');
   const [isValidating, setIsValidating] = useState(false);
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): StatusIconComponent => {
     switch (section.status) {
       case 'APPROVED': return CheckCircle2;
       case 'REJECTED': return XCircle;
@@ -197,8 +199,17 @@ export default function SectionValidator({
                   <div className="text-left">
                     <p className="font-medium">{section.displayName}</p>
                     {section.validatedAt && (
-                      <p className="text-xs text-gray-500">
-                        Validado: {format(new Date(section.validatedAt), "d 'de' MMMM 'a las' HH:mm", { locale: es })}
+                      <p className="text-xs text-gray-500 flex items-center gap-2">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(section.validatedAt), "d MMM yyyy", { locale: es })}
+                        </span>
+                        {section.validatorName && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {section.validatorName}
+                          </span>
+                        )}
                       </p>
                     )}
                   </div>
@@ -243,8 +254,7 @@ export default function SectionValidator({
                 <div className="flex gap-2 pt-4 border-t">
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => handleValidate('APPROVED')}
                     disabled={isValidating}
                   >
@@ -257,8 +267,8 @@ export default function SectionValidator({
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                    variant="destructive"
+                    className="flex-1"
                     onClick={() => setShowRejectDialog(true)}
                     disabled={isValidating}
                   >
@@ -268,15 +278,6 @@ export default function SectionValidator({
                 </div>
               )}
 
-              {/* Validator info */}
-              {section.validatedBy && (
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <User className="h-4 w-4" />
-                    <span>Validado por: {section.validatedBy}</span>
-                  </div>
-                </div>
-              )}
             </div>
           </CollapsibleContent>
         </Collapsible>

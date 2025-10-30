@@ -27,8 +27,14 @@ export function DocumentListItem({
   downloading = false,
   operation,
 }: DocumentListItemProps) {
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
+    } catch (error) {
+      console.error('Invalid date:', dateString);
+      return 'Invalid date';
+    }
   };
 
   const formatFileSize = (bytes: number) => {

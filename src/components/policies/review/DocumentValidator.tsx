@@ -29,6 +29,8 @@ import {
 import { DocumentValidationInfo } from '@/lib/services/reviewService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useDocumentDownload } from '@/hooks/useDocumentDownload';
+import type { StatusIconComponent } from '@/types/review';
 
 interface DocumentValidatorProps {
   document: DocumentValidationInfo;
@@ -45,8 +47,9 @@ export default function DocumentValidator({
   const [rejectionReason, setRejectionReason] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const { downloadDocument, downloading } = useDocumentDownload();
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): StatusIconComponent => {
     switch (document.status) {
       case 'APPROVED': return CheckCircle2;
       case 'REJECTED': return XCircle;
@@ -90,13 +93,18 @@ export default function DocumentValidator({
       'company_constitution': 'Acta Constitutiva',
       'property_deed': 'Escritura de Propiedad',
       'property_tax': 'Predial',
+      'property_tax_statement': 'Estado de Cuenta Predial',
       'bank_statement': 'Estado de Cuenta',
       'income_proof': 'Comprobante de Ingresos',
       'tax_return': 'Declaración de Impuestos',
       'payroll_receipt': 'Recibo de Nómina',
-      'utility_bill': 'Comprobante de Domicilio'
+      'utility_bill': 'Comprobante de Domicilio',
+      'tax_status_certificate': 'Constancia de Situación Fiscal',
+      'proof_of_address': 'Comprobante de Domicilio',
+      'curp': 'CURP',
+      'other': 'Otro'
     };
-    return labels[type] || type;
+    return labels[type.toLowerCase()] || type;
   };
 
   const getCategoryLabel = (category: string) => {
@@ -106,10 +114,12 @@ export default function DocumentValidator({
       'ADDRESS_PROOF': 'Domicilio',
       'BANK_STATEMENT': 'Bancario',
       'PROPERTY_DEED': 'Propiedad',
+      'PROPERTY_TAX_STATEMENT': 'Predial',
       'TAX_RETURN': 'Fiscal',
       'EMPLOYMENT_LETTER': 'Laboral',
       'COMPANY_CONSTITUTION': 'Constitución',
       'PASSPORT': 'Pasaporte',
+      'TAX_STATUS_CERTIFICATE': 'Situación Fiscal',
       'OTHER': 'Otro'
     };
     return labels[category] || category;
@@ -149,12 +159,16 @@ export default function DocumentValidator({
     }
   };
 
-  const handlePreview = () => {
-    // Open document in new tab for preview
-    if (document.s3Key) {
-      // Construct download URL - adjust based on your implementation
-      const downloadUrl = `/api/documents/preview/${document.documentId}`;
-      window.open(downloadUrl, '_blank');
+  const handlePreview = async () => {
+    // Use the document download hook to fetch the signed URL and download/preview
+    if (document.documentId && document.fileName) {
+      await downloadDocument({
+        documentId: document.documentId,
+        documentType: 'actor',
+        fileName: document.fileName
+      });
+    } else {
+      console.error('Document ID or filename missing');
     }
   };
 
@@ -186,15 +200,23 @@ export default function DocumentValidator({
                 <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {document.uploadedAt && format(new Date(document.uploadedAt), "d MMM yyyy", { locale: es })}
+                    {document.createdAt && format(new Date(document.createdAt), "d MMM yyyy", { locale: es })}
                   </span>
-                  {document.validatedAt && (
-                    <span className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      Validado: {document.validatedAt && format(new Date(document.validatedAt), "d MMM yyyy", { locale: es })}
-                    </span>
-                  )}
                 </div>
+                {document.validatedAt && (
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Aprobado: {format(new Date(document.validatedAt), "d MMM yyyy", { locale: es })}
+                    </span>
+                    {document.validatorName && (
+                      <span className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {document.validatorName}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Rejection reason */}
                 {document.status === 'REJECTED' && document.rejectionReason && (
@@ -218,8 +240,13 @@ export default function DocumentValidator({
                 variant="outline"
                 onClick={handlePreview}
                 className="text-xs"
+                disabled={downloading === document.documentId}
               >
-                <Eye className="h-3 w-3 mr-1" />
+                {downloading === document.documentId ? (
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Eye className="h-3 w-3 mr-1" />
+                )}
                 Ver
               </Button>
 
@@ -227,8 +254,7 @@ export default function DocumentValidator({
                 <>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="text-xs text-green-600 border-green-600 hover:bg-green-50"
+                    className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => handleValidate('APPROVED')}
                     disabled={isValidating}
                   >
@@ -241,8 +267,8 @@ export default function DocumentValidator({
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="text-xs text-red-600 border-red-600 hover:bg-red-50"
+                    variant="destructive"
+                    className="text-xs"
                     onClick={() => setShowRejectDialog(true)}
                     disabled={isValidating}
                   >

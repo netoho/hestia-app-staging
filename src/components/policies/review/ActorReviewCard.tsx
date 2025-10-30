@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,9 @@ import {
   Users
 } from 'lucide-react';
 import SectionValidator from './SectionValidator';
-import DocumentValidator from './DocumentValidator';
+import ReviewDocumentCard from './ReviewDocumentCard';
 import { ActorReviewInfo, SectionValidationInfo, DocumentValidationInfo } from '@/lib/services/reviewService';
+import type { ReviewIcon } from '@/types/review';
 
 interface ActorReviewCardProps {
   actor: ActorReviewInfo;
@@ -31,7 +32,7 @@ export default function ActorReviewCard({
 }: ActorReviewCardProps) {
   const [activeTab, setActiveTab] = useState('sections');
 
-  const getSectionIcon = (section: string) => {
+  const getSectionIcon = (section: string): ReviewIcon => {
     switch (section) {
       case 'personal_info': return actor.isCompany ? Building : User;
       case 'work_info': return Briefcase;
@@ -51,6 +52,25 @@ export default function ActorReviewCard({
       case 'aval': return 'Aval';
       default: return actor.actorType;
     }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      'IDENTIFICATION': 'Identificación',
+      'INCOME_PROOF': 'Ingresos',
+      'ADDRESS_PROOF': 'Domicilio',
+      'BANK_STATEMENT': 'Bancario',
+      'PROPERTY_DEED': 'Propiedad',
+      'PROPERTY_TAX_STATEMENT': 'Predial',
+      'TAX_RETURN': 'Fiscal',
+      'EMPLOYMENT_LETTER': 'Laboral',
+      'COMPANY_CONSTITUTION': 'Constitución',
+      'PASSPORT': 'Pasaporte',
+      'TAX_STATUS_CERTIFICATE': 'Situación Fiscal',
+      'LEGAL_POWERS': 'Poderes Legales',
+      'OTHER': 'Otro'
+    };
+    return labels[category] || category;
   };
 
   const getStatusBadge = (status: string) => {
@@ -187,16 +207,41 @@ export default function ActorReviewCard({
 
           <TabsContent value="documents" className="mt-6">
             <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {actor.documents.length > 0 ? (
-                  actor.documents.map((document) => (
-                    <DocumentValidator
-                      key={document.documentId}
-                      document={document}
-                      policyId={policyId}
-                      onValidationComplete={onValidationUpdate}
-                    />
-                  ))
+                  (() => {
+                    // Group documents by category
+                    const groupedDocuments = actor.documents.reduce((acc, doc) => {
+                      if (!acc[doc.category]) {
+                        acc[doc.category] = [];
+                      }
+                      acc[doc.category].push(doc);
+                      return acc;
+                    }, {} as Record<string, DocumentValidationInfo[]>);
+
+                    // Sort categories and render ReviewDocumentCard for each
+                    return Object.entries(groupedDocuments)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([category, docs]) => {
+                        // Sort documents within category
+                        const sortedDocs = docs.sort((a, b) => {
+                          const nameCompare = a.fileName.localeCompare(b.fileName);
+                          if (nameCompare !== 0) return nameCompare;
+                          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                        });
+
+                        return (
+                          <ReviewDocumentCard
+                            key={category}
+                            category={category}
+                            categoryLabel={getCategoryLabel(category)}
+                            documents={sortedDocs}
+                            policyId={policyId}
+                            onValidationComplete={onValidationUpdate}
+                          />
+                        );
+                      });
+                  })()
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     No se han cargado documentos

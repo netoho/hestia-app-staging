@@ -40,6 +40,7 @@ export interface SectionValidationInfo {
   displayName: string;
   status: string;
   validatedBy?: string;
+  validatorName?: string; // Added validator name
   validatedAt?: Date;
   rejectionReason?: string;
   fields: any; // The actual data fields for this section
@@ -50,9 +51,10 @@ export interface DocumentValidationInfo {
   fileName: string;
   documentType: string;
   category: string;
-  uploadedAt: Date;
+  createdAt: Date;
   status: string;
   validatedBy?: string;
+  validatorName?: string; // Added validator name
   validatedAt?: Date;
   rejectionReason?: string;
   s3Key?: string;
@@ -162,18 +164,40 @@ class ReviewService {
     // Get validation details
     const validationDetails = await validationService.getActorValidationDetails(actorType, actor.id);
 
-    // Build section info with actual data
-    const sections = await this.buildSectionInfo(actorType, actor, validationDetails.sections);
+    // Get all unique validator IDs
+    const validatorIds = new Set<string>();
+    validationDetails.sections.forEach(s => {
+      if (s.validatedBy) validatorIds.add(s.validatedBy);
+    });
+    validationDetails.documents.forEach(d => {
+      if (d.validatedBy) validatorIds.add(d.validatedBy);
+    });
 
-    // Build document info
+    // Fetch user names for validators
+    const validatorMap = new Map<string, string>();
+    if (validatorIds.size > 0) {
+      const validators = await prisma.user.findMany({
+        where: { id: { in: Array.from(validatorIds) } },
+        select: { id: true, name: true, email: true }
+      });
+      validators.forEach(v => {
+        validatorMap.set(v.id, v.name || v.email);
+      });
+    }
+
+    // Build section info with actual data and validator names
+    const sections = await this.buildSectionInfo(actorType, actor, validationDetails.sections, validatorMap);
+
+    // Build document info with validator names
     const documents = validationDetails.documents.map(doc => ({
       documentId: doc.id,
       fileName: doc.fileName,
       documentType: doc.documentType,
       category: doc.category,
-      uploadedAt: doc.uploadedAt,
+      createdAt: doc.createdAt,
       status: doc.validationStatus || 'PENDING',
       validatedBy: doc.validatedBy,
+      validatorName: doc.validatedBy ? validatorMap.get(doc.validatedBy) : undefined,
       validatedAt: doc.validatedAt,
       rejectionReason: doc.rejectionReason,
       s3Key: doc.s3Key
@@ -209,7 +233,8 @@ class ReviewService {
   private async buildSectionInfo(
     actorType: ActorType,
     actor: any,
-    validations: any[]
+    validations: any[],
+    validatorMap?: Map<string, string>
   ): Promise<SectionValidationInfo[]> {
     const sections: SectionValidationInfo[] = [];
 
@@ -225,6 +250,7 @@ class ReviewService {
         displayName: sectionDef.displayName,
         status: validation?.status || 'PENDING',
         validatedBy: validation?.validatedBy,
+        validatorName: validation?.validatedBy && validatorMap ? validatorMap.get(validation.validatedBy) : undefined,
         validatedAt: validation?.validatedAt,
         rejectionReason: validation?.rejectionReason,
         fields: sectionData
