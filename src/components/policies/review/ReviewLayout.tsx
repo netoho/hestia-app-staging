@@ -1,27 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  ArrowLeft,
-  FileCheck,
-  Users,
-  Building,
-  User,
-  Shield,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Eye,
-  RefreshCw
-} from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import ActorReviewCard from './ActorReviewCard';
 import ReviewProgress from './ReviewProgress';
 import ReviewNotes from './ReviewNotes';
+import ReviewHeader from './ReviewHeader';
+import ActorListSidebar from './ActorListSidebar';
 import { PolicyReviewData, ActorReviewInfo } from '@/lib/services/reviewService';
 
 interface ReviewLayoutProps {
@@ -52,14 +39,23 @@ export default function ReviewLayout({
       const response = await fetch(`/api/policies/${policyId}/review/progress?detailed=true`);
       if (!response.ok) throw new Error('Failed to fetch review data');
       const result = await response.json();
+
+      // Validate response structure
+      if (!result.data || typeof result.data !== 'object') {
+        throw new Error('Invalid response structure');
+      }
+
       setData(result.data);
 
       // Select first actor if none selected
-      if (!selectedActor && result.data.actors.length > 0) {
+      if (!selectedActor && result.data.actors && result.data.actors.length > 0) {
         setSelectedActor(result.data.actors[0]);
       }
+
+      return result.data; // Return the fetched data
     } catch (error) {
       console.error('Error fetching review data:', error);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -71,47 +67,27 @@ export default function ReviewLayout({
     setRefreshing(false);
   };
 
-  const getActorIcon = (actorType: string) => {
-    switch (actorType) {
-      case 'landlord': return Building;
-      case 'tenant': return User;
-      case 'jointObligor': return Users;
-      case 'aval': return Shield;
-      default: return User;
-    }
-  };
 
-  const getActorTypeLabel = (actorType: string) => {
-    switch (actorType) {
-      case 'landlord': return 'Arrendador';
-      case 'tenant': return 'Inquilino';
-      case 'jointObligor': return 'Obligado Solidario';
-      case 'aval': return 'Aval';
-      default: return actorType;
-    }
-  };
+  const handleValidationUpdate = async () => {
+    // Store current selected actor ID to restore selection after refresh
+    const currentActorId = selectedActor?.actorId;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return 'bg-green-500';
-      case 'REJECTED': return 'bg-red-500';
-      case 'IN_REVIEW': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
-    }
-  };
+    // Clear selected actor first to force re-render
+    setSelectedActor(null);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return CheckCircle2;
-      case 'REJECTED': return XCircle;
-      case 'IN_REVIEW': return Eye;
-      default: return Clock;
-    }
-  };
-
-  const handleValidationUpdate = () => {
     // Refresh data after validation changes
-    fetchReviewData();
+    const newData = await fetchReviewData();
+
+    // After data is refreshed, update selectedActor to point to the new actor object
+    if (currentActorId && newData?.actors) {
+      const updatedActor = newData.actors.find((actor: any) => actor.actorId === currentActorId);
+      if (updatedActor) {
+        // Use setTimeout to ensure state update happens after render cycle
+        setTimeout(() => {
+          setSelectedActor(updatedActor);
+        }, 0);
+      }
+    }
   };
 
   if (loading) {
@@ -136,53 +112,16 @@ export default function ReviewLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBack}
-                className="hover:bg-gray-100"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <FileCheck className="h-6 w-6 text-blue-600" />
-                  Revisión de Información
-                </h1>
-                <p className="text-sm text-gray-600">
-                  Protección #{data.policyNumber} - {data.propertyAddress}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowNotes(!showNotes)}
-              >
-                Notas ({data.notes.length})
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                {refreshing ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ReviewHeader
+        policyNumber={data.policyNumber}
+        propertyAddress={data.propertyAddress}
+        notesCount={data.notes.length}
+        showNotes={showNotes}
+        refreshing={refreshing}
+        onBack={onBack}
+        onNotesToggle={() => setShowNotes(!showNotes)}
+        onRefresh={handleRefresh}
+      />
 
       {/* Progress Overview */}
       <div className="container mx-auto px-4 py-6">
@@ -194,75 +133,11 @@ export default function ReviewLayout({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Actor List Sidebar */}
           <div className="lg:col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Actores</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[600px]">
-                  <div className="p-4 space-y-2">
-                    {data.actors.map((actor) => {
-                      const Icon = getActorIcon(actor.actorType);
-                      return (
-                        <button
-                          key={`${actor.actorType}-${actor.actorId}`}
-                          onClick={() => setSelectedActor(actor)}
-                          className={`w-full text-left p-3 rounded-lg border transition-all ${
-                            selectedActor?.actorId === actor.actorId
-                              ? 'bg-blue-50 border-blue-300'
-                              : 'hover:bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <Icon className="h-5 w-5 text-gray-600 mt-0.5" />
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-sm truncate">
-                                  {actor.name}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {getActorTypeLabel(actor.actorType)}
-                                </p>
-                                {actor.isCompany && (
-                                  <Badge variant="outline" className="text-xs mt-1">
-                                    Empresa
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-blue-600">
-                                {actor.progress.overall}%
-                              </div>
-                              <div className="flex gap-1 mt-1">
-                                {actor.progress.sectionsApproved === actor.progress.sectionsTotal ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <Clock className="h-3 w-3 text-orange-500" />
-                                )}
-                                <span className="text-xs text-gray-500">
-                                  {actor.progress.sectionsApproved}/{actor.progress.sectionsTotal}
-                                </span>
-                              </div>
-                              <div className="flex gap-1 mt-0.5">
-                                {actor.progress.documentsApproved === actor.progress.documentsTotal ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <Clock className="h-3 w-3 text-orange-500" />
-                                )}
-                                <span className="text-xs text-gray-500">
-                                  {actor.progress.documentsApproved}/{actor.progress.documentsTotal}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+            <ActorListSidebar
+              actors={data.actors}
+              selectedActorId={selectedActor?.actorId || null}
+              onActorSelect={setSelectedActor}
+            />
           </div>
 
           {/* Review Panel */}

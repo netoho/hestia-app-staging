@@ -188,7 +188,7 @@ export default function TenantPortalPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50">
       {/* Hero Section */}
-      <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)' }} className="border-b" style={{ borderColor: '#d4dae1' }}>
+      <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)', borderColor: '#d4dae1' }} className="border-b">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="text-center">
             <h1 className="font-headline text-3xl md:text-4xl mb-3" style={{ color: '#173459' }}>

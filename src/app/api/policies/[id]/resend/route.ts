@@ -38,7 +38,7 @@ export async function POST(
     }
 
     // Check if policy is in a state where resending makes sense
-    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.DRAFT, PolicyStatus.INVESTIGATION_PENDING, PolicyStatus.INVESTIGATION_IN_PROGRESS];
+    const resendableStatuses: PolicyStatusType[] = [PolicyStatus.DRAFT, PolicyStatus.COLLECTING_INFO, PolicyStatus.UNDER_INVESTIGATION];
     if (!resendableStatuses.includes(policy.status)) {
       return NextResponse.json(
         { error: 'Cannot resend invitation for policies in this state' },

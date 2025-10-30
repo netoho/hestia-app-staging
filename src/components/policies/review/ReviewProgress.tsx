@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle2,
@@ -23,15 +22,8 @@ interface ReviewProgressProps {
 }
 
 export default function ReviewProgress({ progress }: ReviewProgressProps) {
-  const getProgressColor = () => {
-    if (progress.overall >= 100) return 'bg-green-600';
-    if (progress.overall >= 75) return 'bg-blue-600';
-    if (progress.overall >= 50) return 'bg-yellow-600';
-    return 'bg-orange-600';
-  };
-
   const getStatusMessage = () => {
-    if (progress.overall >= 100) {
+    if (progress.overall >= 100 && progress.rejectedValidations === 0) {
       return {
         text: 'Revisión Completa',
         icon: CheckCircle2,
@@ -40,14 +32,14 @@ export default function ReviewProgress({ progress }: ReviewProgressProps) {
     }
     if (progress.rejectedValidations > 0) {
       return {
-        text: `${progress.rejectedValidations} validaciones rechazadas`,
+        text: 'Requiere corrección',
         icon: AlertTriangle,
         color: 'text-red-600'
       };
     }
     if (progress.pendingValidations > 0) {
       return {
-        text: `${progress.pendingValidations} validaciones pendientes`,
+        text: 'En progreso',
         icon: Clock,
         color: 'text-orange-600'
       };
@@ -64,73 +56,41 @@ export default function ReviewProgress({ progress }: ReviewProgressProps) {
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="space-y-6">
-          {/* Main Progress */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold text-lg">Progreso de Revisión</h3>
-              </div>
-              <div className="text-2xl font-bold text-blue-600">
-                {progress.overall}%
-              </div>
-            </div>
-            <Progress value={progress.overall} className="h-3" />
-            <div className={`flex items-center gap-2 mt-3 ${status.color}`}>
-              <StatusIcon className="h-4 w-4" />
-              <span className="text-sm font-medium">{status.text}</span>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {progress.totalValidations}
-              </div>
-              <p className="text-xs text-gray-600 mt-1">Total Validaciones</p>
+      <CardContent className="p-4">
+        <div className="space-y-4">
+          {/* Compact Header with Progress */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileCheck className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">Progreso de Revisión</span>
+              <span className="text-lg font-bold text-blue-600">{progress.overall}%</span>
             </div>
 
-            <div className="bg-green-50 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <span className="text-2xl font-bold text-green-600">
-                  {progress.completedValidations}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1">Completadas</p>
-            </div>
-
-            <div className="bg-orange-50 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2">
-                <Clock className="h-5 w-5 text-orange-600" />
-                <span className="text-2xl font-bold text-orange-600">
+            {/* Compact Stats Badges */}
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-600">Total: {progress.totalValidations}</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                {progress.completedValidations}
+              </Badge>
+              {progress.pendingValidations > 0 && (
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                  <Clock className="h-3 w-3 mr-1" />
                   {progress.pendingValidations}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1">Pendientes</p>
-            </div>
-
-            <div className="bg-red-50 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2">
-                <XCircle className="h-5 w-5 text-red-600" />
-                <span className="text-2xl font-bold text-red-600">
+                </Badge>
+              )}
+              {progress.rejectedValidations > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                  <XCircle className="h-3 w-3 mr-1" />
                   {progress.rejectedValidations}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1">Rechazadas</p>
+                </Badge>
+              )}
             </div>
           </div>
 
           {/* Progress Bar Segments */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-gray-600">
-              <span>Distribución de validaciones</span>
-              <span>{progress.completedValidations} de {progress.totalValidations}</span>
-            </div>
-            <div className="flex h-2 rounded-full overflow-hidden bg-gray-200">
+          <div className="space-y-2">
+            <div className="flex h-3 rounded-full overflow-hidden bg-gray-200">
               {progress.completedValidations > 0 && (
                 <div
                   className="bg-green-500 transition-all"
@@ -147,6 +107,13 @@ export default function ReviewProgress({ progress }: ReviewProgressProps) {
                   }}
                 />
               )}
+            </div>
+            <div className={`flex items-center gap-2 text-sm ${status.color}`}>
+              <StatusIcon className="h-3.5 w-3.5" />
+              <span className="font-medium">{status.text}</span>
+              <span className="text-xs text-gray-500">
+                ({progress.completedValidations} de {progress.totalValidations} validaciones)
+              </span>
             </div>
           </div>
 

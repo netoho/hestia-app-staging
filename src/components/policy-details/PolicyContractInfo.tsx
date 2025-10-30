@@ -49,7 +49,7 @@ export function PolicyContractInfo({
   onMarkSigned
 }: PolicyContractInfoProps) {
   // Don't show contract info for early statuses
-  if (['DRAFT', 'INVESTIGATION_PENDING', 'INVESTIGATION_IN_PROGRESS'].includes(policyStatus)) {
+  if (['DRAFT', 'COLLECTING_INFO', 'UNDER_INVESTIGATION'].includes(policyStatus)) {
     return null;
   }
 

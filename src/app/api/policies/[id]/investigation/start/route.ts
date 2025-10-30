@@ -55,8 +55,8 @@ export async function POST(
           throw new Error('Investigation already exists for this policy');
         }
 
-        if (policy.status !== 'INVESTIGATION_PENDING') {
-          throw new Error('Investigation can only be started for pending policies');
+        if (policy.status !== 'COLLECTING_INFO') {
+          throw new Error('Investigation can only be started for policies collecting info');
         }
 
         // Create investigation
@@ -72,8 +72,8 @@ export async function POST(
         // Update policy status
         await tx.policy.update({
           where: { id: policyId },
-          data: { 
-            status: 'INVESTIGATION_IN_PROGRESS',
+          data: {
+            status: 'UNDER_INVESTIGATION',
             investigationStartedAt: new Date()
           }
         });

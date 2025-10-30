@@ -83,7 +83,7 @@ export async function PUT(
         });
 
         // Determine new policy status based on verdict
-        let newStatus = 'INVESTIGATION_APPROVED';
+        let newStatus = 'PENDING_APPROVAL';
         if (verdict === 'REJECTED') {
           newStatus = 'INVESTIGATION_REJECTED';
         }
