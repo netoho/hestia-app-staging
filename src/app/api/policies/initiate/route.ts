@@ -163,13 +163,13 @@ export async function POST(request: NextRequest) {
     let finalStatus = policy.status;
 
     if (emailSent) {
-      // Update policy status to INVESTIGATION_PENDING
+      // Update policy status to COLLECTING_INFO
       await updatePolicyStatus(
         policy.id,
-        PolicyStatus.INVESTIGATION_PENDING,
+        PolicyStatus.COLLECTING_INFO,
         authResult.user.id
       );
-      finalStatus = PolicyStatus.INVESTIGATION_PENDING;
+      finalStatus = PolicyStatus.COLLECTING_INFO;
 
       // Add activity log
       await addPolicyActivity(

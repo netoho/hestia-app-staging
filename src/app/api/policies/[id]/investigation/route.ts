@@ -205,9 +205,9 @@ export async function PUT(
         if (data.recommendation === 'APPROVE') {
           newStatus = PolicyStatus.APPROVED;
         } else if (data.recommendation === 'REJECT') {
-          newStatus = PolicyStatus.REJECTED;
+          newStatus = PolicyStatus.INVESTIGATION_REJECTED;
         } else if (data.recommendation === 'REQUIRES_REVIEW') {
-          newStatus = PolicyStatus.REQUIRES_REVIEW;
+          newStatus = PolicyStatus.PENDING_APPROVAL;
         }
 
         await prisma.policy.update({
