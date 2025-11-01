@@ -42,7 +42,11 @@ export interface StorageProvider {
   /**
    * Upload a file to storage
    */
-  upload(options: StorageUploadOptions): Promise<string>;
+  upload(options: StorageUploadOptions, isPrivate: boolean): Promise<string>;
+
+  publicUpload(options: StorageUploadOptions): Promise<string>;
+
+  privateUpload(options: StorageUploadOptions): Promise<string>;
 
   /**
    * Download a file from storage
@@ -81,6 +85,7 @@ export interface StorageConfig {
   provider: StorageProviderType;
   s3?: {
     bucket: string;
+    publicBucket: string;
     region: string;
     accessKeyId: string;
     secretAccessKey: string;
