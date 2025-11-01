@@ -41,7 +41,7 @@ interface Actor {
 interface ActorVerificationCardProps {
   policy: {
     id: string;
-    landlord?: Actor;
+    landlords?: Actor[];
     tenant?: Actor;
     jointObligors?: Actor[];
     avals?: Actor[];
@@ -200,11 +200,13 @@ export default function ActorVerificationCard({
           <CardDescription>{t.pages.policies.actorVerification.subtitle}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {renderActorVerification(
-            policy.landlord,
-            'landlord',
-            <Building className="h-5 w-5" />,
-            'Arrendador'
+          {policy.landlords?.map((landlord, index) =>
+            renderActorVerification(
+              landlord,
+              'landlord',
+              <Building className="h-5 w-5" />,
+              landlord.isPrimary ? 'Arrendador Principal' : `Co-propietario ${index}`
+            )
           )}
 
           {renderActorVerification(
