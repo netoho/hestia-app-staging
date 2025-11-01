@@ -38,7 +38,6 @@ const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
   role: z.enum(['BROKER', 'ADMIN', 'STAFF']),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -53,7 +52,6 @@ interface UserDialogProps {
 export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -64,20 +62,17 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
   useEffect(() => {
     if (open) {
       setError(null);
-      setShowPasswordReset(false);
       if (user) {
         form.reset({
           name: user.name || '',
           email: user.email || '',
-          role: (user.role as any) || 'tenant',
-          password: '',
+          role: (user.role as any) || 'BROKER',
         });
       } else {
         form.reset({
           name: '',
           email: '',
           role: 'BROKER',
-          password: '',
         });
       }
     }
@@ -91,17 +86,12 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
       const url = isEditMode ? `/api/staff/users/${user?.id}` : '/api/staff/users';
       const method = isEditMode ? 'PUT' : 'POST';
 
-      const payload: any = { ...data };
-      if (isEditMode) {
-        if (!payload.password) delete payload.password;
-      }
-
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -109,46 +99,17 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         throw new Error(errorData.error || 'Failed to save user');
       }
 
-      onSuccess();
-      onOpenChange(false);
+      // If creating a new user, show success message about invitation
+      if (!isEditMode) {
+        onSuccess();
+        onOpenChange(false);
+        // The API will handle sending the invitation email
+      } else {
+        onSuccess();
+        onOpenChange(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!user) return;
-
-    const newPassword = form.getValues('password');
-    if (!newPassword || newPassword.length < 6) {
-      form.setError('password', { message: 'Password must be at least 6 characters' });
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/staff/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password: newPassword }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reset password');
-      }
-
-      setShowPasswordReset(false);
-      form.setValue('password', '');
-      setError('Password reset successfully!');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password');
     } finally {
       setIsLoading(false);
     }
@@ -232,23 +193,12 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             />
 
             {!isEditMode && (
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  An invitation email will be sent to the user with a link to set their password.
+                </AlertDescription>
+              </Alert>
             )}
 
             <DialogFooter>

@@ -717,6 +717,79 @@ Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en ${SUPPORT_EMA
   }
 };
 
+// User invitation data
+export interface UserInvitationData {
+  email: string;
+  name?: string;
+  role: 'ADMIN' | 'STAFF' | 'BROKER';
+  invitationUrl: string;
+  expiryDate: Date;
+  inviterName?: string;
+}
+
+export const sendUserInvitation = async (data: UserInvitationData): Promise<boolean> => {
+  try {
+    // Use React Email template
+    const { render } = await import('@react-email/render');
+    const { UserInvitationEmail } = await import('../../templates/email/react-email/UserInvitationEmail');
+
+    const html = await render(UserInvitationEmail(data));
+
+    const roleDescriptions = {
+      ADMIN: 'Administrador del Sistema',
+      STAFF: 'Personal de Operaciones',
+      BROKER: 'Corredor de Seguros',
+    };
+
+    const roleDescription = roleDescriptions[data.role];
+    const subject = `Bienvenido a Hestia - Configuración de Cuenta`;
+
+    // Generate plain text version
+    const text = `
+Hola${data.name ? ` ${data.name}` : ''},
+
+${data.inviterName ? `${data.inviterName} te` : 'Te'} ha invitado a formar parte del equipo de Hestia como ${roleDescription}.
+
+Para comenzar, necesitas configurar tu contraseña y completar tu perfil.
+
+Accede aquí: ${data.invitationUrl}
+
+Tus credenciales de acceso:
+- Email: ${data.email}
+- Contraseña: La establecerás en tu primer acceso
+
+¿Qué podrás hacer en tu primer acceso?
+- Establecer tu contraseña segura
+- Subir tu foto de perfil
+- Completar tu información de contacto
+- Explorar las herramientas disponibles
+
+Importante: Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+})}. Asegúrate de configurar tu cuenta antes de esa fecha.
+
+Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos a soporte@hestiaplp.com.mx.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    console.log('Sending user invitation to:', data.email);
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send user invitation email:', error);
+    return false;
+  }
+};
+
 export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Promise<boolean> => {
   try {
     // Use React Email templates
