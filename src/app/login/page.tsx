@@ -24,14 +24,6 @@ export default function LoginPage() {
     <AuthCard
       title={t.pages.login.title}
       description={t.pages.login.description}
-      footerContent={
-        <>
-          {t.pages.login.noAccount}{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            {t.pages.login.registerLink}
-          </Link>
-        </>
-      }
     >
       <LoginForm />
     </AuthCard>
