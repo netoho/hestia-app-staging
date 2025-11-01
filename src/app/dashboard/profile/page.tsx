@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { t } from '@/lib/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Camera, Trash2 } from 'lucide-react';
 
 interface UserProfile {
   name?: string;
@@ -26,11 +26,13 @@ interface UserProfile {
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -80,6 +82,111 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, user, isAuthLoading]);
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image under 20MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('fileType', file.type);
+
+    try {
+      const response = await fetch('/api/user/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload avatar');
+      }
+
+      const data = await response.json();
+
+      // Update local profile state
+      setProfile(prev => prev ? { ...prev, image: data.avatarUrl } : null);
+
+      toast({
+        title: 'Avatar uploaded',
+        description: 'Your profile picture has been updated successfully',
+      });
+    } catch (err) {
+      console.error('Error uploading avatar:', err);
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Failed to upload avatar',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Clear the input value to allow re-uploading the same file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    if (!confirm('Are you sure you want to remove your profile picture?')) {
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const response = await fetch('/api/user/avatar', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete avatar');
+      }
+
+      // Update local profile state
+      setProfile(prev => prev ? { ...prev, image: undefined } : null);
+
+      toast({
+        title: 'Avatar removed',
+        description: 'Your profile picture has been removed',
+      });
+    } catch (err) {
+      console.error('Error deleting avatar:', err);
+      toast({
+        title: 'Delete failed',
+        description: err instanceof Error ? err.message : 'Failed to delete avatar',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -115,7 +222,7 @@ export default function ProfilePage() {
 
       const updatedProfile: UserProfile = await res.json();
       setProfile(updatedProfile);
-      
+
       // Clear password fields on success
       setCurrentPassword('');
       setNewPassword('');
@@ -193,15 +300,62 @@ export default function ProfilePage() {
         <div className="md:col-span-1">
           <Card className="shadow-lg rounded-lg">
             <CardHeader className="items-center text-center">
-                <Avatar className="h-32 w-32 border-4 border-primary mb-4">
+              <div className="relative group">
+                <Avatar
+                  className="h-32 w-32 border-4 border-primary mb-4 cursor-pointer transition-opacity group-hover:opacity-80"
+                  onClick={handleAvatarClick}
+                >
                   <AvatarImage asChild src={profile?.image || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'}>
                      <Image src={profile?.image || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'} width={128} height={128} data-ai-hint="user portrait" />
                   </AvatarImage>
                   <AvatarFallback className="text-4xl bg-muted">{profile?.name ? profile.name.split(' ').map(n=>n[0]).join('') : 'U'}</AvatarFallback>
                 </Avatar>
+
+                {/* Upload overlay */}
+                <div
+                  className="absolute inset-0 flex items-center justify-center rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ width: '128px', height: '128px', top: '0', left: '50%', transform: 'translateX(-50%)' }}
+                >
+                  <div className="bg-black/50 rounded-full w-full h-full flex items-center justify-center">
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-8 w-8 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-8 w-8 text-white" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Delete button - only show if user has an avatar */}
+                {profile?.image && (
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAvatarDelete();
+                    }}
+                    disabled={isUploadingAvatar}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                  disabled={isUploadingAvatar}
+                />
+              </div>
               <CardTitle className="text-2xl font-headline">{profile?.name || 'N/A'}</CardTitle>
               <CardDescription>{profile?.role}</CardDescription>
-              {/* <Button variant="outline" size="sm" className="mt-2">{t.pages.profile.changePhoto}</Button> */}{/* Photo change not implemented yet */}
+              <p className="text-xs text-muted-foreground mt-2">
+                Click on avatar to change photo
+              </p>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p><strong>{t.pages.profile.email}</strong> {profile?.email}</p>
@@ -244,7 +398,7 @@ export default function ProfilePage() {
                   <Label htmlFor="address">{t.pages.profile.addressLabel}</Label>
                   <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
                 </div>
-                
+
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-semibold text-foreground mb-2">{t.pages.profile.changePassword}</h3>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

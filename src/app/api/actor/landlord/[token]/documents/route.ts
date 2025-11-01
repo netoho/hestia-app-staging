@@ -75,7 +75,7 @@ export async function POST(
     const fileName = `landlords/${validation.landlord.id}/${documentType}-${Date.now()}-${file.name}`;
 
     const storage = getStorageProvider();
-    const uploadPath = await storage.upload({
+    const uploadPath = await storage.privateUpload({
       path: fileName,
       file: {
         buffer,
