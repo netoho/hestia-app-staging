@@ -14,24 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DocumentList } from '@/components/documents/DocumentList';
-import { Document } from '@/types/documents';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentValidationItem } from './DocumentValidationItem';
 import { DocumentValidationInfo } from '@/lib/services/reviewService';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 import {
   CheckCircle2,
   XCircle,
-  Eye,
-  Clock,
   AlertCircle,
-  RefreshCw,
   FileText,
-  User,
-  Calendar,
+  RefreshCw,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 interface ReviewDocumentCardProps {
   category: string;
@@ -54,21 +46,6 @@ export default function ReviewDocumentCard({
   const [isValidating, setIsValidating] = useState(false);
   const { downloadDocument } = useDocumentDownload();
 
-  // Map DocumentValidationInfo to Document format for DocumentList
-  const mappedDocuments: Document[] = useMemo(() => {
-    return documents.map(doc => ({
-      id: doc.documentId,
-      fileName: doc.fileName,
-      fileSize: 0, // Not available in validation info
-      documentType: doc.documentType,
-      category: doc.category as DocumentCategory,
-      createdAt: doc.createdAt,
-      s3Key: doc.s3Key || '',
-      s3Bucket: '',
-      policyId: policyId,
-      uploadedBy: doc.validatedBy || '',
-    }));
-  }, [documents, policyId]);
 
   // Group documents by status
   const documentsByStatus = useMemo(() => {
@@ -77,33 +54,6 @@ export default function ReviewDocumentCard({
     const pending = documents.filter(d => d.status === 'PENDING' || d.status === 'IN_REVIEW');
     return { approved, rejected, pending };
   }, [documents]);
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return CheckCircle2;
-      case 'REJECTED': return XCircle;
-      case 'IN_REVIEW': return Eye;
-      default: return Clock;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return 'text-green-600';
-      case 'REJECTED': return 'text-red-600';
-      case 'IN_REVIEW': return 'text-yellow-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return 'Aprobado';
-      case 'REJECTED': return 'Rechazado';
-      case 'IN_REVIEW': return 'En Revisión';
-      default: return 'Pendiente';
-    }
-  };
 
   const handleValidate = async (document: DocumentValidationInfo, status: 'APPROVED' | 'REJECTED') => {
     if (status === 'REJECTED' && !rejectionReason.trim()) {
@@ -182,91 +132,23 @@ export default function ReviewDocumentCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Document List */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <DocumentList
-              documents={mappedDocuments}
-              readOnly={true}
-              onDownload={handleDownload}
-              showEmptyState={documents.length === 0}
-              emptyMessage="No se han cargado documentos en esta categoría"
-            />
-          </div>
-
-          {/* Validation Controls for each document */}
-          {documents.length > 0 && (
+          {/* Documents with integrated validation controls */}
+          {documents.length > 0 ? (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">Control de Validación</h4>
-              {documents.map(doc => {
-                const StatusIcon = getStatusIcon(doc.status);
-                return (
-                  <div key={doc.documentId} className="flex items-center justify-between p-3 border rounded-lg bg-white">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <StatusIcon className={`h-4 w-4 ${getStatusColor(doc.status)}`} />
-                        <span className="font-medium text-sm">{doc.fileName}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {getStatusLabel(doc.status)}
-                        </Badge>
-                      </div>
-
-                      {/* Validation info */}
-                      {doc.validatedAt && (
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(doc.validatedAt), "d MMM yyyy", { locale: es })}
-                          </span>
-                          {doc.validatorName && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {doc.validatorName}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Rejection reason */}
-                      {doc.status === 'REJECTED' && doc.rejectionReason && (
-                        <Alert className="mt-2 py-2">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription className="text-xs">
-                            Razón de rechazo: {doc.rejectionReason}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-
-                    {/* Action buttons */}
-                    {doc.status !== 'APPROVED' && (
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          size="sm"
-                          className="bg-primary text-primary-foreground hover:bg-primary/90"
-                          onClick={() => handleValidate(doc, 'APPROVED')}
-                          disabled={isValidating}
-                        >
-                          {isValidating ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4" />
-                          )}
-                          <span className="ml-1 hidden sm:inline">Aprobar</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => openRejectDialog(doc)}
-                          disabled={isValidating}
-                        >
-                          <XCircle className="h-4 w-4" />
-                          <span className="ml-1 hidden sm:inline">Rechazar</span>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {documents.map(doc => (
+                <DocumentValidationItem
+                  key={doc.documentId}
+                  document={doc}
+                  onApprove={(document) => handleValidate(document, 'APPROVED')}
+                  onReject={openRejectDialog}
+                  onDownload={handleDownload}
+                  isValidating={isValidating}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="border rounded-lg p-8 bg-gray-50 text-center">
+              <p className="text-sm text-gray-500">No se han cargado documentos en esta categoría</p>
             </div>
           )}
         </CardContent>
