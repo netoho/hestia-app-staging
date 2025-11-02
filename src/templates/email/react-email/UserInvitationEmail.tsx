@@ -30,20 +30,20 @@ const rolePermissions = {
   ADMIN: [
     'Gestión completa de usuarios y roles',
     'Acceso total a todas las pólizas',
-    'Configuración del sistema',
-    'Reportes y análisis avanzados',
+    // 'Configuración del sistema',
+    // 'Reportes y análisis avanzados',
   ],
   STAFF: [
-    'Gestión de pólizas asignadas',
+    'Gestión de pólizas',
     'Revisión de documentación',
-    'Comunicación con actores',
+    // 'Comunicación con clientes',
     'Seguimiento de procesos',
   ],
   BROKER: [
     'Creación de nuevas pólizas',
     'Gestión de clientes propios',
-    'Seguimiento de comisiones',
-    'Acceso a herramientas de venta',
+    // 'Seguimiento de comisiones',
+    // 'Acceso a herramientas de venta',
   ],
 };
 
@@ -152,14 +152,6 @@ export const UserInvitationEmail: React.FC<UserInvitationEmailProps> = ({
               borderRadius: '8px',
               margin: '20px 0'
             }}>
-              <Heading style={{
-                margin: '0 0 12px 0',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: brandColors.primary
-              }}>
-                Tu rol: {roleDescription}
-              </Heading>
               <Text style={{
                 margin: '0 0 10px 0',
                 fontSize: '14px',
