@@ -3,6 +3,7 @@ import { PolicyStatus, GuarantorType, PropertyType, TenantType } from '@prisma/c
 import { PropertyDetailsService } from './PropertyDetailsService';
 
 interface CreatePolicyData {
+  policyNumber?: string; // Now custom policy number can be provided
   propertyAddress: string;
   propertyType?: PropertyType;
   propertyDescription?: string;
@@ -19,15 +20,24 @@ interface CreatePolicyData {
   createdById: string;
   landlord: {
     firstName: string;
-    lastName: string;
+    middleName?: string;
+    paternalLastName: string;
+    maternalLastName: string;
     email: string;
     phone?: string;
     rfc?: string;
+    // Company fields
+    isCompany?: boolean;
+    companyName?: string;
+    companyRfc?: string;
+    legalRepName?: string;
   };
   tenant: {
     tenantType?: TenantType;
     firstName?: string;
-    lastName?: string;
+    middleName?: string;
+    paternalLastName?: string;
+    maternalLastName?: string;
     companyName?: string;
     email: string;
     phone?: string;
@@ -35,13 +45,17 @@ interface CreatePolicyData {
   };
   jointObligors?: Array<{
     firstName: string;
-    lastName: string;
+    middleName?: string;
+    paternalLastName: string;
+    maternalLastName: string;
     email: string;
     phone?: string;
   }>;
   avals?: Array<{
     firstName: string;
-    lastName: string;
+    middleName?: string;
+    paternalLastName: string;
+    maternalLastName: string;
     email: string;
     phone?: string;
   }>;
@@ -76,9 +90,13 @@ interface CreatePolicyData {
 }
 
 export async function createPolicy(data: CreatePolicyData) {
-  const date = new Date();
-  const localDate = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-  const policyNumber = `POL-${localDate}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+  // Use provided policy number or generate a new one
+  let policyNumber = data.policyNumber;
+  if (!policyNumber) {
+    const date = new Date();
+    const localDate = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+    policyNumber = `POL-${localDate}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+  }
 
   // Extract property details from data
   const { propertyDetails, ...policyData } = data;
@@ -103,7 +121,17 @@ export async function createPolicy(data: CreatePolicyData) {
       landlords: {
         create: {
           isPrimary: true, // First landlord is always primary
-          fullName: `${policyData.landlord.firstName} ${policyData.landlord.lastName}`,
+          isCompany: policyData.landlord.isCompany || false,
+          // Personal fields
+          firstName: policyData.landlord.firstName,
+          middleName: policyData.landlord.middleName,
+          paternalLastName: policyData.landlord.paternalLastName,
+          maternalLastName: policyData.landlord.maternalLastName,
+          // Company fields
+          companyName: policyData.landlord.companyName,
+          companyRfc: policyData.landlord.companyRfc,
+          legalRepName: policyData.landlord.legalRepName,
+          // Contact
           email: policyData.landlord.email,
           phone: policyData.landlord.phone || '',
           rfc: policyData.landlord.rfc || '',
@@ -113,9 +141,12 @@ export async function createPolicy(data: CreatePolicyData) {
       tenant: {
         create: {
           tenantType: policyData.tenant.tenantType || 'INDIVIDUAL',
-          fullName: policyData.tenant.tenantType === 'COMPANY'
-            ? (policyData.tenant.companyName || '')
-            : `${policyData.tenant.firstName || ''} ${policyData.tenant.lastName || ''}`.trim(),
+          // Personal fields
+          firstName: policyData.tenant.firstName,
+          middleName: policyData.tenant.middleName,
+          paternalLastName: policyData.tenant.paternalLastName,
+          maternalLastName: policyData.tenant.maternalLastName,
+          // Company fields
           companyName: policyData.tenant.tenantType === 'COMPANY' ? policyData.tenant.companyName : undefined,
           email: policyData.tenant.email,
           phone: policyData.tenant.phone || '',
@@ -145,7 +176,10 @@ export async function createPolicy(data: CreatePolicyData) {
     await prisma.jointObligor.createMany({
       data: data.jointObligors.map((jo) => ({
         policyId: policy.id,
-        fullName: `${jo.firstName} ${jo.lastName}`,
+        firstName: jo.firstName,
+        middleName: jo.middleName || null,
+        paternalLastName: jo.paternalLastName,
+        maternalLastName: jo.maternalLastName,
         email: jo.email,
         phone: jo.phone || '',
         nationality: 'MEXICAN',
@@ -164,7 +198,10 @@ export async function createPolicy(data: CreatePolicyData) {
     await prisma.aval.createMany({
       data: data.avals.map((aval) => ({
         policyId: policy.id,
-        fullName: `${aval.firstName} ${aval.lastName}`,
+        firstName: aval.firstName,
+        middleName: aval.middleName || null,
+        paternalLastName: aval.paternalLastName,
+        maternalLastName: aval.maternalLastName,
         email: aval.email,
         phone: aval.phone || '',
         nationality: 'MEXICAN',

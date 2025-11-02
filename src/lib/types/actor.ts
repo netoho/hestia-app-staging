@@ -155,6 +155,7 @@ export interface PropertyDetails {
   // Rules and inventory
   hasInventory?: boolean;
   hasRules?: boolean;
+  rulesType?: 'condominios' | 'colonos';
   petsAllowed?: boolean;
 
   // Important dates

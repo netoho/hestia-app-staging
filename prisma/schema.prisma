@@ -221,10 +221,14 @@ model PropertyDetails {
   // Additional Property Info
   hasInventory      Boolean     @default(false)
   hasRules          Boolean     @default(false)
+  rulesType         RulesType?  // Type of rules (Condominios or Colonos)
   petsAllowed       Boolean     @default(false)
   propertyDeliveryDate DateTime?
   contractSigningDate DateTime?
-  contractSigningLocation String?
+
+  // Contract Signing Location (structured address)
+  contractSigningAddressId String? @unique
+  contractSigningAddressDetails PropertyAddress? @relation("ContractSigningAddress", fields: [contractSigningAddressId], references: [id])
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -243,7 +247,10 @@ model Landlord {
   isCompany         Boolean     @default(false)
 
   // Personal Information (for individuals)
-  fullName          String?     // Name for individual, company name for company
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   rfc               String?
   curp              String?
 
@@ -322,7 +329,10 @@ model Tenant {
   tenantType        TenantType  @default(INDIVIDUAL)
 
   // Individual Information
-  fullName          String?
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   nationality       NationalityType?
   curp              String?
   rfc               String?
@@ -415,7 +425,10 @@ model JointObligor {
   isCompany         Boolean     @default(false)
 
   // Personal Information (for individuals)
-  fullName          String?
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   nationality       NationalityType?
   curp              String?
   rfc               String?
@@ -517,7 +530,10 @@ model Aval {
   isCompany         Boolean     @default(false)
 
   // Personal Information (for individuals)
-  fullName          String?
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   nationality       NationalityType?
   curp              String?
   rfc               String?
@@ -609,7 +625,10 @@ model Aval {
 model PersonalReference {
   id                String      @id @default(cuid())
 
-  name              String
+  firstName         String      // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String      // Father's last name
+  maternalLastName  String      // Mother's last name
   phone             String
   homePhone         String?
   cellPhone         String?
@@ -637,7 +656,10 @@ model CommercialReference {
   id                String      @id @default(cuid())
 
   companyName       String
-  contactName       String
+  contactFirstName  String      // Contact first name
+  contactMiddleName String?     // Contact middle name (optional)
+  contactPaternalLastName String  // Contact father's last name
+  contactMaternalLastName String  // Contact mother's last name
   phone             String
   email             String?
   relationship      String      // supplier, client, partner, etc.
@@ -682,6 +704,7 @@ model PropertyAddress {
 
   // Relations
   propertyDetails   PropertyDetails? // New relation to PropertyDetails
+  contractSigningPropertyDetails PropertyDetails? @relation("ContractSigningAddress")
   landlord          Landlord?   @relation("LandlordAddress")
   tenant            Tenant?     @relation("TenantAddress")
   tenantEmployer    Tenant?     @relation("TenantEmployerAddress")
@@ -1132,4 +1155,9 @@ enum ValidationStatus {
   APPROVED
   REJECTED
   IN_REVIEW
+}
+
+enum RulesType {
+  CONDOMINIOS
+  COLONOS
 }
