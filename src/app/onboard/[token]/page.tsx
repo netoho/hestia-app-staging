@@ -155,9 +155,7 @@ export default function OnboardingPage() {
       });
 
       // Redirect to profile page
-      setTimeout(() => {
-        router.push('/dashboard/profile');
-      }, 1500);
+      router.push('/dashboard/profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

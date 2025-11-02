@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { currentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
-import { createSafeS3Key } from '@/lib/utils/filename';
+import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
 import prisma from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
+
+// Current storage provider (e.g., S3)
+const currentStorageProvider = getCurrentStorageProvider();
 
 // Maximum file size: 20MB
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 5MB' },
+        { error: 'File too large. Maximum size is 20MB' },
         { status: 400 }
       );
     }

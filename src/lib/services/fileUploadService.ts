@@ -80,7 +80,7 @@ export async function uploadActorDocument(
     const s3Key = generateS3Key(policyNumber, actorType, actorId, file.originalName);
 
     // Upload to S3
-    const uploadPath = await s3Provider.privateUpload({
+    await s3Provider.privateUpload({
       path: s3Key,
       file: {
         buffer: file.buffer,
@@ -487,4 +487,13 @@ export function getPublicDownloadUrl(path: string): string {
   return s3Provider.getPublicUrl(path);
 }
 
-export const currentStorageProvider = s3Provider!;
+/**
+ * Get the current storage provider, or throw if not configured.
+ */
+export function getCurrentStorageProvider(): S3StorageProvider {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured');
+  }
+  return s3Provider;
+}
+

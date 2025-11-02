@@ -76,17 +76,6 @@ export class S3StorageProvider implements StorageProvider {
     const acl = isPrivate ? 'private' : 'public-read';
     const bucket = isPrivate ? this.bucket : this.publicBucket;
 
-
-    console.log({
-      Bucket: bucket,
-      Key: options.path,
-      Body: options.file.buffer,
-      ContentType: options.contentType || options.file.mimeType,
-      Metadata: sanitizedMetadata,
-      // Private by default - no public access
-      ACL: acl,
-    })
-
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: options.path,
