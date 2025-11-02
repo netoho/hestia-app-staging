@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { currentStorageProvider } from '@/lib/services/fileUploadService';
+import { currentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
 import { createSafeS3Key } from '@/lib/utils/filename';
 import prisma from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     // Upload to S3
-    const uploadedUrl = await currentStorageProvider.publicUpload({
+    const uploadedPath = await currentStorageProvider.publicUpload({
       path: s3Key,
       file: {
         buffer,
@@ -85,9 +85,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!uploadedUrl) {
+    if (!uploadedPath) {
       throw new Error('Failed to upload file to storage');
     }
+
+    // Get the full public URL for the uploaded file
+    const uploadedUrl = getPublicDownloadUrl(uploadedPath);
 
     // Get the old avatar URL to potentially delete it
     const currentUser = await prisma.user.findUnique({
@@ -108,12 +111,21 @@ export async function POST(request: NextRequest) {
     });
 
     // Optionally delete old avatar from S3 (if it exists and is an S3 URL)
-    if (currentUser?.image && currentUser.image.includes('amazonaws.com')) {
+    if (currentUser?.image) {
       try {
-        // Extract S3 key from URL
-        const url = new URL(currentUser.image);
-        const oldKey = url.pathname.substring(1); // Remove leading slash
-        if (oldKey.startsWith('avatars/')) {
+        let oldKey: string | null = null;
+
+        // Check if it's a full URL or just a path
+        if (currentUser.image.includes('amazonaws.com')) {
+          // It's a full URL, extract the key
+          const url = new URL(currentUser.image);
+          oldKey = url.pathname.substring(1); // Remove leading slash
+        } else if (currentUser.image.startsWith('avatars/')) {
+          // It's already just the S3 key
+          oldKey = currentUser.image;
+        }
+
+        if (oldKey && oldKey.startsWith('avatars/')) {
           await currentStorageProvider.delete(oldKey);
         }
       } catch (error) {
@@ -205,18 +217,26 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete from S3 if it's an S3 URL
-    if (user.image.includes('amazonaws.com')) {
-      try {
+    // Delete from S3
+    try {
+      let key: string | null = null;
+
+      // Check if it's a full URL or just a path
+      if (user.image.includes('amazonaws.com')) {
+        // It's a full URL, extract the key
         const url = new URL(user.image);
-        const key = url.pathname.substring(1); // Remove leading slash
-        if (key.startsWith('avatars/')) {
-          await currentStorageProvider.delete(key);
-        }
-      } catch (error) {
-        console.error('Failed to delete avatar from S3:', error);
-        // Continue even if S3 deletion fails
+        key = url.pathname.substring(1); // Remove leading slash
+      } else if (user.image.startsWith('avatars/')) {
+        // It's already just the S3 key
+        key = user.image;
       }
+
+      if (key && key.startsWith('avatars/')) {
+        await currentStorageProvider.delete(key);
+      }
+    } catch (error) {
+      console.error('Failed to delete avatar from S3:', error);
+      // Continue even if S3 deletion fails
     }
 
     // Clear avatar URL in database

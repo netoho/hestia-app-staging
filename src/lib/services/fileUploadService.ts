@@ -474,4 +474,17 @@ export async function validatePolicyDocuments(
   };
 }
 
+/**
+ * Get public URL for a file stored in public storage
+ * @param path The storage path/key of the file
+ * @returns The full public URL to access the file
+ */
+export function getPublicDownloadUrl(path: string): string {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured');
+  }
+
+  return s3Provider.getPublicUrl(path);
+}
+
 export const currentStorageProvider = s3Provider!;

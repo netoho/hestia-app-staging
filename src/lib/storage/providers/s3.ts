@@ -25,6 +25,7 @@ export class S3StorageProvider implements StorageProvider {
   private client: S3Client;
   private bucket: string;
   private publicBucket: string;
+  private region: string;
 
   constructor(config: {
     bucket: string;
@@ -36,6 +37,7 @@ export class S3StorageProvider implements StorageProvider {
   }) {
     this.bucket = config.bucket;
     this.publicBucket = config.publicBucket;
+    this.region = config.region;
     this.client = new S3Client({
       region: config.region,
       credentials: {
@@ -245,5 +247,11 @@ export class S3StorageProvider implements StorageProvider {
       console.error('Error listing files from S3:', error);
       return [];
     }
+  }
+
+  getPublicUrl(path: string): string {
+    // Construct the public S3 URL
+    // Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+    return `https://${this.publicBucket}.s3.${this.region}.amazonaws.com/${path}`;
   }
 }
