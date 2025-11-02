@@ -98,7 +98,8 @@ export const getUsers = async (options: GetUsersOptions = {}): Promise<GetUsersR
 };
 
 export const createUser = async (userData: CreateUserData): Promise<User> => {
-  const hashedPassword = userData.password ? await hashPassword(userData.password) : 'temp-password';
+  // Create user without password if not provided (for invitation flow)
+  const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
 
   const newUser = await prisma.user.create({
     data: {
@@ -106,6 +107,7 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
       name: userData.name,
       password: hashedPassword,
       role: (userData.role || 'STAFF') as 'ADMIN' | 'STAFF' | 'BROKER',
+      isActive: true,
     },
   });
 

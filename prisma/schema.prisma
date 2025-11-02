@@ -28,6 +28,11 @@ model User {
   address       String?
   isActive      Boolean         @default(true)
 
+  // Invitation fields
+  invitationToken       String?   @unique
+  invitationTokenExpiry DateTime?
+  passwordSetAt         DateTime?
+
   // Relations
   accounts      Account[]
   sessions      Session[]

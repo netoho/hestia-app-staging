@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, hashPassword, verifyAuth } from '@/lib/auth';
 import { getUsers, createUser } from '@/lib/services/userService';
+import { generateInvitationToken } from '@/lib/services/userTokenService';
+import { sendUserInvitation } from '@/lib/services/emailService';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 
 const createUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1, 'Name is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['BROKER', 'ADMIN', 'STAFF']),
 });
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, name, password, role } = validation.data;
+    const { email, name, role } = validation.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -41,14 +42,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
 
+    // Create user without password - they'll set it via invitation
     const newUser = await createUser({
       email,
       name,
-      password,
-      role
+      role,
+      // No password provided - user will set it through invitation
     });
 
-    return NextResponse.json(newUser, { status: 201 });
+    // Generate invitation token
+    const token = await generateInvitationToken(newUser.id);
+
+    // Get the app URL
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const invitationUrl = `${appUrl}/onboard/${token}`;
+
+    // Calculate expiry date (7 days from now)
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7);
+
+    // Send invitation email
+    const emailSent = await sendUserInvitation({
+      email: newUser.email!,
+      name: newUser.name || undefined,
+      role: newUser.role as 'ADMIN' | 'STAFF' | 'BROKER',
+      invitationUrl,
+      expiryDate,
+      inviterName: authResult.user.name || undefined,
+    });
+
+    if (!emailSent) {
+      console.error('Failed to send invitation email to:', newUser.email);
+      // Don't fail the request, user can resend invitation later
+    }
+
+    return NextResponse.json({
+      ...newUser,
+      invitationSent: emailSent,
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Failed to create user:', error);

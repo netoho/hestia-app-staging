@@ -42,7 +42,7 @@ interface PolicyData {
   policyNumber: string;
   propertyAddress: string;
   status: string;
-  landlord?: LandlordData;
+  landlords?: LandlordData[];
 }
 
 export default function LandlordInformationPage({
@@ -98,11 +98,12 @@ export default function LandlordInformationPage({
       const data = await response.json();
       setPolicy(data);
 
-      // If landlord data exists, populate the form
-      if (data.landlord) {
+      // If landlord data exists, populate the form with primary landlord
+      const primaryLandlord = data.landlords?.find(l => l.isPrimary) || data.landlords?.[0];
+      if (primaryLandlord) {
         setFormData({
           ...formData,
-          ...data.landlord,
+          ...primaryLandlord,
         });
       }
     } catch (error) {

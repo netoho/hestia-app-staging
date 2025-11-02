@@ -42,7 +42,11 @@ export interface StorageProvider {
   /**
    * Upload a file to storage
    */
-  upload(options: StorageUploadOptions): Promise<string>;
+  upload(options: StorageUploadOptions, isPrivate: boolean): Promise<string>;
+
+  publicUpload(options: StorageUploadOptions): Promise<string>;
+
+  privateUpload(options: StorageUploadOptions): Promise<string>;
 
   /**
    * Download a file from storage
@@ -73,6 +77,13 @@ export interface StorageProvider {
    * List files in a directory
    */
   list(prefix: string): Promise<string[]>;
+
+  /**
+   * Get the public URL for a file (only for public files)
+   * @param path The storage path/key of the file
+   * @returns The full public URL to access the file
+   */
+  getPublicUrl(path: string): string;
 }
 
 export type StorageProviderType = 's3' | 'firebase' | 'local';
@@ -81,6 +92,7 @@ export interface StorageConfig {
   provider: StorageProviderType;
   s3?: {
     bucket: string;
+    publicBucket: string;
     region: string;
     accessKeyId: string;
     secretAccessKey: string;

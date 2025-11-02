@@ -240,7 +240,7 @@ export async function PUT(
       const policy = await prisma.policy.findUnique({
         where: { id },
         include: {
-          landlord: true,
+          landlords: true,
           tenant: true,
           jointObligors: true,
           avals: true,
@@ -250,8 +250,8 @@ export async function PUT(
       if (policy) {
         let allActorsComplete = true;
 
-        // Check landlord
-        if (!policy.landlord?.informationComplete) {
+        // Check all landlords
+        if (policy.landlords.some(landlord => !landlord.informationComplete)) {
           allActorsComplete = false;
         }
 

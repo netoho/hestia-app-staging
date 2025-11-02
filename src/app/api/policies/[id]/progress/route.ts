@@ -22,7 +22,7 @@ export async function GET(
     const policy = await prisma.policy.findUnique({
       where: { id },
       include: {
-        landlord: {
+        landlords: {
           include: {
             documents: true,
           },
@@ -81,21 +81,24 @@ export async function GET(
     // Build actor progress data
     const actors = [];
 
-    // Add landlord
-    if (policy.landlord) {
-      actors.push({
-        id: policy.landlord.id,
-        type: 'landlord',
-        name: policy.landlord.fullName,
-        email: policy.landlord.email,
-        phone: policy.landlord.phone,
-        informationComplete: policy.landlord.informationComplete,
-        completedAt: policy.landlord.completedAt?.toISOString(),
-        documentsCount: policy.landlord.documents.length,
-        requiredDocuments: 2, // ID and address proof
+    // Add landlords
+    if (policy.landlords && policy.landlords.length > 0) {
+      policy.landlords.forEach((landlord, index) => {
+        actors.push({
+          id: landlord.id,
+          type: 'landlord',
+          name: landlord.fullName,
+          email: landlord.email,
+          phone: landlord.phone,
+          informationComplete: landlord.informationComplete,
+          completedAt: landlord.completedAt?.toISOString(),
+          documentsCount: landlord.documents.length,
+          requiredDocuments: 2, // ID and address proof
+          isPrimary: landlord.isPrimary,
+        });
       });
     } else {
-      // Landlord not created yet
+      // No landlords created yet
       actors.push({
         id: 'landlord-pending',
         type: 'landlord',

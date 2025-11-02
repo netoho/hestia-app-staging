@@ -9,7 +9,8 @@ let s3Provider: S3StorageProvider | null = null;
 
 if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
   s3Provider = new S3StorageProvider({
-    bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
+    bucket: process.env.AWS_S3_BUCKET || 'hestia-files',
+    publicBucket: process.env.AWS_PUBLIC_S3_BUCKET || 'public-hestia-files',
     region: process.env.AWS_REGION || 'us-east-1',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -79,7 +80,7 @@ export async function uploadActorDocument(
     const s3Key = generateS3Key(policyNumber, actorType, actorId, file.originalName);
 
     // Upload to S3
-    const uploadPath = await s3Provider.upload({
+    await s3Provider.privateUpload({
       path: s3Key,
       file: {
         buffer: file.buffer,
@@ -157,7 +158,7 @@ export async function uploadPolicyDocument(
     const s3Key = `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}-${baseName}.${ext}`;
 
     // Upload to S3
-    await s3Provider.upload({
+    await s3Provider.privateUpload({
       path: s3Key,
       file: {
         buffer: file.buffer,
@@ -170,7 +171,7 @@ export async function uploadPolicyDocument(
         policyId,
         category,
         uploadedBy,
-        version: version?.toString(),
+        version: version!.toString(),
       },
     });
 
@@ -377,30 +378,6 @@ export function validateFile(
 }
 
 /**
- * Upload a single file (simplified wrapper)
- */
-export async function uploadFile(
-  file: UploadedFile,
-  path: string,
-  metadata?: Record<string, string>
-): Promise<string> {
-  if (!s3Provider) {
-    throw new Error('Storage provider not configured. Please check AWS credentials.');
-  }
-
-  return s3Provider.upload({
-    path,
-    file: {
-      buffer: file.buffer,
-      originalName: file.originalName,
-      mimeType: file.mimeType,
-    },
-    contentType: file.mimeType,
-    metadata,
-  });
-}
-
-/**
  * Get signed download URL (alias for getDocumentDownloadUrl)
  */
 export async function getSignedDownloadUrl(
@@ -496,3 +473,27 @@ export async function validatePolicyDocuments(
     missing: [...new Set(missing)], // Remove duplicates
   };
 }
+
+/**
+ * Get public URL for a file stored in public storage
+ * @param path The storage path/key of the file
+ * @returns The full public URL to access the file
+ */
+export function getPublicDownloadUrl(path: string): string {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured');
+  }
+
+  return s3Provider.getPublicUrl(path);
+}
+
+/**
+ * Get the current storage provider, or throw if not configured.
+ */
+export function getCurrentStorageProvider(): S3StorageProvider {
+  if (!s3Provider) {
+    throw new Error('Storage provider not configured');
+  }
+  return s3Provider;
+}
+

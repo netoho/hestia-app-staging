@@ -151,7 +151,7 @@ async function checkAndUpdatePolicyStatus(policyId: string) {
     const policy = await prisma.policy.findUnique({
       where: { id: policyId },
       include: {
-        landlord: true,
+        landlords: true,
         tenant: true,
         jointObligors: true,
         avals: true,
@@ -161,7 +161,9 @@ async function checkAndUpdatePolicyStatus(policyId: string) {
     if (!policy) return;
 
     // Check if all actors are approved
-    const landlordApproved = policy.landlord?.verificationStatus === ActorVerificationStatus.APPROVED;
+    const landlordsApproved =
+      policy.landlords.length > 0 &&
+      policy.landlords.every(l => l.verificationStatus === ActorVerificationStatus.APPROVED);
     const tenantApproved = policy.tenant?.verificationStatus === ActorVerificationStatus.APPROVED;
 
     const jointObligorsApproved =
@@ -172,7 +174,7 @@ async function checkAndUpdatePolicyStatus(policyId: string) {
       !policy.avals.length ||
       policy.avals.every(a => a.verificationStatus === ActorVerificationStatus.APPROVED);
 
-    const allActorsApproved = landlordApproved && tenantApproved &&
+    const allActorsApproved = landlordsApproved && tenantApproved &&
                               jointObligorsApproved && avalsApproved;
 
     // Update policy status if all actors are approved and current status is appropriate

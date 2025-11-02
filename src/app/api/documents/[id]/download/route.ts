@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/auth-config';
 import prisma from '@/lib/prisma';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { encodeFilenameForHeaders } from '@/lib/utils/filename';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -123,10 +124,16 @@ export async function GET(
     }
 
     // Generate signed URL with 30 seconds expiration
+    // Use proper RFC 5987 encoding for filename
+    const encodedFilename = encodeFilenameForHeaders(fileName);
+    const contentDisposition = encodedFilename.startsWith('UTF-8\'\'')
+      ? `attachment; filename*=${encodedFilename}`
+      : `attachment; filename="${encodedFilename}"`;
+
     const command = new GetObjectCommand({
       Bucket: s3Bucket,
       Key: s3Key,
-      ResponseContentDisposition: `attachment; filename="${encodeURIComponent(fileName)}"`,
+      ResponseContentDisposition: contentDisposition,
     });
 
     const signedUrl = await getSignedUrl(s3Client, command, {

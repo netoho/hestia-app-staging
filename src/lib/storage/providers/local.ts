@@ -132,4 +132,11 @@ export class LocalStorageProvider implements StorageProvider {
   clear(): void {
     this.files.clear();
   }
+
+  getPublicUrl(path: string): string {
+    // For local development, return a placeholder URL
+    // In a real implementation, this might serve files via an API endpoint
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    return `${baseUrl}/api/storage/public/${path}`;
+  }
 }
