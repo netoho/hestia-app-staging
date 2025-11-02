@@ -12,9 +12,9 @@
     "start": "bun run --bun next start",
     "lint": "bun run --bun next lint",
     "typecheck": "bun run --bun tsc --noEmit",
-    "db:seed": "bun run --bun prisma db seed",
+    "db:seed": "bun run prisma db seed",
     "db:setup": "./scripts/setup-database.sh",
-    "db:reset": "bun run --bun prisma db push --force-reset && bun run --bun db:seed",
+    "db:reset": "bun run --bun prisma db push --force-reset",
     "postinstall": "bun run --bun prisma generate --no-engine",
     "postinstall:postgres": "bun run --bun prisma generate"
   },
