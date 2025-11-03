@@ -16,7 +16,10 @@ import {
 // Person actor schema (extends base)
 export const personActorSchema = baseActorSchema.extend({
   isCompany: z.literal(false),
-  fullName: z.string().min(1, 'El nombre completo es requerido'),
+  firstName: z.string().min(1, 'El nombre es requerido'),
+  middleName: nullableString(),
+  paternalLastName: z.string().min(1, 'El apellido paterno es requerido'),
+  maternalLastName: z.string().min(1, 'El apellido materno es requerido'),
   rfc: optionalRfcSchema,
   curp: optionalCurpSchema,
 
@@ -33,7 +36,10 @@ export const personActorSchema = baseActorSchema.extend({
 // Partial person schema for updates
 export const partialPersonActorSchema = partialBaseActorSchema.extend({
   isCompany: z.literal(false),
-  fullName: z.string().optional(),
+  firstName: z.string().optional(),
+  middleName: nullableString(),
+  paternalLastName: z.string().optional(),
+  maternalLastName: z.string().optional(),
   rfc: optionalRfcSchema,
   curp: optionalCurpSchema,
 

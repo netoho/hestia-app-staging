@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { jointObligorSchema, personalReferenceSchema } from '@/lib/validations/policy';
 import { z } from 'zod';
+import { formatFullName } from '@/lib/utils/names';
 
 export async function GET(
   req: NextRequest,
@@ -174,20 +175,43 @@ export async function PUT(
     const updatedJointObligor = await prisma.jointObligor.update({
       where: { id: actorId },
       data: {
-        fullName: jointObligorData.fullName,
-        email: jointObligorData.email,
-        phone: jointObligorData.phone,
+        // Personal information for individuals
+        firstName: jointObligorData.firstName || null,
+        middleName: jointObligorData.middleName || null,
+        paternalLastName: jointObligorData.paternalLastName || null,
+        maternalLastName: jointObligorData.maternalLastName || null,
         nationality: jointObligorData.nationality,
         curp: jointObligorData.curp || null,
         rfc: jointObligorData.rfc || null,
         passport: jointObligorData.passport || null,
+
+        // Company information
+        isCompany: jointObligorData.isCompany || false,
+        companyName: jointObligorData.companyName || null,
+        companyRfc: jointObligorData.companyRfc || null,
+
+        // Legal representative information for companies
+        legalRepFirstName: jointObligorData.legalRepFirstName || null,
+        legalRepMiddleName: jointObligorData.legalRepMiddleName || null,
+        legalRepPaternalLastName: jointObligorData.legalRepPaternalLastName || null,
+        legalRepMaternalLastName: jointObligorData.legalRepMaternalLastName || null,
+        legalRepPosition: jointObligorData.legalRepPosition || null,
+        legalRepRfc: jointObligorData.legalRepRfc || null,
+        legalRepPhone: jointObligorData.legalRepPhone || null,
+        legalRepEmail: jointObligorData.legalRepEmail || null,
+
+        // Contact and employment
+        email: jointObligorData.email,
+        phone: jointObligorData.phone,
         address: jointObligorData.address || null,
         employmentStatus: jointObligorData.employmentStatus,
         occupation: jointObligorData.occupation,
-        companyName: jointObligorData.companyName,
+        employerName: jointObligorData.employerName || null,
         position: jointObligorData.position,
         monthlyIncome: jointObligorData.monthlyIncome,
         incomeSource: jointObligorData.incomeSource,
+
+        // Status
         informationComplete: jointObligorData.informationComplete || false,
         completedAt: jointObligorData.informationComplete ? new Date() : null,
         additionalInfo: jointObligorData.additionalInfo || null,
@@ -222,7 +246,13 @@ export async function PUT(
       performedById: user.id,
       details: {
         jointObligorId: actorId,
-        jointObligorName: updatedJointObligor.fullName,
+        jointObligorName: updatedJointObligor.companyName ||
+          (updatedJointObligor.firstName ? formatFullName(
+            updatedJointObligor.firstName,
+            updatedJointObligor.paternalLastName || '',
+            updatedJointObligor.maternalLastName || '',
+            updatedJointObligor.middleName || undefined
+          ) : ''),
         informationComplete: updatedJointObligor.informationComplete,
         updatedBy: user.email,
       },
@@ -349,7 +379,13 @@ export async function DELETE(
       performedById: user.id,
       details: {
         jointObligorId: actorId,
-        jointObligorName: jointObligor.fullName,
+        jointObligorName: jointObligor.companyName ||
+          (jointObligor.firstName ? formatFullName(
+            jointObligor.firstName,
+            jointObligor.paternalLastName || '',
+            jointObligor.maternalLastName || '',
+            jointObligor.middleName || undefined
+          ) : ''),
       },
       ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
     });

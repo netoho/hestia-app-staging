@@ -6,9 +6,9 @@
  * Formats a full name from individual parts
  */
 export function formatFullName(
-  firstName: string,
-  paternalLastName: string,
-  maternalLastName: string,
+  firstName?: string,
+  paternalLastName?: string,
+  maternalLastName?: string,
   middleName?: string
 ): string {
   const parts = [

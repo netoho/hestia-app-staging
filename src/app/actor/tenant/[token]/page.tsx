@@ -51,7 +51,7 @@ export default function TenantPortalPage() {
 
   const validateToken = async () => {
     try {
-      const response = await fetch(`/api/actor/tenant/${token}/validate`);
+      const response = await fetch(`/api/actors/tenant/${token}`);
       const data = await response.json();
 
       if (!response.ok) {

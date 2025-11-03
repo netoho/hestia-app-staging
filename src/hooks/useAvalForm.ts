@@ -8,7 +8,10 @@ export interface AvalFormData {
   isCompany: boolean;
 
   // Individual Information
-  fullName?: string;
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
   nationality?: 'MEXICAN' | 'FOREIGN';
   curp?: string;
   rfc?: string;
@@ -18,7 +21,12 @@ export interface AvalFormData {
   // Company Information
   companyName?: string;
   companyRfc?: string;
-  legalRepName?: string;
+
+  // Legal Representative Information (for companies)
+  legalRepFirstName?: string;
+  legalRepMiddleName?: string;
+  legalRepPaternalLastName?: string;
+  legalRepMaternalLastName?: string;
   legalRepId?: string;
   legalRepPosition?: string;
   legalRepRfc?: string;
@@ -91,8 +99,14 @@ export function useAvalForm(initialData: Partial<AvalFormData> = {}, isAdminEdit
 
     if (!formData.isCompany) {
       // Individual validation
-      if (!formData.fullName) {
-        newErrors.fullName = 'Nombre completo es requerido';
+      if (!formData.firstName) {
+        newErrors.firstName = 'Nombre es requerido';
+      }
+      if (!formData.paternalLastName) {
+        newErrors.paternalLastName = 'Apellido paterno es requerido';
+      }
+      if (!formData.maternalLastName) {
+        newErrors.maternalLastName = 'Apellido materno es requerido';
       }
       if (formData.nationality === 'MEXICAN' && !formData.curp) {
         newErrors.curp = 'CURP es requerido para ciudadanos mexicanos';
@@ -108,8 +122,14 @@ export function useAvalForm(initialData: Partial<AvalFormData> = {}, isAdminEdit
       if (!formData.companyRfc) {
         newErrors.companyRfc = 'RFC de la empresa es requerido';
       }
-      if (!formData.legalRepName) {
-        newErrors.legalRepName = 'Nombre del representante es requerido';
+      if (!formData.legalRepFirstName) {
+        newErrors.legalRepFirstName = 'Nombre del representante es requerido';
+      }
+      if (!formData.legalRepPaternalLastName) {
+        newErrors.legalRepPaternalLastName = 'Apellido paterno del representante es requerido';
+      }
+      if (!formData.legalRepMaternalLastName) {
+        newErrors.legalRepMaternalLastName = 'Apellido materno del representante es requerido';
       }
     }
 
@@ -198,9 +218,8 @@ export function useAvalForm(initialData: Partial<AvalFormData> = {}, isAdminEdit
         partial: true,
       };
 
-      const submitUrl = isAdminEdit
-        ? `/api/admin/actors/aval/${token}/submit`
-        : `/api/actor/aval/${token}/submit`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const submitUrl = `/api/actors/aval/${token}`;
 
       const response = await fetch(submitUrl, {
         method: 'PUT',

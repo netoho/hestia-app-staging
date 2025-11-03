@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
 import { PersonActorData } from '@/lib/types/actor';
+import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
 
 interface PersonInformationProps {
   data: Partial<PersonActorData>;
@@ -20,7 +21,7 @@ export default function PersonInformation({
   onChange,
   errors = {},
   disabled = false,
-  requiredFields = ['fullName', 'email', 'phone'],
+  requiredFields = ['firstName', 'paternalLastName', 'maternalLastName', 'email', 'phone'],
   showEmploymentInfo = false,
   showAdditionalContact = false,
 }: PersonInformationProps) {
@@ -28,24 +29,24 @@ export default function PersonInformation({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Full Name */}
-        <div className="md:col-span-2">
-          <Label htmlFor="fullName">
-            Nombre Completo {isRequired('fullName') && '*'}
-          </Label>
-          <Input
-            id="fullName"
-            value={data.fullName || ''}
-            onChange={(e) => onChange('fullName', e.target.value)}
-            placeholder="Nombre(s) y Apellidos"
-            className={errors.fullName ? 'border-red-500' : ''}
-            disabled={disabled}
-            required={isRequired('fullName')}
-          />
-          <FieldError error={errors.fullName} />
-        </div>
+      {/* Name Fields */}
+      <PersonNameFields
+        firstName={data.firstName || ''}
+        middleName={data.middleName || ''}
+        paternalLastName={data.paternalLastName || ''}
+        maternalLastName={data.maternalLastName || ''}
+        onChange={(field, value) => onChange(field as keyof PersonActorData, value)}
+        required={requiredFields.includes('firstName')}
+        disabled={disabled}
+        errors={{
+          firstName: errors.firstName,
+          middleName: errors.middleName,
+          paternalLastName: errors.paternalLastName,
+          maternalLastName: errors.maternalLastName,
+        }}
+      />
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Email */}
         <div>
           <Label htmlFor="email">

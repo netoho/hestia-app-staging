@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { avalSchema, personalReferenceSchema } from '@/lib/validations/policy';
 import { z } from 'zod';
+import { formatFullName } from '@/lib/utils/names';
 
 export async function GET(
   req: NextRequest,
@@ -174,24 +175,51 @@ export async function PUT(
     const updatedAval = await prisma.aval.update({
       where: { id: actorId },
       data: {
-        fullName: avalData.fullName,
-        email: avalData.email,
-        phone: avalData.phone,
+        // Personal information for individuals
+        firstName: avalData.firstName || null,
+        middleName: avalData.middleName || null,
+        paternalLastName: avalData.paternalLastName || null,
+        maternalLastName: avalData.maternalLastName || null,
         nationality: avalData.nationality,
         curp: avalData.curp || null,
         rfc: avalData.rfc || null,
         passport: avalData.passport || null,
+
+        // Company information
+        isCompany: avalData.isCompany || false,
+        companyName: avalData.companyName || null,
+        companyRfc: avalData.companyRfc || null,
+
+        // Legal representative information for companies
+        legalRepFirstName: avalData.legalRepFirstName || null,
+        legalRepMiddleName: avalData.legalRepMiddleName || null,
+        legalRepPaternalLastName: avalData.legalRepPaternalLastName || null,
+        legalRepMaternalLastName: avalData.legalRepMaternalLastName || null,
+        legalRepPosition: avalData.legalRepPosition || null,
+        legalRepRfc: avalData.legalRepRfc || null,
+        legalRepPhone: avalData.legalRepPhone || null,
+        legalRepEmail: avalData.legalRepEmail || null,
+
+        // Contact information
+        email: avalData.email,
+        phone: avalData.phone,
         address: avalData.address || null,
+
+        // Employment information
         employmentStatus: avalData.employmentStatus,
         occupation: avalData.occupation,
-        companyName: avalData.companyName,
+        employerName: avalData.employerName || null,
         position: avalData.position,
         monthlyIncome: avalData.monthlyIncome,
         incomeSource: avalData.incomeSource,
+
+        // Property information
         propertyAddress: avalData.propertyAddress,
         propertyValue: avalData.propertyValue,
         propertyDeedNumber: avalData.propertyDeedNumber || null,
         propertyRegistry: avalData.propertyRegistry || null,
+
+        // Status
         informationComplete: avalData.informationComplete || false,
         completedAt: avalData.informationComplete ? new Date() : null,
         additionalInfo: avalData.additionalInfo || null,
@@ -226,7 +254,13 @@ export async function PUT(
       performedById: user.id,
       details: {
         avalId: actorId,
-        avalName: updatedAval.fullName,
+        avalName: updatedAval.companyName ||
+          (updatedAval.firstName ? formatFullName(
+            updatedAval.firstName,
+            updatedAval.paternalLastName || '',
+            updatedAval.maternalLastName || '',
+            updatedAval.middleName || undefined
+          ) : ''),
         propertyAddress: updatedAval.propertyAddress,
         informationComplete: updatedAval.informationComplete,
         updatedBy: user.email,
@@ -354,7 +388,13 @@ export async function DELETE(
       performedById: user.id,
       details: {
         avalId: actorId,
-        avalName: aval.fullName,
+        avalName: aval.companyName ||
+          (aval.firstName ? formatFullName(
+            aval.firstName,
+            aval.paternalLastName || '',
+            aval.maternalLastName || '',
+            aval.middleName || undefined
+          ) : ''),
         propertyAddress: aval.propertyAddress,
       },
     });

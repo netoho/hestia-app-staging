@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import { formatFullName } from '@/lib/utils/names';
 
 export type ValidationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW';
 
@@ -482,7 +483,13 @@ class ValidationService {
       return {
         actorType,
         actorId: actor.id,
-        actorName: actor.fullName || actor.companyName || 'Unknown',
+        actorName: actor.companyName ||
+          (actor.firstName ? formatFullName(
+            actor.firstName,
+            actor.paternalLastName || '',
+            actor.maternalLastName || '',
+            actor.middleName || undefined
+          ) : 'Sin nombre'),
         totalSections: actorSections.length,
         approvedSections: actorSectionValidations.filter(sv => sv.status === 'APPROVED').length,
         rejectedSections: actorSectionValidations.filter(sv => sv.status === 'REJECTED').length,

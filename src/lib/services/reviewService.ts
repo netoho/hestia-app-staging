@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { validationService, ActorType, SectionType } from './validationService';
 import { logPolicyActivity } from './policyService';
+import { formatFullName } from '@/lib/utils/names';
 
 export interface PolicyReviewData {
   policyId: string;
@@ -212,7 +213,13 @@ class ReviewService {
     return {
       actorType,
       actorId: actor.id,
-      name: actor.fullName || actor.companyName || 'Unknown',
+      name: actor.companyName ||
+        (actor.firstName ? formatFullName(
+          actor.firstName,
+          actor.paternalLastName || '',
+          actor.maternalLastName || '',
+          actor.middleName || undefined
+        ) : 'Sin nombre'),
       email: actor.email,
       isCompany: actor.isCompany || false,
       sections,
@@ -308,7 +315,12 @@ class ReviewService {
           };
         } else {
           return {
-            fullName: actor.fullName,
+            fullName: actor.firstName ? formatFullName(
+              actor.firstName,
+              actor.paternalLastName || '',
+              actor.maternalLastName || '',
+              actor.middleName || undefined
+            ) : '',
             rfc: actor.rfc,
             curp: actor.curp,
             nationality: actor.nationality,
@@ -352,7 +364,12 @@ class ReviewService {
 
       case 'company_info':
         return {
-          legalRepName: actor.legalRepName,
+          legalRepName: actor.legalRepFirstName ? formatFullName(
+            actor.legalRepFirstName,
+            actor.legalRepPaternalLastName || '',
+            actor.legalRepMaternalLastName || '',
+            actor.legalRepMiddleName || undefined
+          ) : '',
           legalRepPosition: actor.legalRepPosition,
           legalRepRfc: actor.legalRepRfc,
           legalRepPhone: actor.legalRepPhone,

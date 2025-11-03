@@ -179,17 +179,41 @@ export async function POST(
         where: { id: primaryLandlord.id },
         data: {
           isCompany: body.isCompany || false,
-          fullName: body.fullName,
+          // Personal information for individuals
+          firstName: body.firstName || null,
+          middleName: body.middleName || null,
+          paternalLastName: body.paternalLastName || null,
+          maternalLastName: body.maternalLastName || null,
           rfc: body.rfc,
+
+          // Company information
+          companyName: body.companyName || null,
+          companyRfc: body.companyRfc || null,
+
+          // Legal representative information for companies
+          legalRepFirstName: body.legalRepFirstName || null,
+          legalRepMiddleName: body.legalRepMiddleName || null,
+          legalRepPaternalLastName: body.legalRepPaternalLastName || null,
+          legalRepMaternalLastName: body.legalRepMaternalLastName || null,
+          legalRepPosition: body.legalRepPosition || null,
+          legalRepRfc: body.legalRepRfc || null,
+          legalRepPhone: body.legalRepPhone || null,
+          legalRepEmail: body.legalRepEmail || null,
+
+          // Contact and banking
           email: body.email,
           phone: body.phone,
           address: body.address,
           bankName: body.bankName || null,
           accountNumber: body.accountNumber || null,
           clabe: body.clabe || null,
+
+          // Employment
           occupation: body.occupation || null,
-          companyName: body.companyName || null,
+          employerName: body.employerName || null,
           monthlyIncome: body.monthlyIncome || null,
+
+          // Status
           informationComplete: body.informationComplete || false,
           completedAt: body.informationComplete ? new Date() : null,
         },
@@ -201,16 +225,39 @@ export async function POST(
           policyId: id,
           isPrimary: true, // Always create as primary when using this endpoint
           isCompany: body.isCompany || false,
-          fullName: body.fullName,
+
+          // Personal information for individuals
+          firstName: body.firstName || null,
+          middleName: body.middleName || null,
+          paternalLastName: body.paternalLastName || null,
+          maternalLastName: body.maternalLastName || null,
           rfc: body.rfc,
+
+          // Company information
+          companyName: body.companyName || null,
+          companyRfc: body.companyRfc || null,
+
+          // Legal representative information for companies
+          legalRepFirstName: body.legalRepFirstName || null,
+          legalRepMiddleName: body.legalRepMiddleName || null,
+          legalRepPaternalLastName: body.legalRepPaternalLastName || null,
+          legalRepMaternalLastName: body.legalRepMaternalLastName || null,
+          legalRepPosition: body.legalRepPosition || null,
+          legalRepRfc: body.legalRepRfc || null,
+          legalRepPhone: body.legalRepPhone || null,
+          legalRepEmail: body.legalRepEmail || null,
+
+          // Contact and banking
           email: body.email,
           phone: body.phone,
           address: body.address,
           bankName: body.bankName || null,
           accountNumber: body.accountNumber || null,
           clabe: body.clabe || null,
+
+          // Employment
           occupation: body.occupation || null,
-          companyName: body.companyName || null,
+          employerName: body.employerName || null,
           monthlyIncome: body.monthlyIncome || null,
           informationComplete: body.informationComplete || false,
           completedAt: body.informationComplete ? new Date() : null,

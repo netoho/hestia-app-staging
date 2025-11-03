@@ -24,7 +24,10 @@ const phoneSchema = z.string()
 
 // Personal reference schema
 export const personalReferenceSchema = z.object({
-  name: z.string().min(1, 'Nombre es requerido'),
+  firstName: z.string().min(1, 'Nombre es requerido'),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().min(1, 'Apellido paterno es requerido'),
+  maternalLastName: z.string().min(1, 'Apellido materno es requerido'),
   phone: phoneSchema,
   email: emailSchema.optional().nullable(),
   relationship: z.string().min(1, 'Relación es requerida'),
@@ -36,7 +39,10 @@ export const personalReferenceSchema = z.object({
 // ============================================
 
 const baseLandlordSchema = z.object({
-  fullName: z.string().min(1, 'Nombre completo es requerido'),
+  firstName: z.string().min(1, 'Nombre es requerido'),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().min(1, 'Apellido paterno es requerido'),
+  maternalLastName: z.string().min(1, 'Apellido materno es requerido'),
   email: emailSchema,
   phone: phoneSchema,
   address: z.string().min(1, 'Dirección es requerida'),
@@ -68,13 +74,19 @@ export const individualLandlordSchema = baseLandlordSchema.extend({
 // Company landlord schema
 export const companyLandlordSchema = baseLandlordSchema.extend({
   isCompany: z.literal(true),
+  companyName: z.string().min(1, 'Razón social es requerida'),
   rfc: z.string()
     .min(1, 'RFC es requerido')
     .refine(val => RFC_COMPANY_PATTERN.test(val), 'RFC de empresa inválido (formato: AAA123456XXX)'),
 
+  // Legal representative fields
+  legalRepFirstName: z.string().min(1, 'Nombre del representante es requerido'),
+  legalRepMiddleName: z.string().optional().nullable(),
+  legalRepPaternalLastName: z.string().min(1, 'Apellido paterno del representante es requerido'),
+  legalRepMaternalLastName: z.string().min(1, 'Apellido materno del representante es requerido'),
+
   // Company doesn't need work info
   occupation: z.string().optional().nullable(),
-  companyName: z.string().optional().nullable(),
   monthlyIncome: z.number().optional().nullable(),
 });
 
@@ -87,7 +99,15 @@ export const landlordSchema = z.discriminatedUnion('isCompany', [
 // For partial updates
 export const landlordUpdateSchema = z.object({
   isCompany: z.boolean().optional(),
-  fullName: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().min(1).optional(),
+  maternalLastName: z.string().min(1).optional(),
+  companyName: z.string().optional().nullable(),
+  legalRepFirstName: z.string().optional().nullable(),
+  legalRepMiddleName: z.string().optional().nullable(),
+  legalRepPaternalLastName: z.string().optional().nullable(),
+  legalRepMaternalLastName: z.string().optional().nullable(),
   rfc: z.string().optional(),
   email: emailSchema.optional(),
   phone: phoneSchema.optional(),
@@ -96,7 +116,6 @@ export const landlordUpdateSchema = z.object({
   accountNumber: z.string().optional().nullable(),
   clabe: z.string().optional().nullable(),
   occupation: z.string().optional().nullable(),
-  companyName: z.string().optional().nullable(),
   monthlyIncome: z.number().positive().optional().nullable(),
   informationComplete: z.boolean().optional(),
 }).refine(data => {
@@ -125,7 +144,10 @@ const baseTenantSchema = z.object({
 // Individual tenant schema - base without refinements
 const individualTenantSchemaBase = baseTenantSchema.extend({
   tenantType: z.literal('INDIVIDUAL'),
-  fullName: z.string().min(1, 'Nombre completo es requerido'),
+  firstName: z.string().min(1, 'Nombre es requerido'),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().min(1, 'Apellido paterno es requerido'),
+  maternalLastName: z.string().min(1, 'Apellido materno es requerido'),
   nationality: z.enum(['MEXICAN', 'FOREIGN']),
   curp: z.string().optional().nullable(),
   rfc: z.string().optional().nullable(),
@@ -142,7 +164,10 @@ const individualTenantSchemaBase = baseTenantSchema.extend({
   // Company fields should be null for individuals
   companyName: z.string().optional().nullable(),
   companyRfc: z.string().optional().nullable(),
-  legalRepName: z.string().optional().nullable(),
+  legalRepFirstName: z.string().optional().nullable(),
+  legalRepMiddleName: z.string().optional().nullable(),
+  legalRepPaternalLastName: z.string().optional().nullable(),
+  legalRepMaternalLastName: z.string().optional().nullable(),
   legalRepId: z.string().optional().nullable(),
   companyAddress: z.string().optional().nullable(),
 });
@@ -178,12 +203,18 @@ export const companyTenantSchema = baseTenantSchema.extend({
   companyRfc: z.string()
     .min(1, 'RFC es requerido')
     .refine(val => RFC_COMPANY_PATTERN.test(val), 'RFC de empresa inválido'),
-  legalRepName: z.string().min(1, 'Nombre del representante legal es requerido'),
+  legalRepFirstName: z.string().min(1, 'Nombre del representante es requerido'),
+  legalRepMiddleName: z.string().optional().nullable(),
+  legalRepPaternalLastName: z.string().min(1, 'Apellido paterno del representante es requerido'),
+  legalRepMaternalLastName: z.string().min(1, 'Apellido materno del representante es requerido'),
   legalRepId: z.string().min(1, 'Identificación del representante es requerida'),
   companyAddress: z.string().min(1, 'Dirección de la empresa es requerida'),
 
   // Individual fields should be null for companies
-  fullName: z.string().optional().nullable(),
+  firstName: z.string().optional().nullable(),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().optional().nullable(),
+  maternalLastName: z.string().optional().nullable(),
   nationality: z.enum(['MEXICAN', 'FOREIGN']).optional().nullable(),
   curp: z.string().optional().nullable(),
   rfc: z.string().optional().nullable(),
@@ -205,7 +236,10 @@ export const companyTenantSchema = baseTenantSchema.extend({
 // For partial updates
 export const tenantUpdateSchema = baseTenantSchema.partial().extend({
   tenantType: z.enum(['INDIVIDUAL', 'COMPANY']).optional(),
-  fullName: z.string().optional().nullable(),
+  firstName: z.string().optional().nullable(),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().optional().nullable(),
+  maternalLastName: z.string().optional().nullable(),
   nationality: z.enum(['MEXICAN', 'FOREIGN']).optional(),
   curp: z.string().optional().nullable(),
   rfc: z.string().optional().nullable(),
@@ -218,7 +252,10 @@ export const tenantUpdateSchema = baseTenantSchema.partial().extend({
   incomeSource: z.string().optional().nullable(),
   companyName: z.string().optional().nullable(),
   companyRfc: z.string().optional().nullable(),
-  legalRepName: z.string().optional().nullable(),
+  legalRepFirstName: z.string().optional().nullable(),
+  legalRepMiddleName: z.string().optional().nullable(),
+  legalRepPaternalLastName: z.string().optional().nullable(),
+  legalRepMaternalLastName: z.string().optional().nullable(),
   legalRepId: z.string().optional().nullable(),
   companyAddress: z.string().optional().nullable(),
 });
@@ -228,7 +265,10 @@ export const tenantUpdateSchema = baseTenantSchema.partial().extend({
 // ============================================
 
 const jointObligorSchemaBase = z.object({
-  fullName: z.string().min(1, 'Nombre completo es requerido'),
+  firstName: z.string().min(1, 'Nombre es requerido'),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().min(1, 'Apellido paterno es requerido'),
+  maternalLastName: z.string().min(1, 'Apellido materno es requerido'),
   email: emailSchema,
   phone: phoneSchema,
   nationality: z.enum(['MEXICAN', 'FOREIGN']),
@@ -282,7 +322,10 @@ export const jointObligorUpdateSchema = jointObligorSchemaBase.partial();
 // ============================================
 
 const avalSchemaBase = z.object({
-  fullName: z.string().min(1, 'Nombre completo es requerido'),
+  firstName: z.string().min(1, 'Nombre es requerido'),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().min(1, 'Apellido paterno es requerido'),
+  maternalLastName: z.string().min(1, 'Apellido materno es requerido'),
   email: emailSchema,
   phone: phoneSchema,
   nationality: z.enum(['MEXICAN', 'FOREIGN']),

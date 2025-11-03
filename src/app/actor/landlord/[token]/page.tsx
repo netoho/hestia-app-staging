@@ -28,7 +28,7 @@ export default function LandlordPortalPage() {
 
   const validateToken = async () => {
     try {
-      const response = await fetch(`/api/actor/landlord/${token}/validate`);
+      const response = await fetch(`/api/actors/landlord/${token}`);
       const data = await response.json();
 
       if (!response.ok) {

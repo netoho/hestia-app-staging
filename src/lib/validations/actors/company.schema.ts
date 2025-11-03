@@ -11,7 +11,8 @@ import {
   emailSchema,
   phoneSchema,
   optionalEmailSchema,
-  requiredString
+  requiredString,
+  nullableString
 } from './base.schema';
 
 // Company actor schema (extends base)
@@ -21,7 +22,10 @@ export const companyActorSchema = baseActorSchema.extend({
   companyRfc: rfcSchema,
 
   // Legal representative information
-  legalRepName: requiredString(1, 'El nombre del representante legal es requerido'),
+  legalRepFirstName: requiredString(1, 'El nombre del representante es requerido'),
+  legalRepMiddleName: nullableString(),
+  legalRepPaternalLastName: requiredString(1, 'El apellido paterno del representante es requerido'),
+  legalRepMaternalLastName: requiredString(1, 'El apellido materno del representante es requerido'),
   legalRepPosition: requiredString(1, 'El cargo del representante es requerido'),
   legalRepRfc: optionalRfcSchema,
   legalRepPhone: phoneSchema,
@@ -37,7 +41,10 @@ export const partialCompanyActorSchema = partialBaseActorSchema.extend({
   companyName: z.string().optional(),
   companyRfc: z.string().optional(),
 
-  legalRepName: z.string().optional(),
+  legalRepFirstName: z.string().optional(),
+  legalRepMiddleName: nullableString(),
+  legalRepPaternalLastName: z.string().optional(),
+  legalRepMaternalLastName: z.string().optional(),
   legalRepPosition: z.string().optional(),
   legalRepRfc: optionalRfcSchema,
   legalRepPhone: z.string().optional(),

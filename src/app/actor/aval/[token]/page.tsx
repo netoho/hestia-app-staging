@@ -44,7 +44,7 @@ export default function AvalPortalPage({
 
   const validateTokenAndLoadData = async () => {
     try {
-      const response = await fetch(`/api/actor/aval/${token}/validate`);
+      const response = await fetch(`/api/actors/aval/${token}`);
       const data = await response.json();
 
       if (!response.ok) {

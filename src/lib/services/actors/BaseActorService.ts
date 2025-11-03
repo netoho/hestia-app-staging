@@ -246,6 +246,7 @@ export abstract class BaseActorService extends BaseService {
    * Build update data object from actor data
    */
   protected buildUpdateData(data: ActorData, addressId?: string): any {
+    console.log('Building update data for actor:', this.actorType, data);
     const updateData: any = {
       isCompany: data.isCompany,
       email: data.email,
@@ -269,7 +270,11 @@ export abstract class BaseActorService extends BaseService {
     // Add person-specific fields
     if (isPersonActor(data)) {
       const personData = data as PersonActorData;
-      if (personData.fullName !== undefined) updateData.fullName = personData.fullName;
+      // Individual name fields
+      if (personData.firstName !== undefined) updateData.firstName = personData.firstName;
+      if (personData.middleName !== undefined) updateData.middleName = personData.middleName || null;
+      if (personData.paternalLastName !== undefined) updateData.paternalLastName = personData.paternalLastName;
+      if (personData.maternalLastName !== undefined) updateData.maternalLastName = personData.maternalLastName || null;
       if (personData.rfc !== undefined) updateData.rfc = personData.rfc || null;
       if (personData.curp !== undefined) updateData.curp = personData.curp || null;
       if (personData.occupation !== undefined) updateData.occupation = personData.occupation || null;
@@ -284,7 +289,11 @@ export abstract class BaseActorService extends BaseService {
       const companyData = data as CompanyActorData;
       if (companyData.companyName !== undefined) updateData.companyName = companyData.companyName;
       if (companyData.companyRfc !== undefined) updateData.companyRfc = companyData.companyRfc;
-      if (companyData.legalRepName !== undefined) updateData.legalRepName = companyData.legalRepName;
+      // Legal rep name fields
+      if (companyData.legalRepFirstName !== undefined) updateData.legalRepFirstName = companyData.legalRepFirstName;
+      if (companyData.legalRepMiddleName !== undefined) updateData.legalRepMiddleName = companyData.legalRepMiddleName || null;
+      if (companyData.legalRepPaternalLastName !== undefined) updateData.legalRepPaternalLastName = companyData.legalRepPaternalLastName;
+      if (companyData.legalRepMaternalLastName !== undefined) updateData.legalRepMaternalLastName = companyData.legalRepMaternalLastName || null;
       if (companyData.legalRepPosition !== undefined) updateData.legalRepPosition = companyData.legalRepPosition;
       if (companyData.legalRepRfc !== undefined) updateData.legalRepRfc = companyData.legalRepRfc || null;
       if (companyData.legalRepPhone !== undefined) updateData.legalRepPhone = companyData.legalRepPhone;
@@ -384,7 +393,7 @@ export abstract class BaseActorService extends BaseService {
 
     if (isPersonActor(data)) {
       const personData = data as PersonActorData;
-      return hasBasicInfo && !!personData.fullName;
+      return hasBasicInfo && !!(personData.firstName && personData.paternalLastName);
     }
 
     if (isCompanyActor(data)) {
@@ -392,7 +401,7 @@ export abstract class BaseActorService extends BaseService {
       return hasBasicInfo &&
         !!companyData.companyName &&
         !!companyData.companyRfc &&
-        !!companyData.legalRepName &&
+        !!(companyData.legalRepFirstName && companyData.legalRepPaternalLastName) &&
         !!companyData.legalRepPhone &&
         !!companyData.legalRepEmail;
     }

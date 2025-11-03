@@ -175,9 +175,8 @@ export default function JointObligorFormWizard({
         informationComplete: true,
       };
 
-      const submitUrl = isAdminEdit
-        ? `/api/admin/actors/joint-obligor/${token}/submit`
-        : `/api/actor/joint-obligor/${token}/submit`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const submitUrl = `/api/actors/joint-obligor/${token}`;
 
       const response = await fetch(submitUrl, {
         method: 'POST',

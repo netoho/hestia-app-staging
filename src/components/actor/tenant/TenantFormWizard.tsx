@@ -154,9 +154,8 @@ export default function TenantFormWizard({
         informationComplete: true,
       };
 
-      const submitUrl = isAdminEdit
-        ? `/api/admin/actors/tenant/${token}/submit`
-        : `/api/actor/tenant/${token}/submit`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const submitUrl = `/api/actors/tenant/${token}`;
 
       const response = await fetch(submitUrl, {
         method: 'POST',

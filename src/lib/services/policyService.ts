@@ -30,7 +30,10 @@ interface CreatePolicyData {
     isCompany?: boolean;
     companyName?: string;
     companyRfc?: string;
-    legalRepName?: string;
+    legalRepFirstName?: string;
+    legalRepMiddleName?: string;
+    legalRepPaternalLastName?: string;
+    legalRepMaternalLastName?: string;
   };
   tenant: {
     tenantType?: TenantType;
@@ -130,7 +133,10 @@ export async function createPolicy(data: CreatePolicyData) {
           // Company fields
           companyName: policyData.landlord.companyName,
           companyRfc: policyData.landlord.companyRfc,
-          legalRepName: policyData.landlord.legalRepName,
+          legalRepFirstName: policyData.landlord.legalRepFirstName,
+          legalRepMiddleName: policyData.landlord.legalRepMiddleName,
+          legalRepPaternalLastName: policyData.landlord.legalRepPaternalLastName,
+          legalRepMaternalLastName: policyData.landlord.legalRepMaternalLastName,
           // Contact
           email: policyData.landlord.email,
           phone: policyData.landlord.phone || '',
@@ -248,25 +254,33 @@ export async function getPolicies(params?: {
       { policyNumber: { contains: params.search, mode: 'insensitive' } },
       { propertyAddress: { contains: params.search, mode: 'insensitive' } },
 
-      // Tenant
-      { tenant: { fullName: { contains: params.search, mode: 'insensitive' } } },
+      // Tenant - search across name fields
+      { tenant: { firstName: { contains: params.search, mode: 'insensitive' } } },
+      { tenant: { paternalLastName: { contains: params.search, mode: 'insensitive' } } },
+      { tenant: { maternalLastName: { contains: params.search, mode: 'insensitive' } } },
       { tenant: { companyName: { contains: params.search, mode: 'insensitive' } } },
       { tenant: { email: { contains: params.search, mode: 'insensitive' } } },
       { tenant: { phone: { contains: params.search, mode: 'insensitive' } } },
 
-      // Landlords
-      { landlords: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      // Landlords - search across name fields
+      { landlords: { some: { firstName: { contains: params.search, mode: 'insensitive' } } } },
+      { landlords: { some: { paternalLastName: { contains: params.search, mode: 'insensitive' } } } },
+      { landlords: { some: { maternalLastName: { contains: params.search, mode: 'insensitive' } } } },
       { landlords: { some: { companyName: { contains: params.search, mode: 'insensitive' } } } },
       { landlords: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
       { landlords: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
 
-      // Joint Obligors
-      { jointObligors: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      // Joint Obligors - search across name fields
+      { jointObligors: { some: { firstName: { contains: params.search, mode: 'insensitive' } } } },
+      { jointObligors: { some: { paternalLastName: { contains: params.search, mode: 'insensitive' } } } },
+      { jointObligors: { some: { maternalLastName: { contains: params.search, mode: 'insensitive' } } } },
       { jointObligors: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
       { jointObligors: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
 
-      // Avals
-      { avals: { some: { fullName: { contains: params.search, mode: 'insensitive' } } } },
+      // Avals - search across name fields
+      { avals: { some: { firstName: { contains: params.search, mode: 'insensitive' } } } },
+      { avals: { some: { paternalLastName: { contains: params.search, mode: 'insensitive' } } } },
+      { avals: { some: { maternalLastName: { contains: params.search, mode: 'insensitive' } } } },
       { avals: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
       { avals: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
 

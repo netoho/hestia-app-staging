@@ -35,7 +35,7 @@ export default function JointObligorPortalPage({
 
   const validateAndLoad = async () => {
     try {
-      const response = await fetch(`/api/actor/joint-obligor/${token}/validate`);
+      const response = await fetch(`/api/actors/joint-obligor/${token}`);
       const data = await response.json();
 
       if (!response.ok) {

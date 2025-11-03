@@ -9,6 +9,7 @@ import { InlineDocumentManager } from '@/components/documents/InlineDocumentMana
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentCategory } from '@/types/policy';
 import { useMemo } from 'react';
+import { formatFullName } from '@/lib/utils/names';
 
 interface ActorCardProps {
   actor: any;
@@ -82,14 +83,14 @@ export default function ActorCard({
     let total = 10;
 
     // Check basic fields
-    if (actor.fullName || actor.companyName) completed++;
+    if (actor.companyName || (actor.firstName && actor.paternalLastName)) completed++;
     if (actor.email) completed++;
     if (actor.phone) completed++;
     if (actor.rfc || actor.companyRfc) completed++;
     if (actor.address || actor.addressDetails) completed++;
 
     // Employment/business
-    if (actor.occupation || actor.legalRepName) completed++;
+    if (actor.occupation || (actor.legalRepFirstName && actor.legalRepPaternalLastName)) completed++;
     if (actor.monthlyIncome) completed++;
 
     // Additional
@@ -168,7 +169,13 @@ export default function ActorCard({
     );
   }
 
-  const displayName = actor.fullName || actor.companyName || 'Sin nombre';
+  const displayName = actor.companyName ||
+    (actor.firstName ? formatFullName(
+      actor.firstName,
+      actor.paternalLastName || '',
+      actor.maternalLastName || '',
+      actor.middleName || undefined
+    ) : 'Sin nombre');
   const isCompany = actor.tenantType === 'COMPANY' || actor.isCompany;
 
   // Group documents by category

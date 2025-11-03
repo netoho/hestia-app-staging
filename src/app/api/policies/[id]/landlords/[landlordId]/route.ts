@@ -72,12 +72,24 @@ export async function PUT(
       data: {
         isCompany: body.isCompany,
         isPrimary: body.isPrimary,
-        fullName: body.fullName,
+
+        // Personal information for individuals
+        firstName: body.firstName || null,
+        middleName: body.middleName || null,
+        paternalLastName: body.paternalLastName || null,
+        maternalLastName: body.maternalLastName || null,
         rfc: body.rfc,
         curp: body.curp,
+
+        // Company information
         companyName: body.companyName,
         companyRfc: body.companyRfc,
-        legalRepName: body.legalRepName,
+
+        // Legal representative information for companies
+        legalRepFirstName: body.legalRepFirstName || null,
+        legalRepMiddleName: body.legalRepMiddleName || null,
+        legalRepPaternalLastName: body.legalRepPaternalLastName || null,
+        legalRepMaternalLastName: body.legalRepMaternalLastName || null,
         legalRepPosition: body.legalRepPosition,
         legalRepRfc: body.legalRepRfc,
         legalRepPhone: body.legalRepPhone,
