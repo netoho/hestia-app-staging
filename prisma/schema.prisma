@@ -257,11 +257,16 @@ model Landlord {
   // Company Information (for companies)
   companyName       String?     // Official company name
   companyRfc        String?
-  legalRepName      String?     // Legal representative name
-  legalRepPosition  String?     // Legal representative position
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepPosition        String?     // Legal representative position
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
 
   // Contact Information
   email             String
@@ -341,12 +346,17 @@ model Tenant {
   // Company Information
   companyName       String?
   companyRfc        String?
-  legalRepName      String?
-  legalRepId        String?
-  legalRepPosition  String?
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepId              String?
+  legalRepPosition        String?
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
   companyAddress    String?     // Legacy field
 
   // Contact Information
@@ -438,11 +448,16 @@ model JointObligor {
   // Company Information (for companies)
   companyName       String?
   companyRfc        String?
-  legalRepName      String?
-  legalRepPosition  String?
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepPosition        String?
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
 
   // Contact Information
   email             String
@@ -543,11 +558,16 @@ model Aval {
   // Company Information (for companies)
   companyName       String?
   companyRfc        String?
-  legalRepName      String?
-  legalRepPosition  String?
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepPosition        String?
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
 
   // Contact Information
   email             String
