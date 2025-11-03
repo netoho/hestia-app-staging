@@ -701,23 +701,8 @@ export class JointObligorService extends BaseActorService {
           ipAddress: 'unknown', // Will be passed from route
         });
 
-        // Check if all actors are complete and transition status if needed
-        const { checkPolicyActorsComplete } = await import('@/lib/services/actorTokenService');
-        const { transitionPolicyStatus } = await import('@/lib/services/policyWorkflowService');
-
-        const actorsStatus = await checkPolicyActorsComplete(jointObligor.policyId);
-        if (actorsStatus.allComplete) {
-          await transitionPolicyStatus(
-            jointObligor.policyId,
-            'UNDER_INVESTIGATION',
-            'system',
-            'All actor information completed'
-          );
-        }
-
         return {
-          jointObligor: updatedJointObligor,
-          actorsComplete: actorsStatus.allComplete
+          jointObligor: updatedJointObligor
         };
       }
 

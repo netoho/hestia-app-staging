@@ -443,4 +443,70 @@ export abstract class BaseActorService extends BaseService {
       return Result.ok(undefined);
     }
   }
+
+  /**
+   * Check if all actors are complete and transition policy status if needed
+   * This should be called after an actor completes their information (not partial save)
+   */
+  protected async checkAndTransitionPolicyStatus(
+    policyId: string,
+    performedBy: string = 'system'
+  ): AsyncResult<{ transitioned: boolean; newStatus?: string }> {
+    try {
+      // Get the policy to check current status
+      const policy = await this.prisma.policy.findUnique({
+        where: { id: policyId },
+        select: { status: true }
+      });
+
+      if (!policy) {
+        return Result.error('Policy not found');
+      }
+
+      // Only transition if currently in COLLECTING_INFO status
+      if (policy.status !== 'COLLECTING_INFO') {
+        return Result.ok({ transitioned: false });
+      }
+
+      // Check if all actors are complete using the improved function
+      const { checkPolicyActorsComplete } = await import('@/lib/services/actorTokenService');
+      const actorsStatus = await checkPolicyActorsComplete(policyId);
+
+      // If all actors are complete, transition to UNDER_INVESTIGATION
+      if (actorsStatus.allComplete) {
+        const { transitionPolicyStatus } = await import('@/lib/services/policyWorkflowService');
+
+        await transitionPolicyStatus(
+          policyId,
+          'UNDER_INVESTIGATION',
+          performedBy,
+          'All actor information completed'
+        );
+
+        this.log('info', 'Policy status transitioned to UNDER_INVESTIGATION', {
+          policyId,
+          performedBy,
+          allActorsComplete: actorsStatus
+        });
+
+        return Result.ok({
+          transitioned: true,
+          newStatus: 'UNDER_INVESTIGATION'
+        });
+      }
+
+      return Result.ok({
+        transitioned: false,
+        ...actorsStatus // Include completion details for debugging
+      });
+    } catch (error) {
+      this.log('error', 'Failed to check and transition policy status', {
+        policyId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      // Don't fail the operation if transition check fails
+      return Result.ok({ transitioned: false });
+    }
+  }
 }

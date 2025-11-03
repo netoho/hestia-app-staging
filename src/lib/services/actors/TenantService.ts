@@ -293,18 +293,6 @@ export class TenantService extends BaseActorService {
         },
       });
 
-      // If final submission, check if all actors are complete
-      if (!isPartial) {
-        const { checkPolicyActorsComplete } = await import('@/lib/services/actorTokenService');
-        const { transitionPolicyStatus } = await import('@/lib/services/policyWorkflowService');
-
-        const allComplete = await checkPolicyActorsComplete(updatedTenant.policyId);
-
-        if (allComplete) {
-          await transitionPolicyStatus(updatedTenant.policyId, 'UNDER_INVESTIGATION');
-        }
-      }
-
       return Result.ok({
         success: true,
         message: isPartial

@@ -79,6 +79,7 @@ export default function PolicyDetailsContent({
   isStaffOrAdmin,
   onRefresh
 }: PolicyDetailsContentProps) {
+  console.log(permissions)
   const router = useRouter();
   const [currentTab, setCurrentTab] = useState('overview');
   const [tabLoading, setTabLoading] = useState(false);
@@ -137,47 +138,6 @@ export default function PolicyDetailsContent({
       alert('Error al enviar la invitación');
     } finally {
       setSending(null);
-    }
-  };
-
-  const approveActor = async (actorType: string, actorId: string) => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/actors/${actorType}/${actorId}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'approve',
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to approve actor');
-
-      alert('Actor aprobado exitosamente');
-      await onRefresh();
-    } catch (error) {
-      console.error('Error approving actor:', error);
-      alert('Error al aprobar el actor');
-    }
-  };
-
-  const rejectActor = async (actorType: string, actorId: string, reason: string) => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/actors/${actorType}/${actorId}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reject',
-          reason: reason,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to reject actor');
-
-      alert('Actor rechazado y notificado');
-      await onRefresh();
-    } catch (error) {
-      console.error('Error rejecting actor:', error);
-      alert('Error al rechazar el actor');
     }
   };
 
@@ -279,7 +239,7 @@ export default function PolicyDetailsContent({
 
     // Check all landlords are approved
     const landlordsApproved = policy.landlords?.length > 0 &&
-      policy.landlords.every((l: any) => l.verificationStatus === 'APPROVED');
+      policy.landlords.filter(l => l.isPrimary).every((l: any) => l.verificationStatus === 'APPROVED');
 
     const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
 

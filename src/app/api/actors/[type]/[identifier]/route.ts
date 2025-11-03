@@ -261,10 +261,27 @@ export async function POST(
       );
     }
 
+    // Check if all actors complete and transition if needed
+    const { checkPolicyActorsComplete } = await import('@/lib/services/actorTokenService');
+    const { transitionPolicyStatus } = await import('@/lib/services/policyWorkflowService');
+
+    const actorsStatus = await checkPolicyActorsComplete(auth.actor.policyId);
+    if (actorsStatus.allComplete) {
+      await transitionPolicyStatus(
+        auth.actor.policyId,
+        'UNDER_INVESTIGATION',
+        'system',
+        'All actor information completed'
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Información completada exitosamente',
-      data: result.value
+      data: {
+        ...result.value,
+        actorsComplete: actorsStatus.allComplete
+      }
     });
 
   } catch (error: any) {
