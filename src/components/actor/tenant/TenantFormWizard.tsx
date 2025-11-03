@@ -66,7 +66,6 @@ export default function TenantFormWizard({
   const tabs = isCompany
     ? [
         { id: 'personal', label: 'Información', needsSave: true },
-        { id: 'rental', label: 'Historial', needsSave: true },
         { id: 'references', label: 'Referencias', needsSave: true },
         { id: 'documents', label: 'Documentos', needsSave: false },
       ]

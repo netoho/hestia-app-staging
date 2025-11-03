@@ -55,7 +55,36 @@ export class ActorAuthService {
     // Get session
     const session = await getServerSession(authOptions);
 
+    // For document operations, allow access without session if it's a same-origin request
+    // This allows dashboard components to access documents
+    const isDocumentRequest = request.url.includes('/documents');
+    const origin = request.headers.get('origin');
+    const referer = request.headers.get('referer');
+    const isSameOrigin = origin?.includes('localhost') || referer?.includes('localhost');
+
     if (!session?.user?.id) {
+      // Allow document read operations from same origin without session
+      if (isDocumentRequest && isSameOrigin && request.method === 'GET') {
+        // Fetch actor directly for read-only access
+        const actor = await this.fetchActorById(type, actorId);
+
+        if (!actor) {
+          throw new ServiceError(
+            ErrorCode.NOT_FOUND,
+            'Actor no encontrado',
+            404
+          );
+        }
+
+        return {
+          actor,
+          actorName: this.formatActorName(actor, type),
+          canEdit: false, // Read-only access
+          authType: 'admin',
+          skipValidation: false
+        };
+      }
+
       throw new ServiceError(
         ErrorCode.UNAUTHORIZED,
         'No autorizado',
@@ -163,6 +192,7 @@ export class ActorAuthService {
             employerAddressDetails: true,
             previousRentalAddressDetails: true,
             references: true,
+            commercialReferences: true,
             policy: true
           }
         });
@@ -224,6 +254,7 @@ export class ActorAuthService {
             employerAddressDetails: true,
             previousRentalAddressDetails: true,
             references: true,
+            commercialReferences: true,
             policy: true
           }
         });

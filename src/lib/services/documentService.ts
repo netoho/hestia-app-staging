@@ -17,7 +17,7 @@ export async function uploadDocument(data: {
   jointObligorId?: string;
   avalId?: string;
 }) {
-  return prisma.document.create({
+  return prisma.actorDocument.create({
     data: {
       type: data.type,
       fileName: data.fileName,
@@ -57,7 +57,7 @@ export async function getDocumentsByActor(actorId: string, actorType: string) {
       throw new Error(`Invalid actor type: ${actorType}`);
   }
 
-  return prisma.document.findMany({
+  return prisma.actorDocument.findMany({
     where: whereClause,
     orderBy: {
       createdAt: 'desc'
@@ -97,7 +97,7 @@ export async function deleteDocument(documentId: string) {
  * Get documents by policy
  */
 export async function getDocumentsByPolicy(policyId: string) {
-  return prisma.document.findMany({
+  return prisma.actorDocument.findMany({
     where: { policyId },
     include: {
       tenant: {

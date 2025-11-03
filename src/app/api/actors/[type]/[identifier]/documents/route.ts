@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRole } from '@/lib/auth/middleware';
-import { UserRole } from '@prisma/client';
+import { UserRole, DocumentCategory } from '@prisma/client';
 import { actorAuthService } from '@/lib/services/ActorAuthService';
-import { uploadDocument, getDocumentsByActor, deleteDocument } from '@/lib/services/documentService';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { uploadActorDocument, deleteDocument } from '@/lib/services/fileUploadService';
+import { getDocumentsByActor } from '@/lib/services/documentService';
+import type { UploadedFile } from '@/lib/services/fileUploadService';
 
 /**
  * GET /api/actors/[type]/[identifier]/documents
@@ -84,11 +83,12 @@ export async function POST(
 
     // Handle file upload
     const file = formData.get('file') as File;
-    const documentType = formData.get('type') as string;
+    const documentType = formData.get('documentType') as string;
+    const category = formData.get('category') as string;
 
-    if (!file || !documentType) {
+    if (!file || !documentType || !category) {
       return NextResponse.json(
-        { error: 'Archivo y tipo de documento son requeridos' },
+        { error: 'Archivo, tipo de documento y categoría son requeridos' },
         { status: 400 }
       );
     }
@@ -107,36 +107,77 @@ export async function POST(
           }
         }
 
-        // Process and save file
-        const document = await processAndSaveDocument(
-          file,
-          documentType,
+        // Convert File to UploadedFile format
+        const bytes = await file.arrayBuffer();
+        const uploadedFile: UploadedFile = {
+          buffer: Buffer.from(bytes),
+          originalName: file.name,
+          mimeType: file.type,
+          size: file.size
+        };
+
+        // Get policy number for S3 path
+        const policy = auth.actor.policy;
+        const policyNumber = policy?.policyNumber || auth.actor.policyId;
+
+        // Upload document using fileUploadService
+        const result = await uploadActorDocument(
+          uploadedFile,
+          auth.actor.policyId,
+          policyNumber,
+          type === 'joint-obligor' ? 'jointObligor' : type as any,
           auth.actor.id,
-          type,
-          auth.actor.policyId
+          category as DocumentCategory,
+          documentType,
+          user.email
         );
+
+        if (!result.success) {
+          throw new Error(result.error || 'Error al subir documento');
+        }
 
         return NextResponse.json({
           success: true,
           message: 'Documento subido exitosamente',
-          document
+          documentId: result.documentId
         });
       });
     }
 
     // Actor token access
-    const document = await processAndSaveDocument(
-      file,
-      documentType,
+    // Convert File to UploadedFile format
+    const bytes = await file.arrayBuffer();
+    const uploadedFile: UploadedFile = {
+      buffer: Buffer.from(bytes),
+      originalName: file.name,
+      mimeType: file.type,
+      size: file.size
+    };
+
+    // Get policy number for S3 path
+    const policy = auth.actor.policy;
+    const policyNumber = policy?.policyNumber || auth.actor.policyId;
+
+    // Upload document using fileUploadService
+    const result = await uploadActorDocument(
+      uploadedFile,
+      auth.actor.policyId,
+      policyNumber,
+      type === 'joint-obligor' ? 'jointObligor' : type as any,
       auth.actor.id,
-      type,
-      auth.actor.policyId
+      category as DocumentCategory,
+      documentType,
+      'self' // Actor uploading their own document
     );
+
+    if (!result.success) {
+      throw new Error(result.error || 'Error al subir documento');
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Documento subido exitosamente',
-      document
+      documentId: result.documentId
     });
 
   } catch (error: any) {
@@ -217,50 +258,13 @@ export async function DELETE(
   }
 }
 
-/**
- * Helper function to process and save document
- */
-async function processAndSaveDocument(
-  file: File,
-  documentType: string,
-  actorId: string,
-  actorType: string,
-  policyId: string
-) {
-  // Generate unique filename
-  const fileExtension = file.name.split('.').pop();
-  const fileName = `${uuidv4()}.${fileExtension}`;
-
-  // Create directory if it doesn't exist
-  const uploadDir = join(process.cwd(), 'uploads', policyId, actorType, actorId);
-  await mkdir(uploadDir, { recursive: true });
-
-  // Save file to disk
-  const filePath = join(uploadDir, fileName);
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  await writeFile(filePath, buffer);
-
-  // Save document record to database
-  const document = await uploadDocument({
-    type: documentType,
-    fileName: file.name,
-    filePath: filePath.replace(process.cwd(), ''), // Store relative path
-    fileSize: file.size,
-    mimeType: file.type,
-    policyId,
-    [`${actorType}Id`]: actorId // Dynamic field based on actor type
-  });
-
-  return document;
-}
 
 /**
  * Helper to get document by ID
  */
 async function getDocumentById(documentId: string) {
   const prisma = (await import('@/lib/prisma')).default;
-  return prisma.document.findUnique({
+  return prisma.actorDocument.findUnique({
     where: { id: documentId }
   });
 }

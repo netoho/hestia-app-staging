@@ -37,6 +37,7 @@ export async function GET(
         return NextResponse.json({
           success: true,
           data: formatActorData(auth.actor, type),
+          policy: auth.actor.policy,
           canEdit: auth.canEdit,
           authType: auth.authType
         });
@@ -47,6 +48,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: formatActorData(auth.actor, type),
+      policy: auth.actor.policy,
       canEdit: auth.canEdit,
       authType: auth.authType
     });
@@ -348,17 +350,37 @@ function formatActorData(actor: any, type: string) {
   // Remove sensitive fields
   const { accessToken, tokenExpiry, ...safeData } = actor;
 
-  // Add computed fields
-  return {
+  // Add computed fields and references based on actor type
+  const formattedData: any = {
     ...safeData,
     type,
-    displayName: actor.companyName || formatFullName({
-      firstName: actor.firstName,
-      middleName: actor.middleName,
-      paternalLastName: actor.paternalLastName,
-      maternalLastName: actor.maternalLastName
-    }),
+    displayName: actor.companyName || formatFullName(
+      actor.firstName,
+      actor.paternalLastName,
+      actor.maternalLastName,
+      actor.middleName,
+    ),
     isComplete: actor.informationComplete,
     completedAt: actor.completedAt
   };
+
+  // Include references based on actor type and subtype
+  if (type === 'tenant') {
+    if (actor.tenantType === 'COMPANY' && actor.commercialReferences) {
+      formattedData.commercialReferences = actor.commercialReferences;
+    }
+    if (actor.tenantType === 'INDIVIDUAL' && actor.references) {
+      formattedData.references = actor.references;
+    }
+  } else if ((type === 'joint-obligor' || type === 'aval')) {
+    // Joint obligor and aval can have both types of references depending on isCompany
+    if (actor.isCompany && actor.commercialReferences) {
+      formattedData.commercialReferences = actor.commercialReferences;
+    }
+    if (!actor.isCompany && actor.references) {
+      formattedData.references = actor.references;
+    }
+  }
+
+  return formattedData;
 }

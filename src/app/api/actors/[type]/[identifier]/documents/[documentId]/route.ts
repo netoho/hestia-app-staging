@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@prisma/client';
 import { actorAuthService } from '@/lib/services/ActorAuthService';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
 import prisma from '@/lib/prisma';
 
 /**
@@ -17,8 +16,10 @@ export async function GET(
   try {
     const { type, identifier, documentId } = await params;
 
+    console.log(`Download request for document ${documentId} by ${type} ${identifier}`);
+
     // Get document record
-    const document = await prisma.document.findUnique({
+    const document = await prisma.actorDocument.findUnique({
       where: { id: documentId }
     });
 
@@ -72,28 +73,39 @@ export async function GET(
 }
 
 /**
- * Helper function to serve document file
+ * Helper function to serve document file from S3
  */
 async function serveDocument(document: any) {
   try {
-    // Construct full file path
-    const filePath = join(process.cwd(), document.filePath);
+    // Check if document has S3 key
+    if (!document.s3Key) {
+      console.error('Document missing S3 key:', document.id);
+      return NextResponse.json(
+        { error: 'Documento no disponible para descarga' },
+        { status: 400 }
+      );
+    }
 
-    // Read file
-    const fileBuffer = await readFile(filePath);
+    // Generate presigned URL from S3
+    const downloadUrl = await getDocumentDownloadUrl(
+      document.s3Key,
+      document.originalName || document.fileName,
+      300 // 5 minutes expiry
+    );
 
-    // Return file with appropriate headers
-    return new NextResponse(fileBuffer, {
-      headers: {
-        'Content-Type': document.mimeType || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${document.fileName}"`,
-        'Content-Length': document.fileSize.toString(),
-      },
+    // Return JSON response expected by frontend
+    return NextResponse.json({
+      success: true,
+      data: {
+        downloadUrl,
+        fileName: document.originalName || document.fileName,
+        expiresIn: 300
+      }
     });
   } catch (error) {
-    console.error('Error serving document:', error);
+    console.error('Error generating download URL:', error);
     return NextResponse.json(
-      { error: 'Error al leer el archivo' },
+      { error: 'Error al generar URL de descarga' },
       { status: 500 }
     );
   }

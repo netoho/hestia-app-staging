@@ -192,7 +192,10 @@ export abstract class BaseActorService extends BaseService {
         await this.prisma.personalReference.createMany({
           data: references.map((ref: any) => ({
             ...dataClause,
-            name: ref.name,
+            firstName: ref.firstName,
+            middleName: ref.middleName || null,
+            paternalLastName: ref.paternalLastName,
+            maternalLastName: ref.maternalLastName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -210,7 +213,7 @@ export abstract class BaseActorService extends BaseService {
   protected async saveCommercialReferences(
     actorId: string,
     references: any[],
-    actorType: 'aval' | 'jointObligor' | 'landlord'
+    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
   ): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       // Build where clause based on actor type
@@ -231,7 +234,10 @@ export abstract class BaseActorService extends BaseService {
           data: references.map((ref: any) => ({
             ...dataClause,
             companyName: ref.companyName,
-            contactName: ref.contactName,
+            contactFirstName: ref.contactFirstName,
+            contactMiddleName: ref.contactMiddleName || null,
+            contactPaternalLastName: ref.contactPaternalLastName,
+            contactMaternalLastName: ref.contactMaternalLastName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,

@@ -38,15 +38,15 @@ export default function JointObligorPortalPage({
       const response = await fetch(`/api/actors/joint-obligor/${token}`);
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         setError(data.error || 'Token inválido o expirado');
         setLoading(false);
         return;
       }
 
       setPolicy(data.policy);
-      setObligorData(data.jointObligor);
-      setCompleted(data.completed || data.jointObligor?.informationComplete || false);
+      setObligorData(data.data);
+      setCompleted(data.data?.informationComplete || false);
       setLoading(false);
     } catch (error) {
       console.error('Validation error:', error);

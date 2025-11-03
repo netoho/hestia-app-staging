@@ -484,7 +484,7 @@ export class JointObligorService extends BaseActorService {
     data: any,
     isPartialSave: boolean = false
   ): Promise<Result<any>> {
-    return this.executeDbOperation(async (tx) => {
+    return this.executeTransaction(async (tx) => {
       // Validate token using actorTokenService
       const { validateJointObligorToken } = await import('@/lib/services/actorTokenService');
       const validation = await validateJointObligorToken(token);
@@ -596,25 +596,25 @@ export class JointObligorService extends BaseActorService {
       // Handle addresses using helper method
       // Current address
       if (data.addressDetails) {
-        const addressResult = await this.upsertAddress(data.addressDetails, tx);
+        const addressResult = await this.upsertAddress(data.addressDetails, jointObligor.addressId);
         if (addressResult.ok) {
-          updateData.addressId = addressResult.value.id;
+          updateData.addressId = addressResult.value;
         }
       }
 
       // Employer address
       if (data.employerAddressDetails) {
-        const addressResult = await this.upsertAddress(data.employerAddressDetails, tx);
+        const addressResult = await this.upsertAddress(data.employerAddressDetails, jointObligor.employerAddressId);
         if (addressResult.ok) {
-          updateData.employerAddressId = addressResult.value.id;
+          updateData.employerAddressId = addressResult.value;
         }
       }
 
       // Guarantee property address (for property-based guarantee)
       if (data.guaranteePropertyDetails) {
-        const addressResult = await this.upsertAddress(data.guaranteePropertyDetails, tx);
+        const addressResult = await this.upsertAddress(data.guaranteePropertyDetails, jointObligor.guaranteePropertyAddressId);
         if (addressResult.ok) {
-          updateData.guaranteePropertyAddressId = addressResult.value.id;
+          updateData.guaranteePropertyAddressId = addressResult.value;
         }
       }
 
@@ -641,11 +641,15 @@ export class JointObligorService extends BaseActorService {
       });
 
       // Create new personal references (for individuals)
+      console.log('References data:', data.references);
       if (data.references && data.references.length > 0) {
         await tx.personalReference.createMany({
           data: data.references.map((ref: any) => ({
             jointObligorId: jointObligor.id,
-            name: ref.name,
+            firstName: ref.firstName,
+            paternalLastName: ref.paternalLastName,
+            maternalLastName: ref.maternalLastName,
+            middleName: ref.middleName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,

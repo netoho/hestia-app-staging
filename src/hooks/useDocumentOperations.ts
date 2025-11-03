@@ -60,10 +60,10 @@ export function useDocumentOperations({
       const response = await fetch(endpoint);
       const result = await response.json();
 
-      if (result.success && result.data.documents) {
+      if (result.success && result.documents) {
         const groupedDocs = createEmptyDocumentMap();
 
-        result.data.documents.forEach((doc: Document) => {
+        result.documents.forEach((doc: Document) => {
           if (groupedDocs[doc.category]) {
             groupedDocs[doc.category].push(doc);
           }

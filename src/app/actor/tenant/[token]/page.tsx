@@ -54,7 +54,7 @@ export default function TenantPortalPage() {
       const response = await fetch(`/api/actors/tenant/${token}`);
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         toast({
           title: "Error",
           description: data.error || 'Token inválido',
@@ -64,9 +64,9 @@ export default function TenantPortalPage() {
         return;
       }
 
-      setTenant(data.tenant);
+      setTenant(data.data);
       setPolicy(data.policy);
-      setIsCompleted(data.completed || false);
+      setIsCompleted(data.data?.informationComplete || false);
     } catch (error) {
       console.error('Error validating token:', error);
       toast({

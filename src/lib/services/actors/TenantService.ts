@@ -268,9 +268,14 @@ export class TenantService extends BaseActorService {
         }
       }
 
-      // Handle references if provided
+      // Handle personal references if provided
       if (data.references && Array.isArray(data.references)) {
         await this.savePersonalReferences(tenant.id, data.references, 'tenant');
+      }
+
+      // Handle commercial references if provided (for company tenants)
+      if (data.tenantType === 'COMPANY' && data.commercialReferences && Array.isArray(data.commercialReferences)) {
+        await this.saveCommercialReferences(tenant.id, data.commercialReferences, 'tenant');
       }
 
       // Log activity

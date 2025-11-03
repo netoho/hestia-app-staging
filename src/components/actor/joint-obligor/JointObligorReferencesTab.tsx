@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldError } from '@/components/ui/field-error';
 import { PersonalReference, CommercialReference } from '@/hooks/useJointObligorReferences';
+import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
 
 interface JointObligorReferencesTabProps {
   isCompany: boolean;
@@ -47,19 +48,22 @@ export default function JointObligorReferencesTab({
                   Referencia Personal {index + 1}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <PersonNameFields
+                  firstName={ref.firstName}
+                  middleName={ref.middleName}
+                  paternalLastName={ref.paternalLastName}
+                  maternalLastName={ref.maternalLastName}
+                  onChange={(field, value) => onUpdatePersonalReference(index, field, value)}
+                  disabled={disabled}
+                  errors={errors[`personalReference${index}`] ? {
+                    firstName: errors[`personalReference${index}`],
+                    paternalLastName: errors[`personalReference${index}`],
+                    maternalLastName: errors[`personalReference${index}`],
+                  } : {}}
+                />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Name */}
-                  <div>
-                    <Label>Nombre Completo *</Label>
-                    <Input
-                      value={ref.name}
-                      onChange={(e) => onUpdatePersonalReference(index, 'name', e.target.value)}
-                      placeholder="Nombre completo"
-                      disabled={disabled}
-                      className={errors[`personalReference${index}`] ? 'border-red-500' : ''}
-                    />
-                  </div>
 
                   {/* Phone */}
                   <div>
@@ -129,10 +133,9 @@ export default function JointObligorReferencesTab({
                   Referencia Comercial {index + 1}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Company Name */}
-                  <div>
+                  <div className="md:col-span-2">
                     <Label>Nombre de la Empresa *</Label>
                     <Input
                       value={ref.companyName}
@@ -142,18 +145,32 @@ export default function JointObligorReferencesTab({
                       className={errors[`commercialReference${index}`] ? 'border-red-500' : ''}
                     />
                   </div>
+                </div>
 
-                  {/* Contact Name */}
-                  <div>
-                    <Label>Nombre del Contacto *</Label>
-                    <Input
-                      value={ref.contactName}
-                      onChange={(e) => onUpdateCommercialReference(index, 'contactName', e.target.value)}
-                      placeholder="Nombre completo"
-                      disabled={disabled}
-                      className={errors[`commercialReference${index}`] ? 'border-red-500' : ''}
-                    />
-                  </div>
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Nombre del Contacto *</Label>
+                  <PersonNameFields
+                    firstName={ref.contactFirstName}
+                    middleName={ref.contactMiddleName}
+                    paternalLastName={ref.contactPaternalLastName}
+                    maternalLastName={ref.contactMaternalLastName}
+                    onChange={(field, value) => {
+                      const mappedField = field.replace('firstName', 'contactFirstName')
+                        .replace('middleName', 'contactMiddleName')
+                        .replace('paternalLastName', 'contactPaternalLastName')
+                        .replace('maternalLastName', 'contactMaternalLastName');
+                      onUpdateCommercialReference(index, mappedField, value);
+                    }}
+                    disabled={disabled}
+                    errors={errors[`commercialReference${index}`] ? {
+                      firstName: errors[`commercialReference${index}`],
+                      paternalLastName: errors[`commercialReference${index}`],
+                      maternalLastName: errors[`commercialReference${index}`],
+                    } : {}}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                   {/* Phone */}
                   <div>
