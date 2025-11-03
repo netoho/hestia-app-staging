@@ -484,6 +484,7 @@ export class JointObligorService extends BaseActorService {
     data: any,
     isPartialSave: boolean = false
   ): Promise<Result<any>> {
+    console.log('Validating and saving joint obligor info. Partial save:', isPartialSave);
     return this.executeTransaction(async (tx) => {
       // Validate token using actorTokenService
       const { validateJointObligorToken } = await import('@/lib/services/actorTokenService');
@@ -641,7 +642,6 @@ export class JointObligorService extends BaseActorService {
       });
 
       // Create new personal references (for individuals)
-      console.log('References data:', data.references);
       if (data.references && data.references.length > 0) {
         await tx.personalReference.createMany({
           data: data.references.map((ref: any) => ({
@@ -679,12 +679,12 @@ export class JointObligorService extends BaseActorService {
         const { formatFullName } = await import('@/lib/utils/names');
         const actorName = data.isCompany
           ? data.companyName
-          : formatFullName({
-              firstName: data.firstName,
-              middleName: data.middleName,
-              paternalLastName: data.paternalLastName,
-              maternalLastName: data.maternalLastName
-            });
+          : formatFullName(
+              data.firstName,
+              data.paternalLastName,
+              data.maternalLastName,
+              data.middleName,
+            );
 
         const { logPolicyActivity } = await import('@/lib/services/policyService');
         await logPolicyActivity({
