@@ -252,7 +252,6 @@ export abstract class BaseActorService extends BaseService {
    * Build update data object from actor data
    */
   protected buildUpdateData(data: ActorData, addressId?: string): any {
-    console.log('Building update data for actor:', this.actorType, data);
     const updateData: any = {
       isCompany: data.isCompany,
       email: data.email,

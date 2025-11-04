@@ -79,7 +79,6 @@ export default function PolicyDetailsContent({
   isStaffOrAdmin,
   onRefresh
 }: PolicyDetailsContentProps) {
-  console.log(permissions)
   const router = useRouter();
   const [currentTab, setCurrentTab] = useState('overview');
   const [tabLoading, setTabLoading] = useState(false);

@@ -38,8 +38,6 @@ export default function TenantDocumentsSection({
 }: TenantDocumentsSectionProps) {
   const [localAdditionalInfo, setLocalAdditionalInfo] = useState(additionalInfo);
 
-  console.log(initialDocuments);
-
   const {
     documents,
     operations,

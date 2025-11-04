@@ -484,7 +484,6 @@ export class JointObligorService extends BaseActorService {
     data: any,
     isPartialSave: boolean = false
   ): Promise<Result<any>> {
-    console.log('Validating and saving joint obligor info. Partial save:', isPartialSave);
     return this.executeTransaction(async (tx) => {
       // Validate token using actorTokenService
       const { validateJointObligorToken } = await import('@/lib/services/actorTokenService');
