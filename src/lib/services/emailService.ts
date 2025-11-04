@@ -733,7 +733,7 @@ export const sendUserInvitation = async (data: UserInvitationData): Promise<bool
     const { render } = await import('@react-email/render');
     const { UserInvitationEmail } = await import('../../templates/email/react-email/UserInvitationEmail');
 
-    const html = await render(UserInvitationEmail(data));
+    const html = await render(await UserInvitationEmail(data));
 
     const roleDescriptions = {
       ADMIN: 'Administrador del Sistema',
@@ -796,7 +796,7 @@ export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Prom
     const { render } = await import('@react-email/render');
     const { PolicyStatusUpdateEmail } = await import('../../templates/email/react-email/PolicyStatusUpdateEmail');
 
-    const html = await render(PolicyStatusUpdateEmail(data));
+    const html = await render(await PolicyStatusUpdateEmail(data));
     const isApproved = data.status === 'approved';
     const statusText = isApproved ? 'Aprobada' : 'Rechazada';
     const subject = `Solicitud de Protección ${statusText} - Hestia`;
