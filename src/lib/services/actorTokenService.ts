@@ -1,5 +1,5 @@
-import { randomBytes } from 'crypto';
 import prisma from '../prisma';
+import { generateSecureToken } from '@/lib/utils/tokenUtils';
 
 /**
  * Generate expires at date 1000 days from now
@@ -9,13 +9,6 @@ export function generateExpiresAt(): Date {
   expiresAt.setDate(expiresAt.getDate() + 1000); // 1000 days expiration
 
   return expiresAt;
-}
-
-/**
- * Generate a secure token for actor self-service access
- */
-export function generateSecureToken(): string {
-  return randomBytes(32).toString('hex');
 }
 
 /**

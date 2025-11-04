@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/auth-config';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { ServiceError, ErrorCode } from './types/errors';
+import { isValidToken } from '@/lib/utils/tokenUtils';
 
 export interface ActorAuthResult {
   authType: 'admin' | 'actor';
@@ -19,13 +20,6 @@ export interface ActorAuthResult {
  * Service for handling dual authentication (admin session vs actor token)
  */
 export class ActorAuthService {
-  /**
-   * Check if identifier looks like a UUID
-   */
-  private isUUID(identifier: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(identifier);
-  }
 
   /**
    * Resolve authentication context for an actor request
@@ -37,10 +31,10 @@ export class ActorAuthService {
     request: NextRequest
   ): Promise<ActorAuthResult> {
     // Check if identifier is UUID (admin access) or token (actor access)
-    if (this.isUUID(identifier)) {
-      return this.handleAdminAuth(type, identifier, request);
-    } else {
+    if (isValidToken(identifier)) {
       return this.handleActorAuth(type, identifier);
+    } else {
+      return this.handleAdminAuth(type, identifier, request);
     }
   }
 
