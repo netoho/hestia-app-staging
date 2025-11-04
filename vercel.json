@@ -5,5 +5,11 @@
     "deploymentEnabled": {
       "dev": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/incomplete-actors-reminder",
+      "schedule": "30 17 * * *"
+    }
+  ]
 }

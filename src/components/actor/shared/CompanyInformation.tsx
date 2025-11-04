@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
 import { CompanyActorData } from '@/lib/types/actor';
+import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
 
 interface CompanyInformationProps {
   data: Partial<CompanyActorData>;
@@ -22,7 +23,9 @@ export default function CompanyInformation({
   requiredFields = [
     'companyName',
     'companyRfc',
-    'legalRepName',
+    'legalRepFirstName',
+    'legalRepPaternalLastName',
+    'legalRepMaternalLastName',
     'legalRepPosition',
     'legalRepPhone',
     'legalRepEmail',
@@ -147,22 +150,34 @@ export default function CompanyInformation({
       {/* Legal Representative Information */}
       <div className="space-y-4 mt-6">
         <h3 className="text-sm font-medium text-gray-700">Información del Representante Legal</h3>
+
+        {/* Legal Rep Name Fields */}
+        <div className="md:col-span-2">
+          <PersonNameFields
+            firstName={data.legalRepFirstName || ''}
+            middleName={data.legalRepMiddleName || ''}
+            paternalLastName={data.legalRepPaternalLastName || ''}
+            maternalLastName={data.legalRepMaternalLastName || ''}
+            onChange={(field, value) => {
+              // Map field names with legalRep prefix
+              const mappedField = field === 'firstName' ? 'legalRepFirstName' :
+                                  field === 'middleName' ? 'legalRepMiddleName' :
+                                  field === 'paternalLastName' ? 'legalRepPaternalLastName' :
+                                  'legalRepMaternalLastName';
+              onChange(mappedField as keyof CompanyActorData, value);
+            }}
+            required={isRequired('legalRepFirstName')}
+            disabled={disabled}
+            errors={{
+              firstName: errors.legalRepFirstName,
+              middleName: errors.legalRepMiddleName,
+              paternalLastName: errors.legalRepPaternalLastName,
+              maternalLastName: errors.legalRepMaternalLastName,
+            }}
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <Label htmlFor="legalRepName">
-              Nombre del Representante Legal {isRequired('legalRepName') && '*'}
-            </Label>
-            <Input
-              id="legalRepName"
-              value={data.legalRepName || ''}
-              onChange={(e) => onChange('legalRepName', e.target.value)}
-              placeholder="Nombre completo del representante"
-              className={errors.legalRepName ? 'border-red-500' : ''}
-              disabled={disabled}
-              required={isRequired('legalRepName')}
-            />
-            <FieldError error={errors.legalRepName} />
-          </div>
 
           <div>
             <Label htmlFor="legalRepPosition">

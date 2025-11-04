@@ -126,6 +126,7 @@ const es = {
           ] as NavItem[],
           staffLinks: [
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
+            { href: '/dashboard/users', label: 'Gestionar Usuarios', icon: Users },
             { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
             { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
             { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
 import prisma from '@/lib/prisma';
+import { formatFullName } from '@/lib/utils/names';
 
 export async function GET(
   req: NextRequest,
@@ -87,7 +88,13 @@ export async function GET(
         actors.push({
           id: landlord.id,
           type: 'landlord',
-          name: landlord.fullName,
+          name: landlord.companyName ||
+            (landlord.firstName ? formatFullName(
+              landlord.firstName,
+              landlord.paternalLastName || '',
+              landlord.maternalLastName || '',
+              landlord.middleName || undefined
+            ) : ''),
           email: landlord.email,
           phone: landlord.phone,
           informationComplete: landlord.informationComplete,
@@ -116,7 +123,13 @@ export async function GET(
       actors.push({
         id: policy.tenant.id,
         type: 'tenant',
-        name: policy.tenant.fullName || policy.tenant.companyName || '',
+        name: policy.tenant.companyName ||
+          (policy.tenant.firstName ? formatFullName(
+            policy.tenant.firstName,
+            policy.tenant.paternalLastName || '',
+            policy.tenant.maternalLastName || '',
+            policy.tenant.middleName || undefined
+          ) : ''),
         email: policy.tenant.email,
         phone: policy.tenant.phone,
         informationComplete: policy.tenant.informationComplete,
@@ -146,7 +159,13 @@ export async function GET(
           actors.push({
             id: jo.id,
             type: 'jointObligor',
-            name: jo.fullName,
+            name: jo.companyName ||
+              (jo.firstName ? formatFullName(
+                jo.firstName,
+                jo.paternalLastName || '',
+                jo.maternalLastName || '',
+                jo.middleName || undefined
+              ) : ''),
             email: jo.email,
             phone: jo.phone,
             informationComplete: jo.informationComplete,
@@ -178,7 +197,13 @@ export async function GET(
           actors.push({
             id: aval.id,
             type: 'aval',
-            name: aval.fullName,
+            name: aval.companyName ||
+              (aval.firstName ? formatFullName(
+                aval.firstName,
+                aval.paternalLastName || '',
+                aval.maternalLastName || '',
+                aval.middleName || undefined
+              ) : ''),
             email: aval.email,
             phone: aval.phone,
             informationComplete: aval.informationComplete,

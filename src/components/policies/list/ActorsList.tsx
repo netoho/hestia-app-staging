@@ -1,9 +1,13 @@
 'use client';
 
 import { Home, User, Users, CheckSquare, Square } from 'lucide-react';
+import { formatFullName } from '@/lib/utils/names';
 
 interface Actor {
-  fullName?: string;
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
   companyName?: string;
   email?: string;
   phone?: string;
@@ -34,7 +38,7 @@ export default function ActorsList({
     icon: React.ReactNode,
     label?: string
   ) => {
-    const name = actor.fullName || actor.companyName || 'Sin nombre';
+    const name = formatFullName(actor.firstName, actor.paternalLastName, actor.maternalLastName, actor.middleName) || actor.companyName;
     const CompletionIcon = actor.informationComplete ? CheckSquare : Square;
 
     return (

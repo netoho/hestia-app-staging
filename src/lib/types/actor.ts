@@ -50,7 +50,10 @@ export interface BaseActorData {
 // Person-specific actor data
 export interface PersonActorData extends BaseActorData {
   isCompany: false;
-  fullName: string;
+  firstName: string;
+  middleName?: string;
+  paternalLastName: string;
+  maternalLastName: string;
   rfc?: string;
   curp?: string;
   nationality?: NationalityType;
@@ -73,7 +76,10 @@ export interface CompanyActorData extends BaseActorData {
   companyRfc: string;
 
   // Legal representative information
-  legalRepName: string;
+  legalRepFirstName: string;
+  legalRepMiddleName?: string;
+  legalRepPaternalLastName: string;
+  legalRepMaternalLastName: string;
   legalRepPosition: string;
   legalRepRfc?: string;
   legalRepPhone: string;
@@ -155,6 +161,7 @@ export interface PropertyDetails {
   // Rules and inventory
   hasInventory?: boolean;
   hasRules?: boolean;
+  rulesType?: 'condominios' | 'colonos';
   petsAllowed?: boolean;
 
   // Important dates

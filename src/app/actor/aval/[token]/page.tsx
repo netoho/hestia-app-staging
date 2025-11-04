@@ -44,18 +44,18 @@ export default function AvalPortalPage({
 
   const validateTokenAndLoadData = async () => {
     try {
-      const response = await fetch(`/api/actor/aval/${token}/validate`);
+      const response = await fetch(`/api/actors/aval/${token}`);
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         setError(data.error || 'Token inválido o expirado');
         setLoading(false);
         return;
       }
 
       setPolicy(data.policy);
-      setAvalData(data.aval);
-      setCompleted(data.completed || data.aval?.informationComplete || false);
+      setAvalData(data.data);
+      setCompleted(data.data?.informationComplete || false);
       setLoading(false);
     } catch (error) {
       console.error('Error validating token:', error);

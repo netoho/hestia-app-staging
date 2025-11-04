@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth, requireRole } from '@/lib/auth';
 import { sendActorRejectionEmail } from '@/lib/services/emailService';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import { formatFullName } from '@/lib/utils/names';
 
 export async function POST(
   request: NextRequest,
@@ -66,7 +67,13 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName || updateResult.companyName || '';
+        actorName = updateResult.companyName ||
+          (updateResult.firstName ? formatFullName(
+            updateResult.firstName,
+            updateResult.paternalLastName || '',
+            updateResult.maternalLastName || '',
+            updateResult.middleName || undefined
+          ) : '');
         break;
 
       case 'tenant':
@@ -75,7 +82,13 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName || updateResult.companyName || '';
+        actorName = updateResult.companyName ||
+          (updateResult.firstName ? formatFullName(
+            updateResult.firstName,
+            updateResult.paternalLastName || '',
+            updateResult.maternalLastName || '',
+            updateResult.middleName || undefined
+          ) : '');
         break;
 
       case 'jointObligor':
@@ -84,7 +97,13 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName || updateResult.companyName || '';
+        actorName = updateResult.companyName ||
+          (updateResult.firstName ? formatFullName(
+            updateResult.firstName,
+            updateResult.paternalLastName || '',
+            updateResult.maternalLastName || '',
+            updateResult.middleName || undefined
+          ) : '');
         break;
 
       case 'aval':
@@ -93,7 +112,13 @@ export async function POST(
           data: updateData,
         });
         actorEmail = updateResult.email;
-        actorName = updateResult.fullName || updateResult.companyName || '';
+        actorName = updateResult.companyName ||
+          (updateResult.firstName ? formatFullName(
+            updateResult.firstName,
+            updateResult.paternalLastName || '',
+            updateResult.maternalLastName || '',
+            updateResult.middleName || undefined
+          ) : '');
         break;
 
       default:

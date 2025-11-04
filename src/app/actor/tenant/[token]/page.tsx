@@ -7,13 +7,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, CheckCircle2, Home, Calendar, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { brandInfo } from '@/lib/config/brand';
+import { formatFullName } from '@/lib/utils/names';
 
 import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard';
 
 interface TenantData {
   id: string;
   tenantType: 'INDIVIDUAL' | 'COMPANY';
-  fullName?: string;
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
   email: string;
   phone: string;
   informationComplete: boolean;
@@ -47,10 +51,10 @@ export default function TenantPortalPage() {
 
   const validateToken = async () => {
     try {
-      const response = await fetch(`/api/actor/tenant/${token}/validate`);
+      const response = await fetch(`/api/actors/tenant/${token}`);
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         toast({
           title: "Error",
           description: data.error || 'Token inválido',
@@ -60,9 +64,9 @@ export default function TenantPortalPage() {
         return;
       }
 
-      setTenant(data.tenant);
+      setTenant(data.data);
       setPolicy(data.policy);
-      setIsCompleted(data.completed || false);
+      setIsCompleted(data.data?.informationComplete || false);
     } catch (error) {
       console.error('Error validating token:', error);
       toast({
@@ -192,7 +196,7 @@ export default function TenantPortalPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="text-center">
             <h1 className="font-headline text-3xl md:text-4xl mb-3" style={{ color: '#173459' }}>
-              Bienvenido, {tenant.fullName || 'Inquilino'}
+              Bienvenido, {tenant.firstName ? formatFullName(tenant.firstName, tenant.paternalLastName || '', tenant.maternalLastName || '', tenant.middleName) : 'Inquilino'}
             </h1>
             <p className="text-lg text-gray-600 mb-4">
               Complete su información para la protección de arrendamiento

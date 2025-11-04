@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun run --bun next dev --turbopack -p 9002",
+    "dev:node": "next dev --turbopack -p 9002",
     "genkit:dev": "bun run --bun genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "bun run --bun genkit start -- tsx --watch src/ai/dev.ts",
     "build": "bun run --bun next build",

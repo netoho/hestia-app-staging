@@ -54,17 +54,16 @@ export function useDocumentOperations({
 
     setLoading(true);
     try {
-      const endpoint = isAdminEdit
-        ? `/api/admin/actors/${actorType}/${token}/documents`
-        : `/api/actor/${actorType}/${token}/documents`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const endpoint = `/api/actors/${actorType}/${token}/documents`;
 
       const response = await fetch(endpoint);
       const result = await response.json();
 
-      if (result.success && result.data.documents) {
+      if (result.success && result.documents) {
         const groupedDocs = createEmptyDocumentMap();
 
-        result.data.documents.forEach((doc: Document) => {
+        result.documents.forEach((doc: Document) => {
           if (groupedDocs[doc.category]) {
             groupedDocs[doc.category].push(doc);
           }
@@ -133,9 +132,8 @@ export function useDocumentOperations({
     }));
 
     try {
-      const endpoint = isAdminEdit
-        ? `/api/admin/actors/${actorType}/${token}/documents`
-        : `/api/actor/${actorType}/${token}/documents`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const endpoint = `/api/actors/${actorType}/${token}/documents`;
 
       await uploadWithProgress({
         file,
@@ -185,9 +183,8 @@ export function useDocumentOperations({
     }));
 
     try {
-      const endpoint = isAdminEdit
-        ? `/api/admin/actors/${actorType}/${token}/documents/${documentId}/download`
-        : `/api/actor/${actorType}/${token}/documents/${documentId}/download`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const endpoint = `/api/actors/${actorType}/${token}/documents/${documentId}`;
 
       await downloadWithProgress({
         documentId,
@@ -232,9 +229,8 @@ export function useDocumentOperations({
     }));
 
     try {
-      const endpoint = isAdminEdit
-        ? `/api/admin/actors/${actorType}/${token}/documents?documentId=${documentId}`
-        : `/api/actor/${actorType}/${token}/documents?documentId=${documentId}`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const endpoint = `/api/actors/${actorType}/${token}/documents?documentId=${documentId}`;
 
       const response = await fetch(endpoint, {
         method: 'DELETE',

@@ -210,7 +210,9 @@ async function main() {
         create: {
           isPrimary: true,
           isCompany: false,
-          fullName: 'Juan Pérez García',
+          firstName: 'Juan',
+          paternalLastName: 'Pérez',
+          maternalLastName: 'García',
           email: 'juan.perez@example.com',
           phone: '5512345678',
           workPhone: '5598765432',
@@ -230,7 +232,9 @@ async function main() {
       tenant: {
         create: {
           tenantType: 'INDIVIDUAL',
-          fullName: 'María López Hernández',
+          firstName: 'María',
+          paternalLastName: 'López',
+          maternalLastName: 'Hernández',
           nationality: 'MEXICAN',
           curp: 'LOHM900515MDFRPR03',
           rfc: 'LOHM900515ABC',
@@ -296,7 +300,9 @@ async function main() {
     data: {
       policyId: samplePolicy.id,
       isCompany: false,
-      fullName: 'Carlos Rodríguez Martínez',
+      firstName: 'Carlos',
+      paternalLastName: 'Rodríguez',
+      maternalLastName: 'Martínez',
       email: 'carlos.rodriguez@example.com',
       phone: '5511223344',
       workPhone: '5599887766',
@@ -316,7 +322,7 @@ async function main() {
       maritalStatus: 'single',
     }
   });
-  console.log(`Created joint obligor: ${jointObligor.fullName}`);
+  console.log(`Created joint obligor: ${jointObligor.firstName} ${jointObligor.paternalLastName} ${jointObligor.maternalLastName}`);
 
   // Seed SystemConfig
   console.log('Seeding system configuration...');
@@ -355,7 +361,9 @@ async function main() {
             isCompany: true,
             companyName: 'Inmobiliaria Polanco SA de CV',
             companyRfc: 'IPO990101ABC',
-            legalRepName: 'Roberto Sánchez Villa',
+            legalRepFirstName: 'Roberto',
+            legalRepPaternalLastName: 'Sánchez',
+            legalRepMaternalLastName: 'Villa',
             legalRepPosition: 'Director General',
             legalRepRfc: 'SAVR780202XYZ',
             legalRepPhone: '5511112222',
@@ -371,7 +379,9 @@ async function main() {
           {
             isPrimary: false,
             isCompany: false,
-            fullName: 'Laura Sánchez Villa',
+            firstName: 'Laura',
+            paternalLastName: 'Sánchez',
+            maternalLastName: 'Villa',
             email: 'laura.sanchez@example.com',
             phone: '5544332211',
             rfc: 'SAVL850515ABC',
@@ -386,7 +396,9 @@ async function main() {
           tenantType: 'COMPANY',
           companyName: 'Consultores Digitales SA de CV',
           companyRfc: 'CDI200315XYZ',
-          legalRepName: 'Ana Martínez Torres',
+          legalRepFirstName: 'Ana',
+          legalRepPaternalLastName: 'Martínez',
+          legalRepMaternalLastName: 'Torres',
           legalRepPosition: 'Representante Legal',
           legalRepRfc: 'MATA900515ABC',
           legalRepPhone: '5533445566',
@@ -448,7 +460,9 @@ async function main() {
     data: {
       policyId: activePolicy.id,
       isCompany: false,
-      fullName: 'Pedro González López',
+      firstName: 'Pedro',
+      paternalLastName: 'González',
+      maternalLastName: 'López',
       email: 'pedro.gonzalez@example.com',
       phone: '5566778899',
       workPhone: '5577889900',
@@ -478,7 +492,7 @@ async function main() {
       spouseCurp: 'MARL850515MDFRRT09',
     }
   });
-  console.log(`Created aval: ${aval.fullName}`);
+  console.log(`Created aval: ${aval.firstName} ${aval.paternalLastName} ${aval.maternalLastName}`);
 
   console.log('Seeding completed successfully!');
 }

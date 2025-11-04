@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withPolicyAuth } from '@/lib/middleware/policyAuth';
 import { getPolicyById } from '@/lib/services/policyService';
 import { generateActorUrl } from '@/lib/services/actorTokenService';
+import { formatFullName } from '@/lib/utils/names';
 
 export const GET = withPolicyAuth(async (
   request: NextRequest,
@@ -30,7 +31,13 @@ export const GET = withPolicyAuth(async (
         shareLinks.push({
           actorId: landlord.id,
           actorType: 'landlord',
-          actorName: landlord.fullName || landlord.companyName,
+          actorName: landlord.companyName ||
+            (landlord.firstName ? formatFullName(
+              landlord.firstName,
+              landlord.paternalLastName || '',
+              landlord.maternalLastName || '',
+              landlord.middleName || undefined
+            ) : 'Sin nombre'),
           email: landlord.email,
           phone: landlord.phone,
           url: generateActorUrl(landlord.accessToken, 'landlord'),
@@ -45,7 +52,13 @@ export const GET = withPolicyAuth(async (
       shareLinks.push({
         actorId: policy.tenant.id,
         actorType: 'tenant',
-        actorName: policy.tenant.fullName || policy.tenant.companyName,
+        actorName: policy.tenant.companyName ||
+          (policy.tenant.firstName ? formatFullName(
+            policy.tenant.firstName,
+            policy.tenant.paternalLastName || '',
+            policy.tenant.maternalLastName || '',
+            policy.tenant.middleName || undefined
+          ) : 'Sin nombre'),
         email: policy.tenant.email,
         phone: policy.tenant.phone,
         url: generateActorUrl(policy.tenant.accessToken, 'tenant'),
@@ -61,7 +74,13 @@ export const GET = withPolicyAuth(async (
           shareLinks.push({
             actorId: jo.id,
             actorType: 'joint-obligor',
-            actorName: jo.fullName || jo.companyName,
+            actorName: jo.companyName ||
+              (jo.firstName ? formatFullName(
+                jo.firstName,
+                jo.paternalLastName || '',
+                jo.maternalLastName || '',
+                jo.middleName || undefined
+              ) : 'Sin nombre'),
             email: jo.email,
             phone: jo.phone,
             url: generateActorUrl(jo.accessToken, 'joint-obligor'),
@@ -79,7 +98,13 @@ export const GET = withPolicyAuth(async (
           shareLinks.push({
             actorId: aval.id,
             actorType: 'aval',
-            actorName: aval.fullName || aval.companyName,
+            actorName: aval.companyName ||
+              (aval.firstName ? formatFullName(
+                aval.firstName,
+                aval.paternalLastName || '',
+                aval.maternalLastName || '',
+                aval.middleName || undefined
+              ) : 'Sin nombre'),
             email: aval.email,
             phone: aval.phone,
             url: generateActorUrl(aval.accessToken, 'aval'),

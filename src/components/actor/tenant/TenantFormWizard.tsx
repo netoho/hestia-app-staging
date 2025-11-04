@@ -66,7 +66,6 @@ export default function TenantFormWizard({
   const tabs = isCompany
     ? [
         { id: 'personal', label: 'Información', needsSave: true },
-        { id: 'rental', label: 'Historial', needsSave: true },
         { id: 'references', label: 'Referencias', needsSave: true },
         { id: 'documents', label: 'Documentos', needsSave: false },
       ]
@@ -154,9 +153,8 @@ export default function TenantFormWizard({
         informationComplete: true,
       };
 
-      const submitUrl = isAdminEdit
-        ? `/api/admin/actors/tenant/${token}/submit`
-        : `/api/actor/tenant/${token}/submit`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const submitUrl = `/api/actors/tenant/${token}`;
 
       const response = await fetch(submitUrl, {
         method: 'POST',

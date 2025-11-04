@@ -1,16 +1,8 @@
 import prisma from '@/lib/prisma';
-import crypto from 'crypto';
-
+import { generateSecureToken } from '@/lib/utils/tokenUtils';
 /**
  * Service for managing user invitation and password reset tokens
  */
-
-/**
- * Generate a secure random token
- */
-function generateSecureToken(): string {
-  return crypto.randomBytes(32).toString('hex');
-}
 
 /**
  * Generate an invitation token for a user

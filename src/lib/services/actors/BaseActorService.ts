@@ -192,7 +192,10 @@ export abstract class BaseActorService extends BaseService {
         await this.prisma.personalReference.createMany({
           data: references.map((ref: any) => ({
             ...dataClause,
-            name: ref.name,
+            firstName: ref.firstName,
+            middleName: ref.middleName || null,
+            paternalLastName: ref.paternalLastName,
+            maternalLastName: ref.maternalLastName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -210,7 +213,7 @@ export abstract class BaseActorService extends BaseService {
   protected async saveCommercialReferences(
     actorId: string,
     references: any[],
-    actorType: 'aval' | 'jointObligor' | 'landlord'
+    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
   ): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       // Build where clause based on actor type
@@ -231,7 +234,10 @@ export abstract class BaseActorService extends BaseService {
           data: references.map((ref: any) => ({
             ...dataClause,
             companyName: ref.companyName,
-            contactName: ref.contactName,
+            contactFirstName: ref.contactFirstName,
+            contactMiddleName: ref.contactMiddleName || null,
+            contactPaternalLastName: ref.contactPaternalLastName,
+            contactMaternalLastName: ref.contactMaternalLastName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -269,7 +275,11 @@ export abstract class BaseActorService extends BaseService {
     // Add person-specific fields
     if (isPersonActor(data)) {
       const personData = data as PersonActorData;
-      if (personData.fullName !== undefined) updateData.fullName = personData.fullName;
+      // Individual name fields
+      if (personData.firstName !== undefined) updateData.firstName = personData.firstName;
+      if (personData.middleName !== undefined) updateData.middleName = personData.middleName || null;
+      if (personData.paternalLastName !== undefined) updateData.paternalLastName = personData.paternalLastName;
+      if (personData.maternalLastName !== undefined) updateData.maternalLastName = personData.maternalLastName || null;
       if (personData.rfc !== undefined) updateData.rfc = personData.rfc || null;
       if (personData.curp !== undefined) updateData.curp = personData.curp || null;
       if (personData.occupation !== undefined) updateData.occupation = personData.occupation || null;
@@ -284,7 +294,11 @@ export abstract class BaseActorService extends BaseService {
       const companyData = data as CompanyActorData;
       if (companyData.companyName !== undefined) updateData.companyName = companyData.companyName;
       if (companyData.companyRfc !== undefined) updateData.companyRfc = companyData.companyRfc;
-      if (companyData.legalRepName !== undefined) updateData.legalRepName = companyData.legalRepName;
+      // Legal rep name fields
+      if (companyData.legalRepFirstName !== undefined) updateData.legalRepFirstName = companyData.legalRepFirstName;
+      if (companyData.legalRepMiddleName !== undefined) updateData.legalRepMiddleName = companyData.legalRepMiddleName || null;
+      if (companyData.legalRepPaternalLastName !== undefined) updateData.legalRepPaternalLastName = companyData.legalRepPaternalLastName;
+      if (companyData.legalRepMaternalLastName !== undefined) updateData.legalRepMaternalLastName = companyData.legalRepMaternalLastName || null;
       if (companyData.legalRepPosition !== undefined) updateData.legalRepPosition = companyData.legalRepPosition;
       if (companyData.legalRepRfc !== undefined) updateData.legalRepRfc = companyData.legalRepRfc || null;
       if (companyData.legalRepPhone !== undefined) updateData.legalRepPhone = companyData.legalRepPhone;
@@ -384,7 +398,7 @@ export abstract class BaseActorService extends BaseService {
 
     if (isPersonActor(data)) {
       const personData = data as PersonActorData;
-      return hasBasicInfo && !!personData.fullName;
+      return hasBasicInfo && !!(personData.firstName && personData.paternalLastName);
     }
 
     if (isCompanyActor(data)) {
@@ -392,7 +406,7 @@ export abstract class BaseActorService extends BaseService {
       return hasBasicInfo &&
         !!companyData.companyName &&
         !!companyData.companyRfc &&
-        !!companyData.legalRepName &&
+        !!(companyData.legalRepFirstName && companyData.legalRepPaternalLastName) &&
         !!companyData.legalRepPhone &&
         !!companyData.legalRepEmail;
     }
@@ -426,6 +440,72 @@ export abstract class BaseActorService extends BaseService {
       this.log('error', 'Failed to log activity', error);
       // Don't fail the operation if logging fails
       return Result.ok(undefined);
+    }
+  }
+
+  /**
+   * Check if all actors are complete and transition policy status if needed
+   * This should be called after an actor completes their information (not partial save)
+   */
+  protected async checkAndTransitionPolicyStatus(
+    policyId: string,
+    performedBy: string = 'system'
+  ): AsyncResult<{ transitioned: boolean; newStatus?: string }> {
+    try {
+      // Get the policy to check current status
+      const policy = await this.prisma.policy.findUnique({
+        where: { id: policyId },
+        select: { status: true }
+      });
+
+      if (!policy) {
+        return Result.error('Policy not found');
+      }
+
+      // Only transition if currently in COLLECTING_INFO status
+      if (policy.status !== 'COLLECTING_INFO') {
+        return Result.ok({ transitioned: false });
+      }
+
+      // Check if all actors are complete using the improved function
+      const { checkPolicyActorsComplete } = await import('@/lib/services/actorTokenService');
+      const actorsStatus = await checkPolicyActorsComplete(policyId);
+
+      // If all actors are complete, transition to UNDER_INVESTIGATION
+      if (actorsStatus.allComplete) {
+        const { transitionPolicyStatus } = await import('@/lib/services/policyWorkflowService');
+
+        await transitionPolicyStatus(
+          policyId,
+          'UNDER_INVESTIGATION',
+          performedBy,
+          'All actor information completed'
+        );
+
+        this.log('info', 'Policy status transitioned to UNDER_INVESTIGATION', {
+          policyId,
+          performedBy,
+          allActorsComplete: actorsStatus
+        });
+
+        return Result.ok({
+          transitioned: true,
+          newStatus: 'UNDER_INVESTIGATION'
+        });
+      }
+
+      return Result.ok({
+        transitioned: false,
+        ...actorsStatus // Include completion details for debugging
+      });
+    } catch (error) {
+      this.log('error', 'Failed to check and transition policy status', {
+        policyId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      // Don't fail the operation if transition check fails
+      return Result.ok({ transitioned: false });
     }
   }
 }

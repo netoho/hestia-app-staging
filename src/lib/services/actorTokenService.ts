@@ -1,5 +1,5 @@
-import { randomBytes } from 'crypto';
 import prisma from '../prisma';
+import { generateSecureToken } from '@/lib/utils/tokenUtils';
 
 /**
  * Generate expires at date 1000 days from now
@@ -9,13 +9,6 @@ export function generateExpiresAt(): Date {
   expiresAt.setDate(expiresAt.getDate() + 1000); // 1000 days expiration
 
   return expiresAt;
-}
-
-/**
- * Generate a secure token for actor self-service access
- */
-export function generateSecureToken(): string {
-  return randomBytes(32).toString('hex');
 }
 
 /**
@@ -415,10 +408,12 @@ export async function generatePolicyActorTokens(policyId: string): Promise<{
  */
 export async function checkPolicyActorsComplete(policyId: string): Promise<{
   allComplete: boolean;
+  primaryLandlord: boolean;
   tenant: boolean;
   jointObligors: boolean;
   avals: boolean;
   details: {
+    primaryLandlordComplete?: boolean;
     tenantComplete?: boolean;
     jointObligorsComplete?: { [id: string]: boolean };
     avalsComplete?: { [id: string]: boolean };
@@ -427,6 +422,13 @@ export async function checkPolicyActorsComplete(policyId: string): Promise<{
   const policy = await prisma.policy.findUnique({
     where: { id: policyId },
     include: {
+      landlords: {
+        select: {
+          id: true,
+          isPrimary: true,
+          informationComplete: true,
+        }
+      },
       tenant: true,
       jointObligors: true,
       avals: true
@@ -438,40 +440,70 @@ export async function checkPolicyActorsComplete(policyId: string): Promise<{
   }
 
   const details: any = {};
+  let primaryLandlordComplete = false;
   let tenantComplete = true;
   let jointObligorsComplete = true;
   let avalsComplete = true;
+
+  // Check primary landlord
+  const primaryLandlord = policy.landlords.find(l => l.isPrimary);
+  if (primaryLandlord) {
+    primaryLandlordComplete = primaryLandlord.informationComplete;
+  } else {
+    // No primary landlord means not complete
+    details.primaryLandlordComplete = false;
+    primaryLandlordComplete = false;
+  }
 
   // Check tenant
   if (policy.tenant) {
     details.tenantComplete = policy.tenant.informationComplete;
     tenantComplete = policy.tenant.informationComplete;
+  } else {
+    tenantComplete = false;
   }
 
-  // Check joint obligors
-  if (policy.jointObligors && policy.jointObligors.length > 0) {
-    details.jointObligorsComplete = {};
-    for (const jo of policy.jointObligors) {
-      details.jointObligorsComplete[jo.id] = jo.informationComplete;
-      if (!jo.informationComplete) {
-        jointObligorsComplete = false;
+  // Check joint obligors based on guarantorType
+  if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {
+    if (policy.jointObligors && policy.jointObligors.length > 0) {
+      details.jointObligorsComplete = {};
+      for (const jo of policy.jointObligors) {
+        details.jointObligorsComplete[jo.id] = jo.informationComplete;
+        if (!jo.informationComplete) {
+          jointObligorsComplete = false;
+        }
       }
+    } else {
+      // Required but not present
+      jointObligorsComplete = false;
     }
+  } else {
+    // Not required for this guarantorType
+    jointObligorsComplete = true;
   }
 
-  // Check avals
-  if (policy.avals && policy.avals.length > 0) {
-    details.avalsComplete = {};
-    for (const aval of policy.avals) {
-      details.avalsComplete[aval.id] = aval.informationComplete;
-      if (!aval.informationComplete) {
-        avalsComplete = false;
+  // Check avals based on guarantorType
+  if (policy.guarantorType === 'AVAL' || policy.guarantorType === 'BOTH') {
+    if (policy.avals && policy.avals.length > 0) {
+      details.avalsComplete = {};
+      for (const aval of policy.avals) {
+        details.avalsComplete[aval.id] = aval.informationComplete;
+        if (!aval.informationComplete) {
+          avalsComplete = false;
+        }
       }
+    } else {
+      // Required but not present
+      avalsComplete = false;
     }
+  } else {
+    // Not required for this guarantorType
+    avalsComplete = true;
   }
 
   return {
-    allComplete: tenantComplete && jointObligorsComplete && avalsComplete,
+    allComplete: primaryLandlordComplete && tenantComplete && jointObligorsComplete && avalsComplete,
+    primaryLandlord: primaryLandlordComplete,
     tenant: tenantComplete,
     jointObligors: jointObligorsComplete,
     avals: avalsComplete,

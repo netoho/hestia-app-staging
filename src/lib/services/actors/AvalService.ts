@@ -385,7 +385,7 @@ export class AvalService extends BaseActorService {
 
         if (aval.informationComplete && !isPartialSave) {
           throw new ServiceError(
-            ErrorCode.ALREADY_COMPLETED,
+            ErrorCode.ALREADY_COMPLETE,
             'La información ya fue completada',
             400
           );
@@ -415,8 +415,11 @@ export class AvalService extends BaseActorService {
       const updateData: any = {
         // Type
         isCompany: data.isCompany,
-        // Individual Information
-        fullName: data.fullName,
+        // Individual Information - name fields
+        firstName: data.firstName || null,
+        middleName: data.middleName || null,
+        paternalLastName: data.paternalLastName || null,
+        maternalLastName: data.maternalLastName || null,
         nationality: data.nationality,
         curp: data.curp || null,
         rfc: data.rfc || null,
@@ -425,7 +428,11 @@ export class AvalService extends BaseActorService {
         // Company Information
         companyName: data.companyName || null,
         companyRfc: data.companyRfc || null,
-        legalRepName: data.legalRepName || null,
+        // Legal rep name fields
+        legalRepFirstName: data.legalRepFirstName || null,
+        legalRepMiddleName: data.legalRepMiddleName || null,
+        legalRepPaternalLastName: data.legalRepPaternalLastName || null,
+        legalRepMaternalLastName: data.legalRepMaternalLastName || null,
         legalRepPosition: data.legalRepPosition || null,
         legalRepRfc: data.legalRepRfc || null,
         legalRepPhone: data.legalRepPhone || null,

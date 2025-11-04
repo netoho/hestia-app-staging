@@ -2,7 +2,10 @@ import { useState, useCallback } from 'react';
 
 export interface PersonalReference {
   id?: string;
-  name: string;
+  firstName: string;
+  middleName?: string;
+  paternalLastName: string;
+  maternalLastName: string;
   phone: string;
   email?: string;
   relationship: string;
@@ -12,7 +15,10 @@ export interface PersonalReference {
 export interface CommercialReference {
   id?: string;
   companyName: string;
-  contactName: string;
+  contactFirstName: string;
+  contactMiddleName?: string;
+  contactPaternalLastName: string;
+  contactMaternalLastName: string;
   phone: string;
   email?: string;
   relationship?: string;
@@ -27,9 +33,9 @@ export function useTenantReferences(
     initialPersonal.length > 0
       ? initialPersonal
       : [
-          { name: '', phone: '', email: '', relationship: '', occupation: '' },
-          { name: '', phone: '', email: '', relationship: '', occupation: '' },
-          { name: '', phone: '', email: '', relationship: '', occupation: '' },
+          { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
+          { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
+          { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
         ]
   );
 
@@ -37,9 +43,9 @@ export function useTenantReferences(
     initialCommercial.length > 0
       ? initialCommercial
       : [
-          { companyName: '', contactName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-          { companyName: '', contactName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-          { companyName: '', contactName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+          { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+          { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+          { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
         ]
   );
 
@@ -62,14 +68,14 @@ export function useTenantReferences(
   const addPersonalReference = useCallback(() => {
     setPersonalReferences(prev => [
       ...prev,
-      { name: '', phone: '', email: '', relationship: '', occupation: '' },
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
     ]);
   }, []);
 
   const addCommercialReference = useCallback(() => {
     setCommercialReferences(prev => [
       ...prev,
-      { companyName: '', contactName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
     ]);
   }, []);
 
@@ -84,7 +90,7 @@ export function useTenantReferences(
   const validatePersonalReferences = useCallback((): { valid: boolean; errors: Record<string, string> } => {
     const errors: Record<string, string> = {};
     personalReferences.forEach((ref, index) => {
-      if (!ref.name || !ref.phone || !ref.relationship) {
+      if (!ref.firstName || !ref.paternalLastName || !ref.maternalLastName || !ref.phone || !ref.relationship) {
         errors[`reference${index}`] = `Complete la referencia personal ${index + 1}`;
       }
     });
@@ -94,7 +100,7 @@ export function useTenantReferences(
   const validateCommercialReferences = useCallback((): { valid: boolean; errors: Record<string, string> } => {
     const errors: Record<string, string> = {};
     commercialReferences.forEach((ref, index) => {
-      if (!ref.companyName || !ref.contactName || !ref.phone) {
+      if (!ref.companyName || !ref.contactFirstName || !ref.contactPaternalLastName || !ref.contactMaternalLastName || !ref.phone) {
         errors[`commercialReference${index}`] = `Complete la referencia comercial ${index + 1}`;
       }
     });

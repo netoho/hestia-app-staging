@@ -157,8 +157,16 @@ export function useLandlordForm({
         // Person validation
         landlord = landlord as PersonLandlordData;
 
-        if (!landlord.fullName || !validateRequired(landlord.fullName)) {
-          newErrors[`${prefix}fullName`] = VALIDATION_MESSAGES.required;
+        if (!landlord.firstName || !validateRequired(landlord.firstName)) {
+          newErrors[`${prefix}firstName`] = VALIDATION_MESSAGES.required;
+          valid = false;
+        }
+        if (!landlord.paternalLastName || !validateRequired(landlord.paternalLastName)) {
+          newErrors[`${prefix}paternalLastName`] = VALIDATION_MESSAGES.required;
+          valid = false;
+        }
+        if (!landlord.maternalLastName || !validateRequired(landlord.maternalLastName)) {
+          newErrors[`${prefix}maternalLastName`] = VALIDATION_MESSAGES.required;
           valid = false;
         }
       }
@@ -265,10 +273,8 @@ export function useLandlordForm({
         }];
       }
 
-      // Use appropriate endpoint
-      const submitUrl = isAdminEdit
-        ? `/api/admin/actors/landlord/${token}/submit`
-        : `/api/actor/landlord/${token}/submit`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const submitUrl = `/api/actors/landlord/${token}`;
 
       const response = await fetch(submitUrl, {
         method: 'PUT',

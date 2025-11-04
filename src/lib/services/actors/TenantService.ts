@@ -104,50 +104,201 @@ export class TenantService extends BaseActorService {
     isPartial: boolean = false
   ): AsyncResult<any> {
     try {
-      // Validate token (you would need to implement validateTenantToken)
-      // This is just an example structure
-      const tokenValidation = { valid: true, tenant: { id: 'test', policyId: 'test' } };
+      // Validate token
+      const validation = await validateTenantToken(token);
 
-      if (!tokenValidation.valid || !tokenValidation.tenant) {
+      if (!validation.valid) {
         return Result.error(
           new ServiceError(
             ErrorCode.INVALID_TOKEN,
-            'Invalid token',
+            validation.message || 'Invalid token',
             401
           )
         );
       }
 
-      // Validate and save tenant data
-      const result = await this.saveTenantInformation(
-        tokenValidation.tenant.id,
-        data.tenant,
-        isPartial
-      );
+      const { tenant } = validation;
 
-      if (!result.ok) {
-        return result;
+      // Check token expiry
+      if (tenant.tokenExpiry && tenant.tokenExpiry < new Date()) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.TOKEN_EXPIRED,
+            'Token expired',
+            401
+          )
+        );
+      }
+
+      // For final submission, check if already complete
+      if (!isPartial && tenant.informationComplete) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.ALREADY_COMPLETE,
+            'Information already submitted',
+            400
+          )
+        );
+      }
+
+      // Prepare update data
+      const updateData: any = {};
+
+      // Handle all tenant fields
+      if (data.tenantType !== undefined) updateData.tenantType = data.tenantType;
+
+      // Individual name fields
+      if (data.firstName !== undefined) updateData.firstName = data.firstName;
+      if (data.middleName !== undefined) updateData.middleName = data.middleName || null;
+      if (data.paternalLastName !== undefined) updateData.paternalLastName = data.paternalLastName;
+      if (data.maternalLastName !== undefined) updateData.maternalLastName = data.maternalLastName;
+      if (data.nationality !== undefined) updateData.nationality = data.nationality;
+      if (data.curp !== undefined) updateData.curp = data.curp || null;
+      if (data.rfc !== undefined) updateData.rfc = data.rfc || null;
+      if (data.passport !== undefined) updateData.passport = data.passport || null;
+
+      // Company fields
+      if (data.companyName !== undefined) updateData.companyName = data.companyName;
+      if (data.companyRfc !== undefined) updateData.companyRfc = data.companyRfc;
+      if (data.legalRepFirstName !== undefined) updateData.legalRepFirstName = data.legalRepFirstName;
+      if (data.legalRepMiddleName !== undefined) updateData.legalRepMiddleName = data.legalRepMiddleName || null;
+      if (data.legalRepPaternalLastName !== undefined) updateData.legalRepPaternalLastName = data.legalRepPaternalLastName;
+      if (data.legalRepMaternalLastName !== undefined) updateData.legalRepMaternalLastName = data.legalRepMaternalLastName;
+      if (data.legalRepId !== undefined) updateData.legalRepId = data.legalRepId;
+      if (data.legalRepPosition !== undefined) updateData.legalRepPosition = data.legalRepPosition;
+      if (data.legalRepRfc !== undefined) updateData.legalRepRfc = data.legalRepRfc;
+      if (data.legalRepPhone !== undefined) updateData.legalRepPhone = data.legalRepPhone;
+      if (data.legalRepEmail !== undefined) updateData.legalRepEmail = data.legalRepEmail;
+
+      // Contact fields
+      if (data.email !== undefined) updateData.email = data.email;
+      if (data.phone !== undefined) updateData.phone = data.phone;
+      if (data.workPhone !== undefined) updateData.workPhone = data.workPhone;
+      if (data.personalEmail !== undefined) updateData.personalEmail = data.personalEmail;
+      if (data.workEmail !== undefined) updateData.workEmail = data.workEmail;
+
+      // Address
+      if (data.currentAddress !== undefined) updateData.currentAddress = data.currentAddress;
+
+      // Employment
+      if (data.employmentStatus !== undefined) updateData.employmentStatus = data.employmentStatus;
+      if (data.occupation !== undefined) updateData.occupation = data.occupation;
+      if (data.employerName !== undefined) updateData.employerName = data.employerName;
+      if (data.employerAddress !== undefined) updateData.employerAddress = data.employerAddress;
+      if (data.position !== undefined) updateData.position = data.position;
+      if (data.monthlyIncome !== undefined) updateData.monthlyIncome = data.monthlyIncome;
+      if (data.incomeSource !== undefined) updateData.incomeSource = data.incomeSource;
+
+      // Rental history
+      if (data.previousLandlordName !== undefined) updateData.previousLandlordName = data.previousLandlordName;
+      if (data.previousLandlordPhone !== undefined) updateData.previousLandlordPhone = data.previousLandlordPhone;
+      if (data.previousLandlordEmail !== undefined) updateData.previousLandlordEmail = data.previousLandlordEmail;
+      if (data.previousRentAmount !== undefined) updateData.previousRentAmount = data.previousRentAmount;
+      if (data.previousRentalAddress !== undefined) updateData.previousRentalAddress = data.previousRentalAddress;
+      if (data.rentalHistoryYears !== undefined) updateData.rentalHistoryYears = data.rentalHistoryYears;
+
+      // Payment
+      if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod;
+      if (data.requiresCFDI !== undefined) updateData.requiresCFDI = data.requiresCFDI;
+      if (data.cfdiData !== undefined) updateData.cfdiData = data.cfdiData;
+
+      // Additional info
+      if (data.additionalInfo !== undefined) updateData.additionalInfo = data.additionalInfo;
+
+      // If final submission, mark as complete and set verification status
+      if (!isPartial) {
+        updateData.informationComplete = true;
+        updateData.completedAt = new Date();
+        updateData.verificationStatus = 'PENDING';
+      }
+
+      // Update tenant in database
+      const updatedTenant = await this.prisma.tenant.update({
+        where: { id: tenant.id },
+        data: updateData,
+        include: {
+          addressDetails: true,
+          employerAddressDetails: true,
+          previousRentalAddressDetails: true,
+          references: true,
+          documents: true,
+          policy: true
+        }
+      });
+
+      // Handle address details if provided
+      if (data.addressDetails) {
+        const addressResult = await this.upsertAddress(
+          data.addressDetails,
+          updatedTenant.addressId
+        );
+        if (addressResult.ok && addressResult.value !== updatedTenant.addressId) {
+          await this.prisma.tenant.update({
+            where: { id: tenant.id },
+            data: { addressId: addressResult.value }
+          });
+        }
+      }
+
+      // Handle employer address details
+      if (data.employerAddressDetails) {
+        const employerAddressResult = await this.upsertAddress(
+          data.employerAddressDetails,
+          updatedTenant.employerAddressId
+        );
+        if (employerAddressResult.ok && employerAddressResult.value !== updatedTenant.employerAddressId) {
+          await this.prisma.tenant.update({
+            where: { id: tenant.id },
+            data: { employerAddressId: employerAddressResult.value }
+          });
+        }
+      }
+
+      // Handle previous rental address details
+      if (data.previousRentalAddressDetails) {
+        const previousRentalAddressResult = await this.upsertAddress(
+          data.previousRentalAddressDetails,
+          updatedTenant.previousRentalAddressId
+        );
+        if (previousRentalAddressResult.ok && previousRentalAddressResult.value !== updatedTenant.previousRentalAddressId) {
+          await this.prisma.tenant.update({
+            where: { id: tenant.id },
+            data: { previousRentalAddressId: previousRentalAddressResult.value }
+          });
+        }
+      }
+
+      // Handle personal references if provided
+      if (data.references && Array.isArray(data.references)) {
+        await this.savePersonalReferences(tenant.id, data.references, 'tenant');
+      }
+
+      // Handle commercial references if provided (for company tenants)
+      if (data.tenantType === 'COMPANY' && data.commercialReferences && Array.isArray(data.commercialReferences)) {
+        await this.saveCommercialReferences(tenant.id, data.commercialReferences, 'tenant');
       }
 
       // Log activity
       await logPolicyActivity({
-        policyId: tokenValidation.tenant.policyId,
+        policyId: updatedTenant.policyId,
         action: isPartial ? 'tenant_info_partial_save' : 'tenant_info_completed',
         description: isPartial
           ? 'El inquilino guardó información parcial'
           : 'El inquilino completó su información',
-        performedById: tokenValidation.tenant.id,
+        performedById: tenant.id,
         performedByType: 'tenant',
         details: {
-          tenantId: tokenValidation.tenant.id,
-          isCompany: data.tenant.isCompany,
+          tenantId: tenant.id,
+          tenantType: updateData.tenantType || updatedTenant.tenantType,
         },
       });
 
       return Result.ok({
         success: true,
-        message: 'Información actualizada correctamente',
-        tenant: result.value,
+        message: isPartial
+          ? 'Información guardada correctamente'
+          : 'Información enviada correctamente',
+        tenant: updatedTenant,
       });
     } catch (error) {
       this.log('error', 'Tenant submission error', error);

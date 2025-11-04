@@ -17,10 +17,23 @@ import { ArrowLeft, Plus, Trash2, Calculator, Info, Mail } from 'lucide-react';
 import { PropertyType, GuarantorType, TenantType } from '@/types/policy';
 import { formatCurrency } from '@/lib/services/pricingService';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import {
+  PropertyAddressSection,
+  PropertyParkingSection,
+  PropertyServicesSection,
+  PropertyFeaturesSection,
+  PropertyDatesSection,
+} from '@/components/forms/property';
+import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
+import { formatFullName } from '@/lib/utils/names';
+import { generatePolicyNumber, validatePolicyNumber } from '@/lib/utils/policy';
+import { RefreshCw } from 'lucide-react';
 
 interface ActorForm {
   firstName: string;
-  lastName: string;
+  middleName?: string;
+  paternalLastName: string;
+  maternalLastName: string;
   email: string;
   phone: string;
   rfc?: string;
@@ -40,6 +53,10 @@ export default function NewPolicyPage() {
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [pricing, setPricing] = useState<any>(null);
   const [calculatingPrice, setCalculatingPrice] = useState(false);
+
+  // Policy Number
+  const [policyNumber, setPolicyNumber] = useState('');
+  const [policyNumberError, setPolicyNumberError] = useState('');
 
   // Property Information
   const [propertyData, setPropertyData] = useState<any>({
@@ -74,10 +91,11 @@ export default function NewPolicyPage() {
     // Additional info
     hasInventory: false,
     hasRules: false,
+    rulesType: undefined,
     petsAllowed: false,
     propertyDeliveryDate: '',
     contractSigningDate: '',
-    contractSigningLocation: '',
+    contractSigningAddressDetails: null,
   });
 
   // Package and Pricing
@@ -89,7 +107,9 @@ export default function NewPolicyPage() {
   const [landlordData, setLandlordData] = useState<any>({
     isCompany: false,
     firstName: '',
-    lastName: '',
+    middleName: '',
+    paternalLastName: '',
+    maternalLastName: '',
     email: '',
     phone: '',
     rfc: '',
@@ -107,7 +127,9 @@ export default function NewPolicyPage() {
   const [tenantData, setTenantData] = useState<TenantForm>({
     tenantType: TenantType.INDIVIDUAL,
     firstName: '',
-    lastName: '',
+    middleName: '',
+    paternalLastName: '',
+    maternalLastName: '',
     companyName: '',
     email: '',
     phone: '',
@@ -129,6 +151,8 @@ export default function NewPolicyPage() {
   // Load packages on mount
   useEffect(() => {
     fetchPackages();
+    // Generate initial policy number
+    setPolicyNumber(generatePolicyNumber());
   }, []);
 
   // Calculate pricing when relevant fields change
@@ -201,7 +225,9 @@ export default function NewPolicyPage() {
   const addJointObligor = () => {
     setJointObligors([...jointObligors, {
       firstName: '',
-      lastName: '',
+      middleName: '',
+      paternalLastName: '',
+      maternalLastName: '',
       email: '',
       phone: '',
     }]);
@@ -220,7 +246,9 @@ export default function NewPolicyPage() {
   const addAval = () => {
     setAvals([...avals, {
       firstName: '',
-      lastName: '',
+      middleName: '',
+      paternalLastName: '',
+      maternalLastName: '',
       email: '',
       phone: '',
     }]);
@@ -262,7 +290,7 @@ export default function NewPolicyPage() {
         return false;
       }
     } else {
-      if (!landlordData.firstName || !landlordData.lastName || !landlordData.email) {
+      if (!landlordData.firstName || !landlordData.paternalLastName || !landlordData.maternalLastName || !landlordData.email) {
         alert('Por favor complete todos los campos del arrendador');
         return false;
       }
@@ -270,7 +298,7 @@ export default function NewPolicyPage() {
 
     // Validate tenant data based on type
     if (tenantData.tenantType === TenantType.INDIVIDUAL) {
-      if (!tenantData.firstName || !tenantData.lastName || !tenantData.email) {
+      if (!tenantData.firstName || !tenantData.paternalLastName || !tenantData.maternalLastName || !tenantData.email) {
         alert('Por favor complete todos los campos del inquilino');
         return false;
       }
@@ -289,7 +317,7 @@ export default function NewPolicyPage() {
       }
       for (let i = 0; i < jointObligors.length; i++) {
         const jo = jointObligors[i];
-        if (!jo.firstName || !jo.lastName || !jo.email) {
+        if (!jo.firstName || !jo.paternalLastName || !jo.maternalLastName || !jo.email) {
           alert(`Por favor complete todos los campos del obligado solidario ${i + 1}`);
           return false;
         }
@@ -307,7 +335,7 @@ export default function NewPolicyPage() {
       }
       for (let i = 0; i < avals.length; i++) {
         const aval = avals[i];
-        if (!aval.firstName || !aval.lastName || !aval.email) {
+        if (!aval.firstName || !aval.paternalLastName || !aval.maternalLastName || !aval.email) {
           alert(`Por favor complete todos los campos del aval ${i + 1}`);
           return false;
         }
@@ -324,9 +352,18 @@ export default function NewPolicyPage() {
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    // Validate policy number
+    const policyValidation = await validatePolicyNumber(policyNumber);
+    if (!policyValidation.isValid) {
+      setPolicyNumberError(policyValidation.error || 'Número de póliza inválido');
+      setCurrentTab('property'); // Go back to first tab where policy number is
+      return;
+    }
+
     setLoading(true);
     try {
       const policyData = {
+        policyNumber,
         ...propertyData,
         rentAmount: parseFloat(propertyData.rentAmount),
         depositAmount: parseFloat(propertyData.depositAmount || propertyData.rentAmount),
@@ -398,22 +435,56 @@ export default function NewPolicyPage() {
               <CardDescription>Ingrese los detalles de la propiedad a asegurar</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Policy Number Field */}
               <div>
-                <AddressAutocomplete
-                  label="Dirección de la Propiedad"
-                  value={propertyData.propertyAddressDetails}
-                  onChange={(address) => {
-                    setPropertyData({
-                      ...propertyData,
-                      propertyAddressDetails: address,
-                      propertyAddress: address.formattedAddress ||
-                        `${address.street} ${address.exteriorNumber}${address.interiorNumber ? ` Int. ${address.interiorNumber}` : ''}, ${address.neighborhood}, ${address.municipality}, ${address.state}`
-                    });
-                  }}
-                  required
-                  placeholder="Buscar dirección..."
-                />
+                <Label htmlFor="policyNumber">
+                  Número de Póliza <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="policyNumber"
+                    value={policyNumber}
+                    onChange={(e) => {
+                      setPolicyNumber(e.target.value.toUpperCase());
+                      setPolicyNumberError('');
+                    }}
+                    placeholder="POL-YYYYMMDD-XXX"
+                    className={policyNumberError ? 'border-red-500' : ''}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setPolicyNumber(generatePolicyNumber());
+                      setPolicyNumberError('');
+                    }}
+                    title="Generar nuevo número"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+                {policyNumberError && (
+                  <p className="text-sm text-red-500 mt-1">{policyNumberError}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Formato: POL-YYYYMMDD-XXX (se validará al crear la póliza)
+                </p>
               </div>
+
+              <PropertyAddressSection
+                label="Dirección de la Propiedad"
+                value={propertyData.propertyAddressDetails}
+                onChange={(address) => {
+                  setPropertyData({
+                    ...propertyData,
+                    propertyAddressDetails: address,
+                    propertyAddress: address.formattedAddress ||
+                      `${address.street} ${address.exteriorNumber}${address.interiorNumber ? ` Int. ${address.interiorNumber}` : ''}, ${address.neighborhood}, ${address.municipality}, ${address.state}`
+                  });
+                }}
+                required
+              />
 
               <div>
                 <Label htmlFor="propertyDescription">Descripción de la Propiedad</Label>
@@ -512,125 +583,36 @@ export default function NewPolicyPage() {
                 <h3 className="font-medium mb-3">Características de la Propiedad</h3>
 
                 {/* Parking */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor="parkingSpaces">Espacios de Estacionamiento</Label>
-                    <Input
-                      id="parkingSpaces"
-                      type="number"
-                      min="0"
-                      value={propertyData.parkingSpaces}
-                      onChange={(e) => setPropertyData({ ...propertyData, parkingSpaces: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="parkingNumbers">Números de Cajones</Label>
-                    <Input
-                      id="parkingNumbers"
-                      value={propertyData.parkingNumbers}
-                      onChange={(e) => setPropertyData({ ...propertyData, parkingNumbers: e.target.value })}
-                      placeholder="Ej: A1, A2"
-                    />
-                  </div>
-                </div>
+                <PropertyParkingSection
+                  parkingSpaces={propertyData.parkingSpaces}
+                  parkingNumbers={propertyData.parkingNumbers}
+                  onParkingSpacesChange={(value) => setPropertyData({ ...propertyData, parkingSpaces: value || 0 })}
+                  onParkingNumbersChange={(value) => setPropertyData({ ...propertyData, parkingNumbers: value })}
+                />
 
-                {/* Property Features Checkboxes */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isFurnished"
-                      checked={propertyData.isFurnished}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, isFurnished: checked as boolean })}
-                    />
-                    <Label htmlFor="isFurnished">Amueblado</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="petsAllowed"
-                      checked={propertyData.petsAllowed}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, petsAllowed: checked as boolean })}
-                    />
-                    <Label htmlFor="petsAllowed">Se permiten mascotas</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasInventory"
-                      checked={propertyData.hasInventory}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasInventory: checked as boolean })}
-                    />
-                    <Label htmlFor="hasInventory">Tiene inventario</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasRules"
-                      checked={propertyData.hasRules}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasRules: checked as boolean })}
-                    />
-                    <Label htmlFor="hasRules">Tiene reglamento</Label>
-                  </div>
-                </div>
-
-                {/* Utilities Section */}
-                <h4 className="font-medium mb-2">Servicios Incluidos</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasElectricity"
-                      checked={propertyData.hasElectricity}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasElectricity: checked as boolean })}
-                    />
-                    <Label htmlFor="hasElectricity">Electricidad</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasWater"
-                      checked={propertyData.hasWater}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasWater: checked as boolean })}
-                    />
-                    <Label htmlFor="hasWater">Agua</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasGas"
-                      checked={propertyData.hasGas}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasGas: checked as boolean })}
-                    />
-                    <Label htmlFor="hasGas">Gas</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasPhone"
-                      checked={propertyData.hasPhone}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasPhone: checked as boolean })}
-                    />
-                    <Label htmlFor="hasPhone">Teléfono</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasCableTV"
-                      checked={propertyData.hasCableTV}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasCableTV: checked as boolean })}
-                    />
-                    <Label htmlFor="hasCableTV">Cable TV</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasInternet"
-                      checked={propertyData.hasInternet}
-                      onCheckedChange={(checked) => setPropertyData({ ...propertyData, hasInternet: checked as boolean })}
-                    />
-                    <Label htmlFor="hasInternet">Internet</Label>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox
-                    id="utilitiesInLandlordName"
-                    checked={propertyData.utilitiesInLandlordName}
-                    onCheckedChange={(checked) => setPropertyData({ ...propertyData, utilitiesInLandlordName: checked as boolean })}
+                {/* Property Features */}
+                <div className="mb-4">
+                  <PropertyFeaturesSection
+                    isFurnished={propertyData.isFurnished}
+                    petsAllowed={propertyData.petsAllowed}
+                    hasInventory={propertyData.hasInventory}
+                    hasRules={propertyData.hasRules}
+                    rulesType={propertyData.rulesType}
+                    onChange={(field, value) => setPropertyData({ ...propertyData, [field]: value })}
                   />
-                  <Label htmlFor="utilitiesInLandlordName">Los servicios están a nombre del arrendador</Label>
                 </div>
+
+                {/* Utilities/Services Section */}
+                <PropertyServicesSection
+                  hasElectricity={propertyData.hasElectricity}
+                  hasWater={propertyData.hasWater}
+                  hasGas={propertyData.hasGas}
+                  hasPhone={propertyData.hasPhone}
+                  hasCableTV={propertyData.hasCableTV}
+                  hasInternet={propertyData.hasInternet}
+                  utilitiesInLandlordName={propertyData.utilitiesInLandlordName}
+                  onChange={(field, value) => setPropertyData({ ...propertyData, [field]: value })}
+                />
               </div>
 
               {/* Financial Details Section */}
@@ -725,37 +707,12 @@ export default function NewPolicyPage() {
               {/* Contract Dates Section */}
               <div className="border-t pt-4 mt-4">
                 <h3 className="font-medium mb-3">Fechas del Contrato</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="propertyDeliveryDate">Fecha de Entrega del Inmueble</Label>
-                    <Input
-                      id="propertyDeliveryDate"
-                      type="date"
-                      value={propertyData.propertyDeliveryDate}
-                      onChange={(e) => setPropertyData({ ...propertyData, propertyDeliveryDate: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="contractSigningDate">Fecha de Firma del Contrato</Label>
-                    <Input
-                      id="contractSigningDate"
-                      type="date"
-                      value={propertyData.contractSigningDate}
-                      onChange={(e) => setPropertyData({ ...propertyData, contractSigningDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <Label htmlFor="contractSigningLocation">Lugar de Firma del Contrato</Label>
-                  <Input
-                    id="contractSigningLocation"
-                    value={propertyData.contractSigningLocation}
-                    onChange={(e) => setPropertyData({ ...propertyData, contractSigningLocation: e.target.value })}
-                    placeholder="Ej: Ciudad de México"
-                  />
-                </div>
+                <PropertyDatesSection
+                  propertyDeliveryDate={propertyData.propertyDeliveryDate}
+                  contractSigningDate={propertyData.contractSigningDate}
+                  contractSigningAddressDetails={propertyData.contractSigningAddressDetails}
+                  onChange={(field, value) => setPropertyData({ ...propertyData, [field]: value })}
+                />
               </div>
 
               <div className="flex justify-end mt-6">
@@ -1022,25 +979,14 @@ export default function NewPolicyPage() {
               ) : (
                 <>
                   {/* Individual Fields */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="landlordFirstName">Nombre</Label>
-                      <Input
-                        id="landlordFirstName"
-                        value={landlordData.firstName}
-                        onChange={(e) => setLandlordData({ ...landlordData, firstName: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="landlordLastName">Apellidos</Label>
-                      <Input
-                        id="landlordLastName"
-                        value={landlordData.lastName}
-                        onChange={(e) => setLandlordData({ ...landlordData, lastName: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                  <PersonNameFields
+                    firstName={landlordData.firstName}
+                    middleName={landlordData.middleName}
+                    paternalLastName={landlordData.paternalLastName}
+                    maternalLastName={landlordData.maternalLastName}
+                    onChange={(field, value) => setLandlordData({ ...landlordData, [field]: value })}
+                    required={true}
+                  />
 
                   <div>
                     <Label htmlFor="landlordEmail">Email</Label>
@@ -1125,51 +1071,28 @@ export default function NewPolicyPage() {
               )}
 
               {tenantData.tenantType === TenantType.INDIVIDUAL && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="tenantFirstName">Nombre</Label>
-                    <Input
-                      id="tenantFirstName"
-                      value={tenantData.firstName}
-                      onChange={(e) => setTenantData({ ...tenantData, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tenantLastName">Apellidos</Label>
-                    <Input
-                      id="tenantLastName"
-                      value={tenantData.lastName}
-                      onChange={(e) => setTenantData({ ...tenantData, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
+                <PersonNameFields
+                  firstName={tenantData.firstName}
+                  middleName={tenantData.middleName}
+                  paternalLastName={tenantData.paternalLastName}
+                  maternalLastName={tenantData.maternalLastName}
+                  onChange={(field, value) => setTenantData({ ...tenantData, [field]: value })}
+                  required={true}
+                />
               )}
 
               {tenantData.tenantType === TenantType.COMPANY && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="tenantRepFirstName">Nombre del Representante</Label>
-                    <Input
-                      id="tenantRepFirstName"
-                      value={tenantData.firstName}
-                      onChange={(e) => setTenantData({ ...tenantData, firstName: e.target.value })}
-                      placeholder="Nombre del representante legal"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tenantRepLastName">Apellidos del Representante</Label>
-                    <Input
-                      id="tenantRepLastName"
-                      value={tenantData.lastName}
-                      onChange={(e) => setTenantData({ ...tenantData, lastName: e.target.value })}
-                      placeholder="Apellidos del representante legal"
-                    />
-                  </div>
-                </div>
+                <>
+                  <Label>Representante Legal</Label>
+                  <PersonNameFields
+                    firstName={tenantData.firstName}
+                    middleName={tenantData.middleName}
+                    paternalLastName={tenantData.paternalLastName}
+                    maternalLastName={tenantData.maternalLastName}
+                    onChange={(field, value) => setTenantData({ ...tenantData, [field]: value })}
+                    required={false}
+                  />
+                </>
               )}
 
               <div>
@@ -1270,24 +1193,14 @@ export default function NewPolicyPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Input
-                              placeholder="Nombre *"
-                              value={jo.firstName}
-                              onChange={(e) => updateJointObligor(index, 'firstName', e.target.value)}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Input
-                              placeholder="Apellidos *"
-                              value={jo.lastName}
-                              onChange={(e) => updateJointObligor(index, 'lastName', e.target.value)}
-                              required
-                            />
-                          </div>
-                        </div>
+                        <PersonNameFields
+                          firstName={jo.firstName}
+                          middleName={jo.middleName}
+                          paternalLastName={jo.paternalLastName}
+                          maternalLastName={jo.maternalLastName}
+                          onChange={(field, value) => updateJointObligor(index, field, value)}
+                          required={true}
+                        />
                         <Input
                           placeholder="Email *"
                           type="email"
@@ -1339,24 +1252,14 @@ export default function NewPolicyPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Input
-                              placeholder="Nombre *"
-                              value={aval.firstName}
-                              onChange={(e) => updateAval(index, 'firstName', e.target.value)}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Input
-                              placeholder="Apellidos *"
-                              value={aval.lastName}
-                              onChange={(e) => updateAval(index, 'lastName', e.target.value)}
-                              required
-                            />
-                          </div>
-                        </div>
+                        <PersonNameFields
+                          firstName={aval.firstName}
+                          middleName={aval.middleName}
+                          paternalLastName={aval.paternalLastName}
+                          maternalLastName={aval.maternalLastName}
+                          onChange={(field, value) => updateAval(index, field, value)}
+                          required={true}
+                        />
                         <Input
                           placeholder="Email *"
                           type="email"
@@ -1405,6 +1308,10 @@ export default function NewPolicyPage() {
               <div>
                 <h3 className="font-medium mb-2">Propiedad</h3>
                 <dl className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500">Número de Póliza:</dt>
+                    <dd className="font-medium">{policyNumber}</dd>
+                  </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Dirección:</dt>
                     <dd>{propertyData.propertyAddress}</dd>
@@ -1459,7 +1366,7 @@ export default function NewPolicyPage() {
                 <dl className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Nombre:</dt>
-                    <dd>{landlordData.firstName} {landlordData.lastName}</dd>
+                    <dd>{formatFullName(landlordData.firstName, landlordData.paternalLastName, landlordData.maternalLastName, landlordData.middleName)}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Email:</dt>
@@ -1487,7 +1394,7 @@ export default function NewPolicyPage() {
                       <dt className="text-gray-500">
                         {tenantData.tenantType === TenantType.COMPANY ? 'Representante:' : 'Nombre:'}
                       </dt>
-                      <dd>{tenantData.firstName} {tenantData.lastName}</dd>
+                      <dd>{formatFullName(tenantData.firstName, tenantData.paternalLastName, tenantData.maternalLastName, tenantData.middleName)}</dd>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -1514,7 +1421,7 @@ export default function NewPolicyPage() {
                   <h3 className="font-medium mb-2">Obligados Solidarios</h3>
                   <ul className="space-y-1 text-sm">
                     {jointObligors.map((jo, index) => (
-                      <li key={index}>{jo.firstName} {jo.lastName} - {jo.email}</li>
+                      <li key={index}>{formatFullName(jo.firstName, jo.paternalLastName, jo.maternalLastName, jo.middleName)} - {jo.email}</li>
                     ))}
                   </ul>
                 </div>
@@ -1525,7 +1432,7 @@ export default function NewPolicyPage() {
                   <h3 className="font-medium mb-2">Avales</h3>
                   <ul className="space-y-1 text-sm">
                     {avals.map((aval, index) => (
-                      <li key={index}>{aval.firstName} {aval.lastName} - {aval.email}</li>
+                      <li key={index}>{formatFullName(aval.firstName, aval.paternalLastName, aval.maternalLastName, aval.middleName)} - {aval.email}</li>
                     ))}
                   </ul>
                 </div>

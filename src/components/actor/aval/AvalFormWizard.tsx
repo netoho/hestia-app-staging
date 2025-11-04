@@ -158,9 +158,8 @@ export default function AvalFormWizard({
         informationComplete: true,
       };
 
-      const submitUrl = isAdminEdit
-        ? `/api/admin/actors/aval/${token}/submit`
-        : `/api/actor/aval/${token}/submit`;
+      // Use unified route - token can be either UUID (admin) or access token (actor)
+      const submitUrl = `/api/actors/aval/${token}`;
 
       const response = await fetch(submitUrl, {
         method: 'POST',

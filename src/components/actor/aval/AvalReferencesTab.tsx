@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PersonalReference, CommercialReference } from '@/hooks/useAvalReferences';
+import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
 
 interface AvalReferencesTabProps {
   personalReferences: PersonalReference[];
@@ -41,18 +42,21 @@ export default function AvalReferencesTab({
                 <div key={index} className="p-4 border rounded-lg space-y-4">
                   <h4 className="font-medium">Referencia Personal {index + 1}</h4>
 
+                  <PersonNameFields
+                    firstName={ref.firstName}
+                    middleName={ref.middleName}
+                    paternalLastName={ref.paternalLastName}
+                    maternalLastName={ref.maternalLastName}
+                    onChange={(field, value) => onPersonalReferenceChange(index, field, value)}
+                    disabled={disabled}
+                    errors={errors[`personalReference${index}`] ? {
+                      firstName: errors[`personalReference${index}`],
+                      paternalLastName: errors[`personalReference${index}`],
+                      maternalLastName: errors[`personalReference${index}`],
+                    } : {}}
+                  />
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Name */}
-                    <div>
-                      <Label htmlFor={`personal-name-${index}`}>Nombre Completo *</Label>
-                      <Input
-                        id={`personal-name-${index}`}
-                        value={ref.name}
-                        onChange={(e) => onPersonalReferenceChange(index, 'name', e.target.value)}
-                        placeholder="Nombre completo"
-                        disabled={disabled}
-                      />
-                    </div>
 
                     {/* Phone */}
                     <div>
@@ -143,8 +147,7 @@ export default function AvalReferencesTab({
                 <h4 className="font-medium">Referencia Comercial {index + 1}</h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Company Name */}
-                  <div>
+                  <div className="md:col-span-2">
                     <Label htmlFor={`commercial-company-${index}`}>Nombre de la Empresa *</Label>
                     <Input
                       id={`commercial-company-${index}`}
@@ -154,18 +157,32 @@ export default function AvalReferencesTab({
                       disabled={disabled}
                     />
                   </div>
+                </div>
 
-                  {/* Contact Name */}
-                  <div>
-                    <Label htmlFor={`commercial-contact-${index}`}>Nombre del Contacto *</Label>
-                    <Input
-                      id={`commercial-contact-${index}`}
-                      value={ref.contactName}
-                      onChange={(e) => onCommercialReferenceChange(index, 'contactName', e.target.value)}
-                      placeholder="Persona de contacto"
-                      disabled={disabled}
-                    />
-                  </div>
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Nombre del Contacto *</Label>
+                  <PersonNameFields
+                    firstName={ref.contactFirstName}
+                    middleName={ref.contactMiddleName}
+                    paternalLastName={ref.contactPaternalLastName}
+                    maternalLastName={ref.contactMaternalLastName}
+                    onChange={(field, value) => {
+                      const mappedField = field.replace('firstName', 'contactFirstName')
+                        .replace('middleName', 'contactMiddleName')
+                        .replace('paternalLastName', 'contactPaternalLastName')
+                        .replace('maternalLastName', 'contactMaternalLastName');
+                      onCommercialReferenceChange(index, mappedField, value);
+                    }}
+                    disabled={disabled}
+                    errors={errors[`commercialReference${index}`] ? {
+                      firstName: errors[`commercialReference${index}`],
+                      paternalLastName: errors[`commercialReference${index}`],
+                      maternalLastName: errors[`commercialReference${index}`],
+                    } : {}}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                   {/* Phone */}
                   <div>

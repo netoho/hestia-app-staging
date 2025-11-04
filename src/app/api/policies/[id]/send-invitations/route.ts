@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';
 import { sendActorInvitation } from '@/lib/services/emailService';
+import { formatFullName } from '@/lib/utils/names';
 import {
   generateLandlordToken,
   generateTenantToken,
@@ -70,7 +71,13 @@ export async function POST(
           actorType: 'landlord' as any,
           isCompany: primaryLandlord.isCompany,
           email: primaryLandlord.email,
-          name: primaryLandlord.fullName || primaryLandlord.companyName || 'Arrendador',
+          name: primaryLandlord.companyName ||
+            (primaryLandlord.firstName ? formatFullName(
+              primaryLandlord.firstName,
+              primaryLandlord.paternalLastName || '',
+              primaryLandlord.maternalLastName || '',
+              primaryLandlord.middleName || undefined
+            ) : 'Arrendador'),
           token: tokenData.token,
           url: tokenData.url,
           policyNumber: policy.policyNumber,
@@ -97,7 +104,13 @@ export async function POST(
           actorType: 'tenant',
           isCompany: policy.tenant.tenantType === TenantType.COMPANY,
           email: policy.tenant.email,
-          name: policy.tenant.fullName || 'Inquilino',
+          name: policy.tenant.companyName ||
+            (policy.tenant.firstName ? formatFullName(
+              policy.tenant.firstName,
+              policy.tenant.paternalLastName || '',
+              policy.tenant.maternalLastName || '',
+              policy.tenant.middleName || undefined
+            ) : 'Inquilino'),
           token: tokenData.token,
           url: tokenData.url,
           policyNumber: policy.policyNumber,
@@ -125,7 +138,13 @@ export async function POST(
             actorType: 'jointObligor',
             isCompany: jo.isCompany,
             email: jo.email,
-            name: jo.fullName || 'Obligado Solidario',
+            name: jo.companyName ||
+              (jo.firstName ? formatFullName(
+                jo.firstName,
+                jo.paternalLastName || '',
+                jo.maternalLastName || '',
+                jo.middleName || undefined
+              ) : 'Obligado Solidario'),
             token: tokenData.token,
             url: tokenData.url,
             policyNumber: policy.policyNumber,
@@ -154,7 +173,13 @@ export async function POST(
             actorType: 'aval',
             isCompany: aval.isCompany,
             email: aval.email,
-            name: aval.fullName || 'Aval',
+            name: aval.companyName ||
+              (aval.firstName ? formatFullName(
+                aval.firstName,
+                aval.paternalLastName || '',
+                aval.maternalLastName || '',
+                aval.middleName || undefined
+              ) : 'Aval'),
             token: tokenData.token,
             url: tokenData.url,
             policyNumber: policy.policyNumber,

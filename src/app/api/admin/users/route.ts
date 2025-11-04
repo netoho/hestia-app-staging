@@ -3,7 +3,6 @@ import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';
 import { hashPassword } from '@/lib/auth';
-import { v4 as uuidv4 } from 'uuid';
 
 // GET all users
 export async function GET(request: NextRequest) {

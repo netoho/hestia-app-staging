@@ -221,10 +221,14 @@ model PropertyDetails {
   // Additional Property Info
   hasInventory      Boolean     @default(false)
   hasRules          Boolean     @default(false)
+  rulesType         RulesType?  // Type of rules (Condominios or Colonos)
   petsAllowed       Boolean     @default(false)
   propertyDeliveryDate DateTime?
   contractSigningDate DateTime?
-  contractSigningLocation String?
+
+  // Contract Signing Location (structured address)
+  contractSigningAddressId String? @unique
+  contractSigningAddressDetails PropertyAddress? @relation("ContractSigningAddress", fields: [contractSigningAddressId], references: [id])
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -243,18 +247,26 @@ model Landlord {
   isCompany         Boolean     @default(false)
 
   // Personal Information (for individuals)
-  fullName          String?     // Name for individual, company name for company
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   rfc               String?
   curp              String?
 
   // Company Information (for companies)
   companyName       String?     // Official company name
   companyRfc        String?
-  legalRepName      String?     // Legal representative name
-  legalRepPosition  String?     // Legal representative position
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepPosition        String?     // Legal representative position
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
 
   // Contact Information
   email             String
@@ -322,7 +334,10 @@ model Tenant {
   tenantType        TenantType  @default(INDIVIDUAL)
 
   // Individual Information
-  fullName          String?
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   nationality       NationalityType?
   curp              String?
   rfc               String?
@@ -331,12 +346,17 @@ model Tenant {
   // Company Information
   companyName       String?
   companyRfc        String?
-  legalRepName      String?
-  legalRepId        String?
-  legalRepPosition  String?
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepId              String?
+  legalRepPosition        String?
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
   companyAddress    String?     // Legacy field
 
   // Contact Information
@@ -415,7 +435,10 @@ model JointObligor {
   isCompany         Boolean     @default(false)
 
   // Personal Information (for individuals)
-  fullName          String?
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   nationality       NationalityType?
   curp              String?
   rfc               String?
@@ -425,11 +448,16 @@ model JointObligor {
   // Company Information (for companies)
   companyName       String?
   companyRfc        String?
-  legalRepName      String?
-  legalRepPosition  String?
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepPosition        String?
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
 
   // Contact Information
   email             String
@@ -517,7 +545,10 @@ model Aval {
   isCompany         Boolean     @default(false)
 
   // Personal Information (for individuals)
-  fullName          String?
+  firstName         String?     // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String?     // Father's last name
+  maternalLastName  String?     // Mother's last name
   nationality       NationalityType?
   curp              String?
   rfc               String?
@@ -527,11 +558,16 @@ model Aval {
   // Company Information (for companies)
   companyName       String?
   companyRfc        String?
-  legalRepName      String?
-  legalRepPosition  String?
-  legalRepRfc       String?
-  legalRepPhone     String?
-  legalRepEmail     String?
+
+  // Legal Representative Information (Mexican naming convention)
+  legalRepFirstName       String?     // Legal representative first name
+  legalRepMiddleName      String?     // Legal representative middle name (optional)
+  legalRepPaternalLastName String?    // Legal representative paternal last name
+  legalRepMaternalLastName String?    // Legal representative maternal last name
+  legalRepPosition        String?
+  legalRepRfc             String?
+  legalRepPhone           String?
+  legalRepEmail           String?
 
   // Contact Information
   email             String
@@ -609,7 +645,10 @@ model Aval {
 model PersonalReference {
   id                String      @id @default(cuid())
 
-  name              String
+  firstName         String      // First name
+  middleName        String?     // Middle name (optional)
+  paternalLastName  String      // Father's last name
+  maternalLastName  String      // Mother's last name
   phone             String
   homePhone         String?
   cellPhone         String?
@@ -637,7 +676,10 @@ model CommercialReference {
   id                String      @id @default(cuid())
 
   companyName       String
-  contactName       String
+  contactFirstName  String      // Contact first name
+  contactMiddleName String?     // Contact middle name (optional)
+  contactPaternalLastName String  // Contact father's last name
+  contactMaternalLastName String  // Contact mother's last name
   phone             String
   email             String?
   relationship      String      // supplier, client, partner, etc.
@@ -682,6 +724,7 @@ model PropertyAddress {
 
   // Relations
   propertyDetails   PropertyDetails? // New relation to PropertyDetails
+  contractSigningPropertyDetails PropertyDetails? @relation("ContractSigningAddress")
   landlord          Landlord?   @relation("LandlordAddress")
   tenant            Tenant?     @relation("TenantAddress")
   tenantEmployer    Tenant?     @relation("TenantEmployerAddress")
@@ -1132,4 +1175,9 @@ enum ValidationStatus {
   APPROVED
   REJECTED
   IN_REVIEW
+}
+
+enum RulesType {
+  CONDOMINIOS
+  COLONOS
 }

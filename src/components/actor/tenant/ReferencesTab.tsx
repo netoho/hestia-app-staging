@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldError } from '@/components/ui/field-error';
 import { PersonalReference, CommercialReference } from '@/hooks/useTenantReferences';
+import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
 
 interface ReferencesTabProps {
   tenantType: 'INDIVIDUAL' | 'COMPANY';
@@ -41,19 +42,22 @@ export default function ReferencesTab({
             <CardHeader>
               <CardTitle className="text-lg">Referencia Personal {index + 1}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Nombre Completo *</Label>
-                  <Input
-                    value={ref.name}
-                    onChange={(e) => onUpdatePersonalReference(index, 'name', e.target.value)}
-                    placeholder="Nombre completo"
-                    className={errors[`reference${index}`] ? 'border-red-500' : ''}
-                    disabled={disabled}
-                  />
-                </div>
+            <CardContent className="space-y-4">
+              <PersonNameFields
+                firstName={ref.firstName}
+                middleName={ref.middleName}
+                paternalLastName={ref.paternalLastName}
+                maternalLastName={ref.maternalLastName}
+                onChange={(field, value) => onUpdatePersonalReference(index, field, value)}
+                disabled={disabled}
+                errors={errors[`reference${index}`] ? {
+                  firstName: errors[`reference${index}`],
+                  paternalLastName: errors[`reference${index}`],
+                  maternalLastName: errors[`reference${index}`],
+                } : {}}
+              />
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Relación *</Label>
                   <Input
@@ -119,9 +123,9 @@ export default function ReferencesTab({
           <CardHeader>
             <CardTitle className="text-lg">Referencia Comercial {index + 1}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="md:col-span-2">
                 <Label>Nombre de la Empresa *</Label>
                 <Input
                   value={ref.companyName}
@@ -131,17 +135,33 @@ export default function ReferencesTab({
                   disabled={disabled}
                 />
               </div>
+            </div>
 
-              <div>
-                <Label>Nombre del Contacto *</Label>
-                <Input
-                  value={ref.contactName}
-                  onChange={(e) => onUpdateCommercialReference(index, 'contactName', e.target.value)}
-                  placeholder="Nombre completo"
-                  className={errors[`commercialReference${index}`] ? 'border-red-500' : ''}
-                  disabled={disabled}
-                />
-              </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Datos de contacto *</Label>
+              <PersonNameFields
+                firstName={ref.contactFirstName}
+                middleName={ref.contactMiddleName}
+                paternalLastName={ref.contactPaternalLastName}
+                maternalLastName={ref.contactMaternalLastName}
+                onChange={(field, value) => {
+                  // Map the field names to include 'contact' prefix
+                  const mappedField = field.replace('firstName', 'contactFirstName')
+                    .replace('middleName', 'contactMiddleName')
+                    .replace('paternalLastName', 'contactPaternalLastName')
+                    .replace('maternalLastName', 'contactMaternalLastName');
+                  onUpdateCommercialReference(index, mappedField, value);
+                }}
+                disabled={disabled}
+                errors={errors[`commercialReference${index}`] ? {
+                  firstName: errors[`commercialReference${index}`],
+                  paternalLastName: errors[`commercialReference${index}`],
+                  maternalLastName: errors[`commercialReference${index}`],
+                } : {}}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               <div>
                 <Label>Teléfono *</Label>

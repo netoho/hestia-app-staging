@@ -101,8 +101,25 @@ export function formatCurrency(amount: number, currency: string = 'MXN'): string
  * @returns Display name
  */
 export function getActorDisplayName(actor: {
-  fullName?: string;
-  companyName?: string;
+  firstName?: string | null;
+  middleName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+  companyName?: string | null;
 }): string {
-  return actor.fullName || actor.companyName || 'Sin nombre';
+  if (actor.companyName) {
+    return actor.companyName;
+  }
+
+  if (actor.firstName && actor.paternalLastName) {
+    const nameParts = [
+      actor.firstName,
+      actor.middleName,
+      actor.paternalLastName,
+      actor.maternalLastName
+    ].filter(Boolean);
+    return nameParts.join(' ');
+  }
+
+  return 'Sin nombre';
 }
