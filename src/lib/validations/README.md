@@ -434,7 +434,7 @@ export const personActorWithEmploymentSchema = personActorSchema.extend({
 - **Use `.refine()` for complex validation**
   ```typescript
   .refine(
-    (data) => data.tenant Percentage + data.landlordPercentage === 100,
+    (data) => data.tenantPercentage + data.landlordPercentage === 100,
     { message: 'Must sum to 100%' }
   )
   ```
