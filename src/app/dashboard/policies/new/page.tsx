@@ -60,6 +60,7 @@ export default function NewPolicyPage() {
 
   // Property Information
   const [propertyData, setPropertyData] = useState<any>({
+    internalCode: '',
     propertyAddress: '',
     propertyAddressDetails: null,
     propertyType: PropertyType.APARTMENT,
@@ -469,6 +470,23 @@ export default function NewPolicyPage() {
                 )}
                 <p className="text-xs text-gray-500 mt-1">
                   Formato: POL-YYYYMMDD-XXX (se validará al crear la póliza)
+                </p>
+              </div>
+
+              {/* Internal Code Field */}
+              <div>
+                <Label htmlFor="internalCode">
+                  Código Interno
+                </Label>
+                <Input
+                  id="internalCode"
+                  value={propertyData.internalCode}
+                  onChange={(e) => setPropertyData({ ...propertyData, internalCode: e.target.value })}
+                  placeholder="INV1, CONT 1, INC1, PP1, PL, PES1"
+                  maxLength={50}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Código de uso interno para clasificación (opcional)
                 </p>
               </div>
 

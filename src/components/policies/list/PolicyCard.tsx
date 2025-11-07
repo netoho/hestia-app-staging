@@ -11,6 +11,7 @@ import ActorsList from './ActorsList';
 interface Policy {
   id: string;
   policyNumber: string;
+  internalCode?: string;
   status: PolicyStatus;
   propertyAddress: string;
   propertyType?: string;
@@ -81,6 +82,9 @@ export default function PolicyCard({ policy, onView }: PolicyCardProps) {
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
+            {policy.internalCode && (
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">{policy.internalCode}</p>
+            )}
             <h3 className="font-semibold text-base text-blue-600">{policy.policyNumber}</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {policy.createdAt && format(new Date(policy.createdAt), 'dd/MM/yyyy', { locale: es })}

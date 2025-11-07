@@ -436,6 +436,31 @@ export const pricingUpdateSchema = pricingSchemaBase.partial().refine(data => {
 });
 
 // ============================================
+// POLICY SCHEMA
+// ============================================
+
+export const policySchema = z.object({
+  internalCode: z.string().max(50, 'Código interno debe tener máximo 50 caracteres').optional().nullable(),
+  propertyAddress: z.string().min(1, 'Dirección de la propiedad es requerida'),
+  propertyType: z.enum([
+    'HOUSE',
+    'APARTMENT',
+    'CONDO',
+    'TOWNHOUSE',
+    'COMMERCIAL',
+    'OFFICE',
+    'OTHER'
+  ]),
+  propertyDescription: z.string().optional().nullable(),
+  rentAmount: z.number().positive('Monto de renta debe ser mayor a 0'),
+  contractLength: z.number().int().positive('Duración del contrato debe ser mayor a 0').default(12),
+  guarantorType: z.enum(['NONE', 'JOINT_OBLIGOR', 'AVAL', 'BOTH']),
+});
+
+// For partial updates
+export const policyUpdateSchema = policySchema.partial();
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 

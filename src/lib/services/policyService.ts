@@ -4,6 +4,7 @@ import { PropertyDetailsService } from './PropertyDetailsService';
 
 interface CreatePolicyData {
   policyNumber?: string; // Now custom policy number can be provided
+  internalCode?: string; // Internal team code for classification
   propertyAddress: string;
   propertyType?: PropertyType;
   propertyDescription?: string;
@@ -108,6 +109,7 @@ export async function createPolicy(data: CreatePolicyData) {
   const policy = await prisma.policy.create({
     data: {
       policyNumber,
+      internalCode: policyData.internalCode,
       propertyAddress: policyData.propertyAddress,
       propertyType: policyData.propertyType || 'APARTMENT',
       propertyDescription: policyData.propertyDescription,
@@ -252,6 +254,7 @@ export async function getPolicies(params?: {
     where.OR = [
       // Policy and property
       { policyNumber: { contains: params.search, mode: 'insensitive' } },
+      { internalCode: { contains: params.search, mode: 'insensitive' } },
       { propertyAddress: { contains: params.search, mode: 'insensitive' } },
 
       // Tenant - search across name fields

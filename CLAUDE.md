@@ -1,3 +1,4 @@
 - we use bun, so you can check the build with `bun run build`
 - Remember this is a brand new proyect not yet deployed, we don't care about data migration nor about backwards compatibility
 - when looking at enums or data that is both on the codebase and on the schema, remember to use always the schema, if there is a conflict always ask for clarification
+- you can always check @docs/DEVELOPER_GUIDE.md in order to know where to find good info, don't forget to update the file or the referenced files with our progress

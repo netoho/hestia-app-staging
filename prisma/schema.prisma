@@ -117,6 +117,7 @@ model Package {
 model Policy {
   id                String      @id @default(cuid())
   policyNumber      String      @unique @default(cuid())
+  internalCode      String?     // Internal team code for classification (e.g., INV1, CONT 1, INC1)
 
   // Core Policy Information
   propertyAddress   String      // Basic address string for quick reference
