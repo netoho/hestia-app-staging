@@ -117,7 +117,7 @@ class EmailProvider {
 
     const mailOptions = {
       from: FROM_EMAIL,
-      to: 'ehuerta@iadgroup.mx',
+      to: data.to,
       subject: data.subject,
       html: data.html,
       text: data.text
