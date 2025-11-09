@@ -48,9 +48,10 @@ bun run build
 bun prisma generate
 
 # Database operations
-bun prisma migrate dev --create-only --name your_change_name        # Create migration
-bun prisma migrate deploy                                           # Deploy to production
-bun prisma studio                                                   # Visual database browser
+bun prisma migrate dev --create-only --skip-seed --skip-generate --name init      # Create migration
+bun prisma migrate deploy                                                         # Deploy to production
+bun prisma studio                                                                 # Visual database browser
+bun prisma db seed                                                                # Seed database (if applicable)
 
 # Testing
 bun run test
