@@ -508,4 +508,16 @@ export abstract class BaseActorService extends BaseService {
       return Result.ok({ transitioned: false });
     }
   }
+
+  /**
+   * Delete an actor from the database
+   * Used by concrete services to implement public delete methods
+   */
+  protected async deleteActor(tableName: string, actorId: string): AsyncResult<void> {
+    return this.executeDbOperation(async () => {
+      await (this.prisma as any)[tableName].delete({
+        where: { id: actorId }
+      });
+    }, 'delete');
+  }
 }

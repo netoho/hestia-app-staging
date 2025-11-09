@@ -704,4 +704,25 @@ export class AvalService extends BaseActorService {
 
     return result.ok ? result.value : false;
   }
+
+  /**
+   * Public save method for admin use
+   * Wraps the internal saveAvalInformation method
+   */
+  public async save(
+    avalId: string,
+    data: AvalData,
+    isPartial: boolean = false,
+    skipValidation: boolean = false
+  ): AsyncResult<AvalData> {
+    return this.saveAvalInformation(avalId, data, isPartial, skipValidation);
+  }
+
+  /**
+   * Delete an aval from the database
+   * Admin only operation
+   */
+  public async delete(avalId: string): AsyncResult<void> {
+    return this.deleteActor('Aval', avalId);
+  }
 }

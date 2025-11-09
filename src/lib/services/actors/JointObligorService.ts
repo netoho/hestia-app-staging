@@ -708,4 +708,25 @@ export class JointObligorService extends BaseActorService {
       return updatedJointObligor;
     }, 'validateAndSave');
   }
+
+  /**
+   * Public save method for admin use
+   * Wraps the internal saveJointObligorInformation method
+   */
+  public async save(
+    obligorId: string,
+    data: JointObligorData,
+    isPartial: boolean = false,
+    skipValidation: boolean = false
+  ): AsyncResult<JointObligorData> {
+    return this.saveJointObligorInformation(obligorId, data, isPartial, skipValidation);
+  }
+
+  /**
+   * Delete a joint obligor from the database
+   * Admin only operation
+   */
+  public async delete(obligorId: string): AsyncResult<void> {
+    return this.deleteActor('JointObligor', obligorId);
+  }
 }
