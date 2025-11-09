@@ -127,7 +127,7 @@ export async function PUT(
     }
 
     // Actor token access - use validateAndSave
-    const result = await (service as any).validateAndSave(
+    const result = await service.validateAndSave(
       identifier, // token
       data,
       true // isPartialSave
@@ -248,7 +248,7 @@ export async function POST(
     }
 
     // Actor token access - use validateAndSave
-    const result = await (service as any).validateAndSave(
+    const result = await service.validateAndSave(
       identifier, // token
       data,
       false // not partial save - final submission

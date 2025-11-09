@@ -12,6 +12,7 @@ import { usePolicyPermissions, useIsStaffOrAdmin } from '@/lib/hooks/usePolicyPe
 interface PolicyDetails {
   id: string;
   policyNumber: string;
+  internalCode?: string;
   status: string;
 
   // Property Information

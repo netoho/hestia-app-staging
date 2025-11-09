@@ -381,4 +381,25 @@ export class TenantService extends BaseActorService {
 
     return Result.ok(hasEmploymentInfo);
   }
+
+  /**
+   * Public save method for admin use
+   * Wraps the internal saveTenantInformation method
+   */
+  public async save(
+    tenantId: string,
+    data: TenantData,
+    isPartial: boolean = false,
+    skipValidation: boolean = false
+  ): AsyncResult<TenantData> {
+    return this.saveTenantInformation(tenantId, data, isPartial, skipValidation);
+  }
+
+  /**
+   * Delete a tenant from the database
+   * Admin only operation
+   */
+  public async delete(tenantId: string): AsyncResult<void> {
+    return this.deleteActor('Tenant', tenantId);
+  }
 }

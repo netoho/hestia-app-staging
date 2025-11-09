@@ -25,9 +25,9 @@
 # Install dependencies
 bun install
 
-# Setup database
+# Setup database (we treat all the environments the same way)
 bun prisma generate
-bun prisma migrate dev
+bun prisma migrate deploy
 
 # Run development server
 bun run dev
@@ -48,9 +48,10 @@ bun run build
 bun prisma generate
 
 # Database operations
-bun prisma migrate dev        # Create migration
-bun prisma migrate deploy     # Deploy to production
-bun prisma studio            # Visual database browser
+bun prisma migrate dev --create-only --skip-seed --skip-generate --name init      # Create migration
+bun prisma migrate deploy                                                         # Deploy to production
+bun prisma studio                                                                 # Visual database browser
+bun prisma db seed                                                                # Seed database (if applicable)
 
 # Testing
 bun run test
@@ -63,7 +64,7 @@ bun run test:api
 
 ### Tech Stack
 
-**Framework**: Next.js 14 (App Router)
+**Framework**: Next.js 15 (App Router)
 **Database**: PostgreSQL + Prisma ORM
 **Language**: TypeScript
 **Validation**: Zod schemas

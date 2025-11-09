@@ -259,15 +259,7 @@ export class LandlordService extends BaseActorService {
         // Save financial details to Policy if provided in propertyDetails
         // Financial fields are sent via propertyDetails but stored in Policy
         if (data.propertyDetails) {
-          const financialData = {
-            hasIVA: (data.propertyDetails as any).hasIVA,
-            issuesTaxReceipts: (data.propertyDetails as any).issuesTaxReceipts,
-            securityDeposit: (data.propertyDetails as any).securityDeposit,
-            maintenanceFee: (data.propertyDetails as any).maintenanceFee,
-            maintenanceIncludedInRent: (data.propertyDetails as any).maintenanceIncludedInRent,
-            rentIncreasePercentage: (data.propertyDetails as any).rentIncreasePercentage,
-            paymentMethod: (data.propertyDetails as any).paymentMethod,
-          };
+          const financialData = this.extractFinancialData(data.propertyDetails);
 
           // Only save if at least one financial field is provided
           const hasFinancialData = Object.values(financialData).some(v => v !== undefined);
@@ -500,26 +492,6 @@ export class LandlordService extends BaseActorService {
   }
 
   /**
-   * Check if all landlords for a policy have completed their information
-   */
-  async areAllLandlordsComplete(policyId: string): AsyncResult<boolean> {
-    return this.executeDbOperation(async () => {
-      const landlords = await this.prisma.landlord.findMany({
-        where: { policyId },
-        select: { informationComplete: true, verificationStatus: true },
-      });
-
-      if (landlords.length === 0) {
-        return false;
-      }
-
-      return landlords.every(
-        l => l.informationComplete && l.verificationStatus === 'APPROVED'
-      );
-    }, 'areAllLandlordsComplete');
-  }
-
-  /**
    * Upload landlord document
    */
   async uploadDocument(
@@ -590,5 +562,180 @@ export class LandlordService extends BaseActorService {
     }, 'hasRequiredDocuments');
 
     return result.ok ? result.value : false;
+  }
+
+  /**
+   * Extract financial data from property details
+   * Helper to centralize financial field extraction logic
+   */
+  private extractFinancialData(propertyDetails: any) {
+    return {
+      hasIVA: propertyDetails.hasIVA,
+      issuesTaxReceipts: propertyDetails.issuesTaxReceipts,
+      securityDeposit: propertyDetails.securityDeposit,
+      maintenanceFee: propertyDetails.maintenanceFee,
+      maintenanceIncludedInRent: propertyDetails.maintenanceIncludedInRent,
+      rentIncreasePercentage: propertyDetails.rentIncreasePercentage,
+      paymentMethod: propertyDetails.paymentMethod,
+    };
+  }
+
+  /**
+   * Save complex multi-landlord data with property/financial details
+   * Used by admin save() when full LandlordSubmissionData is provided
+   */
+  private async saveMultiLandlordData(
+    primaryLandlordId: string,
+    data: LandlordSubmissionData,
+    isPartial: boolean = false,
+    skipValidation: boolean = false
+  ): AsyncResult<LandlordData> {
+    try {
+      // Start transaction for data consistency
+      const result = await this.executeTransaction(async (tx) => {
+        // Get the primary landlord to find the policyId
+        const primaryLandlord = await tx.landlord.findUnique({
+          where: { id: primaryLandlordId },
+          select: { policyId: true }
+        });
+
+        if (!primaryLandlord) {
+          throw new ServiceError(
+            ErrorCode.NOT_FOUND,
+            'Primary landlord not found',
+            404
+          );
+        }
+
+        const policyId = primaryLandlord.policyId;
+
+        // 1. Save all landlords in the array
+        if (data.landlords && Array.isArray(data.landlords)) {
+          for (const landlordData of data.landlords) {
+            if (landlordData.id) {
+              const saveResult = await this.saveLandlordInformation(
+                landlordData.id,
+                landlordData as LandlordData,
+                isPartial,
+                skipValidation
+              );
+
+              if (!saveResult.ok) {
+                throw saveResult.error;
+              }
+            }
+          }
+        }
+
+        // 2. Save property details if provided
+        if (data.propertyDetails) {
+          const propertyResult = await this.savePropertyDetails(
+            policyId,
+            data.propertyDetails
+          );
+
+          if (!propertyResult.ok) {
+            throw propertyResult.error;
+          }
+        }
+
+        // 3. Save financial details if provided
+        // Financial fields are sent via propertyDetails but stored in Policy
+        if (data.propertyDetails) {
+          const financialData = this.extractFinancialData(data.propertyDetails);
+
+          // Only save if at least one financial field is provided
+          const hasFinancialData = Object.values(financialData).some(v => v !== undefined);
+          if (hasFinancialData) {
+            const financialResult = await this.saveFinancialDetails(
+              policyId,
+              financialData
+            );
+
+            if (!financialResult.ok) {
+              throw financialResult.error;
+            }
+          }
+        }
+
+        // Log activity (admin save)
+        await logPolicyActivity({
+          policyId,
+          action: isPartial ? 'landlord_admin_partial_save' : 'landlord_admin_save',
+          description: isPartial
+            ? 'Admin saved partial landlord information'
+            : 'Admin saved landlord information',
+          performedByType: 'admin',
+          details: {
+            primaryLandlordId,
+            landlordCount: data.landlords?.length || 0,
+            hasPropertyDetails: !!data.propertyDetails,
+            partial: isPartial,
+            skipValidation
+          },
+        });
+
+        // Return the primary landlord data
+        const updatedLandlord = await tx.landlord.findUnique({
+          where: { id: primaryLandlordId },
+          include: {
+            addressDetails: true,
+            documents: true,
+          }
+        });
+
+        return updatedLandlord as LandlordData;
+      });
+
+      return result;
+    } catch (error) {
+      this.log('error', 'Multi-landlord save error', error);
+      return Result.error(
+        new ServiceError(
+          ErrorCode.INTERNAL_ERROR,
+          'Error saving landlord data',
+          500,
+          { error: (error as Error).message }
+        )
+      );
+    }
+  }
+
+  /**
+   * Public save method for admin use
+   * Handles both simple and complex data structures
+   */
+  public async save(
+    landlordId: string,
+    data: LandlordData | LandlordSubmissionData,
+    isPartial: boolean = false,
+    skipValidation: boolean = false
+  ): AsyncResult<LandlordData> {
+    // Check if data is the complex LandlordSubmissionData structure
+    if ('landlords' in data && Array.isArray((data as any).landlords)) {
+      // Complex multi-landlord submission with property/financial details
+      return this.saveMultiLandlordData(
+        landlordId,
+        data as LandlordSubmissionData,
+        isPartial,
+        skipValidation
+      );
+    } else {
+      // Simple single landlord update
+      return this.saveLandlordInformation(
+        landlordId,
+        data as LandlordData,
+        isPartial,
+        skipValidation
+      );
+    }
+  }
+
+  /**
+   * Delete a landlord from the database
+   * Admin only operation
+   */
+  public async delete(landlordId: string): AsyncResult<void> {
+    return this.deleteActor('Landlord', landlordId);
   }
 }

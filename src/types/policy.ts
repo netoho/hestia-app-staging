@@ -325,6 +325,9 @@ export interface ActorDocument {
 // ============================================
 
 export interface PolicyCreateData {
+  // Internal Code
+  internalCode?: string;
+
   // Property Information
   propertyAddress: string;
   propertyType: PropertyType;
@@ -365,6 +368,7 @@ export interface PolicyCreateData {
 export interface PolicyData {
   id: string;
   policyNumber: string;
+  internalCode?: string;
 
   // Property Information
   propertyAddress: string;
