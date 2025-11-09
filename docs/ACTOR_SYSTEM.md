@@ -3,7 +3,7 @@
 **Status**: ✅ 100% Implemented and Production-Ready
 **Last Updated**: November 2024
 **Related Files**:
-- `/src/lib/services/actors/` (2,948 lines total)
+- `/src/lib/services/actors/` (3,046 lines total)
 - `/src/components/forms/shared/PersonNameFields.tsx`
 - `/src/app/api/actors/[type]/[identifier]/route.ts`
 
@@ -193,7 +193,7 @@ const name = formatFullName(
 
 ### BaseActorService
 
-**File**: `src/lib/services/actors/BaseActorService.ts` (512 lines)
+**File**: `src/lib/services/actors/BaseActorService.ts` (523 lines)
 
 **Purpose**: Abstract base class providing common functionality for all actor types.
 
@@ -230,10 +230,11 @@ export abstract class BaseActorService extends BaseService {
   ): AsyncResult<T>;
   protected buildUpdateData(data: ActorData, addressId?: string): any;
   protected async upsertAddress(addressData: AddressDetails, existingAddressId?: string | null): AsyncResult<string>;
+  protected async deleteActor(tableName: string, actorId: string): AsyncResult<void>;
 }
 ```
 
-**Note**: Methods like `save()`, `validateAndSave()`, and actor-specific queries are implemented in concrete services (LandlordService, TenantService, etc.), not in BaseActorService.
+**Note**: Public methods like `save()`, `validateAndSave()`, `delete()`, and actor-specific queries are implemented in concrete services (LandlordService, TenantService, etc.), not in BaseActorService. BaseActorService provides protected helpers like `saveActorData()` and `deleteActor()` that concrete services use.
 
 **Benefits**:
 - Eliminated ~75% code duplication across 4 actor types
@@ -243,7 +244,7 @@ export abstract class BaseActorService extends BaseService {
 
 ### LandlordService
 
-**File**: `src/lib/services/actors/LandlordService.ts` (595 lines)
+**File**: `src/lib/services/actors/LandlordService.ts` (615 lines)
 
 **Extends**: BaseActorService
 
@@ -261,7 +262,7 @@ export class LandlordService extends BaseActorService {
   validatePersonData(data: PersonActorData, isPartial = false): Result<PersonActorData>;
   validateCompanyData(data: CompanyActorData, isPartial = false): Result<CompanyActorData>;
 
-  // Landlord-specific public methods
+  // Landlord-specific internal methods (protected)
   async saveLandlordInformation(
     landlordId: string,
     data: LandlordData,
@@ -269,6 +270,7 @@ export class LandlordService extends BaseActorService {
     skipValidation?: boolean
   ): AsyncResult<LandlordData>;
 
+  // Public methods for different access patterns
   async validateAndSave(
     token: string,
     data: LandlordData,
@@ -280,7 +282,9 @@ export class LandlordService extends BaseActorService {
     data: LandlordData,
     isPartial?: boolean,
     skipValidation?: boolean
-  ): AsyncResult<LandlordResponse>;
+  ): AsyncResult<LandlordData>;
+
+  async delete(landlordId: string): AsyncResult<void>;
 
   async submitLandlord(token: string, data: LandlordSubmissionData): AsyncResult<LandlordResponse>;
 
@@ -291,13 +295,15 @@ export class LandlordService extends BaseActorService {
 **Key Implementation Details**:
 - Uses `individualLandlordSchema` and `companyLandlordSchema` for validation
 - Has partial schemas for auto-save functionality
-- `validateAndSave()` for actor token-based saves
-- `save()` for admin/staff saves with optional validation bypass
+- `validateAndSave()` for actor token-based saves (validates token + data)
+- `save()` for admin/staff saves with optional validation bypass (direct DB save)
+- `delete()` for admin-only actor removal
 - `formatZodErrors()` returns `ValidationError[]` with `{field, message, code}` structure
+- `saveLandlordInformation()` is internal/protected, wrapped by public `save()`
 
 ### TenantService
 
-**File**: `src/lib/services/actors/TenantService.ts` (384 lines)
+**File**: `src/lib/services/actors/TenantService.ts` (405 lines)
 
 **Extends**: BaseActorService
 
@@ -308,7 +314,7 @@ export class LandlordService extends BaseActorService {
 
 ### AvalService
 
-**File**: `src/lib/services/actors/AvalService.ts` (707 lines)
+**File**: `src/lib/services/actors/AvalService.ts` (728 lines)
 
 **Extends**: BaseActorService
 
@@ -319,7 +325,7 @@ export class LandlordService extends BaseActorService {
 
 ### JointObligorService
 
-**File**: `src/lib/services/actors/JointObligorService.ts` (711 lines)
+**File**: `src/lib/services/actors/JointObligorService.ts` (732 lines)
 
 **Extends**: BaseActorService
 
