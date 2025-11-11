@@ -14,11 +14,11 @@ const rateLimiter = combineRateLimiters(passwordResetByEmailLimiter, passwordRes
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await rateLimiter(request);
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
+    // // Apply rate limiting
+    // const rateLimitResponse = await rateLimiter(request);
+    // if (rateLimitResponse) {
+    //   return rateLimitResponse;
+    // }
 
     // Parse and validate request body
     const body = await request.json();

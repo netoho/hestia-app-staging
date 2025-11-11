@@ -142,7 +142,7 @@ export async function POST(
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hestiaplp.com.mx';
       await sendPasswordConfirmationEmail({
         email: user.email || '',
-        name: user.name,
+        name: user.name || undefined,
         loginUrl: `${baseUrl}/login`,
       });
     } catch (emailError) {

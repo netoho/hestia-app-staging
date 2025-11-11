@@ -27,7 +27,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
 }) => {
   const privacyUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.privacy}`;
   const termsUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.terms}`;
-  const supportEmail = brandInfo.support.email;
+  const supportEmail = brandInfo.supportEmail;
 
   return (
     <Html>
@@ -64,7 +64,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
 
           {/* Main Content */}
           <Section style={{
-            backgroundColor: brandColors.email.contentBackground,
+            backgroundColor: brandColors.white,
             padding: '30px',
             borderRadius: '0 0 12px 12px'
           }}>
@@ -101,8 +101,8 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
               <Button
                 href={resetUrl}
                 style={{
-                  backgroundColor: brandColors.email.ctaBackground,
-                  color: brandColors.email.ctaText,
+                  backgroundColor: brandColors.accent,
+                  color: brandColors.white,
                   padding: '14px 28px',
                   borderRadius: '8px',
                   fontSize: '16px',
@@ -124,7 +124,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
               margin: '24px 0'
             }}>
               <Text style={{
-                color: brandColors.email.warningText,
+                color: brandColors.warning,
                 fontSize: '14px',
                 lineHeight: '20px',
                 margin: '0 0 10px',
@@ -133,7 +133,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
                 ⚠️ Información importante:
               </Text>
               <Text style={{
-                color: brandColors.email.warningText,
+                color: brandColors.warning,
                 fontSize: '14px',
                 lineHeight: '20px',
                 margin: '0'
@@ -147,7 +147,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
             </Section>
 
             <Hr style={{
-              borderColor: brandColors.email.divider,
+              borderColor: brandColors.border,
               margin: '30px 0'
             }} />
 
@@ -171,7 +171,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
             </Text>
 
             <Hr style={{
-              borderColor: brandColors.email.divider,
+              borderColor: brandColors.border,
               margin: '30px 0'
             }} />
 
@@ -184,7 +184,7 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
               margin: '24px 0'
             }}>
               <Text style={{
-                color: brandColors.email.infoText,
+                color: brandColors.textPrimary,
                 fontSize: '14px',
                 lineHeight: '20px',
                 margin: '0'
@@ -218,42 +218,42 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
             padding: '24px 0',
           }}>
             <Text style={{
-              color: brandColors.email.footerText,
+              color: brandColors.textMuted,
               fontSize: '12px',
               lineHeight: '18px',
               margin: '0 0 8px'
             }}>
-              © {new Date().getFullYear()} {brandInfo.legalEntity}
+              © {new Date().getFullYear()} {brandInfo.companyLegalName}
               <br />
               Todos los derechos reservados
             </Text>
 
             <Text style={{
-              color: brandColors.email.footerText,
+              color: brandColors.textMuted,
               fontSize: '12px',
               lineHeight: '18px',
               margin: '0'
             }}>
-              <a href={privacyUrl} style={{ color: brandColors.email.footerLink, textDecoration: 'none' }}>
+              <a href={privacyUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>
                 Política de Privacidad
               </a>
               {' | '}
-              <a href={termsUrl} style={{ color: brandColors.email.footerLink, textDecoration: 'none' }}>
+              <a href={termsUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>
                 Términos de Servicio
               </a>
             </Text>
 
             {/* Office Address */}
             <Text style={{
-              color: brandColors.email.footerText,
+              color: brandColors.textMuted,
               fontSize: '11px',
               lineHeight: '16px',
               margin: '16px 0 0',
               opacity: 0.8
             }}>
-              {brandInfo.address}
+              {brandInfo.location}
               <br />
-              Tel: {brandInfo.support.phone}
+              Tel: {brandInfo.supportPhone}
             </Text>
           </Section>
         </Container>
