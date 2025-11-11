@@ -338,46 +338,6 @@ export async function getDocumentMetadata(s3Key: string) {
 }
 
 /**
- * Validate file for upload
- */
-export function validateFile(
-  file: File | UploadedFile,
-  options: {
-    maxSize?: number; // in bytes
-    allowedTypes?: string[];
-  } = {}
-): { valid: boolean; error?: string } {
-  const maxSize = options.maxSize || 10 * 1024 * 1024; // Default 10MB
-  const allowedTypes = options.allowedTypes || [
-    'application/pdf',
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-  ];
-
-  // Check file size
-  const fileSize = 'size' in file ? file.size : file.buffer.length;
-  if (fileSize > maxSize) {
-    return {
-      valid: false,
-      error: `File size exceeds maximum of ${maxSize / (1024 * 1024)}MB`,
-    };
-  }
-
-  // Check file type
-  const mimeType = 'type' in file ? file.type : file.mimeType;
-  if (!allowedTypes.includes(mimeType)) {
-    return {
-      valid: false,
-      error: `File type ${mimeType} is not allowed`,
-    };
-  }
-
-  return { valid: true };
-}
-
-/**
  * Get signed download URL (alias for getDocumentDownloadUrl)
  */
 export async function getSignedDownloadUrl(

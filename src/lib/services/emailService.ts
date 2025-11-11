@@ -413,7 +413,7 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
     const { render } = await import('@react-email/render');
     const { PolicyInvitationEmail } = await import('../../templates/email/react-email/PolicyInvitationEmail');
 
-    const html = await render(PolicyInvitationEmail(data));
+    const html = render(await PolicyInvitationEmail(data));
     const subject = 'Acción Requerida: Completa tu Solicitud de Protección Hestia';
 
     // Generate plain text version
@@ -472,7 +472,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const { render } = await import('@react-email/render');
     const { PolicySubmissionEmail } = await import('../../templates/email/react-email/PolicySubmissionEmail');
 
-    const html = await render(PolicySubmissionEmail(data));
+    const html = render(await PolicySubmissionEmail(data));
     const subject = `Solicitud Recibida - Protección Hestia #${data.policyId}`;
 
     // Generate plain text version
@@ -557,7 +557,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     const { render } = await import('@react-email/render');
     const { ActorInvitationEmail } = await import('../../templates/email/react-email/ActorInvitationEmail');
 
-    const html = await render(ActorInvitationEmail(data));
+    const html = render(await ActorInvitationEmail(data));
 
     const actorTypeNames = {
       'landlord': 'Arrendador',
@@ -677,7 +677,7 @@ export const sendActorRejectionEmail = async (params: ActorRejectionData): Promi
     const { render } = await import('@react-email/render');
     const { ActorRejectionEmail } = await import('../../templates/email/react-email/ActorRejectionEmail');
 
-    const html = await render(ActorRejectionEmail(params));
+    const html = render(await ActorRejectionEmail(params));
 
     const actorTypeLabels: Record<string, string> = {
       landlord: 'Arrendador',
@@ -733,7 +733,7 @@ export const sendUserInvitation = async (data: UserInvitationData): Promise<bool
     const { render } = await import('@react-email/render');
     const { UserInvitationEmail } = await import('../../templates/email/react-email/UserInvitationEmail');
 
-    const html = await render(await UserInvitationEmail(data));
+    const html = render(await UserInvitationEmail(data));
 
     const roleDescriptions = {
       ADMIN: 'Administrador del Sistema',
@@ -796,7 +796,7 @@ export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Prom
     const { render } = await import('@react-email/render');
     const { PolicyStatusUpdateEmail } = await import('../../templates/email/react-email/PolicyStatusUpdateEmail');
 
-    const html = await render(await PolicyStatusUpdateEmail(data));
+    const html = render(await PolicyStatusUpdateEmail(data));
     const isApproved = data.status === 'approved';
     const statusText = isApproved ? 'Aprobada' : 'Rechazada';
     const subject = `Solicitud de Protección ${statusText} - Hestia`;

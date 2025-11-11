@@ -14,7 +14,7 @@ import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, Trash2, Calculator, Info, Mail } from 'lucide-react';
-import { PropertyType, GuarantorType, TenantType } from '@/types/policy';
+import { PropertyType, GuarantorType, TenantType } from '@/lib/enums';
 import { formatCurrency } from '@/lib/services/pricingService';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import {

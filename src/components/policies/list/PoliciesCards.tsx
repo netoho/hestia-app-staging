@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import PolicyCard from './PolicyCard';
-import { PolicyStatus } from '@/types/policy';
+import { PolicyStatus } from '@/lib/enums';
 
 interface Policy {
   id: string;

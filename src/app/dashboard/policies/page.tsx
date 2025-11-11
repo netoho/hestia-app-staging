@@ -7,7 +7,7 @@ import PoliciesHeader from '@/components/policies/list/PoliciesHeader';
 import PoliciesFilters from '@/components/policies/list/PoliciesFilters';
 import PoliciesList from '@/components/policies/list/PoliciesList';
 import PoliciesPagination from '@/components/policies/list/PoliciesPagination';
-import { PolicyStatus } from '@/types/policy';
+import { PolicyStatus } from '@/lib/enums';
 
 interface Policy {
   id: string;

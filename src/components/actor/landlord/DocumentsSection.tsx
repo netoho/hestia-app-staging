@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 import { Document } from '@/types/documents';
 import { useMemo } from 'react';
 

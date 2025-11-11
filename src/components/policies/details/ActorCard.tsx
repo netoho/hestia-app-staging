@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 import { useMemo } from 'react';
 import { formatFullName } from '@/lib/utils/names';
 

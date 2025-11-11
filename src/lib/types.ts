@@ -3,6 +3,9 @@
 // Import Package from prisma client for consistency
 export type { Package } from '@prisma/client';
 
+// Import enums from centralized generated file
+import { UserRole, PolicyStatus } from '@/lib/enums';
+
 export interface Testimonial {
   id: string;
   name: string;
@@ -11,8 +14,6 @@ export interface Testimonial {
   avatarUrl: string;
   dataAiHint: string;
 }
-
-export type UserRole = 'ADMIN' | 'BROKER' | 'STAFF';
 
 export interface User {
   id: string;
@@ -44,8 +45,6 @@ export interface HowItWorksStep {
   icon: string;
   dataAiHint: string;
 }
-
-export type PolicyStatus = 'draft' | 'sent_to_tenant' | 'in_progress' | 'submitted' | 'under_review' | 'approved' | 'denied';
 
 export interface Policy {
   id: string;

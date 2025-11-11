@@ -13,8 +13,9 @@
     "typecheck": "bun run --bun tsc --noEmit",
     "db:seed": "bun run prisma db seed",
     "db:reset": "bun run --bun prisma db push --force-reset",
-    "postinstall": "bun run --bun prisma generate --no-engine",
-    "postinstall:postgres": "bun run --bun prisma generate"
+    "postinstall": "bun run --bun prisma generate --no-engine && bun run scripts/generate-enums.ts",
+    "postinstall:postgres": "bun run --bun prisma generate && bun run scripts/generate-enums.ts",
+    "generate-enums": "bun run scripts/generate-enums.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -63,7 +64,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.475.0",
     "mailgun.js": "^12.0.3",
-    "next": "15.4.2",
+    "next": "15.5.6",
     "next-auth": "^4.24.7",
     "nodemailer": "^7.0.5",
     "patch-package": "^8.0.0",
@@ -80,6 +81,7 @@
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^13.0.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

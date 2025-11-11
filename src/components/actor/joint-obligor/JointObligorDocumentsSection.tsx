@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Info, AlertCircle } from 'lucide-react';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 
 interface JointObligorDocumentsSectionProps {
   obligorId?: string;

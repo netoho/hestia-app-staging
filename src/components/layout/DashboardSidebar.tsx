@@ -1,6 +1,7 @@
 'use client';
 
-import type { NavItem, UserRole } from '@/lib/types';
+import type { NavItem } from '@/lib/types';
+import type { UserRole } from '@/lib/enums';
 import {
   Sidebar,
   SidebarContent,
