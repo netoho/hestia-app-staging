@@ -1053,3 +1053,67 @@ Ver póliza: ${data.policyLink}
     return false;
   }
 };
+
+// ====================================
+// Password Reset Email
+// ====================================
+
+interface PasswordResetData {
+  email: string;
+  name?: string;
+  resetUrl: string;
+  expiryHours?: number;
+}
+
+export const sendPasswordResetEmail = async (data: PasswordResetData): Promise<boolean> => {
+  try {
+    // Use React Email template
+    const { render } = await import('@react-email/render');
+    const { PasswordResetEmail } = await import('../../templates/email/react-email/PasswordResetEmail');
+
+    const expiryHours = data.expiryHours || 1;
+    const expiryTime = expiryHours === 1 ? '1 hora' : `${expiryHours} horas`;
+
+    const html = await render(await PasswordResetEmail({
+      email: data.email,
+      name: data.name,
+      resetUrl: data.resetUrl,
+      expiryTime
+    }));
+
+    const subject = 'Restablecer tu contraseña - Hestia';
+
+    // Generate plain text version
+    const text = `
+Hola ${data.name || 'usuario'},
+
+Recibimos una solicitud para restablecer la contraseña de tu cuenta en Hestia asociada con el correo electrónico ${data.email}.
+
+Si realizaste esta solicitud, visita el siguiente enlace para crear una nueva contraseña:
+${data.resetUrl}
+
+IMPORTANTE:
+• Este enlace expirará en ${expiryTime}
+• Por seguridad, no compartas este enlace con nadie
+• Si no solicitaste restablecer tu contraseña, ignora este correo
+
+Si el enlace no funciona, copia y pega la URL completa en tu navegador.
+
+Nota de seguridad: Si no solicitaste restablecer tu contraseña, es posible que alguien esté intentando acceder a tu cuenta. Por favor, asegúrate de que tu cuenta esté segura y contacta a nuestro equipo de soporte si tienes alguna preocupación.
+
+¿Necesitas ayuda? Contáctanos en ${SUPPORT_EMAIL}
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    return false;
+  }
+};
