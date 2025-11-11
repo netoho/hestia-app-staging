@@ -1,6 +1,6 @@
 # Hestia Developer Guide
 
-**Last Updated**: November 5, 2024 (commit: 513fa3d)
+**Last Updated**: November 10, 2024 (commit: fix/actor-system)
 **Status**: ✅ Reflects Production Codebase
 **Purpose**: Main entrypoint for all development documentation
 
@@ -35,7 +35,7 @@ bun run dev
 
 ### Build Verification
 ```bash
-# Type check (may show 28 known TS errors - see Known Issues)
+# Type check (may show ~205 TS errors - mostly in API routes - see Known Issues)
 bunx tsc --noEmit
 
 # Production build (should succeed)
@@ -45,7 +45,10 @@ bun run build
 ### Key Commands
 ```bash
 # After schema changes (ALWAYS run this first!)
-bun prisma generate
+bun prisma generate    # This also auto-generates src/lib/enums.ts
+
+# Enum generation (runs automatically with prisma generate)
+bun run generate-enums # Manual enum generation from Prisma schema
 
 # Database operations
 bun prisma migrate dev --create-only --skip-seed --skip-generate --name init      # Create migration
@@ -135,6 +138,15 @@ ActorAuthService.resolveActorAuth() → token-based OR session-based
 
 **4. Three-Layer Validation** - Frontend (Zod) → API (Services) → Database (Prisma)
 
+**5. Single Source of Truth for Enums** - Auto-generated from Prisma schema
+```typescript
+// Server-side: Import from @prisma/client
+import { UserRole } from '@prisma/client';
+
+// Client-side: Import from generated file
+import { UserRole } from '@/lib/enums';
+```
+
 ---
 
 ## Core Systems
@@ -214,6 +226,30 @@ await mutate(async () => {
 - Refresh interval: 30s (policies list)
 - Cache time: 24 hours
 
+### Enum System
+
+**Implementation**: Build-time extraction from Prisma schema
+
+**Key Features**:
+- **Single Source of Truth**: Prisma schema defines all enums
+- **Auto-generation**: Runs automatically after `prisma generate`
+- **Type-safe**: Full TypeScript support for both client and server
+- **Zero bundle overhead**: Client gets lightweight enum file, not full Prisma client
+
+**Generated File**: `src/lib/enums.ts` (auto-generated, do not edit)
+- Contains all 18 enums from Prisma schema
+- Exports const objects and TypeScript types
+- Includes utility function for getting enum values as arrays
+
+**Usage Pattern**:
+```typescript
+// Server-side (API routes, services, middleware)
+import { UserRole, PolicyStatus } from '@prisma/client';
+
+// Client-side (components, pages)
+import { UserRole, PolicyStatus } from '@/lib/enums';
+```
+
 ### Cron Jobs
 
 **Implementation**: Vercel Cron Jobs
@@ -288,34 +324,37 @@ export class NewActorTypeService extends BaseActorService<NewActorType> {
 vim prisma/schema.prisma
 
 # 2. Regenerate Prisma client (MUST DO THIS FIRST!)
-bun prisma generate
+bun prisma generate  # This also auto-generates src/lib/enums.ts
 
 # 3. Create migration
 bun prisma migrate dev --name descriptive_name
 
-# 4. Update Zod validation schemas
+# 4. Verify enum generation (if enums were changed)
+cat src/lib/enums.ts  # Check that new/updated enums are present
+
+# 5. Update Zod validation schemas
 # Edit files in src/lib/validations/
 
-# 5. Update TypeScript types
+# 6. Update TypeScript types
 # Usually auto-updated by Prisma generate
 
-# 6. Fix service layer
+# 7. Fix service layer
 # Update any methods that use changed fields
 
-# 7. Fix UI components
+# 8. Fix UI components
 # Update forms and displays
 
-# 8. Test with edge cases
+# 9. Test with edge cases
 # Test null, undefined, empty string for optional fields
 
-# 9. Type check
+# 10. Type check
 bunx tsc --noEmit
 
-# 10. Build verification
+# 11. Build verification
 bun run build
 ```
 
-**Why this order matters**: Prisma generates TypeScript types. If you update types/validation before running `bun prisma generate`, you'll get cascading type errors.
+**Why this order matters**: Prisma generates TypeScript types and enums. If you update types/validation before running `bun prisma generate`, you'll get cascading type errors.
 
 ### Creating a New Policy
 
@@ -346,8 +385,10 @@ bun run build
 ```
 
 **Common Issues**:
-- After schema changes: Run `bun prisma generate`
-- Enum errors: Import from `@prisma/client`, don't use string literals
+- After schema changes: Run `bun prisma generate` (also regenerates enums)
+- Enum errors: ✅ FIXED - Now using auto-generated enums
+  - Server imports from `@prisma/client`
+  - Client imports from `@/lib/enums`
 - Optional field errors: Check validation logic for `?? ''` coercion
 
 **📚 Deep Dive**: See [REACT_STATE_PATTERNS.md](./REACT_STATE_PATTERNS.md#typescript-troubleshooting)
@@ -413,48 +454,40 @@ RESEND_API_KEY="..."     # if using Resend
 
 ## Known Issues
 
-### TypeScript Errors (28 total)
+### TypeScript Errors (~205 total)
 
 **Status**: Build succeeds ✅, but type-check shows errors ⚠️
 
-**Category 1: UserRole Enum (14 errors)**
-- **Location**: `/src/app/api/actors/[type]/[identifier]/route.ts`
-- **Issue**: Using string literals instead of enum values
-- **Example**:
-  ```typescript
-  // WRONG
-  withRole(request, [UserRole.ADMIN, "STAFF", "BROKER"], ...)
+**Update November 10, 2024**: Fixed UserRole enum errors by implementing build-time enum extraction from Prisma schema
 
-  // RIGHT
-  import { UserRole } from '@prisma/client';
-  withRole(request, [UserRole.ADMIN, UserRole.STAFF, UserRole.BROKER], ...)
-  ```
-- **Fix**: Import and use `UserRole` enum consistently
-- **Priority**: Medium (doesn't affect runtime)
+**Category 1: UserRole Enum (FIXED ✅)**
+- **Previous Issue**: 20 errors from using wrong import source
+- **Solution Implemented**: Created build-time enum extraction system
+  - Server uses `@prisma/client` directly
+  - Client uses auto-generated `@/lib/enums`
+  - Single source of truth maintained in Prisma schema
+- **Result**: All UserRole/PolicyStatus enum errors resolved
 
-**Category 2: Missing .save() Method (3 errors)**
-- **Location**: Actor service route handlers
-- **Issue**: Services don't have `.save()` method exposed
-- **Fix**: Either add `.save()` method to services or use `.validateAndSave()`
-- **Priority**: Low (functionality works via `.validateAndSave()`)
+**Category 2: Missing .save() and .delete() Methods (FIXED ✅)**
+- **Previous Issue**: BaseActorService missing methods
+- **Solution Implemented** (Nov 9, 2024 session):
+  - Added public `.save()` and `.delete()` methods to all actor services
+  - Services now have complete CRUD operations
+- **Result**: No more missing method errors in actor routes
 
-**Category 3: Missing .delete() Method (1 error)**
-- **Location**: DELETE route handler
-- **Issue**: BaseActorService doesn't have `.delete()` method
-- **Fix**: Implement `.delete()` method in BaseActorService
-- **Priority**: Low (delete functionality may not be needed)
-
-**Category 4: Other (10 errors)**
-- **Location**: Investigation routes, contract routes
-- **Issue**: Unrelated to actor system refactor
-- **Fix**: Needs separate investigation
-- **Priority**: Low (outside current actor system scope)
+**Category 3: API Route Type Mismatches (~195 errors)**
+- **Location**: Various API routes (investigation, contracts, etc.)
+- **Issues**:
+  - Property name mismatches (e.g., `landlord` vs `landlords`)
+  - Missing properties on Prisma models
+  - Incorrect type assignments
+- **Priority**: Low (doesn't affect runtime due to build configuration)
 
 **Action Items**:
-- [ ] Fix UserRole enum imports (30 minutes)
-- [ ] Decide on .save() vs .validateAndSave() pattern (discussion needed)
-- [ ] Implement .delete() or remove DELETE routes (decision needed)
-- [ ] Investigate remaining 10 errors separately
+- [x] ✅ Fix UserRole enum imports (Completed Nov 10)
+- [x] ✅ Implement .save() and .delete() methods (Completed Nov 9)
+- [ ] Fix remaining API route type mismatches
+- [ ] Investigate Prisma model property issues
 
 ---
 
@@ -550,7 +583,9 @@ bun run test:api             # API tests only
 ```
 
 ### Useful Files
-- `prisma/schema.prisma` - Database schema (source of truth)
+- `prisma/schema.prisma` - Database schema (source of truth for all enums)
+- `scripts/generate-enums.ts` - Enum extraction script
+- `src/lib/enums.ts` - Auto-generated client-safe enums
 - `src/lib/services/actors/BaseActorService.ts` - Service pattern
 - `src/components/forms/shared/PersonNameFields.tsx` - Reusable component
 - `src/hooks/useFormWizardTabs.ts` - Wizard state management
@@ -564,9 +599,14 @@ bun run test:api             # API tests only
 
 ---
 
-**Last Verified**: November 5, 2024 (commit: 513fa3d)
-**Codebase Version**: Production (develop branch)
+**Last Verified**: November 10, 2024 (commit: fix/actor-system)
+**Codebase Version**: Production (fix/actor-system branch)
 **Maintained By**: Development team
 **Documentation Accuracy**: ✅ Core systems verified against actual implementation
+
+**Recent Updates**:
+- Nov 10, 2024: Added enum extraction system documentation
+- Nov 10, 2024: Updated Known Issues section (fixed UserRole/enum errors)
+- Nov 9, 2024: Actor services now have complete CRUD operations
 
 For questions or clarifications, review session files in `.claude/sessions/`
