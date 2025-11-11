@@ -85,7 +85,7 @@ export const brandInfo = {
   companyLegalName: 'Hestia Protección Legal y Patrimonial S.A.S de C.V.',
   companyShortName: 'Hestia PLP',
   tagline: 'Tu garantía de confianza en el arrendamiento',
-  supportEmail: 'soporte@hestiaplp.com.mx',
+  supportEmail: 'info@hestiaplp.com.mx',
   infoEmail: 'info@hestiaplp.com.mx',
   supportPhone: '55 1277 0883 | 55 2111 7610',
   location: 'Ciudad de México',

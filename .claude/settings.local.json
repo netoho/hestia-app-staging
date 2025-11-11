@@ -41,7 +41,8 @@
       "Bash(for f in .claude/sessions/2025-11*.md .claude/sessions/2025-10-29*.md .claude/sessions/2025-10-26*.md)",
       "Bash(do echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━)",
       "WebSearch",
-      "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/.current-session)"
+      "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/.current-session)",
+      "Bash(/Users/neto/Development/hestia/forgot-password/.claude/sessions/.current-session)"
     ],
     "deny": [],
     "ask": []

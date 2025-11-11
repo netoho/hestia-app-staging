@@ -127,3 +127,105 @@ export async function getInvitationStatus(userId: string) {
     expiryDate: user.invitationTokenExpiry,
   };
 }
+
+// ============================================
+// PASSWORD RESET TOKEN FUNCTIONS
+// ============================================
+
+/**
+ * Generate a password reset token for a user by email
+ * @param email - The email address to generate a token for
+ * @param expiryHours - Number of hours until token expires (default: 1)
+ * @returns The generated token and user ID if found, null if email not found
+ */
+export async function generatePasswordResetToken(email: string, expiryHours: number = 1): Promise<{ token: string; userId: string } | null> {
+  // Find user by email
+  const user = await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: { id: true, isActive: true },
+  });
+
+  // Don't reveal if user exists - return null silently
+  if (!user || !user.isActive) {
+    return null;
+  }
+
+  const token = generateSecureToken();
+  const expiryDate = new Date();
+  expiryDate.setHours(expiryDate.getHours() + expiryHours);
+
+  // Update user with reset token, invalidating any previous reset token
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      resetToken: token,
+      resetTokenExpiry: expiryDate,
+    },
+  });
+
+  return { token, userId: user.id };
+}
+
+/**
+ * Validate a password reset token
+ * @param token - The token to validate
+ * @returns The user if token is valid, null otherwise
+ */
+export async function validatePasswordResetToken(token: string) {
+  if (!token) {
+    return null;
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      resetToken: token,
+      resetTokenExpiry: {
+        gt: new Date(),
+      },
+      isActive: true,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+    },
+  });
+
+  return user;
+}
+
+/**
+ * Clear password reset token for a user (after successful use)
+ * @param userId - The user ID to clear token for
+ */
+export async function clearPasswordResetToken(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      resetToken: null,
+      resetTokenExpiry: null,
+      passwordSetAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Check if a password reset token exists and is valid
+ * @param email - The email to check
+ * @returns True if a valid reset token exists
+ */
+export async function hasActivePasswordResetToken(email: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: {
+      resetToken: true,
+      resetTokenExpiry: true,
+    },
+  });
+
+  if (!user || !user.resetToken || !user.resetTokenExpiry) {
+    return false;
+  }
+
+  return user.resetTokenExpiry > new Date();
+}

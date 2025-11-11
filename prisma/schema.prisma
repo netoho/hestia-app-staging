@@ -33,6 +33,10 @@ model User {
   invitationTokenExpiry DateTime?
   passwordSetAt         DateTime?
 
+  // Password reset fields
+  resetToken            String?   @unique
+  resetTokenExpiry      DateTime?
+
   // Relations
   accounts      Account[]
   sessions      Session[]
