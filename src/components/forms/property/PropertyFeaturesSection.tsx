@@ -56,11 +56,12 @@ export function PropertyFeaturesSection({
             label="Tiene reglamento"
             checked={hasRules}
             onCheckedChange={(checked) => {
-              onChange('hasRules', checked);
-              // Clear rulesType if unchecking hasRules
+              console.log('falksjfadsj', checked);
               if (!checked) {
+                // Clear rulesType if unchecking hasRules
                 onChange('rulesType', undefined);
               }
+              onChange('hasRules', checked);
             }}
             disabled={disabled}
           />

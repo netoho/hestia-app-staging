@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, Trash2, Calculator, Info, Mail } from 'lucide-react';
@@ -103,6 +102,9 @@ export default function NewPolicyPage() {
   const [packageId, setPackageId] = useState('');
   const [tenantPercentage, setTenantPercentage] = useState(100);
   const [landlordPercentage, setLandlordPercentage] = useState(0);
+  const [manualPrice, setManualPrice] = useState<number | null>(null);
+  const [isManualOverride, setIsManualOverride] = useState(false);
+  const [percentageError, setPercentageError] = useState('');
 
   // Landlord Information
   const [landlordData, setLandlordData] = useState<any>({
@@ -156,12 +158,6 @@ export default function NewPolicyPage() {
     setPolicyNumber(generatePolicyNumber());
   }, []);
 
-  // Calculate pricing when relevant fields change
-  useEffect(() => {
-    if (propertyData.rentAmount && packageId) {
-      calculatePricing();
-    }
-  }, [propertyData.rentAmount, packageId, tenantPercentage]);
 
   const fetchPackages = async () => {
     setLoadingPackages(true);
@@ -203,13 +199,18 @@ export default function NewPolicyPage() {
           packageId,
           rentAmount: parseFloat(propertyData.rentAmount),
           tenantPercentage,
-          landlordPercentage
+          landlordPercentage,
+          includeInvestigationFee: false // Don't include investigation fee for new policies
         })
       });
 
       if (response.ok) {
         const data = await response.json();
         setPricing(data);
+        // If not manually overridden, update the manual price with calculated subtotal (without IVA)
+        if (!isManualOverride) {
+          setManualPrice(data.subtotal);
+        }
       }
     } catch (error) {
       console.error('Error calculating price:', error);
@@ -218,9 +219,45 @@ export default function NewPolicyPage() {
     }
   };
 
-  const handlePercentageChange = (value: number[]) => {
-    setTenantPercentage(value[0]);
-    setLandlordPercentage(100 - value[0]);
+  const handleTenantPercentageChange = (value: string) => {
+    const percentage = parseFloat(value) || 0;
+    if (percentage >= 0 && percentage <= 100) {
+      setTenantPercentage(percentage);
+      setLandlordPercentage(100 - percentage);
+      setPercentageError('');
+    }
+  };
+
+  const handleLandlordPercentageChange = (value: string) => {
+    const percentage = parseFloat(value) || 0;
+    if (percentage >= 0 && percentage <= 100) {
+      setLandlordPercentage(percentage);
+      setTenantPercentage(100 - percentage);
+      setPercentageError('');
+    }
+  };
+
+  const validatePercentages = (): boolean => {
+    const sum = tenantPercentage + landlordPercentage;
+    if (Math.abs(sum - 100) > 0.01) {
+      setPercentageError('Los porcentajes deben sumar 100%');
+      return false;
+    }
+    setPercentageError('');
+    return true;
+  };
+
+  const handleManualPriceChange = (value: string) => {
+    const price = parseFloat(value) || 0;
+    setManualPrice(price);
+    setIsManualOverride(true);
+  };
+
+  const resetToCalculatedPrice = () => {
+    if (pricing) {
+      setManualPrice(pricing.subtotal);
+      setIsManualOverride(false);
+    }
   };
 
   const addJointObligor = () => {
@@ -281,6 +318,20 @@ export default function NewPolicyPage() {
     // Validate package selection
     if (!packageId) {
       alert('Por favor seleccione un paquete');
+      return false;
+    }
+
+    // Validate percentages
+    if (!validatePercentages()) {
+      alert('Los porcentajes de pago deben sumar 100%');
+      setCurrentTab('pricing');
+      return false;
+    }
+
+    // Validate price
+    if (!manualPrice || manualPrice <= 0) {
+      alert('Por favor ingrese un precio válido');
+      setCurrentTab('pricing');
       return false;
     }
 
@@ -378,7 +429,7 @@ export default function NewPolicyPage() {
         tenantPercentage,
         landlordPercentage,
         guarantorType,
-        totalPrice: pricing?.total || 0,
+        totalPrice: isManualOverride && manualPrice ? manualPrice * 1.16 : (pricing?.totalWithIva || 0),
         landlord: landlordData,
         tenant: tenantData,
         jointObligors: guarantorType === GuarantorType.JOINT_OBLIGOR || guarantorType === GuarantorType.BOTH ? jointObligors : [],
@@ -540,7 +591,6 @@ export default function NewPolicyPage() {
                   <Label htmlFor="rentAmount">Renta Mensual</Label>
                   <Input
                     id="rentAmount"
-                    type="number"
                     value={propertyData.rentAmount}
                     onChange={(e) => setPropertyData({ ...propertyData, rentAmount: e.target.value })}
                     placeholder="0.00"
@@ -551,7 +601,6 @@ export default function NewPolicyPage() {
                   <Label htmlFor="depositAmount">Depósito</Label>
                   <Input
                     id="depositAmount"
-                    type="number"
                     value={propertyData.depositAmount}
                     onChange={(e) => setPropertyData({ ...propertyData, depositAmount: e.target.value })}
                     placeholder="0.00"
@@ -563,11 +612,9 @@ export default function NewPolicyPage() {
                 <Label htmlFor="contractLength">Duración del Contrato (meses)</Label>
                 <Input
                   id="contractLength"
-                  type="number"
-                  min="1"
-                  max="60"
                   value={propertyData.contractLength}
-                  onChange={(e) => setPropertyData({ ...propertyData, contractLength: parseInt(e.target.value) })}
+                  onChange={(e) => setPropertyData({ ...propertyData, contractLength: parseInt(e.target.value) || 12 })}
+                  placeholder="12"
                   required
                 />
               </div>
@@ -642,18 +689,15 @@ export default function NewPolicyPage() {
                     <Label htmlFor="securityDeposit">Depósito de Garantía (meses)</Label>
                     <Input
                       id="securityDeposit"
-                      type="number"
-                      min="0"
-                      step="0.5"
                       value={propertyData.securityDeposit}
                       onChange={(e) => setPropertyData({ ...propertyData, securityDeposit: parseFloat(e.target.value) || 1 })}
+                      placeholder="1"
                     />
                   </div>
                   <div>
                     <Label htmlFor="maintenanceFee">Cuota de Mantenimiento</Label>
                     <Input
                       id="maintenanceFee"
-                      type="number"
                       value={propertyData.maintenanceFee}
                       onChange={(e) => setPropertyData({ ...propertyData, maintenanceFee: e.target.value })}
                       placeholder="0.00"
@@ -693,9 +737,6 @@ export default function NewPolicyPage() {
                     <Label htmlFor="rentIncreasePercentage">% Incremento Anual (contratos &gt; 1 año)</Label>
                     <Input
                       id="rentIncreasePercentage"
-                      type="number"
-                      min="0"
-                      step="0.1"
                       value={propertyData.rentIncreasePercentage}
                       onChange={(e) => setPropertyData({ ...propertyData, rentIncreasePercentage: e.target.value })}
                       placeholder="Ej: 5.0"
@@ -798,69 +839,248 @@ export default function NewPolicyPage() {
                 )}
               </div>
 
+              {/* Calculate Price Button */}
+              <div className="flex justify-center my-6">
+                <Button
+                  type="button"
+                  onClick={calculatePricing}
+                  disabled={!propertyData.rentAmount || !packageId || calculatingPrice}
+                  variant="outline"
+                  size="lg"
+                >
+                  {calculatingPrice ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2" />
+                      Calculando...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="mr-2 h-4 w-4" />
+                      Calcular Precio
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Unified Cost Summary - Always visible with different states */}
+              <div className="relative">
+                {/* Loading overlay */}
+                {calculatingPrice && (
+                  <div className="absolute inset-0 flex items-center justify-center z-10">
+                    <div className="bg-white/80 p-3 rounded-lg shadow-sm">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Main cost summary card - always visible */}
+                <div className={`bg-gray-50 p-4 rounded-lg space-y-3 transition-all duration-300 ${
+                  calculatingPrice ? 'opacity-50 blur-sm' : ''
+                }`}>
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Calculator className="h-4 w-4" />
+                    Resumen de Costos
+                  </h4>
+
+                  {/* Calculation Summary - only show if pricing exists */}
+                  {pricing?.calculationSummary && (
+                    <div className="bg-white p-3 rounded border border-gray-200 space-y-2 text-sm">
+                      <h5 className="font-medium text-gray-700">Desglose del Cálculo:</h5>
+
+                      <div className="space-y-1 text-gray-600">
+                        <div className="flex justify-between">
+                          <span>Paquete:</span>
+                          <span className="font-medium">{pricing.calculationSummary.packageName}</span>
+                        </div>
+
+                        {pricing.calculationSummary.calculationMethod === 'percentage' && (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Método:</span>
+                              <span>{pricing.calculationSummary.percentage}% de la renta mensual</span>
+                            </div>
+                            {pricing.calculationSummary.minimumApplied && (
+                              <div className="flex justify-between text-orange-600">
+                                <span>Mínimo aplicado:</span>
+                                <span>{formatCurrency(pricing.calculationSummary.minimumAmount || 0)}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {pricing.calculationSummary.calculationMethod === 'flat' && (
+                          <div className="flex justify-between">
+                            <span>Precio fijo:</span>
+                            <span>{formatCurrency(pricing.calculationSummary.flatFee || 0)}</span>
+                          </div>
+                        )}
+
+                        <div className="pt-1 border-t mt-2">
+                          <div className="font-mono text-xs bg-gray-100 p-2 rounded">
+                            {pricing.calculationSummary.formula}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price breakdown - always show structure */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Precio del Paquete:</span>
+                      <span className="font-medium">
+                        {pricing ? formatCurrency(pricing.packagePrice) : '---'}
+                      </span>
+                    </div>
+
+                    {pricing?.investigationFee !== null && pricing?.investigationFee > 0 && (
+                      <div className="flex justify-between">
+                        <span>Cuota de Investigación:</span>
+                        <span className="font-medium">{formatCurrency(pricing.investigationFee)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <span className="font-medium">
+                        {pricing ? formatCurrency(pricing.subtotal) : '---'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span>IVA (16%):</span>
+                      <span className="font-medium">
+                        {pricing ? formatCurrency(pricing.iva) : '---'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="font-medium">Total con IVA:</span>
+                      <span className="font-bold">
+                        {pricing ? formatCurrency(pricing.totalWithIva) : '---'}
+                      </span>
+                    </div>
+
+                    {isManualOverride && manualPrice !== null && (
+                      <div className="flex justify-between text-blue-600 font-medium">
+                        <span>Precio Manual (sin IVA):</span>
+                        <span>{formatCurrency(manualPrice)}</span>
+                      </div>
+                    )}
+
+                    {isManualOverride && manualPrice !== null && (
+                      <div className="flex justify-between text-blue-600 font-medium">
+                        <span>Total Manual con IVA:</span>
+                        <span>{formatCurrency(manualPrice * 1.16)}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t space-y-1">
+                      <div className="flex justify-between text-blue-600">
+                        <span>Pago Inquilino ({tenantPercentage}%):</span>
+                        <span className="font-medium">
+                          {pricing || manualPrice ?
+                            formatCurrency((isManualOverride && manualPrice ? manualPrice * 1.16 : pricing?.totalWithIva || 0) * tenantPercentage / 100) :
+                            '---'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-green-600">
+                        <span>Pago Arrendador ({landlordPercentage}%):</span>
+                        <span className="font-medium">
+                          {pricing || manualPrice ?
+                            formatCurrency((isManualOverride && manualPrice ? manualPrice * 1.16 : pricing?.totalWithIva || 0) * landlordPercentage / 100) :
+                            '---'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Distribution of Cost */}
               <div className="space-y-4">
                 <Label>Distribución del Costo</Label>
                 <div className="p-4 border rounded-lg space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Inquilino: {tenantPercentage}%</span>
-                      <span>Arrendador: {landlordPercentage}%</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="tenantPercentage">Porcentaje Inquilino</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="tenantPercentage"
+                          value={tenantPercentage}
+                          onChange={(e) => handleTenantPercentageChange(e.target.value)}
+                          placeholder="100"
+                        />
+                        <span className="text-sm font-medium">%</span>
+                      </div>
                     </div>
-                    <Slider
-                      value={[tenantPercentage]}
-                      onValueChange={handlePercentageChange}
-                      max={100}
-                      step={5}
-                      className="w-full"
-                    />
+                    <div>
+                      <Label htmlFor="landlordPercentage">Porcentaje Arrendador</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="landlordPercentage"
+                          value={landlordPercentage}
+                          onChange={(e) => handleLandlordPercentageChange(e.target.value)}
+                          placeholder="0"
+                        />
+                        <span className="text-sm font-medium">%</span>
+                      </div>
+                    </div>
                   </div>
+
+                  {percentageError && (
+                    <Alert className="mt-2" variant="destructive">
+                      <AlertDescription>{percentageError}</AlertDescription>
+                    </Alert>
+                  )}
 
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      El costo puede ser compartido entre el inquilino y el arrendador según lo acordado.
+                      El costo puede ser compartido entre el inquilino y el arrendador según lo acordado. Los porcentajes deben sumar 100%.
                     </AlertDescription>
                   </Alert>
                 </div>
               </div>
 
-              {pricing && !calculatingPrice && (
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Calculator className="h-4 w-4" />
-                    Resumen de Costos
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Precio del Paquete:</span>
-                      <span className="font-medium">{formatCurrency(pricing.packagePrice)}</span>
+              {/* Manual Price Override - moved to bottom */}
+              <div className="space-y-4">
+                <Label>Ajuste Manual de Precio</Label>
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="manualPrice">Precio Base (sin IVA)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="manualPrice"
+                        value={manualPrice || pricing?.subtotal || ''}
+                        onChange={(e) => handleManualPriceChange(e.target.value)}
+                        placeholder="0.00"
+                      />
+                      {isManualOverride && pricing && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={resetToCalculatedPrice}
+                          title="Restablecer al precio calculado"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex justify-between pt-2 border-t">
-                      <span className="font-medium">Total:</span>
-                      <span className="font-bold">{formatCurrency(pricing.total)}</span>
-                    </div>
-                    <div className="pt-2 border-t space-y-1">
-                      <div className="flex justify-between text-blue-600">
-                        <span>Pago Inquilino ({tenantPercentage}%):</span>
-                        <span className="font-medium">{formatCurrency(pricing.tenantAmount)}</span>
+                    {isManualOverride && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-blue-600">
+                          ⚠️ Precio manual activado (Calculado: {formatCurrency(pricing?.subtotal || 0)})
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Total con IVA: {formatCurrency(manualPrice * 1.16)}
+                        </p>
                       </div>
-                      <div className="flex justify-between text-green-600">
-                        <span>Pago Arrendador ({landlordPercentage}%):</span>
-                        <span className="font-medium">{formatCurrency(pricing.landlordAmount)}</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )}
-
-              {calculatingPrice && (
-                <div className="text-center py-4">
-                  <div className="inline-flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                    <span>Calculando precio...</span>
-                  </div>
-                </div>
-              )}
+              </div>
 
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setCurrentTab('property')}>

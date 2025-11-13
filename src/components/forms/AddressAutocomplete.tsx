@@ -428,7 +428,7 @@ export function AddressAutocomplete({
 
           {formData.placeId && (
             <div className="text-xs text-gray-500">
-              <p>Google Place ID: {formData.placeId}</p>
+              <p className='text-ellipsis overflow-auto'>Google Place ID: {formData.placeId}</p>
               {formData.latitude && formData.longitude && (
                 <p>Coordenadas: {formData.latitude}, {formData.longitude}</p>
               )}

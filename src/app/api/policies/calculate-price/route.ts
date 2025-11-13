@@ -13,12 +13,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate pricing
+    // Calculate pricing with optional investigation fee
     const pricing = await calculatePolicyPricing({
       packageId: data.packageId,
       rentAmount: data.rentAmount,
       tenantPercentage: data.tenantPercentage,
-      landlordPercentage: data.landlordPercentage
+      landlordPercentage: data.landlordPercentage,
+      includeInvestigationFee: data.includeInvestigationFee || false
     });
 
     return NextResponse.json(pricing);
