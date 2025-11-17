@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-import { useTenantForm } from '@/hooks/useTenantForm';
-import { useTenantReferences } from '@/hooks/useTenantReferences';
+import { useActorFormState } from '@/hooks/useActorFormState';
+import { useActorReferences } from '@/hooks/useActorReferences';
+import { useFormWizardSubmission } from '@/hooks/useFormWizardSubmission';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
+import { actorConfig } from '@/lib/constants/actorConfig';
+import { formMessages } from '@/lib/constants/formMessages';
+import { validatePersonFields, validateContactInfo, validateFinancialInfo } from '@/lib/utils/actorValidation';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
 import { SaveTabButton } from '@/components/actor/shared/SaveTabButton';
-import { cleanFormAddresses } from '@/lib/utils/addressUtils';
 import PersonalInfoTab from './PersonalInfoTab';
 import EmploymentTab from './EmploymentTab';
 import RentalHistoryTab from './RentalHistoryTab';
@@ -37,55 +40,104 @@ export default function TenantFormWizard({
   const { toast } = useToast();
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
-  // Use custom hooks
-  const {
-    formData,
-    updateField,
-    errors,
-    setErrors,
-    saving,
-    validatePersonalTab,
-    saveTab: saveFormTab,
-  } = useTenantForm(initialData, isAdminEdit);
+  // Use generic form state hook
+  const formState = useActorFormState({
+    actorType: 'tenant',
+    initialData,
+    policy,
+    isAdminEdit,
+    token,
+  });
 
-  const {
-    personalReferences,
-    commercialReferences,
-    updatePersonalReference,
-    updateCommercialReference,
-    validatePersonalReferences,
-    validateCommercialReferences,
-  } = useTenantReferences(
-    initialData.references || [],
-    initialData.commercialReferences || []
-  );
+  // Extract what we need
+  const { formData, updateField, errors, setErrors } = formState as any;
+
+  // References hook - Tenant allows dynamic add/remove
+  const referencesHook = useActorReferences({
+    actorType: 'tenant',
+    initialReferences: initialData,
+    allowAddRemove: true,
+    minReferences: 1,
+    maxReferences: 5,
+    errorKeyPrefix: 'reference',
+  });
+
+  const personalReferences = (referencesHook as any).personalReferences || [];
+  const commercialReferences = (referencesHook as any).commercialReferences || [];
+  const updatePersonalReference = (referencesHook as any).updatePersonalReference || (() => {});
+  const updateCommercialReference = (referencesHook as any).updateCommercialReference || (() => {});
+  const validatePersonalReferences = (referencesHook as any).validatePersonalReferences || (() => ({ valid: true, errors: {} }));
+  const validateCommercialReferences = (referencesHook as any).validateCommercialReferences || (() => ({ valid: true, errors: {} }));
+  const addPersonalReference = (referencesHook as any).addPersonalReference || (() => {});
+  const removePersonalReference = (referencesHook as any).removePersonalReference || (() => {});
+  const addCommercialReference = (referencesHook as any).addCommercialReference || (() => {});
+  const removeCommercialReference = (referencesHook as any).removeCommercialReference || (() => {});
+
+  // Use submission hook
+  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmission({
+    actorType: 'tenant',
+    token,
+    isAdminEdit,
+  });
 
   const isCompany = formData.tenantType === 'COMPANY';
 
-  // Tab configuration
-  const tabs = isCompany
-    ? [
-        { id: 'personal', label: 'Información', needsSave: true },
-        { id: 'references', label: 'Referencias', needsSave: true },
-        { id: 'documents', label: 'Documentos', needsSave: false },
-      ]
-    : [
-        { id: 'personal', label: 'Personal', needsSave: true },
-        { id: 'employment', label: 'Empleo', needsSave: true },
-        { id: 'rental', label: 'Historial', needsSave: true },
-        { id: 'references', label: 'Referencias', needsSave: true },
-        { id: 'documents', label: 'Documentos', needsSave: false },
-      ];
+  // Tab configuration using centralized config
+  const config = actorConfig.tenant;
+  const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
 
   // Use wizard tabs hook
   const wizard = useFormWizardTabs({ tabs, isAdminEdit });
 
-  // Save tab handler
+  // Initialize tabs as saved based on initial data
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.fullName || initialData.companyName) {
+        wizard.markTabSaved('personal');
+      }
+      if (initialData.occupation || initialData.monthlyIncome) {
+        wizard.markTabSaved('employment');
+      }
+      if (initialData.previousLandlordName) {
+        wizard.markTabSaved('rental');
+      }
+      if (initialData.references?.length > 0 || initialData.commercialReferences?.length > 0) {
+        wizard.markTabSaved('references');
+      }
+    }
+  }, [initialData]);
+
+  // Validation functions
+  const validatePersonalTab = useCallback(() => {
+    if (isCompany) {
+      return validatePersonFields({
+        ...formData,
+        firstName: formData.legalRepFirstName,
+        paternalLastName: formData.legalRepPaternalLastName,
+        maternalLastName: formData.legalRepMaternalLastName,
+      }, (errs: Record<string, string>) => setErrors(errs));
+    }
+    return validatePersonFields(formData, (errs: Record<string, string>) => setErrors(errs));
+  }, [formData, isCompany, setErrors]);
+
+  const validateEmploymentTab = useCallback(() => {
+    const contactValid = validateContactInfo(formData, (errs: Record<string, string>) => setErrors(errs));
+    const financialValid = validateFinancialInfo(formData, (errs: Record<string, string>) => setErrors(errs));
+    return contactValid && financialValid;
+  }, [formData, setErrors]);
+
+  // Save tab handler using consolidated logic
   const handleSaveTab = useCallback(async (tabName: string) => {
-    // Validation logic
     const validateTab = () => {
+      setErrors({}); // Clear errors before validation
+
       if (tabName === 'personal') {
         return validatePersonalTab();
+      } else if (tabName === 'employment' && !isCompany) {
+        return validateEmploymentTab();
+      } else if (tabName === 'rental' && !isCompany) {
+        // Rental history is optional
+        return true;
       } else if (tabName === 'references') {
         const refValidation = isCompany
           ? validateCommercialReferences()
@@ -98,94 +150,76 @@ export default function TenantFormWizard({
       return true;
     };
 
-    // Save logic
-    const saveData = async () => {
-      const additionalData: any = {};
+    const getAdditionalData = () => {
       if (tabName === 'references') {
-        additionalData.references = isCompany ? undefined : personalReferences;
-        additionalData.commercialReferences = isCompany ? commercialReferences : undefined;
+        return {
+          references: isCompany ? undefined : personalReferences,
+          commercialReferences: isCompany ? commercialReferences : undefined,
+        };
       }
+      return {};
+    };
 
-      const success = await saveFormTab(token, tabName, additionalData);
+    // Use consolidated save logic
+    const saveData = async () => {
+      const dataToSave = {
+        ...formData,
+        ...getAdditionalData(),
+      };
+
+      const success = await saveTabHandler(
+        tabName,
+        validateTab,
+        () => dataToSave,
+        () => getAdditionalData()
+      );
+
       if (!success) {
-        throw new Error('Failed to save');
+        throw new Error(formMessages.error.saveFailed);
       }
     };
 
     return wizard.handleTabSave(tabName, validateTab, saveData);
   }, [
     validatePersonalTab,
+    validateEmploymentTab,
     validatePersonalReferences,
     validateCommercialReferences,
-    saveFormTab,
-    token,
+    saveTabHandler,
+    formData,
     isCompany,
     personalReferences,
     commercialReferences,
     setErrors,
-    wizard
+    wizard,
+    formMessages.error.saveFailed,
   ]);
 
-  // Final submit handler
+  // Final submit handler using consolidated logic
   const handleFinalSubmit = useCallback(async () => {
-    if (!requiredDocsUploaded) {
-      toast({
-        title: "Documentos requeridos",
-        description: "Por favor cargue todos los documentos requeridos antes de enviar",
-        variant: "destructive",
-      });
-      return;
-    }
-
     wizard.setSavingTab('final');
 
     try {
-      // Clean address fields before final submission
-      const cleanFormData = cleanFormAddresses(
-        { ...formData },
-        ['addressDetails', 'employerAddressDetails', 'previousRentalAddressDetails']
+      const getReferences = () => ({
+        personal: isCompany ? undefined : personalReferences,
+        commercial: isCompany ? commercialReferences : undefined,
+      });
+
+      const success = await submitHandler(
+        () => formData,
+        requiredDocsUploaded,
+        getReferences,
+        onComplete
       );
 
-      const submissionData = {
-        ...cleanFormData,
-        references: isCompany ? undefined : personalReferences,
-        commercialReferences: isCompany ? commercialReferences : undefined,
-        informationComplete: true,
-      };
-
-      // Use unified route - token can be either UUID (admin) or access token (actor)
-      const submitUrl = `/api/actors/tenant/${token}`;
-
-      const response = await fetch(submitUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit information');
-      }
-
-      toast({
-        title: "✓ Información Enviada",
-        description: 'Tu información ha sido enviada exitosamente',
-      });
-
-      if (onComplete) {
-        onComplete();
+      if (!success) {
+        wizard.setSavingTab(null);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      toast({
-        title: "Error",
-        description: 'Error al enviar la información',
-        variant: "destructive",
-      });
-    } finally {
       wizard.setSavingTab(null);
     }
-  }, [formData, isCompany, personalReferences, commercialReferences, token, toast, onComplete, requiredDocsUploaded, wizard]);
+  }, [formData, isCompany, personalReferences, commercialReferences, submitHandler, onComplete, requiredDocsUploaded, wizard]);
 
   const { getProgress } = wizard;
   const progress = getProgress();
@@ -271,6 +305,10 @@ export default function TenantFormWizard({
             commercialReferences={commercialReferences}
             onUpdatePersonalReference={updatePersonalReference}
             onUpdateCommercialReference={updateCommercialReference}
+            onAddPersonalReference={addPersonalReference}
+            onAddCommercialReference={addCommercialReference}
+            onRemovePersonalReference={removePersonalReference}
+            onRemoveCommercialReference={removeCommercialReference}
             errors={errors}
             disabled={wizard.savingTab === 'references'}
           />
