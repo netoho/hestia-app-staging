@@ -1,97 +1,9 @@
-import prisma from '../prisma';
-import { PolicyStatus, GuarantorType, PropertyType, TenantType } from '@prisma/client';
-import { PropertyDetailsService } from './PropertyDetailsService';
+import prisma from '@/lib/prisma';
+import { PolicyStatus } from '@prisma/client';
+import { PropertyDetailsService } from '../PropertyDetailsService';
+import { CreatePolicyData, logPolicyActivityParams } from './types';
+import { validatePolicyNumberFormat } from "@/lib/utils/policy";
 
-interface CreatePolicyData {
-  policyNumber?: string; // Now custom policy number can be provided
-  internalCode?: string; // Internal team code for classification
-  propertyAddress: string;
-  propertyType?: PropertyType;
-  propertyDescription?: string;
-  rentAmount: string | number;
-  depositAmount?: string | number;
-  contractLength?: number;
-  startDate?: string;
-  endDate?: string;
-  guarantorType?: GuarantorType;
-  packageId?: string;
-  tenantPercentage?: number;
-  landlordPercentage?: number;
-  totalPrice?: number;
-  createdById: string;
-  landlord: {
-    firstName: string;
-    middleName?: string;
-    paternalLastName: string;
-    maternalLastName: string;
-    email: string;
-    phone?: string;
-    rfc?: string;
-    // Company fields
-    isCompany?: boolean;
-    companyName?: string;
-    companyRfc?: string;
-    legalRepFirstName?: string;
-    legalRepMiddleName?: string;
-    legalRepPaternalLastName?: string;
-    legalRepMaternalLastName?: string;
-  };
-  tenant: {
-    tenantType?: TenantType;
-    firstName?: string;
-    middleName?: string;
-    paternalLastName?: string;
-    maternalLastName?: string;
-    companyName?: string;
-    email: string;
-    phone?: string;
-    rfc?: string;
-  };
-  jointObligors?: Array<{
-    firstName: string;
-    middleName?: string;
-    paternalLastName: string;
-    maternalLastName: string;
-    email: string;
-    phone?: string;
-  }>;
-  avals?: Array<{
-    firstName: string;
-    middleName?: string;
-    paternalLastName: string;
-    maternalLastName: string;
-    email: string;
-    phone?: string;
-  }>;
-  // Property details fields (optional, will be created separately)
-  propertyDetails?: {
-    parkingSpaces?: number;
-    parkingNumbers?: string;
-    isFurnished?: boolean;
-    hasPhone?: boolean;
-    hasElectricity?: boolean;
-    hasWater?: boolean;
-    hasGas?: boolean;
-    hasCableTV?: boolean;
-    hasInternet?: boolean;
-    otherServices?: string;
-    utilitiesInLandlordName?: boolean;
-    hasIVA?: boolean;
-    issuesTaxReceipts?: boolean;
-    securityDeposit?: number;
-    maintenanceFee?: number;
-    maintenanceIncludedInRent?: boolean;
-    rentIncreasePercentage?: number;
-    paymentMethod?: string;
-    hasInventory?: boolean;
-    hasRules?: boolean;
-    petsAllowed?: boolean;
-    propertyDeliveryDate?: string;
-    contractSigningDate?: string;
-    contractSigningLocation?: string;
-    propertyAddressDetails?: any;
-  };
-}
 
 export async function createPolicy(data: CreatePolicyData) {
   // Use provided policy number or generate a new one
@@ -500,15 +412,6 @@ export async function updatePolicyStatus(
   });
 }
 
-interface logPolicyActivityParams {
-  policyId: string;
-  action: string;
-  description: string;
-  details?: any;
-  performedById?: string;      // User ID or Actor ID
-  performedByType?: string;     // "user", "landlord", "tenant", "aval", "joint_obligor"
-  ipAddress?: string;
-}
 
 export async function logPolicyActivity(data: logPolicyActivityParams) {
   const {
@@ -531,4 +434,55 @@ export async function logPolicyActivity(data: logPolicyActivityParams) {
       ipAddress,
     }
   });
+}
+
+
+/**
+ * Checks if a policy number is unique in the database
+ * @param policyNumber The policy number to check
+ * @returns Promise<boolean> true if unique, false if already exists
+ */
+export async function checkPolicyNumberUnique(policyNumber: string): Promise<boolean> {
+  try {
+
+    const existingPolicy = await prisma.policy.findUnique({
+      where: { policyNumber },
+      select: { id: true },
+    });
+
+    return !existingPolicy;
+
+  } catch (error) {
+    console.error('Error checking policy number:', error);
+    return false;
+  }
+}
+
+/**
+ * Validates a policy number (format and uniqueness)
+ * @param policyNumber The policy number to validate
+ * @returns Promise with validation result
+ */
+export async function validatePolicyNumber(policyNumber: string): Promise<{
+  isValid: boolean;
+  error?: string;
+}> {
+  // Check format
+  if (!validatePolicyNumberFormat(policyNumber)) {
+    return {
+      isValid: false,
+      error: 'Formato inválido. Use: POL-YYYYMMDD-XXX',
+    };
+  }
+
+  // Check uniqueness
+  const isUnique = await checkPolicyNumberUnique(policyNumber);
+  if (!isUnique) {
+    return {
+      isValid: false,
+      error: 'Este número de póliza ya existe',
+    };
+  }
+
+  return { isValid: true };
 }
