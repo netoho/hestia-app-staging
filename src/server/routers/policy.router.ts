@@ -15,8 +15,9 @@ import {
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
-import { generatePolicyActorTokens } from '@/lib/services/actorTokenService';
+import { generateLandlordToken, generatePolicyActorTokens } from '@/lib/services/actorTokenService';
 import { sendActorInvitation } from '@/lib/services/emailService';
+import {sendIncompleteActorInfoNotification} from "@/lib/services/notificationService";
 
 // Schema for creating a policy
 const CreatePolicySchema = z.object({
@@ -223,65 +224,15 @@ export const policyRouter = createTRPCRouter({
         // Send invitations if requested
         if (input.sendInvitations) {
           try {
-            // Generate tokens for all actors
-            const tokens = await generatePolicyActorTokens(policy.id);
+            await sendIncompleteActorInfoNotification({
+              initiatorId: ctx.userId,
+              policyId: policy.id,
+              resend: true,
+              actors: [],
+              initiatorName: ctx.session?.user?.name || ctx.session?.user?.email || 'System',
+              ipAddress: 'unknown',
+            })
 
-            // Send invitation emails
-            const emailPromises = [];
-
-            if (tokens.landlordToken) {
-              emailPromises.push(
-                sendActorInvitation(
-                  input.landlord.email,
-                  'landlord',
-                  tokens.landlordToken,
-                  policy.policyNumber
-                )
-              );
-            }
-
-            if (tokens.tenantToken) {
-              emailPromises.push(
-                sendActorInvitation(
-                  input.tenant.email,
-                  'tenant',
-                  tokens.tenantToken,
-                  policy.policyNumber
-                )
-              );
-            }
-
-            if (tokens.jointObligorTokens) {
-              tokens.jointObligorTokens.forEach((token, index) => {
-                if (input.jointObligors?.[index]?.email) {
-                  emailPromises.push(
-                    sendActorInvitation(
-                      input.jointObligors[index].email,
-                      'jointObligor',
-                      token,
-                      policy.policyNumber
-                    )
-                  );
-                }
-              });
-            }
-
-            if (tokens.avalTokens) {
-              tokens.avalTokens.forEach((token, index) => {
-                if (input.avals?.[index]?.email) {
-                  emailPromises.push(
-                    sendActorInvitation(
-                      input.avals[index].email,
-                      'aval',
-                      token,
-                      policy.policyNumber
-                    )
-                  );
-                }
-              });
-            }
-
-            await Promise.all(emailPromises);
           } catch (error) {
             console.error('Failed to send invitations:', error);
             // Don't fail the policy creation if invitations fail
