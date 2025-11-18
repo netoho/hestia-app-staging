@@ -3,7 +3,7 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
@@ -26,23 +26,24 @@ import { validatePropertyDetails, PropertyDetails } from '@/lib/validations/land
 import { validateLandlordToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
+import type { LandlordWithRelations } from './types';
 
-export class LandlordService extends BaseActorService {
+export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
     super('landlord', prisma);
   }
 
   /**
-   * Get the table name for database operations
+   * Get the Prisma delegate for landlord operations
    */
-  protected getTableName(): string {
-    return 'landlord';
+  protected getPrismaDelegate(tx?: any): Prisma.LandlordDelegate {
+    return (tx || this.prisma).landlord;
   }
 
   /**
    * Get includes for landlord queries
    */
-  protected getIncludes(): any {
+  protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
       policy: true
@@ -99,7 +100,7 @@ export class LandlordService extends BaseActorService {
     data: LandlordData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<LandlordData> {
+  ): AsyncResult<LandlordWithRelations> {
     // Fetch existing landlord to get current addressId
     const existingLandlord = await this.prisma.landlord.findUnique({
       where: { id: landlordId },
@@ -116,7 +117,7 @@ export class LandlordService extends BaseActorService {
       cfdiData: data.cfdiData,
     };
 
-    return this.saveActorData('landlord', landlordId, saveData as any, isPartial, skipValidation);
+    return this.saveActorData(landlordId, saveData, isPartial, skipValidation);
   }
 
   /**
@@ -724,24 +725,29 @@ export class LandlordService extends BaseActorService {
    */
   public async save(
     landlordId: string,
-    data: LandlordData | LandlordSubmissionData,
+    data: LandlordData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<LandlordData> {
+  ): AsyncResult<LandlordWithRelations> {
     // Check if data is the complex LandlordSubmissionData structure
-    if ('landlords' in data && Array.isArray((data as any).landlords)) {
+    if ('landlords' in data && Array.isArray((data as LandlordSubmissionData).landlords)) {
       // Complex multi-landlord submission with property/financial details
-      return this.saveMultiLandlordData(
+      const result = await this.saveMultiLandlordData(
         landlordId,
         data as LandlordSubmissionData,
         isPartial,
         skipValidation
       );
+      // Return the specific landlord that was updated
+      if (result.ok) {
+        return Result.ok(result.value as unknown as LandlordWithRelations);
+      }
+      return Result.error(result.error);
     } else {
       // Simple single landlord update
       return this.saveLandlordInformation(
         landlordId,
-        data as LandlordData,
+        data,
         isPartial,
         skipValidation
       );
@@ -753,6 +759,6 @@ export class LandlordService extends BaseActorService {
    * Admin only operation
    */
   public async delete(landlordId: string): AsyncResult<void> {
-    return this.deleteActor('Landlord', landlordId);
+    return this.deleteActor(landlordId);
   }
 }

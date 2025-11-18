@@ -17,11 +17,20 @@ import {
   ValidationError,
 } from '@/lib/types/actor';
 import { ZodError } from 'zod';
+import type {
+  ActorModelMap,
+  ActorTypeLiteral,
+  PersonalReferenceInput,
+  CommercialReferenceInput
+} from './types';
 
-export abstract class BaseActorService extends BaseService {
-  protected actorType: string;
+export abstract class BaseActorService<
+  TModel extends ActorModelMap[keyof ActorModelMap],
+  TData extends ActorData
+> extends BaseService {
+  protected actorType: ActorTypeLiteral;
 
-  constructor(actorType: string, prisma?: PrismaClient) {
+  constructor(actorType: ActorTypeLiteral, prisma?: PrismaClient) {
     super({ prisma });
     this.actorType = actorType;
   }
@@ -171,13 +180,11 @@ export abstract class BaseActorService extends BaseService {
    */
   protected async savePersonalReferences(
     actorId: string,
-    references: any[],
-    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
+    references: PersonalReferenceInput[]
   ): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       // Build where clause based on actor type
-      const whereClause: any = {};
-      whereClause[`${actorType}Id`] = actorId;
+      const whereClause = this.buildReferenceWhereClause(actorId);
 
       // Delete existing references
       await this.prisma.personalReference.deleteMany({
@@ -186,11 +193,10 @@ export abstract class BaseActorService extends BaseService {
 
       // Create new references if provided
       if (references && references.length > 0) {
-        const dataClause: any = {};
-        dataClause[`${actorType}Id`] = actorId;
+        const dataClause = this.buildReferenceDataClause(actorId);
 
         await this.prisma.personalReference.createMany({
-          data: references.map((ref: any) => ({
+          data: references.map((ref) => ({
             ...dataClause,
             firstName: ref.firstName,
             middleName: ref.middleName || null,
@@ -208,17 +214,31 @@ export abstract class BaseActorService extends BaseService {
   }
 
   /**
+   * Build where clause for reference queries based on actor type
+   */
+  private buildReferenceWhereClause(actorId: string): Record<string, string> {
+    const key = `${this.actorType}Id`;
+    return { [key]: actorId };
+  }
+
+  /**
+   * Build data clause for reference creation based on actor type
+   */
+  private buildReferenceDataClause(actorId: string): Record<string, string> {
+    const key = `${this.actorType}Id`;
+    return { [key]: actorId };
+  }
+
+  /**
    * Save commercial references for an actor
    */
   protected async saveCommercialReferences(
     actorId: string,
-    references: any[],
-    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
+    references: CommercialReferenceInput[]
   ): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       // Build where clause based on actor type
-      const whereClause: any = {};
-      whereClause[`${actorType}Id`] = actorId;
+      const whereClause = this.buildReferenceWhereClause(actorId);
 
       // Delete existing references
       await this.prisma.commercialReference.deleteMany({
@@ -227,11 +247,10 @@ export abstract class BaseActorService extends BaseService {
 
       // Create new references if provided
       if (references && references.length > 0) {
-        const dataClause: any = {};
-        dataClause[`${actorType}Id`] = actorId;
+        const dataClause = this.buildReferenceDataClause(actorId);
 
         await this.prisma.commercialReference.createMany({
-          data: references.map((ref: any) => ({
+          data: references.map((ref) => ({
             ...dataClause,
             companyName: ref.companyName,
             contactFirstName: ref.contactFirstName,
@@ -312,13 +331,12 @@ export abstract class BaseActorService extends BaseService {
   /**
    * Save actor data (generic implementation)
    */
-  protected async saveActorData<T extends ActorData>(
-    tableName: string,
+  protected async saveActorData(
     actorId: string,
-    data: T,
+    data: TData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<T> {
+  ): AsyncResult<TModel> {
     // Skip validation if requested (for admin endpoints)
     if (!skipValidation) {
       // Validate data
@@ -348,33 +366,41 @@ export abstract class BaseActorService extends BaseService {
         updateData.completedAt = new Date();
       }
 
-      // Execute update based on table name
-      const result = await (tx as any)[tableName].update({
+      // Get the Prisma delegate for this actor type
+      const delegate = this.getPrismaDelegate(tx);
+
+      // Execute update using the proper delegate
+      const result = await delegate.update({
         where: { id: actorId },
         data: updateData,
+        include: this.getIncludes()
       });
 
       this.log('info', `${this.actorType} data saved`, {
         actorId,
-        isPartial,
-        tableName
+        isPartial
       });
 
-      return result as T;
+      return result as TModel;
     });
   }
 
   /**
+   * Get the Prisma delegate for this actor type
+   * Must be implemented by concrete services
+   */
+  protected abstract getPrismaDelegate(tx?: any): any;
+
+  /**
    * Get actor by ID
    */
-  protected async getActorById(tableName: string, actorId: string): AsyncResult<any> {
+  protected async getActorById(actorId: string): AsyncResult<TModel> {
     return this.executeDbOperation(async () => {
-      const actor = await (this.prisma as any)[tableName].findUnique({
+      const delegate = this.getPrismaDelegate();
+
+      const actor = await delegate.findUnique({
         where: { id: actorId },
-        include: {
-          address: true,
-          documents: true,
-        },
+        include: this.getIncludes()
       });
 
       if (!actor) {
@@ -385,7 +411,7 @@ export abstract class BaseActorService extends BaseService {
         );
       }
 
-      return actor;
+      return actor as TModel;
     }, `get${this.actorType}ById`);
   }
 
@@ -459,7 +485,13 @@ export abstract class BaseActorService extends BaseService {
       });
 
       if (!policy) {
-        return Result.error('Policy not found');
+        return Result.error(
+          new ServiceError(
+            ErrorCode.NOT_FOUND,
+            'Policy not found',
+            404
+          )
+        );
       }
 
       // Only transition if currently in COLLECTING_INFO status
@@ -513,9 +545,11 @@ export abstract class BaseActorService extends BaseService {
    * Delete an actor from the database
    * Used by concrete services to implement public delete methods
    */
-  protected async deleteActor(tableName: string, actorId: string): AsyncResult<void> {
+  protected async deleteActor(actorId: string): AsyncResult<void> {
     return this.executeDbOperation(async () => {
-      await (this.prisma as any)[tableName].delete({
+      const delegate = this.getPrismaDelegate();
+
+      await delegate.delete({
         where: { id: actorId }
       });
     }, 'delete');
@@ -530,7 +564,7 @@ export abstract class BaseActorService extends BaseService {
    * Get an actor by ID
    * Used by tRPC router for admin access
    */
-  public async getById(id: string): AsyncResult<any> {
+  public async getById(id: string): AsyncResult<TModel> {
     return this.getActorById(id);
   }
 
@@ -538,12 +572,11 @@ export abstract class BaseActorService extends BaseService {
    * Get an actor by token
    * Used by tRPC router for actor self-service access
    */
-  public async getByToken(token: string): AsyncResult<any> {
-    // Get the table name from the concrete service
-    const tableName = this.getTableName();
-
+  public async getByToken(token: string): AsyncResult<TModel> {
     return this.executeDbOperation(async () => {
-      const actor = await (this.prisma as any)[tableName].findFirst({
+      const delegate = this.getPrismaDelegate();
+
+      const actor = await delegate.findFirst({
         where: { accessToken: token },
         include: this.getIncludes()
       });
@@ -563,7 +596,7 @@ export abstract class BaseActorService extends BaseService {
         );
       }
 
-      return actor;
+      return actor as TModel;
     }, 'getByToken');
   }
 
@@ -573,13 +606,13 @@ export abstract class BaseActorService extends BaseService {
    */
   public async update(
     id: string,
-    data: any,
+    data: TData,
     options?: {
       skipValidation?: boolean;
       updatedById?: string;
       isPartial?: boolean;
     }
-  ): AsyncResult<any> {
+  ): AsyncResult<TModel> {
     return this.save(
       id,
       data,
@@ -589,16 +622,20 @@ export abstract class BaseActorService extends BaseService {
   }
 
   /**
-   * Get the table name for this actor type
-   * Must be implemented by concrete services
+   * Abstract save method to be implemented by concrete services
    */
-  protected abstract getTableName(): string;
+  public abstract save(
+    id: string,
+    data: TData,
+    isPartial?: boolean,
+    skipValidation?: boolean
+  ): AsyncResult<TModel>;
 
   /**
    * Get the includes for database queries
    * Can be overridden by concrete services
    */
-  protected getIncludes(): any {
+  protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
       policy: true

@@ -3,11 +3,12 @@
  * Handles all joint obligor-related business logic and data operations
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
-import { PersonActorData, CompanyActorData } from '@/lib/types/actor';
+import { PersonActorData, CompanyActorData, ActorData } from '@/lib/types/actor';
+import type { JointObligorWithRelations } from './types';
 import { z } from 'zod';
 import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
 import { companyActorSchema } from '@/lib/validations/actors/company.schema';
@@ -54,27 +55,27 @@ const jointObligorCompanySchema = companyActorSchema.extend({
   propertyUnderLegalProceeding: z.boolean().optional(),
 });
 
-export class JointObligorService extends BaseActorService {
+export class JointObligorService extends BaseActorService<JointObligorWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
     super('jointObligor', prisma);
   }
 
   /**
-   * Get the table name for database operations
+   * Get the Prisma delegate for joint obligor operations
    */
-  protected getTableName(): string {
-    return 'jointObligor';
+  protected getPrismaDelegate(tx?: any): Prisma.JointObligorDelegate {
+    return (tx || this.prisma).jointObligor;
   }
 
   /**
    * Get includes for joint obligor queries
    */
-  protected getIncludes(): any {
+  protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
       employerAddressDetails: true,
       guaranteePropertyDetails: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       policy: true
     };
@@ -127,10 +128,10 @@ export class JointObligorService extends BaseActorService {
    */
   async saveJointObligorInformation(
     jointObligorId: string,
-    data: any,
+    data: ActorData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<any> {
+  ): AsyncResult<JointObligorWithRelations> {
     // Fetch existing joint obligor to get current addressId
     const existingJointObligor = await this.prisma.jointObligor.findUnique({
       where: { id: jointObligorId },
@@ -736,10 +737,10 @@ export class JointObligorService extends BaseActorService {
    */
   public async save(
     obligorId: string,
-    data: JointObligorData,
+    data: ActorData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<JointObligorData> {
+  ): AsyncResult<JointObligorWithRelations> {
     return this.saveJointObligorInformation(obligorId, data, isPartial, skipValidation);
   }
 
@@ -748,6 +749,6 @@ export class JointObligorService extends BaseActorService {
    * Admin only operation
    */
   public async delete(obligorId: string): AsyncResult<void> {
-    return this.deleteActor('JointObligor', obligorId);
+    return this.deleteActor(obligorId);
   }
 }

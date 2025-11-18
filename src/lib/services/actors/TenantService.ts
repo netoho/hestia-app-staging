@@ -3,19 +3,21 @@
  * Shows how easily we can create new actor services by extending BaseActorService
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
 import {
   PersonActorData,
   CompanyActorData,
+  ActorData,
 } from '@/lib/types/actor';
 import { z } from 'zod';
 import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
 import { companyActorSchema } from '@/lib/validations/actors/company.schema';
 import { validateTenantToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import type { TenantWithRelations } from './types';
 
 // Tenant-specific validation schemas
 const tenantPersonSchema = personWithNationalitySchema.extend({
@@ -36,27 +38,27 @@ const tenantCompanySchema = companyActorSchema.extend({
   yearsInBusiness: z.number().positive().optional(),
 });
 
-export class TenantService extends BaseActorService {
+export class TenantService extends BaseActorService<TenantWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
     super('tenant', prisma);
   }
 
   /**
-   * Get the table name for database operations
+   * Get the Prisma delegate for tenant operations
    */
-  protected getTableName(): string {
-    return 'tenant';
+  protected getPrismaDelegate(tx?: any): Prisma.TenantDelegate {
+    return (tx || this.prisma).tenant;
   }
 
   /**
    * Get includes for tenant queries
    */
-  protected getIncludes(): any {
+  protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
       employerAddressDetails: true,
       previousRentalAddressDetails: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       policy: true
     };
@@ -109,11 +111,23 @@ export class TenantService extends BaseActorService {
    */
   async saveTenantInformation(
     tenantId: string,
-    data: any,
+    data: ActorData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<any> {
-    return this.saveActorData('tenant', tenantId, data, isPartial, skipValidation);
+  ): AsyncResult<TenantWithRelations> {
+    return this.saveActorData(tenantId, data, isPartial, skipValidation);
+  }
+
+  /**
+   * Public save method required by base class
+   */
+  public async save(
+    tenantId: string,
+    data: ActorData,
+    isPartial: boolean = false,
+    skipValidation: boolean = false
+  ): AsyncResult<TenantWithRelations> {
+    return this.saveTenantInformation(tenantId, data, isPartial, skipValidation);
   }
 
   /**
@@ -291,12 +305,12 @@ export class TenantService extends BaseActorService {
 
       // Handle personal references if provided
       if (data.references && Array.isArray(data.references)) {
-        await this.savePersonalReferences(tenant.id, data.references, 'tenant');
+        await this.savePersonalReferences(tenant.id, data.references);
       }
 
       // Handle commercial references if provided (for company tenants)
       if (data.tenantType === 'COMPANY' && data.commercialReferences && Array.isArray(data.commercialReferences)) {
-        await this.saveCommercialReferences(tenant.id, data.commercialReferences, 'tenant');
+        await this.saveCommercialReferences(tenant.id, data.commercialReferences);
       }
 
       // Log activity
@@ -337,8 +351,8 @@ export class TenantService extends BaseActorService {
   /**
    * Get tenant by ID
    */
-  async getTenantById(tenantId: string): AsyncResult<any> {
-    return this.getActorById('tenant', tenantId);
+  async getTenantById(tenantId: string): AsyncResult<TenantWithRelations> {
+    return this.getActorById(tenantId);
   }
 
   /**
@@ -404,23 +418,10 @@ export class TenantService extends BaseActorService {
   }
 
   /**
-   * Public save method for admin use
-   * Wraps the internal saveTenantInformation method
-   */
-  public async save(
-    tenantId: string,
-    data: TenantData,
-    isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<TenantData> {
-    return this.saveTenantInformation(tenantId, data, isPartial, skipValidation);
-  }
-
-  /**
    * Delete a tenant from the database
    * Admin only operation
    */
   public async delete(tenantId: string): AsyncResult<void> {
-    return this.deleteActor('Tenant', tenantId);
+    return this.deleteActor(tenantId);
   }
 }

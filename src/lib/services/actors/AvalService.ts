@@ -3,11 +3,12 @@
  * Handles all aval-related business logic and data operations
  */
 
-import { PrismaClient, DocumentCategory } from '@prisma/client';
+import { PrismaClient, DocumentCategory, Prisma } from '@prisma/client';
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
-import { PersonActorData, CompanyActorData, AddressDetails } from '@/lib/types/actor';
+import { PersonActorData, CompanyActorData, AddressDetails, ActorData } from '@/lib/types/actor';
+import type { AvalWithRelations } from './types';
 import { z } from 'zod';
 import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
 import { companyActorSchema } from '@/lib/validations/actors/company.schema';
@@ -53,27 +54,27 @@ const avalCompanySchema = companyActorSchema.extend({
   propertyUnderLegalProceeding: z.boolean().default(false),
 });
 
-export class AvalService extends BaseActorService {
+export class AvalService extends BaseActorService<AvalWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
     super('aval', prisma);
   }
 
   /**
-   * Get the table name for database operations
+   * Get the Prisma delegate for aval operations
    */
-  protected getTableName(): string {
-    return 'aval';
+  protected getPrismaDelegate(tx?: any): Prisma.AvalDelegate {
+    return (tx || this.prisma).aval;
   }
 
   /**
    * Get includes for aval queries
    */
-  protected getIncludes(): any {
+  protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
       employerAddressDetails: true,
       guaranteePropertyDetails: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       policy: true
     };
@@ -126,10 +127,10 @@ export class AvalService extends BaseActorService {
    */
   async saveAvalInformation(
     avalId: string,
-    data: any,
+    data: ActorData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<any> {
+  ): AsyncResult<AvalWithRelations> {
     return this.executeTransaction(async (tx) => {
       // Fetch existing aval to get current address IDs
       const existingAval = await tx.aval.findUnique({
@@ -732,10 +733,10 @@ export class AvalService extends BaseActorService {
    */
   public async save(
     avalId: string,
-    data: AvalData,
+    data: ActorData,
     isPartial: boolean = false,
     skipValidation: boolean = false
-  ): AsyncResult<AvalData> {
+  ): AsyncResult<AvalWithRelations> {
     return this.saveAvalInformation(avalId, data, isPartial, skipValidation);
   }
 
@@ -744,6 +745,6 @@ export class AvalService extends BaseActorService {
    * Admin only operation
    */
   public async delete(avalId: string): AsyncResult<void> {
-    return this.deleteActor('Aval', avalId);
+    return this.deleteActor(avalId);
   }
 }

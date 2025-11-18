@@ -17,6 +17,18 @@ import { TenantType } from '@prisma/client';
 // Actor types enum
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
 
+// Address details schema
+const AddressDetailsSchema = z.object({
+  street: z.string(),
+  exteriorNumber: z.string(),
+  interiorNumber: z.string().optional(),
+  neighborhood: z.string(),
+  municipality: z.string(),
+  state: z.string(),
+  postalCode: z.string(),
+  country: z.string().default('México'),
+});
+
 // Base person schema (Mexican 4-field naming)
 const PersonSchema = z.object({
   firstName: z.string().min(1),
@@ -45,7 +57,7 @@ const TenantStrictSchema = z.object({
 
   // Address
   currentAddress: z.string().min(1),
-  currentAddressDetails: z.any().optional(),
+  currentAddressDetails: AddressDetailsSchema.optional(),
 
   // Employment
   occupation: z.string().min(1),
@@ -92,10 +104,42 @@ const LandlordStrictSchema = z.object({
   clabe: z.string().length(18),
 });
 
-// Admin schemas - all fields optional for flexibility
-const ActorAdminUpdateSchema = z.record(z.any());
+// Admin schemas - flexible updates with proper typing
+const ActorAdminUpdateSchema = z.object({
+  // Person fields
+  firstName: z.string().optional(),
+  middleName: z.string().optional().nullable(),
+  paternalLastName: z.string().optional(),
+  maternalLastName: z.string().optional().nullable(),
 
-// Get service helper
+  // Company fields
+  isCompany: z.boolean().optional(),
+  companyName: z.string().optional(),
+  companyRfc: z.string().optional(),
+
+  // Contact
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  workPhone: z.string().optional().nullable(),
+
+  // Address
+  address: z.string().optional(),
+  addressDetails: AddressDetailsSchema.optional(),
+
+  // Financial
+  bankName: z.string().optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  clabe: z.string().optional().nullable(),
+
+  // Additional
+  additionalInfo: z.string().optional().nullable(),
+}).passthrough(); // Allow additional fields for flexibility
+
+// Type-safe service factory with overloads
+function getActorService(type: 'tenant'): TenantService;
+function getActorService(type: 'landlord'): LandlordService;
+function getActorService(type: 'aval'): AvalService;
+function getActorService(type: 'jointObligor'): JointObligorService;
 function getActorService(type: z.infer<typeof ActorTypeSchema>) {
   switch (type) {
     case 'tenant':
@@ -107,7 +151,8 @@ function getActorService(type: z.infer<typeof ActorTypeSchema>) {
     case 'jointObligor':
       return new JointObligorService();
     default:
-      throw new Error(`Unknown actor type: ${type}`);
+      const exhaustiveCheck: never = type;
+      throw new Error(`Unknown actor type: ${exhaustiveCheck}`);
   }
 }
 
@@ -431,7 +476,7 @@ export const actorRouter = createTRPCRouter({
     .input(z.object({
       type: ActorTypeSchema,
       identifier: z.string(), // Can be ID (for session) or token
-      data: z.record(z.any()),
+      data: ActorAdminUpdateSchema,
     }))
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
