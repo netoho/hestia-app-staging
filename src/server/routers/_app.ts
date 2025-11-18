@@ -7,6 +7,7 @@ import { paymentRouter } from './payment.router';
 import { investigationRouter } from './investigation.router';
 import { contractRouter } from './contract.router';
 import { documentRouter } from './document.router';
+import { userRouter } from './user.router';
 
 /**
  * Main app router
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
   investigation: investigationRouter,
   contract: contractRouter,
   document: documentRouter,
+  user: userRouter,
 });
 
 // Export type for use in client
