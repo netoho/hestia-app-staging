@@ -10,6 +10,7 @@ import ReviewNotes from './ReviewNotes';
 import ReviewHeader from './ReviewHeader';
 import ActorListSidebar from './ActorListSidebar';
 import { PolicyReviewData, ActorReviewInfo } from '@/lib/services/reviewService';
+import { trpc } from '@/lib/trpc/client';
 
 interface ReviewLayoutProps {
   policyId: string;
@@ -22,51 +23,28 @@ export default function ReviewLayout({
   initialData,
   onBack
 }: ReviewLayoutProps) {
-  const [data, setData] = useState<PolicyReviewData | null>(initialData || null);
-  const [loading, setLoading] = useState(!initialData);
   const [selectedActor, setSelectedActor] = useState<ActorReviewInfo | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
 
+  // Use tRPC query for fetching review data
+  const { data, isLoading, error, refetch, isRefetching } = trpc.review.getProgress.useQuery(
+    { policyId, detailed: true },
+    {
+      initialData,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // Select first actor when data loads
   useEffect(() => {
-    if (!initialData) {
-      fetchReviewData();
+    if (!selectedActor && data && 'actors' in data && data.actors && data.actors.length > 0) {
+      setSelectedActor(data.actors[0]);
     }
-  }, [policyId]);
-
-  const fetchReviewData = async () => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/review/progress?detailed=true`);
-      if (!response.ok) throw new Error('Failed to fetch review data');
-      const result = await response.json();
-
-      // Validate response structure
-      if (!result.data || typeof result.data !== 'object') {
-        throw new Error('Invalid response structure');
-      }
-
-      setData(result.data);
-
-      // Select first actor if none selected
-      if (!selectedActor && result.data.actors && result.data.actors.length > 0) {
-        setSelectedActor(result.data.actors[0]);
-      }
-
-      return result.data; // Return the fetched data
-    } catch (error) {
-      console.error('Error fetching review data:', error);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [data, selectedActor]);
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchReviewData();
-    setRefreshing(false);
+    await refetch();
   };
-
 
   const handleValidationUpdate = async () => {
     // Store current selected actor ID to restore selection after refresh
@@ -76,10 +54,10 @@ export default function ReviewLayout({
     setSelectedActor(null);
 
     // Refresh data after validation changes
-    const newData = await fetchReviewData();
+    const { data: newData } = await refetch();
 
     // After data is refreshed, update selectedActor to point to the new actor object
-    if (currentActorId && newData?.actors) {
+    if (currentActorId && newData && 'actors' in newData && newData.actors) {
       const updatedActor = newData.actors.find((actor: any) => actor.actorId === currentActorId);
       if (updatedActor) {
         // Use setTimeout to ensure state update happens after render cycle
@@ -90,7 +68,7 @@ export default function ReviewLayout({
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
@@ -98,11 +76,11 @@ export default function ReviewLayout({
     );
   }
 
-  if (!data) {
+  if (error || !data) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">No se pudieron cargar los datos de revisión</p>
-        <Button onClick={fetchReviewData} className="mt-4">
+        <Button onClick={() => refetch()} className="mt-4">
           Reintentar
         </Button>
       </div>
@@ -117,7 +95,7 @@ export default function ReviewLayout({
         propertyAddress={data.propertyAddress}
         notesCount={data.notes.length}
         showNotes={showNotes}
-        refreshing={refreshing}
+        refreshing={isRefetching}
         onBack={onBack}
         onNotesToggle={() => setShowNotes(!showNotes)}
         onRefresh={handleRefresh}

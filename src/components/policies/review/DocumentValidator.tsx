@@ -31,6 +31,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 import type { StatusIconComponent } from '@/types/review';
+import { trpc } from '@/lib/trpc/client';
 
 interface DocumentValidatorProps {
   document: DocumentValidationInfo;
@@ -45,9 +46,21 @@ export default function DocumentValidator({
 }: DocumentValidatorProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const { downloadDocument, downloading } = useDocumentDownload();
+
+  // Use tRPC mutation for document validation
+  const validateDocumentMutation = trpc.review.validateDocument.useMutation({
+    onSuccess: () => {
+      setShowRejectDialog(false);
+      setRejectionReason('');
+      onValidationComplete();
+    },
+    onError: (error) => {
+      console.error('Validation error:', error);
+      alert(`Error al validar: ${error.message}`);
+    },
+  });
 
   const getStatusIcon = (): StatusIconComponent => {
     switch (document.status) {
@@ -130,33 +143,12 @@ export default function DocumentValidator({
       return;
     }
 
-    setIsValidating(true);
-    try {
-      const response = await fetch(`/api/policies/${policyId}/review/validate-document`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documentId: document.documentId,
-          status,
-          rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
-        })
-      });
-
-      if (response.ok) {
-        setShowRejectDialog(false);
-        setRejectionReason('');
-        onValidationComplete();
-      } else {
-        const error = await response.json();
-        console.error('Validation error:', error);
-        alert(`Error al validar: ${error.message}`);
-      }
-    } catch (error) {
-      console.error('Error validating document:', error);
-      alert('Error al validar el documento');
-    } finally {
-      setIsValidating(false);
-    }
+    validateDocumentMutation.mutate({
+      policyId,
+      documentId: document.documentId,
+      status,
+      rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
+    });
   };
 
   const handlePreview = async () => {
@@ -256,9 +248,9 @@ export default function DocumentValidator({
                     size="sm"
                     className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => handleValidate('APPROVED')}
-                    disabled={isValidating}
+                    disabled={validateDocumentMutation.isPending}
                   >
-                    {isValidating ? (
+                    {validateDocumentMutation.isPending ? (
                       <RefreshCw className="h-3 w-3 animate-spin" />
                     ) : (
                       <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -270,7 +262,7 @@ export default function DocumentValidator({
                     variant="destructive"
                     className="text-xs"
                     onClick={() => setShowRejectDialog(true)}
-                    disabled={isValidating}
+                    disabled={validateDocumentMutation.isPending}
                   >
                     <XCircle className="h-3 w-3 mr-1" />
                     Rechazar
@@ -315,9 +307,9 @@ export default function DocumentValidator({
             <Button
               variant="destructive"
               onClick={() => handleValidate('REJECTED')}
-              disabled={!rejectionReason.trim() || isValidating}
+              disabled={!rejectionReason.trim() || validateDocumentMutation.isPending}
             >
-              {isValidating ? (
+              {validateDocumentMutation.isPending ? (
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <XCircle className="h-4 w-4 mr-2" />

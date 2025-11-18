@@ -24,6 +24,7 @@ import {
   FileText,
   RefreshCw,
 } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
 
 interface ReviewDocumentCardProps {
   category: string;
@@ -43,8 +44,21 @@ export default function ReviewDocumentCard({
   const [selectedDocument, setSelectedDocument] = useState<DocumentValidationInfo | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
   const { downloadDocument } = useDocumentDownload();
+
+  // Use tRPC mutation for document validation
+  const validateDocumentMutation = trpc.review.validateDocument.useMutation({
+    onSuccess: () => {
+      setShowRejectDialog(false);
+      setRejectionReason('');
+      setSelectedDocument(null);
+      onValidationComplete();
+    },
+    onError: (error) => {
+      console.error('Validation error:', error);
+      alert(`Error al validar: ${error.message}`);
+    },
+  });
 
 
   // Group documents by status
@@ -60,34 +74,12 @@ export default function ReviewDocumentCard({
       return;
     }
 
-    setIsValidating(true);
-    try {
-      const response = await fetch(`/api/policies/${policyId}/review/validate-document`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documentId: document.documentId,
-          status,
-          rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
-        })
-      });
-
-      if (response.ok) {
-        setShowRejectDialog(false);
-        setRejectionReason('');
-        setSelectedDocument(null);
-        onValidationComplete();
-      } else {
-        const error = await response.json();
-        console.error('Validation error:', error);
-        alert(`Error al validar: ${error.message}`);
-      }
-    } catch (error) {
-      console.error('Error validating document:', error);
-      alert('Error al validar el documento');
-    } finally {
-      setIsValidating(false);
-    }
+    validateDocumentMutation.mutate({
+      policyId,
+      documentId: document.documentId,
+      status,
+      rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
+    });
   };
 
   const handleDownload = async (documentId: string, fileName: string) => {
@@ -142,7 +134,7 @@ export default function ReviewDocumentCard({
                   onApprove={(document) => handleValidate(document, 'APPROVED')}
                   onReject={openRejectDialog}
                   onDownload={handleDownload}
-                  isValidating={isValidating}
+                  isValidating={validateDocumentMutation.isPending}
                 />
               ))}
             </div>
@@ -188,9 +180,9 @@ export default function ReviewDocumentCard({
             <Button
               variant="destructive"
               onClick={() => selectedDocument && handleValidate(selectedDocument, 'REJECTED')}
-              disabled={!rejectionReason.trim() || isValidating}
+              disabled={!rejectionReason.trim() || validateDocumentMutation.isPending}
             >
-              {isValidating ? (
+              {validateDocumentMutation.isPending ? (
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <XCircle className="h-4 w-4 mr-2" />

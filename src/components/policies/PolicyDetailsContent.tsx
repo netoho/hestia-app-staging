@@ -25,6 +25,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
+import { trpc } from '@/lib/trpc/client';
 
 // Import lightweight components (eager loading)
 import ActorCard from '@/components/policies/details/ActorCard';
@@ -94,72 +95,56 @@ export default function PolicyDetailsContent({
   const [tenantView, setTenantView] = useState<'info' | 'history'>('info');
   const [guarantorView, setGuarantorView] = useState<'info' | 'history'>('info');
 
-  const handleSendInvitations = async () => {
-    try {
-      setSending('all');
-      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert('Invitaciones enviadas exitosamente');
-        await onRefresh();
-      } else {
-        alert('Error al enviar invitaciones');
-      }
-    } catch (error) {
+  // tRPC mutations
+  const sendInvitationsMutation = trpc.policy.sendInvitations.useMutation({
+    onSuccess: () => {
+      alert('Invitaciones enviadas exitosamente');
+      onRefresh();
+    },
+    onError: (error) => {
       console.error('Error sending invitations:', error);
       alert('Error al enviar invitaciones');
-    } finally {
+    },
+    onSettled: () => {
       setSending(null);
-    }
+    },
+  });
+
+  const updateStatusMutation = trpc.policy.updateStatus.useMutation({
+    onSuccess: () => {
+      alert('Protección aprobada exitosamente');
+      onRefresh();
+    },
+    onError: (error) => {
+      console.error('Error updating policy status:', error);
+      alert('Error al actualizar el estado de la protección');
+    },
+  });
+
+  const handleSendInvitations = async () => {
+    setSending('all');
+    sendInvitationsMutation.mutate({
+      policyId,
+      resend: true,
+    });
   };
 
   const sendIndividualInvitation = async (actorType: string, actorId: string) => {
     setSending(actorId);
-    try {
-      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actors: [actorType],
-          resend: true,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to send invitation');
-
-      alert('Invitación enviada exitosamente');
-      await onRefresh();
-    } catch (error) {
-      console.error('Error sending invitation:', error);
-      alert('Error al enviar la invitación');
-    } finally {
-      setSending(null);
-    }
+    sendInvitationsMutation.mutate({
+      policyId,
+      actors: [actorType],
+      resend: true,
+    });
   };
 
   const approvePolicy = async () => {
     if (!confirm('¿Estás seguro de que deseas aprobar esta protección?')) return;
 
-    try {
-      const response = await fetch(`/api/policies/${policyId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'APPROVED',
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to approve policy');
-
-      alert('Protección aprobada exitosamente');
-      await onRefresh();
-    } catch (error) {
-      console.error('Error approving policy:', error);
-      alert('Error al aprobar');
-    }
+    updateStatusMutation.mutate({
+      policyId,
+      status: 'APPROVED' as const,
+    });
   };
 
   const getStatusBadge = (status: string) => {

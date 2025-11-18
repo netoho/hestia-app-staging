@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { trpc } from '@/lib/trpc/client';
 
 interface ReviewNote {
   id: string;
@@ -54,59 +55,47 @@ export default function ReviewNotes({
   onNoteAdded
 }: ReviewNotesProps) {
   const [newNote, setNewNote] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'actor' | 'policy'>('all');
+
+  // tRPC mutations
+  const addNoteMutation = trpc.review.addNote.useMutation({
+    onSuccess: () => {
+      setNewNote('');
+      onNoteAdded();
+    },
+    onError: (error) => {
+      alert(`Error al agregar nota: ${error.message}`);
+    },
+  });
+
+  const deleteNoteMutation = trpc.review.deleteNote.useMutation({
+    onSuccess: () => {
+      onNoteAdded(); // Refresh notes
+    },
+    onError: (error) => {
+      alert(`Error al eliminar nota: ${error.message}`);
+    },
+  });
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/policies/${policyId}/review/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          note: newNote,
-          actorType: selectedActorType,
-          actorId: selectedActorId,
-          documentId: selectedDocumentId
-        })
-      });
-
-      if (response.ok) {
-        setNewNote('');
-        onNoteAdded();
-      } else {
-        const error = await response.json();
-        alert(`Error al agregar nota: ${error.message}`);
-      }
-    } catch (error) {
-      console.error('Error adding note:', error);
-      alert('Error al agregar la nota');
-    } finally {
-      setIsSubmitting(false);
-    }
+    addNoteMutation.mutate({
+      policyId,
+      note: newNote,
+      actorType: selectedActorType,
+      actorId: selectedActorId,
+      documentId: selectedDocumentId
+    });
   };
 
   const handleDeleteNote = async (noteId: string) => {
     if (!confirm('¿Estás seguro de eliminar esta nota?')) return;
 
-    try {
-      const response = await fetch(
-        `/api/policies/${policyId}/review/notes?noteId=${noteId}`,
-        { method: 'DELETE' }
-      );
-
-      if (response.ok) {
-        onNoteAdded(); // Refresh notes
-      } else {
-        const error = await response.json();
-        alert(`Error al eliminar nota: ${error.message}`);
-      }
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      alert('Error al eliminar la nota');
-    }
+    deleteNoteMutation.mutate({
+      policyId,
+      noteId
+    });
   };
 
   const getFilteredNotes = () => {
@@ -250,9 +239,9 @@ export default function ReviewNotes({
           <Button
             className="w-full"
             onClick={handleAddNote}
-            disabled={!newNote.trim() || isSubmitting}
+            disabled={!newNote.trim() || addNoteMutation.isPending}
           >
-            {isSubmitting ? (
+            {addNoteMutation.isPending ? (
               <RefreshCw className="h-4 w-4 animate-spin mr-2" />
             ) : (
               <Send className="h-4 w-4 mr-2" />
