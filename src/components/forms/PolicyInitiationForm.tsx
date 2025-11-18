@@ -30,6 +30,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Send, Loader2, Building2, User, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
+import { trpc } from '@/lib/trpc/client';
 
 // Schema for both individual and company tenants
 const policyInitiateSchema = z.object({
@@ -118,9 +119,29 @@ interface PolicyInitiationFormProps {
 }
 
 export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(false);
+  // Use tRPC to fetch packages
+  const { data: packages = [], isLoading: loadingPackages } = trpc.package.getAll.useQuery();
+
+  // Use tRPC mutation for creating policy
+  const createPolicyMutation = trpc.policy.create.useMutation({
+    onSuccess: () => {
+      toast({
+        title: '¡Protección iniciada!',
+        description: 'Se han enviado las invitaciones a los actores.',
+      });
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al iniciar la protección',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const { toast } = useToast();
 
   const form = useForm<PolicyInitiateFormValues>({
@@ -148,10 +169,6 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
 
   const tenantType = form.watch('tenantType');
 
-  // Fetch packages on mount
-  useEffect(() => {
-    fetchPackages();
-  }, []);
 
   // Update price when package selection changes
   const selectedPackageId = form.watch('packageId');
@@ -173,63 +190,10 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
     }
   }, [tenantPercent, form]);
 
-  const fetchPackages = async () => {
-    setLoadingPackages(true);
-    try {
-      const response = await fetch('/api/packages');
-      if (response.ok) {
-        const data = await response.json();
-        setPackages(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch packages:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los paquetes',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingPackages(false);
-    }
-  };
 
   const onSubmit = async (values: PolicyInitiateFormValues) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/policies/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al iniciar la protección');
-      }
-
-      const result = await response.json();
-
-      toast({
-        title: 'Protección iniciada exitosamente',
-        description: result.emailSent
-          ? `Se ha enviado un correo de invitación a ${values.tenantEmail}`
-          : 'La protección ha sido creada pero no se pudo enviar el correo de invitación',
-        variant: result.emailSent ? 'default' : 'destructive',
-      });
-
-      onSuccess?.();
-    } catch (error) {
-      console.error('Policy initiation error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al iniciar la protección',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Use the tRPC mutation
+    createPolicyMutation.mutate(values);
   };
 
   return (
@@ -738,9 +702,9 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
           <Button
             type="submit"
             size="lg"
-            disabled={isLoading}
+            disabled={createPolicyMutation.isPending}
           >
-            {isLoading ? (
+            {createPolicyMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Creando Protección...

@@ -19,7 +19,7 @@ export default function JointObligorPortalPage({
   // Use tRPC to fetch actor data
   const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
     {
-      type: 'joint-obligor',
+      type: 'jointObligor',
       token
     },
     {
