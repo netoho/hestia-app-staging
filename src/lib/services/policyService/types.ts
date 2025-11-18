@@ -18,10 +18,10 @@ export interface CreatePolicyData {
   totalPrice?: number;
   createdById: string;
   landlord: {
-    firstName: string;
+    firstName?: string;
     middleName?: string;
-    paternalLastName: string;
-    maternalLastName: string;
+    paternalLastName?: string;
+    maternalLastName?: string;
     email: string;
     phone?: string;
     rfc?: string;
