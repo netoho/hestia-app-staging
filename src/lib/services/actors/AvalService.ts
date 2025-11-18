@@ -59,6 +59,27 @@ export class AvalService extends BaseActorService {
   }
 
   /**
+   * Get the table name for database operations
+   */
+  protected getTableName(): string {
+    return 'aval';
+  }
+
+  /**
+   * Get includes for aval queries
+   */
+  protected getIncludes(): any {
+    return {
+      addressDetails: true,
+      employerAddressDetails: true,
+      guaranteePropertyDetails: true,
+      references: true,
+      commercialReferences: true,
+      policy: true
+    };
+  }
+
+  /**
    * Validate person aval data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {

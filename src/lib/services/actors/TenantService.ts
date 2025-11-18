@@ -42,6 +42,27 @@ export class TenantService extends BaseActorService {
   }
 
   /**
+   * Get the table name for database operations
+   */
+  protected getTableName(): string {
+    return 'tenant';
+  }
+
+  /**
+   * Get includes for tenant queries
+   */
+  protected getIncludes(): any {
+    return {
+      addressDetails: true,
+      employerAddressDetails: true,
+      previousRentalAddressDetails: true,
+      references: true,
+      commercialReferences: true,
+      policy: true
+    };
+  }
+
+  /**
    * Validate person tenant data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {

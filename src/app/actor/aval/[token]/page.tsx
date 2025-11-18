@@ -1,76 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle, Loader2, Home, DollarSign, Calendar } from 'lucide-react';
 import { brandInfo } from '@/lib/config/brand';
+import { trpc } from '@/lib/trpc/client';
 import AvalFormWizard from '@/components/actor/aval/AvalFormWizard';
-
-interface PolicyData {
-  id: string;
-  policyNumber: string;
-  propertyAddress: string;
-  rentAmount: number;
-  contractLength: number;
-  status: string;
-}
 
 export default function AvalPortalPage({
   params
 }: {
   params: Promise<{ token: string }>
 }) {
-  const [token, setToken] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [policy, setPolicy] = useState<PolicyData | null>(null);
-  const [avalData, setAvalData] = useState<any>(null);
-  const [completed, setCompleted] = useState(false);
+  // Unwrap the params promise using React's use() hook
+  const { token } = use(params);
 
-  // Resolve params
-  useEffect(() => {
-    params.then(resolvedParams => {
-      setToken(resolvedParams.token);
-    });
-  }, [params]);
-
-  // Fetch aval and policy data
-  useEffect(() => {
-    if (token) {
-      validateTokenAndLoadData();
+  // Use tRPC to fetch actor data
+  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+    {
+      type: 'aval',
+      token
+    },
+    {
+      retry: false
     }
-  }, [token]);
+  );
 
-  const validateTokenAndLoadData = async () => {
-    try {
-      const response = await fetch(`/api/actors/aval/${token}`);
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setError(data.error || 'Token inválido o expirado');
-        setLoading(false);
-        return;
-      }
-
-      setPolicy(data.policy);
-      setAvalData(data.data);
-      setCompleted(data.data?.informationComplete || false);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error validating token:', error);
-      setError('Error al validar el acceso. Por favor, intente nuevamente.');
-      setLoading(false);
-    }
-  };
+  const avalData = data?.data || null;
+  const policy = data?.policy || null;
+  const completed = data?.data?.informationComplete || false;
 
   const handleComplete = () => {
     // Reload data to show completed state
-    setCompleted(true);
-    validateTokenAndLoadData();
+    refetch();
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
@@ -88,7 +54,7 @@ export default function AvalPortalPage({
           <Alert className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">
-              {error}. Contacte a {brandInfo.supportEmail}
+              {error?.message || 'Token inválido o expirado'}. Por favor, contacte a {brandInfo.supportEmail}
             </AlertDescription>
           </Alert>
         </div>

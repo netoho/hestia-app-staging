@@ -520,4 +520,88 @@ export abstract class BaseActorService extends BaseService {
       });
     }, 'delete');
   }
+
+  /**
+   * Public methods required by tRPC router
+   * These wrap the protected methods to provide a consistent interface
+   */
+
+  /**
+   * Get an actor by ID
+   * Used by tRPC router for admin access
+   */
+  public async getById(id: string): AsyncResult<any> {
+    return this.getActorById(id);
+  }
+
+  /**
+   * Get an actor by token
+   * Used by tRPC router for actor self-service access
+   */
+  public async getByToken(token: string): AsyncResult<any> {
+    // Get the table name from the concrete service
+    const tableName = this.getTableName();
+
+    return this.executeDbOperation(async () => {
+      const actor = await (this.prisma as any)[tableName].findFirst({
+        where: { accessToken: token },
+        include: this.getIncludes()
+      });
+
+      if (!actor) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Actor no encontrado con el token proporcionado'
+        );
+      }
+
+      // Check token expiry
+      if (actor.tokenExpiry && actor.tokenExpiry < new Date()) {
+        throw new ServiceError(
+          ErrorCode.TOKEN_EXPIRED,
+          'Token expirado'
+        );
+      }
+
+      return actor;
+    }, 'getByToken');
+  }
+
+  /**
+   * Update an actor
+   * Wrapper for save method to match tRPC router expectations
+   */
+  public async update(
+    id: string,
+    data: any,
+    options?: {
+      skipValidation?: boolean;
+      updatedById?: string;
+      isPartial?: boolean;
+    }
+  ): AsyncResult<any> {
+    return this.save(
+      id,
+      data,
+      options?.isPartial ?? true,
+      options?.skipValidation ?? false
+    );
+  }
+
+  /**
+   * Get the table name for this actor type
+   * Must be implemented by concrete services
+   */
+  protected abstract getTableName(): string;
+
+  /**
+   * Get the includes for database queries
+   * Can be overridden by concrete services
+   */
+  protected getIncludes(): any {
+    return {
+      addressDetails: true,
+      policy: true
+    };
+  }
 }

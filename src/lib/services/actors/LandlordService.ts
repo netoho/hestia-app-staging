@@ -33,6 +33,23 @@ export class LandlordService extends BaseActorService {
   }
 
   /**
+   * Get the table name for database operations
+   */
+  protected getTableName(): string {
+    return 'landlord';
+  }
+
+  /**
+   * Get includes for landlord queries
+   */
+  protected getIncludes(): any {
+    return {
+      addressDetails: true,
+      policy: true
+    };
+  }
+
+  /**
    * Validate person landlord data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {

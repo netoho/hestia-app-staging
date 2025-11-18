@@ -174,10 +174,13 @@ export const policyRouter = createTRPCRouter({
     }),
 
   /**
-   * Get policy by ID
+   * Get policy by ID with optional progress calculation
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({
+      id: z.string(),
+      includeProgress: z.boolean().optional().default(false)
+    }))
     .query(async ({ input, ctx }) => {
       const policy = await getPolicyById(input.id);
 
@@ -194,6 +197,13 @@ export const policyRouter = createTRPCRouter({
           code: 'FORBIDDEN',
           message: 'You do not have access to this policy',
         });
+      }
+
+      // Calculate progress if requested
+      if (input.includeProgress) {
+        const { calculatePolicyProgress } = await import('@/lib/services/progressService');
+        const progress = calculatePolicyProgress(policy);
+        return { ...policy, progress };
       }
 
       return policy;
@@ -328,10 +338,135 @@ export const policyRouter = createTRPCRouter({
     }),
 
   /**
+   * Get share links for all policy actors
+   */
+  getShareLinks: protectedProcedure
+    .input(z.object({ policyId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const policy = await getPolicyById(input.policyId);
+
+      if (!policy) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Policy not found',
+        });
+      }
+
+      // Check access for brokers
+      if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to this policy',
+        });
+      }
+
+      const { generateActorUrl } = await import('@/lib/services/actorTokenService');
+      const { formatFullName } = await import('@/lib/utils/names');
+
+      // Build share links for all actors
+      const shareLinks: any[] = [];
+
+      // Landlords (only primary)
+      for (const landlord of policy.landlords || []) {
+        if (landlord.accessToken && landlord.isPrimary) {
+          shareLinks.push({
+            actorId: landlord.id,
+            actorType: 'landlord',
+            actorName: landlord.companyName ||
+              (landlord.firstName ? formatFullName(
+                landlord.firstName,
+                landlord.paternalLastName || '',
+                landlord.maternalLastName || '',
+                landlord.middleName || undefined
+              ) : 'Sin nombre'),
+            email: landlord.email,
+            phone: landlord.phone,
+            url: generateActorUrl(landlord.accessToken, 'landlord'),
+            tokenExpiry: landlord.tokenExpiry,
+            informationComplete: landlord.informationComplete,
+          });
+        }
+      }
+
+      // Tenant
+      if (policy.tenant?.accessToken) {
+        shareLinks.push({
+          actorId: policy.tenant.id,
+          actorType: 'tenant',
+          actorName: policy.tenant.companyName ||
+            (policy.tenant.firstName ? formatFullName(
+              policy.tenant.firstName,
+              policy.tenant.paternalLastName || '',
+              policy.tenant.maternalLastName || '',
+              policy.tenant.middleName || undefined
+            ) : 'Sin nombre'),
+          email: policy.tenant.email,
+          phone: policy.tenant.phone,
+          url: generateActorUrl(policy.tenant.accessToken, 'tenant'),
+          tokenExpiry: policy.tenant.tokenExpiry,
+          informationComplete: policy.tenant.informationComplete,
+        });
+      }
+
+      // Joint Obligors
+      for (const jo of policy.jointObligors || []) {
+        if (jo.accessToken) {
+          shareLinks.push({
+            actorId: jo.id,
+            actorType: 'joint-obligor',
+            actorName: jo.companyName ||
+              (jo.firstName ? formatFullName(
+                jo.firstName,
+                jo.paternalLastName || '',
+                jo.maternalLastName || '',
+                jo.middleName || undefined
+              ) : 'Sin nombre'),
+            email: jo.email,
+            phone: jo.phone,
+            url: generateActorUrl(jo.accessToken, 'joint-obligor'),
+            tokenExpiry: jo.tokenExpiry,
+            informationComplete: jo.informationComplete,
+          });
+        }
+      }
+
+      // Avals
+      for (const aval of policy.avals || []) {
+        if (aval.accessToken) {
+          shareLinks.push({
+            actorId: aval.id,
+            actorType: 'aval',
+            actorName: aval.companyName ||
+              (aval.firstName ? formatFullName(
+                aval.firstName,
+                aval.paternalLastName || '',
+                aval.maternalLastName || '',
+                aval.middleName || undefined
+              ) : 'Sin nombre'),
+            email: aval.email,
+            phone: aval.phone,
+            url: generateActorUrl(aval.accessToken, 'aval'),
+            tokenExpiry: aval.tokenExpiry,
+            informationComplete: aval.informationComplete,
+          });
+        }
+      }
+
+      return {
+        policyNumber: policy.policyNumber,
+        shareLinks,
+      };
+    }),
+
+  /**
    * Send invitations to actors
    */
   sendInvitations: protectedProcedure
-    .input(z.object({ policyId: z.string() }))
+    .input(z.object({
+      policyId: z.string(),
+      actors: z.array(z.string()).optional(),
+      resend: z.boolean().optional().default(false),
+    }))
     .mutation(async ({ input, ctx }) => {
       try {
         const policy = await getPolicyById(input.policyId);
@@ -343,14 +478,29 @@ export const policyRouter = createTRPCRouter({
           });
         }
 
-        // Generate and send tokens
-        const tokens = await generatePolicyActorTokens(input.policyId);
+        // Check access for brokers
+        if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not have access to this policy',
+          });
+        }
 
-        // Send emails (implementation would be similar to create procedure)
+        // Send invitations
+        const { sendIncompleteActorInfoNotification } = await import('@/lib/services/notificationService');
+
+        const invitations = await sendIncompleteActorInfoNotification({
+          policyId: input.policyId,
+          actors: input.actors,
+          resend: input.resend,
+          initiatorName: ctx.session?.user?.name || 'Sistema',
+          initiatorId: ctx.userId,
+          ipAddress: ctx.headers?.get('x-forwarded-for') || 'unknown',
+        });
 
         return {
           success: true,
-          tokensSent: Object.keys(tokens).length,
+          invitations,
         };
       } catch (error) {
         throw new TRPCError({

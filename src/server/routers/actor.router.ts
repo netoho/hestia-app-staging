@@ -124,14 +124,20 @@ export const actorRouter = createTRPCRouter({
       const service = getActorService(input.type);
       const result = await service.getByToken(input.token);
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: result.error?.message || 'Actor not found',
         });
       }
 
-      return result.data;
+      // Return actor data with policy
+      return {
+        data: result.value,
+        policy: result.value.policy,
+        authType: 'actor',
+        canEdit: !result.value.informationComplete
+      };
     }),
 
   /**
@@ -177,7 +183,7 @@ export const actorRouter = createTRPCRouter({
 
       // Validate token and get actor
       const actor = await service.getByToken(input.token);
-      if (!actor.success) {
+      if (!actor.ok) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid or expired token',
@@ -185,18 +191,18 @@ export const actorRouter = createTRPCRouter({
       }
 
       // Update with strict validation
-      const result = await service.update(actor.data.id, input.data, {
+      const result = await service.update(actor.value.id, input.data, {
         skipValidation: false, // Always validate for self-service
       });
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: result.error?.message || 'Validation failed',
         });
       }
 
-      return result.data;
+      return result.value;
     }),
 
   /**
@@ -218,14 +224,14 @@ export const actorRouter = createTRPCRouter({
         updatedById: ctx.userId,
       });
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: result.error?.message || 'Update failed',
         });
       }
 
-      return result.data;
+      return result.value;
     }),
 
   /**
@@ -240,7 +246,7 @@ export const actorRouter = createTRPCRouter({
       const service = getActorService(input.type);
       const result = await service.getById(input.id);
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: result.error?.message || 'Actor not found',
@@ -253,7 +259,7 @@ export const actorRouter = createTRPCRouter({
         // This would need additional logic to check policy ownership
       }
 
-      return result.data;
+      return result.value;
     }),
 
   /**
@@ -270,16 +276,16 @@ export const actorRouter = createTRPCRouter({
       if (!input.type || input.type === 'tenant') {
         const service = new TenantService();
         const tenant = await service.getByPolicyId(input.policyId);
-        if (tenant.success && tenant.data) {
-          results.push({ type: 'tenant', actor: tenant.data });
+        if (tenant.ok && tenant.value) {
+          results.push({ type: 'tenant', actor: tenant.value });
         }
       }
 
       if (!input.type || input.type === 'landlord') {
         const service = new LandlordService();
         const landlords = await service.getAllByPolicyId(input.policyId);
-        if (landlords.success && landlords.data) {
-          landlords.data.forEach(landlord => {
+        if (landlords.ok && landlords.value) {
+          landlords.value.forEach(landlord => {
             results.push({ type: 'landlord', actor: landlord });
           });
         }
@@ -288,8 +294,8 @@ export const actorRouter = createTRPCRouter({
       if (!input.type || input.type === 'aval') {
         const service = new AvalService();
         const avals = await service.getAllByPolicyId(input.policyId);
-        if (avals.success && avals.data) {
-          avals.data.forEach(aval => {
+        if (avals.ok && avals.value) {
+          avals.value.forEach(aval => {
             results.push({ type: 'aval', actor: aval });
           });
         }
@@ -298,8 +304,8 @@ export const actorRouter = createTRPCRouter({
       if (!input.type || input.type === 'jointObligor') {
         const service = new JointObligorService();
         const jos = await service.getAllByPolicyId(input.policyId);
-        if (jos.success && jos.data) {
-          jos.data.forEach(jo => {
+        if (jos.ok && jos.value) {
+          jos.value.forEach(jo => {
             results.push({ type: 'jointObligor', actor: jo });
           });
         }
@@ -362,13 +368,13 @@ export const actorRouter = createTRPCRouter({
         isPrimary: true,
       });
 
-      if (!landlordResult.success) {
+      if (!landlordResult.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Failed to create landlord: ${landlordResult.error?.message}`,
         });
       }
-      results.landlord = landlordResult.data;
+      results.landlord = landlordResult.value;
 
       // Create tenant
       const tenantService = new TenantService();
@@ -377,13 +383,13 @@ export const actorRouter = createTRPCRouter({
         policyId: input.policyId,
       });
 
-      if (!tenantResult.success) {
+      if (!tenantResult.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Failed to create tenant: ${tenantResult.error?.message}`,
         });
       }
-      results.tenant = tenantResult.data;
+      results.tenant = tenantResult.value;
 
       // Create joint obligors
       if (input.actors.jointObligors) {
@@ -394,8 +400,8 @@ export const actorRouter = createTRPCRouter({
             policyId: input.policyId,
           });
 
-          if (joResult.success) {
-            results.jointObligors.push(joResult.data);
+          if (joResult.ok) {
+            results.jointObligors.push(joResult.value);
           }
         }
       }
@@ -409,8 +415,8 @@ export const actorRouter = createTRPCRouter({
             policyId: input.policyId,
           });
 
-          if (avalResult.success) {
-            results.avals.push(avalResult.data);
+          if (avalResult.ok) {
+            results.avals.push(avalResult.value);
           }
         }
       }
@@ -451,14 +457,14 @@ export const actorRouter = createTRPCRouter({
         updatedById: auth.userId,
       });
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: result.error?.message || 'Update failed',
         });
       }
 
-      return result.data;
+      return result.value;
     }),
 
   /**
@@ -480,13 +486,13 @@ export const actorRouter = createTRPCRouter({
         updatedById: ctx.userId,
       });
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Failed to mark as complete',
         });
       }
 
-      return result.data;
+      return result.value;
     }),
 });

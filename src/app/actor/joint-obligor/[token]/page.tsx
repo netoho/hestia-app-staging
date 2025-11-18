@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle2, AlertCircle, Home, DollarSign, Calendar } from 'lucide-react';
 import { brandInfo } from '@/lib/config/brand';
+import { trpc } from '@/lib/trpc/client';
 import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard';
 
 export default function JointObligorPortalPage({
@@ -12,57 +13,31 @@ export default function JointObligorPortalPage({
 }: {
   params: Promise<{ token: string }>
 }) {
-  const [token, setToken] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [obligorData, setObligorData] = useState<any>(null);
-  const [policy, setPolicy] = useState<any>(null);
-  const [completed, setCompleted] = useState(false);
+  // Unwrap the params promise using React's use() hook
+  const { token } = use(params);
 
-  // Resolve params
-  useEffect(() => {
-    params.then(resolvedParams => {
-      setToken(resolvedParams.token);
-    });
-  }, [params]);
-
-  // Validate token and load data
-  useEffect(() => {
-    if (token) {
-      validateAndLoad();
+  // Use tRPC to fetch actor data
+  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+    {
+      type: 'joint-obligor',
+      token
+    },
+    {
+      retry: false
     }
-  }, [token]);
+  );
 
-  const validateAndLoad = async () => {
-    try {
-      const response = await fetch(`/api/actors/joint-obligor/${token}`);
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setError(data.error || 'Token inválido o expirado');
-        setLoading(false);
-        return;
-      }
-
-      setPolicy(data.policy);
-      setObligorData(data.data);
-      setCompleted(data.data?.informationComplete || false);
-      setLoading(false);
-    } catch (error) {
-      console.error('Validation error:', error);
-      setError('Error al validar el acceso. Por favor, intente nuevamente.');
-      setLoading(false);
-    }
-  };
+  const obligorData = data?.data || null;
+  const policy = data?.policy || null;
+  const completed = data?.data?.informationComplete || false;
 
   const handleComplete = () => {
     // Reload data to show completed state
-    setCompleted(true);
-    validateAndLoad();
+    refetch();
   };
 
   // Loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
@@ -81,7 +56,7 @@ export default function JointObligorPortalPage({
           <Alert className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">
-              {error}. Contacte a {brandInfo.supportEmail}
+              {error?.message || 'Token inválido o expirado'}. Por favor, contacte a {brandInfo.supportEmail}
             </AlertDescription>
           </Alert>
         </div>
