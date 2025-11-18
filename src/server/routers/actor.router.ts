@@ -136,11 +136,11 @@ const ActorAdminUpdateSchema = z.object({
 }).passthrough(); // Allow additional fields for flexibility
 
 // Type-safe service factory with overloads
-function getActorService(type: 'tenant'): TenantService;
-function getActorService(type: 'landlord'): LandlordService;
-function getActorService(type: 'aval'): AvalService;
-function getActorService(type: 'jointObligor'): JointObligorService;
-function getActorService(type: z.infer<typeof ActorTypeSchema>) {
+// function getActorService(type: 'tenant'): TenantService;
+// function getActorService(type: 'landlord'): LandlordService;
+// function getActorService(type: 'aval'): AvalService;
+// function getActorService(type: 'jointObligor'): JointObligorService;
+function getActorService(type: z.infer<typeof ActorTypeSchema>): TenantService | LandlordService | AvalService | JointObligorService {
   switch (type) {
     case 'tenant':
       return new TenantService();
@@ -182,6 +182,42 @@ export const actorRouter = createTRPCRouter({
         policy: result.value.policy,
         authType: 'actor',
         canEdit: !result.value.informationComplete
+      };
+    }),
+
+  /**
+   * Get actor by token (self-service portal)
+   */
+  getManyByToken: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      type: ActorTypeSchema,
+    }))
+    .query(async ({ input, ctx }) => {
+
+      if (input.type !== 'landlord') {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Only landlords support multiple records',
+        });
+      }
+
+      const service: LandlordService = getActorService(input.type) as LandlordService;
+      const result = await service.getManyByToken(input.token);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: result.error?.message || 'Actor not found',
+        });
+      }
+
+      // Return actor data with policy
+      return {
+        data: result.value,
+        policy: result.value.length > 0 ? result.value[0].policy : null,
+        authType: 'actor',
+        canEdit: !result.value.some(l => l.informationComplete)
       };
     }),
 
