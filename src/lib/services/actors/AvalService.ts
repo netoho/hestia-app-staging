@@ -74,7 +74,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       addressDetails: true,
       employerAddressDetails: true,
       guaranteePropertyDetails: true,
-      personalReferences: true,
+      references: true,
       commercialReferences: true,
       policy: true
     };
@@ -707,7 +707,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
   /**
    * Check if aval has required documents
    */
-  private async hasRequiredDocuments(avalId: string): Promise<boolean> {
+  async hasRequiredDocuments(avalId: string): Promise<boolean> {
     const result = await this.executeDbOperation(async () => {
       const aval = await this.prisma.aval.findUnique({
         where: { id: avalId },

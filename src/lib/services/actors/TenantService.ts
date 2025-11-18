@@ -58,7 +58,7 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
       addressDetails: true,
       employerAddressDetails: true,
       previousRentalAddressDetails: true,
-      personalReferences: true,
+      references: true,
       commercialReferences: true,
       policy: true
     };
