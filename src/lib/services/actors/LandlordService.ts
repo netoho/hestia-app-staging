@@ -3,30 +3,29 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { Result, AsyncResult } from '../types/result';
-import { ServiceError, ErrorCode } from '../types/errors';
+import {Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
 import {
-  PersonActorData,
   CompanyActorData,
   LandlordData,
-  LandlordSubmissionData,
   LandlordResponse,
+  LandlordSubmissionData,
+  PersonActorData,
   PropertyDetails as PropertyDetailsType,
 } from '@/lib/types/actor';
 import {
-  validateLandlordSubmission,
-  individualLandlordSchema,
   companyLandlordSchema,
-  partialIndividualLandlordSchema,
+  individualLandlordSchema,
   partialCompanyLandlordSchema,
+  partialIndividualLandlordSchema,
+  validateLandlordSubmission,
 } from '@/lib/validations/landlord/landlord.schema';
-import { validatePropertyDetails, PropertyDetails } from '@/lib/validations/landlord/property.schema';
-import { validateLandlordToken } from '@/lib/services/actorTokenService';
-import { logPolicyActivity } from '@/lib/services/policyService';
-import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
-import type { LandlordWithRelations } from './types';
+import {validateLandlordToken} from '@/lib/services/actorTokenService';
+import {logPolicyActivity} from '@/lib/services/policyService';
+import {PropertyDetailsService} from '@/lib/services/PropertyDetailsService';
+import type {LandlordWithRelations} from './types';
 
 export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
@@ -560,9 +559,49 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   }
 
   /**
+   * Get an actor by token
+   * Used by tRPC router for actor self-service access
+   */
+  public async getManyByToken(token: string): AsyncResult<LandlordWithRelations[]> {
+    return this.executeDbOperation(async () => {
+      const delegate = this.getPrismaDelegate();
+
+      const landlord = await delegate.findFirst({
+        where: { accessToken: token },
+        select: {
+          policyId: true,
+          tokenExpiry: true,
+        }
+      });
+
+      if (!landlord) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Actor no encontrado con el token proporcionado'
+        );
+      }
+
+      // Check token expiry
+      if (landlord.tokenExpiry && landlord.tokenExpiry < new Date()) {
+        throw new ServiceError(
+          ErrorCode.TOKEN_EXPIRED,
+          'Token expirado'
+        );
+      }
+
+      return delegate.findMany({
+        where: {policyId: landlord?.policyId},
+        include: this.getIncludes(),
+      });
+    }, 'getByToken');
+  }
+
+
+
+  /**
    * Check if landlord has required documents
    */
-  private async hasRequiredDocuments(landlordId: string): Promise<boolean> {
+  async hasRequiredDocuments(landlordId: string): Promise<boolean> {
     const result = await this.executeDbOperation(async () => {
       const landlord = await this.prisma.landlord.findUnique({
         where: { id: landlordId },
