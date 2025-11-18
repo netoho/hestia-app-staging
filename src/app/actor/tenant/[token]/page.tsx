@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,6 +17,16 @@ export default function TenantPortalPage() {
   const router = useRouter();
   const { toast } = useToast();
   const token = params.token as string;
+
+  // Store token in localStorage for tRPC client to use in Authorization header
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    return () => {
+      localStorage.removeItem('token');
+    };
+  }, [token]);
 
   // Use tRPC to fetch actor data
   const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
