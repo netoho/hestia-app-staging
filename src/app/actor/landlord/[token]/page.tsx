@@ -17,7 +17,7 @@ export default function LandlordPortalPage() {
   const token = params.token as string;
 
   // Use tRPC to fetch actor data
-  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+  const { data, isLoading, error, refetch } = trpc.actor.getManyByToken.useQuery(
     {
       type: 'landlord',
       token
@@ -29,7 +29,9 @@ export default function LandlordPortalPage() {
 
   const landlord = data?.data || null;
   const policy = data?.policy || null;
-  const isCompleted = data?.data?.informationComplete || false;
+  const canEdit = data?.canEdit || false;
+  const informationComplete = data?.data?.[0].informationComplete
+  const isCompleted = data?.data?.[0].informationComplete || false;
 
   const handleComplete = () => {
     toast({
@@ -213,11 +215,11 @@ export default function LandlordPortalPage() {
             <div className="mt-4 pt-4 border-t flex items-center justify-between">
               <span className="text-sm text-gray-600">Estado de la información:</span>
               <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                landlord.informationComplete
+                informationComplete
                   ? 'bg-green-100 text-green-700'
                   : 'bg-orange-100 text-orange-700'
               }`}>
-                {landlord.informationComplete
+                {informationComplete
                   ? '✓ Información Completa'
                   : '⏳ Información Pendiente'}
               </span>
@@ -230,6 +232,7 @@ export default function LandlordPortalPage() {
           token={token}
           initialData={landlord}
           policy={policy}
+          canEdit={canEdit}
           onComplete={handleComplete}
         />
       </div>

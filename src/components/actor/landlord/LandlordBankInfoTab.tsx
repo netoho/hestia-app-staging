@@ -8,6 +8,7 @@ interface LandlordBankInfoTabProps {
   updateLandlordField: (index: number, field: string, value: any) => void;
   errors: Record<string, string>;
   isAdminEdit?: boolean;
+  canEdit?: boolean;
 }
 
 export default function LandlordBankInfoTab({
@@ -15,6 +16,7 @@ export default function LandlordBankInfoTab({
   updateLandlordField,
   errors,
   isAdminEdit = false,
+  canEdit = true,
 }: LandlordBankInfoTabProps) {
   // Only show bank info for primary landlord
   const primaryLandlord = landlords[0];
@@ -42,7 +44,7 @@ export default function LandlordBankInfoTab({
                 w-full px-3 py-2 border rounded-md
                 ${errors['landlord0.bankName'] ? 'border-red-500' : 'border-gray-300'}
               `}
-              disabled={!isAdminEdit}
+              disabled={!isAdminEdit && !canEdit}
             />
             {errors['landlord0.bankName'] && (
               <p className="text-red-500 text-sm mt-1">{errors['landlord0.bankName']}</p>
@@ -61,7 +63,7 @@ export default function LandlordBankInfoTab({
                 w-full px-3 py-2 border rounded-md
                 ${errors['landlord0.accountHolder'] ? 'border-red-500' : 'border-gray-300'}
               `}
-              disabled={!isAdminEdit}
+              disabled={!isAdminEdit && !canEdit}
             />
             {errors['landlord0.accountHolder'] && (
               <p className="text-red-500 text-sm mt-1">{errors['landlord0.accountHolder']}</p>
@@ -86,7 +88,7 @@ export default function LandlordBankInfoTab({
               ${errors['landlord0.clabe'] ? 'border-red-500' : 'border-gray-300'}
             `}
             placeholder="000000000000000000"
-            disabled={!isAdminEdit}
+            disabled={!isAdminEdit && !canEdit}
           />
           {errors['landlord0.clabe'] && (
             <p className="text-red-500 text-sm mt-1">{errors['landlord0.clabe']}</p>

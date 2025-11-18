@@ -30,6 +30,7 @@ export default function TenantPortalPage() {
 
   const tenant = data?.data || null;
   const policy = data?.policy || null;
+  const canEdit = data?.canEdit || false;
   const isCompleted = data?.data?.informationComplete || false;
 
   const handleComplete = () => {
@@ -235,6 +236,7 @@ export default function TenantPortalPage() {
           token={token}
           initialData={tenant}
           policy={policy}
+          canEdit={canEdit}
           onComplete={handleComplete}
         />
       </div>

@@ -14,6 +14,7 @@ interface LandlordOwnerInfoTabProps {
   removeCoOwner?: (index: number) => void;
   errors: Record<string, string>;
   isAdminEdit?: boolean;
+  canEdit?: boolean;
 }
 
 export default function LandlordOwnerInfoTab({
@@ -23,6 +24,7 @@ export default function LandlordOwnerInfoTab({
   removeCoOwner,
   errors,
   isAdminEdit = false,
+  canEdit = true,
 }: LandlordOwnerInfoTabProps) {
   return (
     <div className="space-y-6">
@@ -57,7 +59,7 @@ export default function LandlordOwnerInfoTab({
                   }
                   return acc;
                 }, {} as Record<string, string>)}
-                disabled={!isAdminEdit}
+                disabled={!isAdminEdit && !canEdit}
                 showAdditionalContact={index === 0}
               />
             ) : (
@@ -71,39 +73,41 @@ export default function LandlordOwnerInfoTab({
                   }
                   return acc;
                 }, {} as Record<string, string>)}
-                disabled={!isAdminEdit}
+                disabled={!isAdminEdit && !canEdit}
                 showAdditionalContact={index === 0}
               />
             )}
 
             {/* Ownership percentage */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Porcentaje de Propiedad *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={landlord.ownershipPercentage || ''}
-                  onChange={(e) => updateLandlordField(index, 'ownershipPercentage', e.target.value)}
-                  className={`
-                    w-full px-3 py-2 border rounded-md
-                    ${errors[`landlord${index}.ownershipPercentage`]
-                      ? 'border-red-500'
-                      : 'border-gray-300'
-                    }
-                  `}
-                  disabled={!isAdminEdit && index === 0}
-                />
-                {errors[`landlord${index}.ownershipPercentage`] && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors[`landlord${index}.ownershipPercentage`]}
-                  </p>
-                )}
+            {landlord.isCompany && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Porcentaje de Propiedad *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={landlord.ownershipPercentage || ''}
+                    onChange={(e) => updateLandlordField(index, 'ownershipPercentage', e.target.value)}
+                    className={`
+                      w-full px-3 py-2 border rounded-md
+                      ${errors[`landlord${index}.ownershipPercentage`]
+                        ? 'border-red-500'
+                        : 'border-gray-300'
+                      }
+                    `}
+                    disabled={(!isAdminEdit && !canEdit) || index === 0}
+                  />
+                  {errors[`landlord${index}.ownershipPercentage`] && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors[`landlord${index}.ownershipPercentage`]}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       ))}

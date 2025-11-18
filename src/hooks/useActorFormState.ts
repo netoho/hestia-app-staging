@@ -151,7 +151,7 @@ const isMultiActorType = (actorType: ActorType): actorType is 'landlord' => {
 export function useActorFormState<T extends ActorType>(
   options: UseActorFormStateOptions<T>
 ): T extends 'landlord' ? MultiActorReturn : SingleActorReturn<ActorDataMap[T]> {
-  const { actorType, initialData, policy, isAdminEdit, token } = options;
+  const { actorType, initialData, policy } = options;
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Multi-actor state (Landlord)

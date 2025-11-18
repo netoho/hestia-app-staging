@@ -27,6 +27,7 @@ interface LandlordFormWizardProps {
   policy?: any;
   onComplete?: () => void;
   isAdminEdit?: boolean;
+  canEdit?: boolean;
 }
 
 export default function LandlordFormWizard({
@@ -35,6 +36,7 @@ export default function LandlordFormWizard({
   policy,
   onComplete,
   isAdminEdit = false,
+  canEdit = true,
 }: LandlordFormWizardProps) {
   const { toast } = useToast();
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
@@ -112,16 +114,16 @@ export default function LandlordFormWizard({
           localErrors[`landlord${index}.rfc`] = 'RFC requerido';
           isValid = false;
         }
+        // Validate ownership percentage
+        if (!landlord.ownershipPercentage || landlord.ownershipPercentage <= 0) {
+          localErrors[`landlord${index}.ownershipPercentage`] = 'Porcentaje requerido';
+          isValid = false;
+        }
       } else {
-        const personResult = validatePersonFields(landlord, localErrors);
-        if (!personResult) isValid = false;
+        validatePersonFields(landlord, localErrors);
+        if (Object.keys(localErrors).length > 0) isValid = false;
       }
 
-      // Validate ownership percentage
-      if (!landlord.ownershipPercentage || landlord.ownershipPercentage <= 0) {
-        localErrors[`landlord${index}.ownershipPercentage`] = 'Porcentaje requerido';
-        isValid = false;
-      }
     });
 
     setErrors(localErrors);
@@ -303,6 +305,7 @@ export default function LandlordFormWizard({
             removeCoOwner={removeCoOwner}
             errors={errors}
             isAdminEdit={isAdminEdit}
+            canEdit={canEdit}
           />
           <SaveTabButton
             tabName="owner-info"
@@ -319,6 +322,7 @@ export default function LandlordFormWizard({
             updateLandlordField={updateLandlordField}
             errors={errors}
             isAdminEdit={isAdminEdit}
+            canEdit={canEdit}
           />
           <SaveTabButton
             tabName="bank-info"
