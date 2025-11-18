@@ -113,9 +113,9 @@ const ActorAdminUpdateSchema = z.object({
   maternalLastName: z.string().optional().nullable(),
 
   // Company fields
-  isCompany: z.boolean().optional(),
-  companyName: z.string().optional(),
-  companyRfc: z.string().optional(),
+  isCompany: z.boolean().optional().default(false),
+  companyName: z.string().optional().nullable(),
+  companyRfc: z.string().optional().nullable(),
 
   // Contact
   email: z.string().email().optional(),
@@ -525,7 +525,8 @@ export const actorRouter = createTRPCRouter({
         ctx.authType === 'session' ? ctx.session : null
       );
 
-      if (!auth.authorized) {
+
+      if (!auth) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: auth.error || 'Unauthorized',
@@ -533,8 +534,8 @@ export const actorRouter = createTRPCRouter({
       }
 
       // Update with appropriate validation level
-      const result = await service.update(auth.actorId!, input.data, {
-        skipValidation: auth.canSkipValidation,
+      const result = await service.update(auth.actor.id, input.data, {
+        skipValidation: auth.skipValidation,
         updatedById: auth.userId,
       });
 
