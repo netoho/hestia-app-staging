@@ -68,7 +68,7 @@ export default function PersonInformation({
         {/* Phone */}
         <div>
           <Label htmlFor="phone">
-            Teléfono {isRequired('phone') && '*'}
+            Teléfono Celular {isRequired('phone') && '*'}
           </Label>
           <Input
             id="phone"

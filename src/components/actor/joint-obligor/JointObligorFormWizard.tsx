@@ -9,7 +9,7 @@ import { Check, Loader2, User, Briefcase, Shield, Users, FileText, AlertCircle }
 import { useToast } from '@/hooks/use-toast';
 import { useActorFormState } from '@/hooks/useActorFormState';
 import { useActorReferences } from '@/hooks/useActorReferences';
-import { useFormWizardSubmission } from '@/hooks/useFormWizardSubmission';
+import { useFormWizardSubmissionTRPC } from '@/hooks/useFormWizardSubmissionTRPC';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
@@ -76,7 +76,7 @@ export default function JointObligorFormWizard({
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
   // Use submission hook
-  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmission({
+  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmissionTRPC({
     actorType: 'joint-obligor',
     token,
     isAdminEdit,
@@ -113,22 +113,31 @@ export default function JointObligorFormWizard({
 
   // Validation functions for tabs
   const validatePersonalTab = useCallback(() => {
+    const localErrors: Record<string, string> = {};
+
     if (formData.isCompany) {
-      const result = validatePersonFields({
+      validatePersonFields({
         ...formData,
         firstName: formData.legalRepFirstName,
         paternalLastName: formData.legalRepPaternalLastName,
         maternalLastName: formData.legalRepMaternalLastName,
-      }, (errs: Record<string, string>) => setErrors(errs));
-      return result;
+      }, localErrors);
+    } else {
+      validatePersonFields(formData, localErrors);
     }
-    return validatePersonFields(formData, (errs: Record<string, string>) => setErrors(errs));
+
+    setErrors(localErrors);
+    return Object.keys(localErrors).length === 0;
   }, [formData, setErrors]);
 
   const validateEmploymentTab = useCallback(() => {
-    const contactValid = validateContactInfo(formData, (errs: Record<string, string>) => setErrors(errs));
-    const financialValid = validateFinancialInfo(formData, (errs: Record<string, string>) => setErrors(errs));
-    return contactValid && financialValid;
+    const localErrors: Record<string, string> = {};
+
+    validateContactInfo(formData, localErrors);
+    const financialValid = validateFinancialInfo(formData, setErrors);
+
+    setErrors(localErrors);
+    return Object.keys(localErrors).length === 0 && financialValid;
   }, [formData, setErrors]);
 
   const validateGuaranteeTab = useCallback(() => {

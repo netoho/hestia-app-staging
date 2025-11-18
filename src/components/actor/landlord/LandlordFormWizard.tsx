@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useActorFormState } from '@/hooks/useActorFormState';
-import { useFormWizardSubmission } from '@/hooks/useFormWizardSubmission';
+import { useFormWizardSubmissionTRPC } from '@/hooks/useFormWizardSubmissionTRPC';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { formMessages } from '@/lib/constants/formMessages';
@@ -74,7 +74,7 @@ export default function LandlordFormWizard({
   const wizard = useFormWizardTabs({ tabs, isAdminEdit });
 
   // Use submission hook
-  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmission({
+  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmissionTRPC({
     actorType: 'landlord',
     token,
     isAdminEdit,
