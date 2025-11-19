@@ -622,6 +622,98 @@ export abstract class BaseActorService<
   }
 
   /**
+   * Submit actor information (mark as complete)
+   * Called AFTER the last tab has been successfully saved
+   * This method only validates completeness and marks the actor as done
+   */
+  public async submitActor(
+    id: string,
+    options?: {
+      skipValidation?: boolean;
+      submittedBy?: string;
+    }
+  ): AsyncResult<TModel> {
+    return this.executeTransaction(async (tx) => {
+      // 1. Get the current actor data
+      const delegate = this.getPrismaDelegate(tx);
+      const actor = await delegate.findUnique({
+        where: { id },
+        include: this.getIncludes()
+      });
+
+      if (!actor) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          `${this.actorType} not found`,
+          404
+        );
+      }
+
+      // 2. Validate completeness (all required fields filled)
+      if (!options?.skipValidation) {
+        const validationResult = this.validateCompleteness(actor);
+        if (!validationResult.ok) {
+          throw validationResult.error;
+        }
+      }
+
+      // 3. Check required documents
+      const docsCheckResult = await this.validateRequiredDocuments(id);
+      if (!docsCheckResult.ok) {
+        throw new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          docsCheckResult.error
+        );
+      }
+
+      // 4. Mark as complete
+      const updatedActor = await delegate.update({
+        where: { id },
+        data: {
+          informationComplete: true,
+          completedAt: new Date(),
+          submittedBy: options?.submittedBy ?? 'self',
+        },
+        include: this.getIncludes()
+      });
+
+      // 5. Check if all actors complete → transition policy status
+      await this.checkAndTransitionPolicyStatus(
+        actor.policyId,
+        options?.submittedBy ?? 'system'
+      );
+
+      // 6. Log the submission
+      await this.logActivity(
+        actor.policyId,
+        'ACTOR_SUBMITTED',
+        `${this.actorType} información completada`,
+        id,
+        { submittedBy: options?.submittedBy ?? 'self' }
+      );
+
+      this.log('info', `${this.actorType} submitted successfully`, { actorId: id });
+
+      return updatedActor as TModel;
+    });
+  }
+
+  /**
+   * Validate that all required fields are filled
+   * Uses the existing data in the database, not new input
+   * Must be implemented by concrete services based on actor type
+   */
+  protected abstract validateCompleteness(actor: TModel): Result<boolean>;
+
+  /**
+   * Validate required documents are uploaded
+   * Must be implemented by concrete services based on actor type
+   */
+  protected abstract validateRequiredDocuments(actorId: string): AsyncResult<boolean>;
+
+  /**
    * Abstract save method to be implemented by concrete services
    */
   public abstract save(

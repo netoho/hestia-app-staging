@@ -747,4 +747,96 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
   public async delete(avalId: string): AsyncResult<void> {
     return this.deleteActor(avalId);
   }
+
+  /**
+   * Validate aval completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(aval: AvalWithRelations): Result<boolean> {
+    const errors: string[] = [];
+
+    if (!aval.isCompany) {
+      // Person validation
+      if (!aval.firstName) errors.push('Nombre requerido');
+      if (!aval.paternalLastName) errors.push('Apellido paterno requerido');
+      if (!aval.maternalLastName) errors.push('Apellido materno requerido');
+      if (!aval.occupation) errors.push('Ocupación requerida');
+      if (!aval.employerName) errors.push('Nombre del empleador requerido');
+      if (!aval.monthlyIncome) errors.push('Ingreso mensual requerido');
+    } else {
+      // Company validation
+      if (!aval.companyName) errors.push('Razón social requerida');
+      if (!aval.companyRfc) errors.push('RFC de empresa requerido');
+      if (!aval.legalRepFirstName) errors.push('Nombre del representante requerido');
+      if (!aval.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
+      if (!aval.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+    }
+
+    // Common required fields
+    if (!aval.email) errors.push('Email requerido');
+    if (!aval.phone) errors.push('Teléfono requerido');
+    if (!aval.addressDetails) errors.push('Dirección requerida');
+
+    // Aval specific - must have property guarantee
+    if (!aval.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
+    if (!aval.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+    if (!aval.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
+    if (!aval.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+
+    // Check references (minimum 3 for aval)
+    const referenceCount = aval.personalReferences?.length ?? 0;
+    if (referenceCount < 3) {
+      errors.push('Mínimo 3 referencias requeridas');
+    }
+
+    if (errors.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(avalId: string): AsyncResult<boolean> {
+    const aval = await this.getById(avalId);
+    if (!aval.ok) return aval;
+
+    const requiredDocs: any[] = aval.value.isCompany
+      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA', 'ACTA_CONSTITUTIVA']
+      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA'];
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        avalId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
 }

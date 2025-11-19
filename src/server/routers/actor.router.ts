@@ -14,22 +14,21 @@ import { JointObligorService } from '@/lib/services/actors/JointObligorService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
 import { TenantType } from '@prisma/client';
 
+// Import centralized schemas
+import { addressSchema, partialAddressSchema } from '@/lib/validations/actors/base.schema';
+
 // Actor types enum
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
 
-// Address details schema
-const AddressDetailsSchema = z.object({
-  street: z.string(),
-  exteriorNumber: z.string(),
-  interiorNumber: z.string().optional(),
-  neighborhood: z.string(),
-  municipality: z.string(),
-  state: z.string(),
-  postalCode: z.string(),
-  country: z.string().default('México'),
-});
+// Define which tab is the last one for each actor type
+const LAST_TABS = {
+  tenant: 'documents',
+  landlord: 'documents',
+  aval: 'documents',
+  jointObligor: 'documents',
+} as const;
 
-// Base person schema (Mexican 4-field naming)
+// Base person schema (Mexican 4-field naming) - temporary until we centralize all
 const PersonSchema = z.object({
   firstName: z.string().min(1),
   middleName: z.string().optional(),
@@ -57,7 +56,7 @@ const TenantStrictSchema = z.object({
 
   // Address
   currentAddress: z.string().min(1),
-  currentAddressDetails: AddressDetailsSchema.optional(),
+  currentAddressDetails: partialAddressSchema.optional(),
 
   // Employment
   occupation: z.string().min(1),
@@ -113,7 +112,7 @@ const ActorAdminUpdateSchema = z.object({
   maternalLastName: z.string().optional().nullable(),
 
   // Company fields
-  isCompany: z.boolean().optional().default(false),
+  isCompany: z.boolean().optional().nullable(),
   companyName: z.string().optional().nullable(),
   companyRfc: z.string().optional().nullable(),
 
@@ -124,7 +123,7 @@ const ActorAdminUpdateSchema = z.object({
 
   // Address
   address: z.string().optional(),
-  addressDetails: AddressDetailsSchema.optional(),
+  addressDetails: partialAddressSchema.optional(),
 
   // Financial
   bankName: z.string().optional().nullable(),
@@ -133,6 +132,11 @@ const ActorAdminUpdateSchema = z.object({
 
   // Additional
   additionalInfo: z.string().optional().nullable(),
+
+  // Metadata flags
+  partial: z.boolean().optional(), // Indicates tab save vs full submission
+  informationComplete: z.boolean().optional(), // Marks final submission
+  tabName: z.string().optional(), // Which tab is being saved
 }).passthrough(); // Allow additional fields for flexibility
 
 // Type-safe service factory with overloads
@@ -533,16 +537,94 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Update with appropriate validation level
-      const result = await service.update(auth.actor.id, input.data, {
+      // Extract metadata flags from input
+      const { partial, informationComplete, tabName, ...actualData } = input.data;
+
+      console.log('Updating actor with data:', actualData, 'Partial:', partial, 'Tab:', tabName);
+
+      // STEP 1: Always save the tab data first
+      const saveResult = await service.update(auth.actor.id, actualData, {
         skipValidation: auth.skipValidation,
         updatedById: auth.userId,
+        isPartial: partial ?? false, // Pass partial flag to service
+      });
+
+      if (!saveResult.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: saveResult.error?.message || 'Update failed',
+        });
+      }
+
+      // STEP 2: Check if this is the last tab and auto-submit
+      const isLastTab = tabName && LAST_TABS[input.type] === tabName;
+
+      if (isLastTab && partial !== false) {
+        // STEP 3: Call submitActor to validate and mark as complete
+        const submitResult = await service.submitActor(auth.actor.id, {
+          skipValidation: auth.skipValidation,
+          submittedBy: auth.userId ?? 'self',
+        });
+
+        if (!submitResult.ok) {
+          // Save succeeded but submission failed
+          return {
+            ...saveResult.value,
+            submitted: false,
+            submissionError: submitResult.error?.message,
+          };
+        }
+
+        // Both save and submit succeeded
+        return {
+          ...submitResult.value,
+          submitted: true,
+        };
+      }
+
+      // Not last tab or explicit non-partial save
+      return {
+        ...saveResult.value,
+        submitted: false,
+      };
+    }),
+
+  /**
+   * Explicit submit endpoint for manual submission or retry
+   */
+  submitActor: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(), // Can be ID (for session) or token
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+      const service = getActorService(input.type);
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        ctx.authType === 'session' ? ctx.session : null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: auth.error || 'Unauthorized',
+        });
+      }
+
+      // Submit the actor (validate and mark as complete)
+      const result = await service.submitActor(auth.actor.id, {
+        skipValidation: auth.skipValidation,
+        submittedBy: auth.userId ?? 'self',
       });
 
       if (!result.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: result.error?.message || 'Update failed',
+          message: result.error?.message || 'Error submitting information',
         });
       }
 

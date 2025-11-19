@@ -751,4 +751,113 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   public async delete(obligorId: string): AsyncResult<void> {
     return this.deleteActor(obligorId);
   }
+
+  /**
+   * Validate joint obligor completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(jointObligor: JointObligorWithRelations): Result<boolean> {
+    const errors: string[] = [];
+
+    if (!jointObligor.isCompany) {
+      // Person validation
+      if (!jointObligor.firstName) errors.push('Nombre requerido');
+      if (!jointObligor.paternalLastName) errors.push('Apellido paterno requerido');
+      if (!jointObligor.maternalLastName) errors.push('Apellido materno requerido');
+      if (!jointObligor.occupation) errors.push('Ocupación requerida');
+      if (!jointObligor.employerName) errors.push('Nombre del empleador requerido');
+      if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido');
+    } else {
+      // Company validation
+      if (!jointObligor.companyName) errors.push('Razón social requerida');
+      if (!jointObligor.companyRfc) errors.push('RFC de empresa requerido');
+      if (!jointObligor.legalRepFirstName) errors.push('Nombre del representante requerido');
+      if (!jointObligor.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
+      if (!jointObligor.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+    }
+
+    // Common required fields
+    if (!jointObligor.email) errors.push('Email requerido');
+    if (!jointObligor.phone) errors.push('Teléfono requerido');
+    if (!jointObligor.addressDetails) errors.push('Dirección requerida');
+
+    // Joint obligor specific - must have guarantee method
+    if (!jointObligor.guaranteeMethod) errors.push('Método de garantía requerido');
+
+    if (jointObligor.guaranteeMethod === 'property') {
+      // Property guarantee validation
+      if (!jointObligor.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
+      if (!jointObligor.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+      if (!jointObligor.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
+      if (!jointObligor.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+    } else if (jointObligor.guaranteeMethod === 'income') {
+      // Income guarantee validation
+      if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');
+      const minIncome = 10000; // Example minimum income requirement
+      if (jointObligor.monthlyIncome && jointObligor.monthlyIncome < minIncome) {
+        errors.push(`Ingreso mínimo de $${minIncome} requerido para garantía por ingresos`);
+      }
+    }
+
+    // Check references (minimum 3 for joint obligor with addresses)
+    const referenceCount = jointObligor.personalReferences?.length ?? 0;
+    if (referenceCount < 3) {
+      errors.push('Mínimo 3 referencias requeridas con dirección');
+    }
+
+    if (errors.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(obligorId: string): AsyncResult<boolean> {
+    const obligor = await this.getById(obligorId);
+    if (!obligor.ok) return obligor;
+
+    let requiredDocs: any[] = obligor.value.isCompany
+      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS', 'ACTA_CONSTITUTIVA']
+      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+
+    // Add property documents if using property guarantee
+    if (obligor.value.guaranteeMethod === 'property') {
+      requiredDocs = requiredDocs.concat(['ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA']);
+    }
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        jointObligorId: obligorId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
 }

@@ -800,4 +800,139 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   public async delete(landlordId: string): AsyncResult<void> {
     return this.deleteActor(landlordId);
   }
+
+  /**
+   * Validate landlord completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(landlord: LandlordWithRelations): Result<boolean> {
+    const errors: string[] = [];
+
+    if (!landlord.isCompany) {
+      // Person validation
+      if (!landlord.firstName) errors.push('Nombre requerido');
+      if (!landlord.paternalLastName) errors.push('Apellido paterno requerido');
+      if (!landlord.maternalLastName) errors.push('Apellido materno requerido');
+    } else {
+      // Company validation
+      if (!landlord.companyName) errors.push('Razón social requerida');
+      if (!landlord.companyRfc) errors.push('RFC de empresa requerido');
+      if (!landlord.legalRepFirstName) errors.push('Nombre del representante requerido');
+      if (!landlord.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
+      if (!landlord.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+    }
+
+    // Common required fields
+    if (!landlord.email) errors.push('Email requerido');
+    if (!landlord.phone) errors.push('Teléfono requerido');
+    if (!landlord.addressDetails) errors.push('Dirección requerida');
+
+    // Primary landlord specific
+    if (landlord.isPrimary) {
+      if (!landlord.bankName) errors.push('Nombre del banco requerido');
+      if (!landlord.accountNumber) errors.push('Número de cuenta requerido');
+      if (!landlord.clabe) errors.push('CLABE requerida');
+      if (!landlord.accountHolder) errors.push('Titular de cuenta requerido');
+    }
+
+    // Property info
+    if (!landlord.propertyDeedNumber) errors.push('Número de escritura requerido');
+    if (!landlord.propertyRegistryFolio) errors.push('Folio de registro requerido');
+
+    if (errors.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(landlordId: string): AsyncResult<boolean> {
+    const landlord = await this.getById(landlordId);
+    if (!landlord.ok) return landlord;
+
+    const requiredDocs: any[] = landlord.value.isCompany
+      ? ['ESCRITURA', 'PREDIAL', 'IDENTIFICACION', 'ACTA_CONSTITUTIVA']
+      : ['ESCRITURA', 'PREDIAL', 'IDENTIFICACION'];
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        landlordId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Submit all landlords for a policy
+   * Special method for multi-landlord submission
+   */
+  public async submitAllLandlords(
+    policyId: string,
+    options?: {
+      skipValidation?: boolean;
+      submittedBy?: string;
+    }
+  ): AsyncResult<LandlordWithRelations[]> {
+    const landlords = await this.getLandlordsByPolicyId(policyId);
+    if (!landlords.ok) return landlords;
+
+    const results: LandlordWithRelations[] = [];
+
+    // Submit each landlord
+    for (const landlord of landlords.value) {
+      const result = await this.submitActor(landlord.id, options);
+      if (!result.ok) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.VALIDATION_ERROR,
+            `Error submitting landlord ${landlord.firstName || landlord.companyName}: ${result.error?.message}`,
+            400
+          )
+        );
+      }
+      results.push(result.value);
+    }
+
+    // Verify ownership percentages total 100%
+    const totalPercentage = results.reduce((sum, l) => sum + (l.ownershipPercentage ?? 0), 0);
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          `Los porcentajes de propiedad deben sumar 100% (actual: ${totalPercentage}%)`,
+          400
+        )
+      );
+    }
+
+    return Result.ok(results);
+  }
 }

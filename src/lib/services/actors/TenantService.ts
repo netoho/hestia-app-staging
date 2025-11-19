@@ -424,4 +424,95 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   public async delete(tenantId: string): AsyncResult<void> {
     return this.deleteActor(tenantId);
   }
+
+  /**
+   * Validate tenant completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(tenant: TenantWithRelations): Result<boolean> {
+    const errors: string[] = [];
+    const isCompany = tenant.tenantType === 'COMPANY';
+
+    if (!isCompany) {
+      // Person validation
+      if (!tenant.firstName) errors.push('Nombre requerido');
+      if (!tenant.paternalLastName) errors.push('Apellido paterno requerido');
+      if (!tenant.maternalLastName) errors.push('Apellido materno requerido');
+      if (!tenant.occupation) errors.push('Ocupación requerida');
+      if (!tenant.employerName) errors.push('Nombre del empleador requerido');
+      if (!tenant.monthlyIncome) errors.push('Ingreso mensual requerido');
+    } else {
+      // Company validation
+      if (!tenant.companyName) errors.push('Razón social requerida');
+      if (!tenant.companyRfc) errors.push('RFC de empresa requerido');
+      if (!tenant.legalRepFirstName) errors.push('Nombre del representante requerido');
+      if (!tenant.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
+      if (!tenant.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+    }
+
+    // Common required fields
+    if (!tenant.email) errors.push('Email requerido');
+    if (!tenant.phone) errors.push('Teléfono requerido');
+    if (!tenant.addressDetails) errors.push('Dirección requerida');
+
+    // Check references (minimum 2)
+    const referenceCount = tenant.personalReferences?.length ?? 0;
+    const commercialRefCount = tenant.commercialReferences?.length ?? 0;
+    if (referenceCount + commercialRefCount < 2) {
+      errors.push('Mínimo 2 referencias requeridas');
+    }
+
+    if (errors.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(tenantId: string): AsyncResult<boolean> {
+    const tenant = await this.getById(tenantId);
+    if (!tenant.ok) return tenant;
+
+    const isCompany = tenant.value.tenantType === 'COMPANY';
+
+    // Using DocumentCategory enum values
+    const requiredDocs: any[] = isCompany
+      ? ['ACTA_CONSTITUTIVA', 'COMPROBANTE_DOMICILIO', 'CONSTANCIA_SITUACION_FISCAL']
+      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        tenantId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
 }
