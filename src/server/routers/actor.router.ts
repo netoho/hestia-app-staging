@@ -13,6 +13,7 @@ import { AvalService } from '@/lib/services/actors/AvalService';
 import { JointObligorService } from '@/lib/services/actors/JointObligorService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
 import { TenantType } from '@prisma/client';
+import { getTabFields } from '@/lib/constants/actorTabFields';
 
 // Import centralized schemas
 import { addressSchema, partialAddressSchema } from '@/lib/validations/actors/base.schema';
@@ -48,7 +49,9 @@ const TenantStrictSchema = z.object({
 
   // Contact
   email: z.string().email(),
-  phoneNumber: z.string().min(1),
+  phone: z.string().min(1),
+  personalEmail: z.string().email().optional().nullable(),
+  workEmail: z.string().email().optional().nullable(),
 
   // Identification
   rfc: z.string().optional(),
@@ -59,10 +62,26 @@ const TenantStrictSchema = z.object({
   currentAddressDetails: partialAddressSchema.optional(),
 
   // Employment
+  employmentStatus: z.string().optional().nullable(),
   occupation: z.string().min(1),
+  position: z.string().optional().nullable(),
   companyWorkName: z.string().min(1),
   companyWorkAddress: z.string().min(1),
   monthlyIncome: z.number().positive(),
+  incomeSource: z.string().optional().nullable(),
+  employerAddressDetails: partialAddressSchema.optional().nullable(),
+
+  // Rental History
+  previousAddress: z.string().optional().nullable(),
+  previousLandlordName: z.string().optional().nullable(),
+  previousLandlordPhone: z.string().optional().nullable(),
+  previousLandlordEmail: z.string().email().optional().nullable(),
+  previousRentAmount: z.number().optional().nullable(),
+  rentalHistoryYears: z.number().optional().nullable(),
+  previousRentalAddressDetails: partialAddressSchema.optional().nullable(),
+  reasonForMoving: z.string().optional().nullable(),
+  numberOfOccupants: z.number().optional(),
+  petDetails: z.string().optional().nullable(),
 
   // References
   references: z.array(z.object({
@@ -71,6 +90,12 @@ const TenantStrictSchema = z.object({
     phone: z.string().min(1),
     email: z.string().email().optional(),
   })).min(2),
+}).transform(data => {
+  const isCompany = data.tenantType === 'COMPANY';
+  return {
+    ...data,
+    isCompany,
+  };
 });
 
 const LandlordStrictSchema = z.object({
@@ -84,10 +109,18 @@ const LandlordStrictSchema = z.object({
 
   // Contact
   email: z.string().email(),
-  phoneNumber: z.string().min(1),
+  phone: z.string().min(1),
+  personalEmail: z.string().email().optional().nullable(),
+  workEmail: z.string().email().optional().nullable(),
 
   // Identification
   rfc: z.string().min(1),
+
+  // Property Ownership
+  propertyDeedNumber: z.string().optional().nullable(),
+  propertyRegistryFolio: z.string().optional().nullable(),
+  propertyValue: z.number().optional().nullable(),
+  ownershipPercentage: z.number().optional().nullable(),
 
   // Legal rep (for companies)
   legalRepName: z.string().optional(),
@@ -120,6 +153,8 @@ const ActorAdminUpdateSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
   workPhone: z.string().optional().nullable(),
+  personalEmail: z.string().email().optional().nullable(),
+  workEmail: z.string().email().optional().nullable(),
 
   // Address
   address: z.string().optional(),
@@ -138,6 +173,9 @@ const ActorAdminUpdateSchema = z.object({
   informationComplete: z.boolean().optional(), // Marks final submission
   tabName: z.string().optional(), // Which tab is being saved
 }).passthrough(); // Allow additional fields for flexibility
+
+// Import ActorData for type casting
+import { ActorData } from '@/lib/types/actor';
 
 // Type-safe service factory with overloads
 // function getActorService(type: 'tenant'): TenantService;
@@ -172,6 +210,8 @@ export const actorRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const service = getActorService(input.type);
       const result = await service.getByToken(input.token);
+
+      console.log(`[Actor GetByToken] Type: ${input.type}, Token: ${input.token}, Result:`, result);
 
       if (!result.ok) {
         throw new TRPCError({
@@ -244,22 +284,79 @@ export const actorRouter = createTRPCRouter({
         type: z.literal('aval'),
         token: z.string(),
         data: PersonSchema.extend({
+          isCompany: z.literal(false).default(false),
           email: z.string().email(),
-          phoneNumber: z.string(),
+          phone: z.string(),
+          personalEmail: z.string().email().optional().nullable(),
+          workEmail: z.string().email().optional().nullable(),
           currentAddress: z.string(),
+
+          // Employment
+          employmentStatus: z.string().optional().nullable(),
           occupation: z.string(),
+          position: z.string().optional().nullable(),
+          employerAddress: z.string().optional().nullable(),
           monthlyIncome: z.number(),
+          incomeSource: z.string().optional().nullable(),
+
+          // Property guarantee (MANDATORY for Aval)
+          hasPropertyGuarantee: z.boolean().default(true),
+          guaranteeMethod: z.enum(['income', 'property']).optional().nullable(),
+          propertyAddress: z.string().optional().nullable(),
+          propertyValue: z.number().positive().optional().nullable(),
+          propertyDeedNumber: z.string().optional().nullable(),
+          propertyRegistry: z.string().optional().nullable(),
+          propertyTaxAccount: z.string().optional().nullable(),
+          propertyUnderLegalProceeding: z.boolean().default(false),
+
+          // Marriage information
+          maritalStatus: z.string().optional().nullable(),
+          spouseName: z.string().optional().nullable(),
+          spouseRfc: z.string().optional().nullable(),
+          spouseCurp: z.string().optional().nullable(),
         }),
       }),
       z.object({
         type: z.literal('jointObligor'),
         token: z.string(),
         data: PersonSchema.extend({
+          isCompany: z.literal(false).default(false),
           email: z.string().email(),
-          phoneNumber: z.string(),
+          phone: z.string(),
+          personalEmail: z.string().email().optional().nullable(),
+          workEmail: z.string().email().optional().nullable(),
           currentAddress: z.string(),
+
+          // Employment
+          employmentStatus: z.string().optional().nullable(),
           occupation: z.string(),
+          position: z.string().optional().nullable(),
+          employerAddress: z.string().optional().nullable(),
           monthlyIncome: z.number(),
+          incomeSource: z.string().optional().nullable(),
+
+          // Guarantee
+          guaranteeMethod: z.enum(['income', 'property']).optional(),
+          hasPropertyGuarantee: z.boolean().optional(),
+          hasProperties: z.boolean().optional(),
+
+          // Property guarantee fields
+          propertyAddress: z.string().optional().nullable(),
+          propertyValue: z.number().optional().nullable(),
+          propertyDeedNumber: z.string().optional().nullable(),
+          propertyRegistry: z.string().optional().nullable(),
+          propertyTaxAccount: z.string().optional().nullable(),
+          propertyUnderLegalProceeding: z.boolean().optional(),
+
+          // Financial Information (income guarantee)
+          bankName: z.string().optional().nullable(),
+          accountHolder: z.string().optional().nullable(),
+
+          // Marriage information
+          maritalStatus: z.string().optional().nullable(),
+          spouseName: z.string().optional().nullable(),
+          spouseRfc: z.string().optional().nullable(),
+          spouseCurp: z.string().optional().nullable(),
         }),
       }),
     ]))
@@ -276,7 +373,8 @@ export const actorRouter = createTRPCRouter({
       }
 
       // Update with strict validation
-      const result = await service.update(actor.value.id, input.data, {
+      // We use Partial<ActorData> to allow flexibility while maintaining some type safety
+      const result = await service.update(actor.value.id, input.data as Partial<ActorData>, {
         skipValidation: false, // Always validate for self-service
       });
 
@@ -304,7 +402,7 @@ export const actorRouter = createTRPCRouter({
       const service = getActorService(input.type);
 
       // Update with optional validation skip
-      const result = await service.update(input.id, input.data, {
+      const result = await service.update(input.id, input.data as unknown as Partial<ActorData>, {
         skipValidation: input.skipValidation,
         updatedById: ctx.userId,
       });
@@ -519,6 +617,7 @@ export const actorRouter = createTRPCRouter({
       data: ActorAdminUpdateSchema,
     }))
     .mutation(async ({ input, ctx }) => {
+      console.log('[Actor Update] Received update request for type:', input.type, input.data);
       const authService = new ActorAuthService();
       const service = getActorService(input.type);
 
@@ -526,27 +625,55 @@ export const actorRouter = createTRPCRouter({
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        ctx.authType === 'session' ? ctx.session : null
+        null // Pass null for request as it's not available in tRPC context
       );
 
 
       if (!auth) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: auth.error || 'Unauthorized',
+          message: 'Unauthorized',
         });
       }
 
-      // Extract metadata flags from input
-      const { partial, informationComplete, tabName, ...actualData } = input.data;
+      // Extract metadata flags and special fields from input
+      const {
+        partial,
+        informationComplete,
+        tabName,
+        personalReferences,
+        commercialReferences,
+        ...actualData
+      } = input.data;
 
-      console.log('Updating actor with data:', actualData, 'Partial:', partial, 'Tab:', tabName);
+      // Validate tab name if provided
+      if (tabName) {
+        const validTabFields = getTabFields(input.type, tabName);
+
+        console.log('Valid tab fields for', input.type, tabName, ':', validTabFields);
+
+        if (!validTabFields) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Invalid tab name "${tabName}" for actor type "${input.type}"`,
+          });
+        }
+
+        // Log which fields are being updated for this tab
+        console.log(`[Actor Update] Type: ${input.type}, Tab: "${tabName}", Fields being updated:`, Object.keys(actualData));
+        console.log(`[Actor Update] Field values:`, Object.entries(actualData).map(([key, value]) =>
+          `${key}: ${value === null ? 'null' : value === '' ? 'empty string' : typeof value}`
+        ));
+      } else {
+        console.log(`[Actor Update] Type: ${input.type}, No tab specified, Partial: ${partial}, Fields:`, Object.keys(actualData));
+      }
 
       // STEP 1: Always save the tab data first
-      const saveResult = await service.update(auth.actor.id, actualData, {
+      const saveResult = await service.update(auth.actor.id, actualData as Partial<ActorData>, {
         skipValidation: auth.skipValidation,
         updatedById: auth.userId,
         isPartial: partial ?? false, // Pass partial flag to service
+        tabName: tabName, // Pass tab name for better logging and validation
       });
 
       if (!saveResult.ok) {
@@ -556,11 +683,30 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // STEP 2: Check if this is the last tab and auto-submit
+      // STEP 2: Save references if provided (typically for references tab)
+      if (personalReferences && Array.isArray(personalReferences)) {
+        const refResult = await service.savePersonalReferences(auth.actor.id, personalReferences);
+        if (!refResult.ok) {
+          console.error('Failed to save personal references:', refResult.error);
+        } else {
+          console.log(`[Actor Update] Saved ${personalReferences.length} personal references`);
+        }
+      }
+
+      if (commercialReferences && Array.isArray(commercialReferences)) {
+        const comRefResult = await service.saveCommercialReferences(auth.actor.id, commercialReferences);
+        if (!comRefResult.ok) {
+          console.error('Failed to save commercial references:', comRefResult.error);
+        } else {
+          console.log(`[Actor Update] Saved ${commercialReferences.length} commercial references`);
+        }
+      }
+
+      // STEP 3: Check if this is the last tab and auto-submit
       const isLastTab = tabName && LAST_TABS[input.type] === tabName;
 
       if (isLastTab && partial !== false) {
-        // STEP 3: Call submitActor to validate and mark as complete
+        // STEP 4: Call submitActor to validate and mark as complete
         const submitResult = await service.submitActor(auth.actor.id, {
           skipValidation: auth.skipValidation,
           submittedBy: auth.userId ?? 'self',
@@ -605,7 +751,7 @@ export const actorRouter = createTRPCRouter({
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        ctx.authType === 'session' ? ctx.session : null
+        null // Pass null for request as it's not available in tRPC context
       );
 
       if (!auth) {
@@ -644,8 +790,7 @@ export const actorRouter = createTRPCRouter({
 
       const result = await service.update(input.id, {
         informationComplete: true,
-        informationCompleteDate: new Date(),
-      }, {
+      } as unknown as Partial<ActorData>, {
         skipValidation: true,
         updatedById: ctx.userId,
       });

@@ -58,16 +58,55 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
       addressDetails: true,
       employerAddressDetails: true,
       previousRentalAddressDetails: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       policy: true
     };
   }
 
   /**
+   * Build update data object from actor data
+   * Overrides base method to include tenant-specific fields
+   */
+  protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
+    const updateData = super.buildUpdateData(data, addressId);
+    const tenantData = data as any;
+
+    // Employment fields
+    if (tenantData.employmentStatus !== undefined) updateData.employmentStatus = tenantData.employmentStatus || null;
+    if (tenantData.position !== undefined) updateData.position = tenantData.position || null;
+    if (tenantData.yearsAtJob !== undefined) updateData.yearsAtJob = tenantData.yearsAtJob || null;
+    if (tenantData.hasAdditionalIncome !== undefined) updateData.hasAdditionalIncome = tenantData.hasAdditionalIncome;
+    if (tenantData.additionalIncomeSource !== undefined) updateData.additionalIncomeSource = tenantData.additionalIncomeSource || null;
+    if (tenantData.additionalIncomeAmount !== undefined) updateData.additionalIncomeAmount = tenantData.additionalIncomeAmount || null;
+    if (tenantData.incomeSource !== undefined) updateData.incomeSource = tenantData.incomeSource || null;
+
+    // Rental history
+    if (tenantData.previousAddress !== undefined) updateData.previousAddress = tenantData.previousAddress || null;
+    if (tenantData.previousLandlordName !== undefined) updateData.previousLandlordName = tenantData.previousLandlordName || null;
+    if (tenantData.previousLandlordPhone !== undefined) updateData.previousLandlordPhone = tenantData.previousLandlordPhone || null;
+    if (tenantData.previousLandlordEmail !== undefined) updateData.previousLandlordEmail = tenantData.previousLandlordEmail || null;
+    if (tenantData.previousRentAmount !== undefined) updateData.previousRentAmount = tenantData.previousRentAmount || null;
+    if (tenantData.rentalHistoryYears !== undefined) updateData.rentalHistoryYears = tenantData.rentalHistoryYears || null;
+    if (tenantData.reasonForMoving !== undefined) updateData.reasonForMoving = tenantData.reasonForMoving || null;
+    if (tenantData.numberOfOccupants !== undefined) updateData.numberOfOccupants = tenantData.numberOfOccupants || null;
+    if (tenantData.hasPets !== undefined) updateData.hasPets = tenantData.hasPets;
+    if (tenantData.petDescription !== undefined) updateData.petDescription = tenantData.petDescription || null;
+
+    // Company specific
+    if (tenantData.businessType !== undefined) updateData.businessType = tenantData.businessType || null;
+    if (tenantData.employeeCount !== undefined) updateData.employeeCount = tenantData.employeeCount || null;
+    if (tenantData.yearsInBusiness !== undefined) updateData.yearsInBusiness = tenantData.yearsInBusiness || null;
+
+    return updateData;
+  }
+
+
+
+  /**
    * Validate person tenant data
    */
-  validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
+  validatePersonData(data: Partial<PersonActorData>, isPartial: boolean = false): Result<PersonActorData> {
     const schema = isPartial ? tenantPersonSchema.partial() : tenantPersonSchema;
     const result = schema.safeParse(data);
 
@@ -88,7 +127,7 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   /**
    * Validate company tenant data
    */
-  validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
+  validateCompanyData(data: Partial<CompanyActorData>, isPartial: boolean = false): Result<CompanyActorData> {
     const schema = isPartial ? tenantCompanySchema.partial() : tenantCompanySchema;
     const result = schema.safeParse(data);
 
@@ -107,27 +146,16 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   }
 
   /**
-   * Save tenant information
-   */
-  async saveTenantInformation(
-    tenantId: string,
-    data: ActorData,
-    isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<TenantWithRelations> {
-    return this.saveActorData(tenantId, data, isPartial, skipValidation);
-  }
-
-  /**
    * Public save method required by base class
    */
   public async save(
     tenantId: string,
-    data: ActorData,
+    data: Partial<ActorData>,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<TenantWithRelations> {
-    return this.saveTenantInformation(tenantId, data, isPartial, skipValidation);
+    return this.saveActorData(tenantId, data, isPartial, skipValidation, tabName);
   }
 
   /**
@@ -255,7 +283,7 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
           addressDetails: true,
           employerAddressDetails: true,
           previousRentalAddressDetails: true,
-          references: true,
+          personalReferences: true,
           documents: true,
           policy: true
         }
@@ -356,11 +384,57 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   }
 
   /**
+   * Get tenant by policy ID
+   */
+  async getByPolicyId(policyId: string): AsyncResult<TenantWithRelations> {
+    return this.executeDbOperation(async () => {
+      const tenant = await this.prisma.tenant.findFirst({
+        where: { policyId },
+        include: this.getIncludes()
+      });
+
+      if (!tenant) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Tenant not found for policy',
+          404
+        );
+      }
+
+      return tenant as TenantWithRelations;
+    }, 'getByPolicyId');
+  }
+
+  /**
+   * Create a new tenant
+   */
+  async create(data: any): AsyncResult<TenantWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          policyId: data.policyId,
+          tenantType: data.tenantType,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          paternalLastName: data.paternalLastName,
+          maternalLastName: data.maternalLastName,
+          companyName: data.companyName,
+          email: data.email,
+          phone: data.phone || data.phoneNumber, // Handle both for compatibility
+        },
+        include: this.getIncludes()
+      });
+
+      return tenant as TenantWithRelations;
+    });
+  }
+
+  /**
    * Get tenant references
    */
   async getTenantReferences(tenantId: string): AsyncResult<any[]> {
     return this.executeDbOperation(async () => {
-      const references = await this.prisma.reference.findMany({
+      const references = await this.prisma.personalReference.findMany({
         where: { tenantId },
         orderBy: { createdAt: 'desc' },
       });
@@ -381,10 +455,21 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
     }
   ): AsyncResult<any> {
     return this.executeDbOperation(async () => {
-      const reference = await this.prisma.reference.create({
+      // Split name into components (best effort)
+      const nameParts = referenceData.name.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const paternalLastName = nameParts.length > 1 ? nameParts[1] : '';
+      const maternalLastName = nameParts.length > 2 ? nameParts.slice(2).join(' ') : '';
+
+      const reference = await this.prisma.personalReference.create({
         data: {
           tenantId,
-          ...referenceData,
+          firstName,
+          paternalLastName,
+          maternalLastName,
+          relationship: referenceData.relationship,
+          phone: referenceData.phone,
+          email: referenceData.email,
         },
       });
 

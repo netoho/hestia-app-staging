@@ -14,6 +14,7 @@ import {
   curpSchema,
   optionalCurpSchema,
   emailSchema,
+  optionalEmailSchema,
   phoneSchema,
   moneyAmountSchema,
   optionalMoneyAmountSchema,
@@ -36,6 +37,8 @@ export const tenantPersonSchema = z.object({
   // Contact
   email: emailSchema,
   phone: phoneSchema,
+  personalEmail: optionalEmailSchema,
+  workEmail: optionalEmailSchema,
 
   // Identification
   nationality: z.string().min(1, 'La nacionalidad es requerida'),
@@ -49,7 +52,9 @@ export const tenantPersonSchema = z.object({
   addressDetails: addressSchema.optional().nullable(),
 
   // Employment Information
+  employmentStatus: z.string().optional().nullable(),
   occupation: z.string().min(1, 'La ocupación es requerida'),
+  position: z.string().optional().nullable(),
   employerName: z.string().min(1, 'El nombre del empleador es requerido'),
   employerPhone: phoneSchema,
   monthlyIncome: moneyAmountSchema,
@@ -57,6 +62,7 @@ export const tenantPersonSchema = z.object({
   hasAdditionalIncome: z.boolean().default(false),
   additionalIncomeSource: z.string().optional().nullable(),
   additionalIncomeAmount: optionalMoneyAmountSchema,
+  incomeSource: z.string().optional().nullable(),
   employerAddress: z.string().optional().nullable(),
   employerAddressDetails: addressSchema.optional().nullable(),
 
@@ -64,6 +70,9 @@ export const tenantPersonSchema = z.object({
   previousAddress: z.string().optional().nullable(),
   previousLandlordName: z.string().optional().nullable(),
   previousLandlordPhone: z.string().optional().nullable(),
+  previousLandlordEmail: optionalEmailSchema,
+  previousRentAmount: optionalMoneyAmountSchema,
+  rentalHistoryYears: z.number().int().nonnegative().optional().nullable(),
   previousRentalAddressDetails: addressSchema.optional().nullable(),
   reasonForMoving: z.string().optional().nullable(),
   numberOfOccupants: z.number().int().positive().optional(),
@@ -130,6 +139,8 @@ export const tenantPersonalTabSchema = tenantPersonSchema.pick({
   maternalLastName: true,
   email: true,
   phone: true,
+  personalEmail: true,
+  workEmail: true,
   nationality: true,
   curp: true,
   rfc: true,
@@ -163,7 +174,9 @@ export const tenantCompanyPersonalTabSchema = tenantCompanySchema.pick({
  * Employment tab schema (Tab 2) - Person only
  */
 export const tenantEmploymentTabSchema = tenantPersonSchema.pick({
+  employmentStatus: true,
   occupation: true,
+  position: true,
   employerName: true,
   employerPhone: true,
   monthlyIncome: true,
@@ -171,6 +184,7 @@ export const tenantEmploymentTabSchema = tenantPersonSchema.pick({
   hasAdditionalIncome: true,
   additionalIncomeSource: true,
   additionalIncomeAmount: true,
+  incomeSource: true,
   employerAddress: true,
   employerAddressDetails: true,
 });
@@ -182,6 +196,9 @@ export const tenantRentalTabSchema = tenantPersonSchema.pick({
   previousAddress: true,
   previousLandlordName: true,
   previousLandlordPhone: true,
+  previousLandlordEmail: true,
+  previousRentAmount: true,
+  rentalHistoryYears: true,
   previousRentalAddressDetails: true,
   reasonForMoving: true,
   numberOfOccupants: true,

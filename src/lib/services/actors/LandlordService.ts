@@ -3,11 +3,12 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import {Prisma, PrismaClient} from '@prisma/client';
-import {BaseActorService} from './BaseActorService';
-import {AsyncResult, Result} from '../types/result';
-import {ErrorCode, ServiceError} from '../types/errors';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { BaseActorService } from './BaseActorService';
+import { AsyncResult, Result } from '../types/result';
+import { ErrorCode, ServiceError } from '../types/errors';
 import {
+  ActorData,
   CompanyActorData,
   LandlordData,
   LandlordResponse,
@@ -22,10 +23,10 @@ import {
   partialIndividualLandlordSchema,
   validateLandlordSubmission,
 } from '@/lib/validations/landlord/landlord.schema';
-import {validateLandlordToken} from '@/lib/services/actorTokenService';
-import {logPolicyActivity} from '@/lib/services/policyService';
-import {PropertyDetailsService} from '@/lib/services/PropertyDetailsService';
-import type {LandlordWithRelations} from './types';
+import { validateLandlordToken } from '@/lib/services/actorTokenService';
+import { logPolicyActivity } from '@/lib/services/policyService';
+import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
+import type { LandlordWithRelations } from './types';
 
 export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
@@ -47,6 +48,39 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       addressDetails: true,
       policy: true
     };
+  }
+
+  /**
+   * Build update data object from actor data
+   * Overrides base method to include landlord-specific fields
+   */
+  protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
+    const updateData = super.buildUpdateData(data, addressId);
+    const landlordData = data as any;
+
+    // Property fields
+    if (landlordData.propertyDeedNumber !== undefined) updateData.propertyDeedNumber = landlordData.propertyDeedNumber || null;
+    if (landlordData.propertyRegistryFolio !== undefined) updateData.propertyRegistryFolio = landlordData.propertyRegistryFolio || null;
+    if (landlordData.propertyValue !== undefined) updateData.propertyValue = landlordData.propertyValue || null;
+    if (landlordData.ownershipPercentage !== undefined) updateData.ownershipPercentage = landlordData.ownershipPercentage;
+
+    // Financial fields
+    if (landlordData.hasAdditionalIncome !== undefined) updateData.hasAdditionalIncome = landlordData.hasAdditionalIncome;
+    if (landlordData.additionalIncomeSource !== undefined) updateData.additionalIncomeSource = landlordData.additionalIncomeSource || null;
+    if (landlordData.additionalIncomeAmount !== undefined) updateData.additionalIncomeAmount = landlordData.additionalIncomeAmount || null;
+
+    // Company specific
+    if (landlordData.businessType !== undefined) updateData.businessType = landlordData.businessType || null;
+    if (landlordData.monthlyIncome !== undefined && data.isCompany) {
+      // Base service only handles monthlyIncome for persons
+      updateData.monthlyIncome = landlordData.monthlyIncome || null;
+    }
+
+    // CFDI
+    if (landlordData.requiresCFDI !== undefined) updateData.requiresCFDI = landlordData.requiresCFDI;
+    if (landlordData.cfdiData !== undefined) updateData.cfdiData = landlordData.cfdiData;
+
+    return updateData;
   }
 
   /**
@@ -98,7 +132,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     landlordId: string,
     data: LandlordData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<LandlordWithRelations> {
     // Fetch existing landlord to get current addressId
     const existingLandlord = await this.prisma.landlord.findUnique({
@@ -116,7 +151,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       cfdiData: data.cfdiData,
     };
 
-    return this.saveActorData(landlordId, saveData, isPartial, skipValidation);
+    return this.saveActorData(landlordId, saveData, isPartial, skipValidation, tabName);
   }
 
   /**
@@ -354,32 +389,30 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    */
   async getPrimaryLandlord(policyId: string): AsyncResult<LandlordData> {
     return this.executeDbOperation(async () => {
-      const landlord = await this.prisma.landlord.findFirst({
-        where: { policyId, isPrimary: true },
-        include: {
-          addressDetails: true,
-          documents: true,
-          policy: {
-            include: {
-              propertyDetails: {
-                include: {
-                  propertyAddressDetails: true,
-                },
-              },
-            },
-          },
+      const landlordRecord = await this.prisma.landlord.findFirst({
+        where: {
+          policyId,
+          isPrimary: true,
         },
+        select: { id: true },
       });
 
-      if (!landlord) {
-        throw new ServiceError(
-          ErrorCode.NOT_FOUND,
-          'Primary landlord not found for policy',
-          404
+      if (!landlordRecord) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.NOT_FOUND,
+            'Primary landlord not found for policy',
+            404
+          )
         );
       }
 
-      return landlord as LandlordData;
+      const landlordResult = await this.getActorById(landlordRecord.id);
+      if (!landlordResult.ok) {
+        return Result.error(landlordResult.error);
+      }
+
+      return landlordResult.value as unknown as LandlordData;
     }, 'getPrimaryLandlord');
   }
 
@@ -405,6 +438,20 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   }
 
   /**
+   * Get all landlords by policy ID (alias for getAllLandlords)
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<LandlordData[]> {
+    return this.getAllLandlords(policyId);
+  }
+
+  /**
+   * Create a new landlord (alias for createLandlord)
+   */
+  async create(data: any): AsyncResult<LandlordData> {
+    return this.createLandlord(data.policyId, data, data.isPrimary);
+  }
+
+  /**
    * Create a new landlord for a policy
    */
   async createLandlord(
@@ -413,6 +460,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     isPrimary: boolean = false
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
+      const landlordData = data as any;
       // If setting as primary, unmark existing primary
       if (isPrimary) {
         await tx.landlord.updateMany({
@@ -426,42 +474,42 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         data: {
           policyId,
           isPrimary,
-          isCompany: data.isCompany || false,
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
+          isCompany: landlordData.isCompany || false,
+          email: landlordData.email || '',
+          phone: landlordData.phone || '',
+          address: landlordData.address || '',
           // Individual name fields
-          firstName: data.firstName,
-          middleName: data.middleName,
-          paternalLastName: data.paternalLastName,
-          maternalLastName: data.maternalLastName,
-          rfc: data.rfc,
-          curp: data.curp,
-          companyName: data.companyName,
-          companyRfc: data.companyRfc,
+          firstName: landlordData.firstName,
+          middleName: landlordData.middleName,
+          paternalLastName: landlordData.paternalLastName,
+          maternalLastName: landlordData.maternalLastName,
+          rfc: landlordData.rfc,
+          curp: landlordData.curp,
+          companyName: landlordData.companyName,
+          companyRfc: landlordData.companyRfc,
           // Legal rep name fields
-          legalRepFirstName: data.legalRepFirstName,
-          legalRepMiddleName: data.legalRepMiddleName,
-          legalRepPaternalLastName: data.legalRepPaternalLastName,
-          legalRepMaternalLastName: data.legalRepMaternalLastName,
-          legalRepPosition: data.legalRepPosition,
-          legalRepRfc: data.legalRepRfc,
-          legalRepPhone: data.legalRepPhone,
-          legalRepEmail: data.legalRepEmail,
-          workPhone: data.workPhone,
-          personalEmail: data.personalEmail,
-          workEmail: data.workEmail,
-          occupation: data.occupation,
-          employerName: data.employerName,
-          monthlyIncome: data.monthlyIncome,
-          bankName: data.bankName,
-          accountNumber: data.accountNumber,
-          clabe: data.clabe,
-          accountHolder: data.accountHolder,
-          propertyDeedNumber: data.propertyDeedNumber,
-          propertyRegistryFolio: data.propertyRegistryFolio,
-          requiresCFDI: data.requiresCFDI,
-          cfdiData: data.cfdiData,
+          legalRepFirstName: landlordData.legalRepFirstName,
+          legalRepMiddleName: landlordData.legalRepMiddleName,
+          legalRepPaternalLastName: landlordData.legalRepPaternalLastName,
+          legalRepMaternalLastName: landlordData.legalRepMaternalLastName,
+          legalRepPosition: landlordData.legalRepPosition,
+          legalRepRfc: landlordData.legalRepRfc,
+          legalRepPhone: landlordData.legalRepPhone,
+          legalRepEmail: landlordData.legalRepEmail,
+          workPhone: landlordData.workPhone,
+          personalEmail: landlordData.personalEmail,
+          workEmail: landlordData.workEmail,
+          occupation: landlordData.occupation,
+          employerName: landlordData.employerName,
+          monthlyIncome: landlordData.monthlyIncome,
+          bankName: landlordData.bankName,
+          accountNumber: landlordData.accountNumber,
+          clabe: landlordData.clabe,
+          accountHolder: landlordData.accountHolder,
+          propertyDeedNumber: landlordData.propertyDeedNumber,
+          propertyRegistryFolio: landlordData.propertyRegistryFolio,
+          requiresCFDI: landlordData.requiresCFDI,
+          cfdiData: landlordData.cfdiData,
         },
         include: {
           addressDetails: true,
@@ -470,7 +518,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       });
 
       this.log('info', 'Landlord created', { landlordId: landlord.id, policyId, isPrimary });
-      return landlord as LandlordData;
+      return landlord as unknown as LandlordData;
     });
   }
 
@@ -518,13 +566,14 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     fileUrl: string
   ): AsyncResult<any> {
     return this.executeDbOperation(async () => {
-      const document = await this.prisma.document.create({
+      const document = await this.prisma.actorDocument.create({
         data: {
           landlordId,
-          documentType,
+          category: documentType as any,
           fileName,
-          fileUrl,
-          uploadedAt: new Date(),
+          filePath: fileUrl,
+          fileSize: 0, // Default or pass as arg
+          mimeType: 'application/octet-stream', // Default or pass as arg
         },
       });
 
@@ -590,7 +639,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       }
 
       return delegate.findMany({
-        where: {policyId: landlord?.policyId},
+        where: { policyId: landlord?.policyId },
         include: this.getIncludes(),
       });
     }, 'getByToken');
@@ -741,7 +790,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
           }
         });
 
-        return updatedLandlord as LandlordData;
+        return updatedLandlord as unknown as LandlordData;
       });
 
       return result;
@@ -766,7 +815,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     landlordId: string,
     data: LandlordData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<LandlordWithRelations> {
     // Check if data is the complex LandlordSubmissionData structure
     if ('landlords' in data && Array.isArray((data as LandlordSubmissionData).landlords)) {
@@ -788,7 +838,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         landlordId,
         data,
         isPartial,
-        skipValidation
+        skipValidation,
+        tabName
       );
     }
   }
@@ -901,19 +952,20 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       submittedBy?: string;
     }
   ): AsyncResult<LandlordWithRelations[]> {
-    const landlords = await this.getLandlordsByPolicyId(policyId);
+    const landlords = await this.getAllByPolicyId(policyId);
     if (!landlords.ok) return landlords;
 
     const results: LandlordWithRelations[] = [];
 
     // Submit each landlord
     for (const landlord of landlords.value) {
+      if (!landlord.id) continue;
       const result = await this.submitActor(landlord.id, options);
       if (!result.ok) {
         return Result.error(
           new ServiceError(
             ErrorCode.VALIDATION_ERROR,
-            `Error submitting landlord ${landlord.firstName || landlord.companyName}: ${result.error?.message}`,
+            `Error submitting landlord ${(landlord as any).firstName || (landlord as any).companyName}: ${result.error?.message}`,
             400
           )
         );
@@ -922,7 +974,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     }
 
     // Verify ownership percentages total 100%
-    const totalPercentage = results.reduce((sum, l) => sum + (l.ownershipPercentage ?? 0), 0);
+    const totalPercentage = results.reduce((sum, l) => sum + ((l as any).ownershipPercentage ?? 0), 0);
     if (Math.abs(totalPercentage - 100) > 0.01) {
       return Result.error(
         new ServiceError(

@@ -38,30 +38,33 @@ export abstract class BaseActorService<
   /**
    * Validate person actor data
    */
-  abstract validatePersonData(data: PersonActorData, isPartial?: boolean): Result<PersonActorData>;
+  abstract validatePersonData(data: Partial<PersonActorData>, isPartial?: boolean): Result<PersonActorData>;
 
   /**
    * Validate company actor data
    */
-  abstract validateCompanyData(data: CompanyActorData, isPartial?: boolean): Result<CompanyActorData>;
+  abstract validateCompanyData(data: Partial<CompanyActorData>, isPartial?: boolean): Result<CompanyActorData>;
+
+  /**
+   * Format Zod validation errors for API response
+   */
+  protected formatZodErrors(error: ZodError): ValidationError[] {
+    return error.errors.map(err => ({
+      field: err.path.join('.'),
+      message: err.message,
+      code: err.code,
+    }));
+  }
 
   /**
    * Validate actor data based on type
    */
-  protected validateActorData(data: ActorData, isPartial: boolean = false): Result<ActorData> {
+  protected validateActorData(data: Partial<ActorData>, isPartial: boolean = false): Result<ActorData> {
     try {
-      if (isPersonActor(data)) {
-        return this.validatePersonData(data as PersonActorData, isPartial);
-      } else if (isCompanyActor(data)) {
-        return this.validateCompanyData(data as CompanyActorData, isPartial);
+      if (isPersonActor(data as ActorData)) {
+        return this.validatePersonData(data as Partial<PersonActorData>, isPartial);
       } else {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid actor type: must be either person or company',
-            400
-          )
-        );
+        return this.validateCompanyData(data as Partial<CompanyActorData>, isPartial);
       }
     } catch (error) {
       if (error instanceof ZodError) {
@@ -76,17 +79,6 @@ export abstract class BaseActorService<
       }
       throw error;
     }
-  }
-
-  /**
-   * Format Zod validation errors for API response
-   */
-  protected formatZodErrors(error: ZodError): ValidationError[] {
-    return error.errors.map(err => ({
-      field: err.path.join('.'),
-      message: err.message,
-      code: err.code,
-    }));
   }
 
   /**
@@ -177,8 +169,9 @@ export abstract class BaseActorService<
 
   /**
    * Save personal references for an actor
+   * Public method to allow tRPC router to call directly
    */
-  protected async savePersonalReferences(
+  public async savePersonalReferences(
     actorId: string,
     references: PersonalReferenceInput[]
   ): AsyncResult<void> {
@@ -231,8 +224,9 @@ export abstract class BaseActorService<
 
   /**
    * Save commercial references for an actor
+   * Public method to allow tRPC router to call directly
    */
-  protected async saveCommercialReferences(
+  public async saveCommercialReferences(
     actorId: string,
     references: CommercialReferenceInput[]
   ): AsyncResult<void> {
@@ -270,17 +264,16 @@ export abstract class BaseActorService<
   /**
    * Build update data object from actor data
    */
-  protected buildUpdateData(data: ActorData, addressId?: string): any {
-    const updateData: any = {
-      isCompany: data.isCompany,
-      email: data.email,
-      phone: data.phone,
-    };
+  protected buildUpdateData(data: Partial<ActorData>): any {
+    const updateData: any = {};
+
+    if (data.isCompany !== undefined) updateData.isCompany = data.isCompany;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.phone !== undefined) updateData.phone = data.phone;
 
     // Add optional common fields if provided
     if (data.workPhone !== undefined) updateData.workPhone = data.workPhone || null;
     if (data.address !== undefined) updateData.address = data.address;
-    if (addressId) updateData.addressId = addressId;
 
     // Bank information
     if (data.bankName !== undefined) updateData.bankName = data.bankName || null;
@@ -292,8 +285,8 @@ export abstract class BaseActorService<
     if (data.additionalInfo !== undefined) updateData.additionalInfo = data.additionalInfo || null;
 
     // Add person-specific fields
-    if (isPersonActor(data)) {
-      const personData = data as PersonActorData;
+    if (data.isCompany === false || data.isCompany === undefined) {
+      const personData = data as Partial<PersonActorData>;
       // Individual name fields
       if (personData.firstName !== undefined) updateData.firstName = personData.firstName;
       if (personData.middleName !== undefined) updateData.middleName = personData.middleName || null;
@@ -309,8 +302,8 @@ export abstract class BaseActorService<
     }
 
     // Add company-specific fields
-    if (isCompanyActor(data)) {
-      const companyData = data as CompanyActorData;
+    if (data.isCompany === true || data.isCompany === undefined) {
+      const companyData = data as Partial<CompanyActorData>;
       if (companyData.companyName !== undefined) updateData.companyName = companyData.companyName;
       if (companyData.companyRfc !== undefined) updateData.companyRfc = companyData.companyRfc;
       // Legal rep name fields
@@ -333,14 +326,20 @@ export abstract class BaseActorService<
    */
   protected async saveActorData(
     actorId: string,
-    data: TData,
+    data: Partial<TData>,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<TModel> {
     // Skip validation if requested (for admin endpoints)
     if (!skipValidation) {
+      // Log tab context for debugging
+      if (tabName && isPartial) {
+        this.log('info', `Saving ${this.actorType} tab "${tabName}" with fields:`, Object.keys(data));
+      }
+
       // Validate data
-      const validationResult = this.validateActorData(data, isPartial);
+      const validationResult = this.validateActorData(data as Partial<ActorData>, isPartial);
       if (!validationResult.ok) {
         return Result.error(validationResult.error);
       }
@@ -348,17 +347,39 @@ export abstract class BaseActorService<
 
     return this.executeTransaction(async (tx) => {
       // Handle address if provided
-      let addressId: string | undefined;
-      if (data.addressDetails) {
-        const addressResult = await this.upsertAddress(data.addressDetails, data.addressId);
-        if (!addressResult.ok) {
-          throw new Error('Failed to save address');
-        }
-        addressId = addressResult.value;
-      }
+
+      const {
+        addressDetails,
+        employerAddressDetails,
+        guaranteePropertyDetails,
+        previousRentalAddressDetails,
+        ...restData
+      } = data as any;
+
+      const upsertAddressesResult = await this.upsertMultipleAddresses({
+        addressDetails,
+        employerAddressDetails,
+        guaranteePropertyDetails,
+        previousRentalAddressDetails,
+      })
 
       // Build update data
-      const updateData = this.buildUpdateData(data, addressId);
+      const updateData = this.buildUpdateData(restData as Partial<ActorData>);
+
+      if (upsertAddressesResult.ok) {
+        if (upsertAddressesResult.value.addressId) {
+          updateData.addressId = upsertAddressesResult.value.addressId;
+        }
+        if (upsertAddressesResult.value.employerAddressId) {
+          updateData.employerAddressId = upsertAddressesResult.value.employerAddressId;
+        }
+        if (upsertAddressesResult.value.guaranteePropertyAddressId) {
+          updateData.guaranteePropertyAddressId = upsertAddressesResult.value.guaranteePropertyAddressId;
+        }
+        if (upsertAddressesResult.value.previousRentalAddressId) {
+          updateData.previousRentalAddressId = upsertAddressesResult.value.previousRentalAddressId;
+        }
+      }
 
       // Mark as complete if not partial
       if (!isPartial) {
@@ -606,18 +627,20 @@ export abstract class BaseActorService<
    */
   public async update(
     id: string,
-    data: TData,
+    data: Partial<TData>,
     options?: {
       skipValidation?: boolean;
       updatedById?: string;
       isPartial?: boolean;
+      tabName?: string;
     }
   ): AsyncResult<TModel> {
     return this.save(
       id,
       data,
       options?.isPartial ?? true,
-      options?.skipValidation ?? false
+      options?.skipValidation ?? false,
+      options?.tabName
     );
   }
 
@@ -718,9 +741,10 @@ export abstract class BaseActorService<
    */
   public abstract save(
     id: string,
-    data: TData,
+    data: Partial<TData>,
     isPartial?: boolean,
-    skipValidation?: boolean
+    skipValidation?: boolean,
+    tabName?: string
   ): AsyncResult<TModel>;
 
   /**

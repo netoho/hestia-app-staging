@@ -75,7 +75,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       addressDetails: true,
       employerAddressDetails: true,
       guaranteePropertyDetails: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       policy: true
     };
@@ -130,7 +130,8 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     jointObligorId: string,
     data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<JointObligorWithRelations> {
     // Fetch existing joint obligor to get current addressId
     const existingJointObligor = await this.prisma.jointObligor.findUnique({
@@ -168,7 +169,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       spouseCurp: data.spouseCurp,
     };
 
-    return this.saveActorData('jointObligor', jointObligorId, saveData as any, isPartial, skipValidation);
+    return this.saveActorData(jointObligorId, saveData as any, isPartial, skipValidation, tabName);
   }
 
   /**
@@ -317,7 +318,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
           documents: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
         },
       });
@@ -346,7 +347,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
           documents: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           policy: true,
         },
@@ -362,6 +363,45 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
 
       return jointObligor;
     }, 'getJointObligorByPolicyId');
+  }
+
+  /**
+   * Get all joint obligors by policy ID
+   * Note: Currently usually one per policy, but method name aligns with other services
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<any[]> {
+    return this.executeDbOperation(async () => {
+      const jointObligors = await this.prisma.jointObligor.findMany({
+        where: { policyId },
+        include: this.getIncludes()
+      });
+      return jointObligors;
+    }, 'getAllByPolicyId');
+  }
+
+  /**
+   * Create a new joint obligor
+   */
+  async create(data: any): AsyncResult<JointObligorWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      const jointObligor = await tx.jointObligor.create({
+        data: {
+          policyId: data.policyId,
+          isCompany: data.isCompany,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          paternalLastName: data.paternalLastName,
+          maternalLastName: data.maternalLastName,
+          companyName: data.companyName,
+          email: data.email,
+          phone: data.phone || data.phoneNumber,
+          relationshipToTenant: data.relationshipToTenant,
+        },
+        include: this.getIncludes()
+      });
+
+      return jointObligor as JointObligorWithRelations;
+    });
   }
 
   /**
@@ -701,11 +741,11 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
         const actorName = data.isCompany
           ? data.companyName
           : formatFullName(
-              data.firstName,
-              data.paternalLastName,
-              data.maternalLastName,
-              data.middleName,
-            );
+            data.firstName,
+            data.paternalLastName,
+            data.maternalLastName,
+            data.middleName,
+          );
 
         const { logPolicyActivity } = await import('@/lib/services/policyService');
         await logPolicyActivity({
@@ -739,9 +779,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     obligorId: string,
     data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<JointObligorWithRelations> {
-    return this.saveJointObligorInformation(obligorId, data, isPartial, skipValidation);
+    return this.saveJointObligorInformation(obligorId, data, isPartial, skipValidation, tabName);
   }
 
   /**

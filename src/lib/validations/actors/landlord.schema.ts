@@ -12,6 +12,7 @@ import {
   curpSchema,
   optionalCurpSchema,
   emailSchema,
+  optionalEmailSchema,
   phoneSchema,
   moneyAmountSchema,
   optionalMoneyAmountSchema,
@@ -36,6 +37,8 @@ export const landlordPersonSchema = z.object({
   // Contact
   email: emailSchema,
   phone: phoneSchema,
+  personalEmail: optionalEmailSchema,
+  workEmail: optionalEmailSchema,
 
   // Identification
   nationality: z.string().min(1, 'La nacionalidad es requerida'),
@@ -101,6 +104,8 @@ export const landlordCompanySchema = z.object({
   // Contact
   email: emailSchema,
   phone: phoneSchema,
+  personalEmail: optionalEmailSchema,
+  workEmail: optionalEmailSchema,
 
   // Address
   address: z.string().min(1, 'La dirección es requerida'),
@@ -146,6 +151,8 @@ export const landlordOwnerInfoTabSchema = landlordPersonSchema.pick({
   maternalLastName: true,
   email: true,
   phone: true,
+  personalEmail: true,
+  workEmail: true,
   nationality: true,
   curp: true,
   rfc: true,
@@ -173,6 +180,8 @@ export const landlordCompanyOwnerInfoTabSchema = landlordCompanySchema.pick({
   legalRepNationality: true,
   email: true,
   phone: true,
+  personalEmail: true,
+  workEmail: true,
   address: true,
   addressDetails: true,
   ownershipPercentage: true,

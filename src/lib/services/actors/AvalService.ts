@@ -74,7 +74,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       addressDetails: true,
       employerAddressDetails: true,
       guaranteePropertyDetails: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       policy: true
     };
@@ -129,7 +129,8 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     avalId: string,
     data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<AvalWithRelations> {
     return this.executeTransaction(async (tx) => {
       // Fetch existing aval to get current address IDs
@@ -205,14 +206,15 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
         }
       });
 
       this.log('info', 'Aval data saved', {
         avalId,
-        isPartial
+        isPartial,
+        tabName
       });
 
       return updatedAval;
@@ -538,7 +540,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true,
           policy: {
@@ -574,7 +576,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true,
         },
@@ -583,6 +585,38 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
 
       return avals;
     }, 'getAvalsByPolicyId');
+  }
+
+  /**
+   * Get all avals by policy ID (alias for getAvalsByPolicyId)
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<any[]> {
+    return this.getAvalsByPolicyId(policyId);
+  }
+
+  /**
+   * Create a new aval
+   */
+  async create(data: any): AsyncResult<AvalWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      const aval = await tx.aval.create({
+        data: {
+          policyId: data.policyId,
+          isCompany: data.isCompany,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          paternalLastName: data.paternalLastName,
+          maternalLastName: data.maternalLastName,
+          companyName: data.companyName,
+          email: data.email,
+          phone: data.phone || data.phoneNumber,
+          relationshipToTenant: data.relationshipToTenant,
+        },
+        include: this.getIncludes()
+      });
+
+      return aval as AvalWithRelations;
+    });
   }
 
   /**
@@ -735,9 +769,10 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     avalId: string,
     data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
+    skipValidation: boolean = false,
+    tabName?: string
   ): AsyncResult<AvalWithRelations> {
-    return this.saveAvalInformation(avalId, data, isPartial, skipValidation);
+    return this.saveAvalInformation(avalId, data, isPartial, skipValidation, tabName);
   }
 
   /**

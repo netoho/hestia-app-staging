@@ -105,7 +105,8 @@ export function isCompanyActor(actor: ActorData): actor is CompanyActorData {
 }
 
 // Landlord-specific extensions
-export interface LandlordData extends BaseActorData {
+// Landlord-specific extensions
+export interface BaseLandlordData extends BaseActorData {
   policyId: string;
   isPrimary?: boolean;
 
@@ -116,16 +117,18 @@ export interface LandlordData extends BaseActorData {
   cfdiData?: string;
 
   // Documents
-  documents?: Document[];
+  documents?: ActorDocument[];
 }
 
-export interface PersonLandlordData extends LandlordData, PersonActorData {
-    isCompany: false;
+export interface PersonLandlordData extends BaseLandlordData, PersonActorData {
+  isCompany: false;
 }
 
-export interface CompanyLandlordData extends LandlordData, CompanyActorData {
-    isCompany: true;
+export interface CompanyLandlordData extends BaseLandlordData, CompanyActorData {
+  isCompany: true;
 }
+
+export type LandlordData = PersonLandlordData | CompanyLandlordData;
 
 // Financial details (now part of Policy, not PropertyDetails)
 export interface PolicyFinancialDetails {
@@ -171,9 +174,7 @@ export interface PropertyDetails {
 }
 
 // Form data types for submissions
-export interface LandlordFormData extends LandlordData {
-  // Extends with form-specific fields if needed
-}
+export type LandlordFormData = LandlordData;
 
 export interface LandlordSubmissionData {
   landlords: LandlordFormData[];
@@ -197,10 +198,10 @@ export interface LandlordResponse extends ActorResponse {
 // Document type for file uploads
 export interface ActorDocument {
   id: string;
-  documentType: string;
+  category: string; // Matches Prisma 'category'
   fileName: string;
-  fileUrl?: string;
-  uploadedAt: Date | string;
+  filePath: string; // Matches Prisma 'filePath'
+  createdAt: Date | string;
 }
 
 // Validation error type
