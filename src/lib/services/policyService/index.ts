@@ -316,7 +316,7 @@ export async function getPolicyById(id: string) {
       },
       tenant: {
         include: {
-          references: true,
+          personalReferences: true,
           documents: true,
           addressDetails: true,
           employerAddressDetails: true,
@@ -325,7 +325,7 @@ export async function getPolicyById(id: string) {
       },
       jointObligors: {
         include: {
-          references: true,
+          personalReferences: true,
           documents: true,
           addressDetails: true,
           employerAddressDetails: true,
@@ -334,7 +334,7 @@ export async function getPolicyById(id: string) {
       },
       avals: {
         include: {
-          references: true,
+          personalReferences: true,
           documents: true,
           addressDetails: true,
           employerAddressDetails: true,
