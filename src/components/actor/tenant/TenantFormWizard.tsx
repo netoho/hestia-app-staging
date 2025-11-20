@@ -55,7 +55,7 @@ export default function TenantFormWizard({
   // References hook - Tenant allows dynamic add/remove
   const referencesHook = useActorReferences({
     actorType: 'tenant',
-    initialReferences: initialData,
+    initialPersonal: initialData.personalReferences || [],
     allowAddRemove: true,
     minReferences: 1,
     maxReferences: 5,
@@ -163,7 +163,7 @@ export default function TenantFormWizard({
     const getAdditionalData = () => {
       if (tabName === 'references') {
         return {
-          references: isCompany ? undefined : personalReferences,
+          personalReferences: isCompany ? undefined : personalReferences,
           commercialReferences: isCompany ? commercialReferences : undefined,
         };
       }

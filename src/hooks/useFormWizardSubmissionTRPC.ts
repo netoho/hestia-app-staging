@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cleanFormAddresses } from '@/lib/utils/addressUtils';
+import { emptyStringsToNull } from '@/lib/utils/dataTransform';
 import { filterFieldsByTab } from '@/lib/constants/actorTabFields';
 import { trpc } from '@/lib/trpc/client';
 import type {
@@ -90,7 +91,8 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
     tabName: string,
     validateTab: () => ValidationResult,
     getFormData: () => FormDataMap[ActorType],
-    getAdditionalData?: () => AdditionalData
+    getAdditionalData?: () => AdditionalData,
+    getReferences?: () => ReferencesData
   ): Promise<{ saved: boolean; submitted?: boolean; error?: string }> => {
     // Validate tab data
     const validationResult = validateTab();
@@ -118,7 +120,10 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
 
       // Clean address fields before submission
       const addressFields = ACTOR_ADDRESS_FIELDS[actorType];
-      const cleanedFormData = cleanFormAddresses(filteredFormData, addressFields);
+      const cleanedAddresses = cleanFormAddresses(filteredFormData, addressFields);
+
+      // Transform empty strings to null for database consistency
+      const cleanedFormData = emptyStringsToNull(cleanedAddresses);
 
       // Prepare submission data
       let submissionData: SubmissionPayload = {
@@ -127,6 +132,19 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
         partial: true, // Indicates this is a tab save, not final submission
         tabName, // Include which tab is being saved
       };
+
+      ;
+
+      // Special handling for references tab
+      if (tabName === 'references' && getReferences) {
+        const references = getReferences();
+        if (references.personal) {
+          submissionData.references = references.personal;
+        }
+        if (references.commercial) {
+          submissionData.commercialReferences = references.commercial;
+        }
+      }
 
       // Special handling for landlord multi-actor
       if (isMultiActor && actorType === 'landlord') {
@@ -149,6 +167,7 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
 
       // Make tRPC mutation call
       // The dual-auth update mutation accepts both token and UUID as identifier
+      console.log('Submission Data:', submissionData)
       const result = await updateMutation.mutateAsync({
         type: actorType === 'joint-obligor' ? 'jointObligor' : actorType,
         identifier: token, // Can be token or UUID - router handles both
@@ -205,7 +224,10 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
 
       // Clean address fields before submission
       const addressFields = ACTOR_ADDRESS_FIELDS[actorType];
-      const cleanedFormData = cleanFormAddresses(formData, addressFields);
+      const cleanedAddresses = cleanFormAddresses(formData, addressFields);
+
+      // Transform empty strings to null for database consistency
+      const cleanedFormData = emptyStringsToNull(cleanedAddresses);
 
       // Prepare final submission data
       let submissionData: SubmissionPayload = {
@@ -239,6 +261,7 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
         };
       }
 
+      console.log('Final Submission Data:', submissionData);
       // Make tRPC mutation call
       await updateMutation.mutateAsync({
         type: actorType === 'joint-obligor' ? 'jointObligor' : actorType,

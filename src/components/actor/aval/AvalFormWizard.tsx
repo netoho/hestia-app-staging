@@ -54,7 +54,7 @@ export default function AvalFormWizard({
   // References hook
   const referencesHook = useActorReferences({
     actorType: 'aval',
-    initialReferences: initialData,
+    initialPersonalReferences: initialData,
     allowAddRemove: false,
     minReferences: 3,
     maxReferences: 3,
@@ -96,7 +96,7 @@ export default function AvalFormWizard({
       if (initialData.propertyAddress || initialData.propertyValue) {
         wizard.markTabSaved('property');
       }
-      if (initialData.references?.length > 0 || initialData.commercialReferences?.length > 0) {
+      if (initialData.personalReferences?.length > 0 || initialData.commercialReferences?.length > 0) {
         wizard.markTabSaved('references');
       }
     }

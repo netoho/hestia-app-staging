@@ -55,7 +55,7 @@ export default function JointObligorFormWizard({
   // References hook - using the actual return values
   const referencesHook = useActorReferences({
     actorType: 'jointObligor',
-    initialReferences: initialData,
+    initialPersonalReferences: initialData,
     allowAddRemove: false,
     minReferences: 3,
     maxReferences: 3,
@@ -105,7 +105,7 @@ export default function JointObligorFormWizard({
       if (initialData.guaranteeMethod) {
         wizard.markTabSaved('guarantee');
       }
-      if (initialData.references?.length > 0 || initialData.commercialReferences?.length > 0) {
+      if (initialData.personalReferences?.length > 0 || initialData.commercialReferences?.length > 0) {
         wizard.markTabSaved('references');
       }
     }
@@ -173,7 +173,7 @@ export default function JointObligorFormWizard({
     const getAdditionalData = () => {
       if (tabName === 'references') {
         return {
-          references: formData.isCompany ? undefined : personalReferences,
+          personalReferences: formData.isCompany ? undefined : personalReferences,
           commercialReferences: formData.isCompany ? commercialReferences : undefined,
         };
       }
