@@ -76,10 +76,10 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
           error: rejection.errors[0].message,
         })),
       ];
-      
+
       const updatedFiles = [...files, ...newFiles].slice(0, maxFiles);
       setFiles(updatedFiles);
-      
+
       const validRawFiles = updatedFiles
         .filter((f) => f.progress !== 'error')
         .map((f) => f.file);
@@ -101,7 +101,7 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
       setFiles(prev =>
         prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'uploading' } : f))
       );
-      
+
       setTimeout(() => {
         setFiles(prev =>
           prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'completed' } : f))
@@ -114,37 +114,37 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
     setFiles(prev =>
       prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'uploading' } : f))
     );
-    
+
     try {
       // Create FormData for upload
       const formData = new FormData();
       formData.append('file', uploadableFile.file);
       formData.append('category', category);
-      
+
       // Upload file
       const response = await fetch(`/api/tenant/${token}/upload`, {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Upload failed');
       }
-      
+
       const result = await response.json();
-      
+
       // Mark as completed and store document ID
       setFiles(prev =>
         prev.map(f => (f.id === uploadableFile.id ? { ...f, progress: 'completed' } : f))
       );
       setUploadedFiles(prev => [...prev, result.document.id]);
-      
+
     } catch (error) {
       // Mark as error
       setFiles(prev =>
-        prev.map(f => (f.id === uploadableFile.id ? { 
-          ...f, 
+        prev.map(f => (f.id === uploadableFile.id ? {
+          ...f,
           progress: 'error',
           error: error instanceof Error ? error.message : 'Upload failed'
         } : f))
@@ -155,8 +155,8 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
   const handleDelete = async (fileId: string) => {
     const fileToDelete = files.find(f => f.id === fileId);
     if (!fileToDelete) return;
-    
-    // If file was uploaded and we have a token, delete from server
+
+    // If file was uploaded, and we have a token, delete from server
     if (fileToDelete.progress === 'completed' && token && uploadedFiles.length > 0) {
       try {
         // Find the document ID for this file (you might need to track this better)
@@ -165,7 +165,7 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
         console.error('Error deleting file from server:', error);
       }
     }
-    
+
     const updatedFiles = files.filter(f => f.id !== fileId);
     setFiles(updatedFiles);
 
@@ -181,14 +181,14 @@ const FileUploader = ({ id, title, description, maxFiles, form, token, category 
     maxFiles: maxFiles - files.length,
     accept: { 'application/pdf': [], 'image/*': [] },
   });
-  
+
   const truncate = (name: string, len: number) => name.length > len ? `${name.substring(0, len-3)}...` : name;
 
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-foreground">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
-      
+
       {files.length > 0 && (
          <div className="space-y-2">
             {files.map((f) => (
@@ -274,7 +274,7 @@ export function CreatePolicyDocumentsForm({ token, policyId, onNext, onBack, ini
       <CardDescription className="mb-6">{t.pages.newPolicy.documents.description}</CardDescription>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          
+
           <FileUploader
             id="identification"
             title={t.pages.newPolicy.documents.id.title}
@@ -284,7 +284,7 @@ export function CreatePolicyDocumentsForm({ token, policyId, onNext, onBack, ini
             token={token}
             category="identification"
           />
-          
+
           <Separator />
 
           <FileUploader
@@ -326,9 +326,9 @@ export function CreatePolicyDocumentsForm({ token, policyId, onNext, onBack, ini
                 </FormItem>
             )}
             />
-          
+
           <Separator />
-          
+
            <FileUploader
             id="optional"
             title={t.pages.newPolicy.documents.optional.title}

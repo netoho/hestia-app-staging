@@ -3,15 +3,15 @@
  * Handles all aval-related business logic and data operations
  */
 
-import { PrismaClient, DocumentCategory, Prisma } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { Result, AsyncResult } from '../types/result';
-import { ServiceError, ErrorCode } from '../types/errors';
-import { PersonActorData, CompanyActorData, AddressDetails, ActorData } from '@/lib/types/actor';
-import type { AvalWithRelations } from './types';
-import { z } from 'zod';
-import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
-import { companyActorSchema } from '@/lib/validations/actors/company.schema';
+import {DocumentCategory, Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
+import {ActorData, AddressDetails, CompanyActorData, PersonActorData} from '@/lib/types/actor';
+import type {AvalWithRelations} from './types';
+import {z} from 'zod';
+import {personWithNationalitySchema} from '@/lib/validations/actors/person.schema';
+import {companyActorSchema} from '@/lib/validations/actors/company.schema';
 
 // Aval-specific validation schemas
 const avalPersonSchema = personWithNationalitySchema.extend({
@@ -570,8 +570,8 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
    */
   async getAvalsByPolicyId(policyId: string): AsyncResult<any[]> {
     return this.executeDbOperation(async () => {
-      const avals = await this.prisma.aval.findMany({
-        where: { policyId },
+      return await this.prisma.aval.findMany({
+        where: {policyId},
         include: {
           addressDetails: true,
           employerAddressDetails: true,
@@ -580,10 +580,8 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           commercialReferences: true,
           documents: true,
         },
-        orderBy: { createdAt: 'asc' }
+        orderBy: {createdAt: 'asc'}
       });
-
-      return avals;
     }, 'getAvalsByPolicyId');
   }
 

@@ -16,7 +16,7 @@ type WebVitalsMetric = {
 
 class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
-  private enabled: boolean;
+  private readonly enabled: boolean;
   private slowThreshold = 1000; // 1s for slow renders/requests
 
   constructor() {

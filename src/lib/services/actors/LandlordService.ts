@@ -3,10 +3,10 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import { Prisma, PrismaClient } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { AsyncResult, Result } from '../types/result';
-import { ErrorCode, ServiceError } from '../types/errors';
+import {Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
 import {
   ActorData,
   CompanyActorData,
@@ -23,10 +23,10 @@ import {
   partialIndividualLandlordSchema,
   validateLandlordSubmission,
 } from '@/lib/validations/landlord/landlord.schema';
-import { validateLandlordToken } from '@/lib/services/actorTokenService';
-import { logPolicyActivity } from '@/lib/services/policyService';
-import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
-import type { LandlordWithRelations } from './types';
+import {validateLandlordToken} from '@/lib/services/actorTokenService';
+import {logPolicyActivity} from '@/lib/services/policyService';
+import {PropertyDetailsService} from '@/lib/services/PropertyDetailsService';
+import type {LandlordWithRelations} from './types';
 
 export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
@@ -278,8 +278,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       }
 
       // Start transaction
-      const result = await this.executeTransaction(async (tx) => {
-        const { landlord } = tokenValidation;
+      return await this.executeTransaction(async (tx) => {
+        const {landlord} = tokenValidation;
 
         // Save all landlords in the array
         for (const landlordData of data.landlords) {
@@ -355,8 +355,6 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
           },
         } as LandlordResponse;
       });
-
-      return result;
     } catch (error) {
       this.log('error', 'Landlord submission error', error);
       return Result.error(
@@ -698,11 +696,11 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   ): AsyncResult<LandlordData> {
     try {
       // Start transaction for data consistency
-      const result = await this.executeTransaction(async (tx) => {
+      return await this.executeTransaction(async (tx) => {
         // Get the primary landlord to find the policyId
         const primaryLandlord = await tx.landlord.findUnique({
-          where: { id: primaryLandlordId },
-          select: { policyId: true }
+          where: {id: primaryLandlordId},
+          select: {policyId: true}
         });
 
         if (!primaryLandlord) {
@@ -783,7 +781,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
 
         // Return the primary landlord data
         const updatedLandlord = await tx.landlord.findUnique({
-          where: { id: primaryLandlordId },
+          where: {id: primaryLandlordId},
           include: {
             addressDetails: true,
             documents: true,
@@ -792,8 +790,6 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
 
         return updatedLandlord as unknown as LandlordData;
       });
-
-      return result;
     } catch (error) {
       this.log('error', 'Multi-landlord save error', error);
       return Result.error(

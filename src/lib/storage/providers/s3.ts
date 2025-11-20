@@ -22,10 +22,10 @@ import { Readable } from 'stream';
 import { sanitizeForS3Metadata, encodeFilenameForHeaders } from '@/lib/utils/filename';
 
 export class S3StorageProvider implements StorageProvider {
-  private client: S3Client;
-  private bucket: string;
-  private publicBucket: string;
-  private region: string;
+  private readonly client: S3Client;
+  private readonly bucket: string;
+  private readonly publicBucket: string;
+  private readonly region: string;
 
   constructor(config: {
     bucket: string;

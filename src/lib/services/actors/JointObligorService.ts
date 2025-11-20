@@ -3,15 +3,15 @@
  * Handles all joint obligor-related business logic and data operations
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { Result, AsyncResult } from '../types/result';
-import { ServiceError, ErrorCode } from '../types/errors';
-import { PersonActorData, CompanyActorData, ActorData } from '@/lib/types/actor';
-import type { JointObligorWithRelations } from './types';
-import { z } from 'zod';
-import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
-import { companyActorSchema } from '@/lib/validations/actors/company.schema';
+import {Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
+import {ActorData, CompanyActorData, PersonActorData} from '@/lib/types/actor';
+import type {JointObligorWithRelations} from './types';
+import {z} from 'zod';
+import {personWithNationalitySchema} from '@/lib/validations/actors/person.schema';
+import {companyActorSchema} from '@/lib/validations/actors/company.schema';
 
 // JointObligor-specific validation schemas
 const jointObligorPersonSchema = personWithNationalitySchema.extend({
@@ -371,11 +371,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
    */
   async getAllByPolicyId(policyId: string): AsyncResult<any[]> {
     return this.executeDbOperation(async () => {
-      const jointObligors = await this.prisma.jointObligor.findMany({
-        where: { policyId },
+      return await this.prisma.jointObligor.findMany({
+        where: {policyId},
         include: this.getIncludes()
       });
-      return jointObligors;
     }, 'getAllByPolicyId');
   }
 

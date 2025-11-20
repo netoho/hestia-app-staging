@@ -83,7 +83,7 @@ export class PaymentService {
     description?: string;
     metadata?: any;
   }) {
-    return await prisma.payment.create({
+    return prisma.payment.create({
       data: {
         policyId,
         amount,
@@ -281,7 +281,7 @@ export class PaymentService {
    * Get payment status for a policy
    */
   static async getPaymentsByPolicyId(policyId: string) {
-    return await prisma.payment.findMany({
+    return prisma.payment.findMany({
       where: { policyId },
       orderBy: { createdAt: 'desc' },
     });

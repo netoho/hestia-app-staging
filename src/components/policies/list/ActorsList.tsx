@@ -2,6 +2,7 @@
 
 import { Home, User, Users, CheckSquare, Square } from 'lucide-react';
 import { formatFullName } from '@/lib/utils/names';
+import { ReactNode } from 'react';
 
 interface Actor {
   firstName?: string;
@@ -35,7 +36,7 @@ export default function ActorsList({
 }: ActorsListProps) {
   const renderActor = (
     actor: Actor,
-    icon: React.ReactNode,
+    icon: ReactNode,
     label?: string
   ) => {
     const name = formatFullName(actor.firstName, actor.paternalLastName, actor.maternalLastName, actor.middleName) || actor.companyName;

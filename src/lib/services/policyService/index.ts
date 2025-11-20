@@ -87,7 +87,7 @@ export async function createPolicy(data: CreatePolicyData) {
     if (!detailsResult.ok) {
       console.error('Failed to create property details:', detailsResult.error);
       // Note: We don't fail the policy creation if property details fail
-      // but we log the error for investigation
+      // but; we log the error for investigation
     }
   }
 

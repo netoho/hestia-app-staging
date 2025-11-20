@@ -58,7 +58,7 @@ export async function getInvestigationFee(): Promise<number> {
  * Get package details including pricing
  */
 export async function getPackageDetails(packageId: string): Promise<Package | null> {
-  return await prisma.package.findUnique({
+  return prisma.package.findUnique({
     where: { id: packageId }
   });
 }
@@ -277,7 +277,7 @@ export function formatCurrency(amount: number): string {
  * Get all active packages for selection
  */
 export async function getActivePackages() {
-  return await prisma.package.findMany({
+  return prisma.package.findMany({
     where: { isActive: true },
     orderBy: { price: 'asc' }
   });

@@ -133,7 +133,7 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
         tabName, // Include which tab is being saved
       };
 
-      ;
+
 
       // Special handling for references tab
       if (tabName === 'references' && getReferences) {
