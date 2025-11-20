@@ -287,7 +287,7 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
       },
       tenant: {
         include: {
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true
         }
@@ -299,14 +299,14 @@ export const getPolicyByToken = async (token: string): Promise<PolicyWithRelatio
       },
       jointObligors: {
         include: {
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true
         }
       },
       avals: {
         include: {
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true
         }
