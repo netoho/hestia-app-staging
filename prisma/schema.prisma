@@ -407,7 +407,7 @@ model Tenant {
   tokenExpiry       DateTime?
 
   // References
-  references        PersonalReference[]
+  personalReferences   PersonalReference[]
   commercialReferences CommercialReference[]  // For companies
 
   // Documents
@@ -517,7 +517,7 @@ model JointObligor {
   tokenExpiry       DateTime?
 
   // References (3 required)
-  references        PersonalReference[]
+  personalReferences   PersonalReference[]
   commercialReferences CommercialReference[]  // For companies
 
   // Documents
@@ -622,7 +622,7 @@ model Aval {
   tokenExpiry       DateTime?
 
   // References (3 required)
-  references        PersonalReference[]
+  personalReferences   PersonalReference[]
   commercialReferences CommercialReference[]  // For companies
 
   // Documents
