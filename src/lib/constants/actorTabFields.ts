@@ -10,6 +10,15 @@
 export type ActorType = 'landlord' | 'tenant' | 'aval' | 'jointObligor';
 
 /**
+ * Type-safe tab field configuration
+ * Allows explicit handling of different tab types
+ */
+export type TabFieldConfig =
+  | { type: 'fields'; fields: readonly string[] }
+  | { type: 'complex'; handler: 'references' | 'documents' }
+  | { type: 'skip' };  // For tabs that should skip filtering
+
+/**
  * Landlord Tab Fields
  *
  * Tabs: owner-info, bank-info, property-info, financial-info, documents
@@ -27,7 +36,10 @@ export const LANDLORD_TAB_FIELDS = {
     'rfc',
     'dateOfBirth',
     'phoneNumber',
+    'workPhone',
     'email',
+    'personalEmail',
+    'workEmail',
     'maritalStatus',
     // Legal representative (for companies)
     'legalRepFirstName',
@@ -89,6 +101,9 @@ export const TENANT_TAB_FIELDS = {
     'dateOfBirth',
     'phoneNumber',
     'email',
+    'workPhone',
+    'personalEmail',
+    'workEmail',
     'maritalStatus',
     // Legal representative (for companies)
     'legalRepFirstName',
@@ -108,11 +123,14 @@ export const TENANT_TAB_FIELDS = {
   ],
   employment: [
     'occupation',
+    'employmentStatus',
+    'position',
     'employerName',
     'employerPhoneNumber',
     'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
+    'incomeSource',
     'additionalIncomeAmount',
     'yearsAtJob',
     'employerAddressDetails',
@@ -121,6 +139,10 @@ export const TENANT_TAB_FIELDS = {
     'previousAddress',
     'previousLandlordName',
     'previousLandlordPhone',
+    'previousLandlordEmail',
+    'previousRentAmount',
+    'rentalHistoryYears',
+    'previousRentalAddressDetails',
     'reasonForMoving',
     'numberOfOccupants',
     'hasPets',
@@ -151,6 +173,9 @@ export const AVAL_TAB_FIELDS = {
     'dateOfBirth',
     'phoneNumber',
     'email',
+    'email',
+    'personalEmail',
+    'workEmail',
     'maritalStatus',
     // Legal representative (for companies)
     'legalRepFirstName',
@@ -170,11 +195,14 @@ export const AVAL_TAB_FIELDS = {
   ],
   employment: [
     'occupation',
+    'employmentStatus',
+    'position',
     'employerName',
     'employerPhoneNumber',
     'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
+    'incomeSource',
     'additionalIncomeAmount',
     'yearsAtJob',
     'employerAddressDetails',
@@ -213,6 +241,9 @@ export const JOINT_OBLIGOR_TAB_FIELDS = {
     'dateOfBirth',
     'phoneNumber',
     'email',
+    'email',
+    'personalEmail',
+    'workEmail',
     'maritalStatus',
     // Legal representative (for companies)
     'legalRepFirstName',
@@ -232,11 +263,14 @@ export const JOINT_OBLIGOR_TAB_FIELDS = {
   ],
   employment: [
     'occupation',
+    'employmentStatus',
+    'position',
     'employerName',
     'employerPhoneNumber',
     'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
+    'incomeSource',
     'additionalIncomeAmount',
     'yearsAtJob',
     'employerAddressDetails',
@@ -290,6 +324,13 @@ export function getTabFields(actorType: ActorType, tabName: string): readonly st
 }
 
 /**
+ * Check if a tab is a complex tab (references, documents) that requires special handling
+ */
+export function isComplexTab(tabName: string): boolean {
+  return tabName === 'references' || tabName === 'documents';
+}
+
+/**
  * Filter form data to only include fields for a specific tab
  *
  * @param formData - The complete form data object
@@ -302,6 +343,14 @@ export function filterFieldsByTab<T extends Record<string, any>>(
   actorType: ActorType,
   tabName: string
 ): Partial<T> {
+  // Complex tabs (references, documents) are handled separately
+  // Return empty object to avoid sending unrelated fields
+  if (isComplexTab(tabName)) {
+    // Don't include regular form fields for complex tabs
+    // References and documents are added separately in the submission hook
+    return {};
+  }
+
   const tabFields = getTabFields(actorType, tabName);
 
   // If no field mapping exists for this tab, return all data (backwards compatible)
@@ -312,10 +361,10 @@ export function filterFieldsByTab<T extends Record<string, any>>(
   const filtered: Record<string, any> = {};
 
   tabFields.forEach((field) => {
-    const value = formData[field];
-    // Only include fields that are defined and not empty string
-    if (value !== undefined && value !== '') {
-      filtered[field] = value;
+    // Include field if it exists in formData, even if value is null/empty/0/false
+    // Using 'in' operator to check for key existence, not value
+    if (field in formData) {
+      filtered[field] = formData[field];
     }
   });
 
