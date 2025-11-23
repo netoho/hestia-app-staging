@@ -175,7 +175,7 @@ export default function TenantPortalPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="text-center">
             <h1 className="font-headline text-3xl md:text-4xl mb-3" style={{ color: '#173459' }}>
-              Bienvenido, {tenant.firstName ? formatFullName(tenant.firstName, tenant.paternalLastName || '', tenant.maternalLastName || '', tenant.middleName) : 'Inquilino'}
+              Bienvenido, {tenant.firstName ? formatFullName(tenant.firstName, tenant.paternalLastName || '', tenant.maternalLastName || '', tenant.middleName || undefined) : 'Inquilino'}
             </h1>
             <p className="text-lg text-gray-600 mb-4">
               Complete su información para la protección de arrendamiento
@@ -247,8 +247,8 @@ export default function TenantPortalPage() {
           token={token}
           initialData={tenant}
           policy={policy}
-          canEdit={canEdit}
           onComplete={handleComplete}
+          isAdminEdit={false}
         />
       </div>
     </div>
