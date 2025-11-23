@@ -78,36 +78,12 @@ export default function LandlordOwnerInfoTab({
               />
             )}
 
-            {/* Ownership percentage */}
-            {landlord.isCompany && (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Porcentaje de Propiedad *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={landlord.ownershipPercentage || ''}
-                    onChange={(e) => updateLandlordField(index, 'ownershipPercentage', e.target.value)}
-                    className={`
-                      w-full px-3 py-2 border rounded-md
-                      ${errors[`landlord${index}.ownershipPercentage`]
-                        ? 'border-red-500'
-                        : 'border-gray-300'
-                      }
-                    `}
-                    disabled={(!isAdminEdit && !canEdit) || index === 0}
-                  />
-                  {errors[`landlord${index}.ownershipPercentage`] && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors[`landlord${index}.ownershipPercentage`]}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Primary landlord designation (hidden field) */}
+            <input
+              type="hidden"
+              name={`landlord${index}.isPrimary`}
+              value={index === 0 ? 'true' : 'false'}
+            />
           </CardContent>
         </Card>
       ))}
