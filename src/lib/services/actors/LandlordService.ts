@@ -17,12 +17,13 @@ import {
   PropertyDetails as PropertyDetailsType,
 } from '@/lib/types/actor';
 import {
-  companyLandlordSchema,
-  individualLandlordSchema,
-  partialCompanyLandlordSchema,
-  partialIndividualLandlordSchema,
-  validateLandlordSubmission,
-} from '@/lib/validations/landlord/landlord.schema';
+  validateLandlordData,
+  validateMultiLandlordSubmission,
+  isLandlordComplete,
+  validatePrimaryLandlord,
+  type LandlordIndividual,
+  type LandlordCompany,
+} from '@/lib/schemas/landlord';
 import {validateLandlordToken} from '@/lib/services/actorTokenService';
 import {logPolicyActivity} from '@/lib/services/policyService';
 import {PropertyDetailsService} from '@/lib/services/PropertyDetailsService';
@@ -62,7 +63,6 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     if (landlordData.propertyDeedNumber !== undefined) updateData.propertyDeedNumber = landlordData.propertyDeedNumber || null;
     if (landlordData.propertyRegistryFolio !== undefined) updateData.propertyRegistryFolio = landlordData.propertyRegistryFolio || null;
     if (landlordData.propertyValue !== undefined) updateData.propertyValue = landlordData.propertyValue || null;
-    if (landlordData.ownershipPercentage !== undefined) updateData.ownershipPercentage = landlordData.ownershipPercentage;
 
     // Financial fields
     if (landlordData.hasAdditionalIncome !== undefined) updateData.hasAdditionalIncome = landlordData.hasAdditionalIncome;
@@ -87,8 +87,10 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    * Validate person landlord data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    const schema = isPartial ? partialIndividualLandlordSchema : individualLandlordSchema;
-    const result = schema.safeParse(data);
+    const result = validateLandlordData(data, {
+      isCompany: false,
+      mode: isPartial ? 'partial' : 'strict',
+    });
 
     if (!result.success) {
       return Result.error(
@@ -108,8 +110,10 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    * Validate company landlord data
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    const schema = isPartial ? partialCompanyLandlordSchema : companyLandlordSchema;
-    const result = schema.safeParse(data);
+    const result = validateLandlordData(data, {
+      isCompany: true,
+      mode: isPartial ? 'partial' : 'strict',
+    });
 
     if (!result.success) {
       return Result.error(
@@ -253,9 +257,9 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       // Set partial flag
       const partial = isPartial ?? data.partial ?? false;
 
-      // Validate submission data
-      const validationResult = validateLandlordSubmission(data);
-      if (!validationResult.success) {
+      // Validate submission data using new schema
+      const validationResult = validateMultiLandlordSubmission(data);
+      if (!validationResult.success && 'error' in validationResult) {
         return Result.error(
           new ServiceError(
             ErrorCode.VALIDATION_ERROR,
@@ -853,46 +857,16 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    * Implements abstract method from BaseActorService
    */
   protected validateCompleteness(landlord: LandlordWithRelations): Result<boolean> {
-    const errors: string[] = [];
+    // Use the new isLandlordComplete function from the schema
+    const completenessCheck = isLandlordComplete(landlord, Boolean(landlord.isCompany));
 
-    if (!landlord.isCompany) {
-      // Person validation
-      if (!landlord.firstName) errors.push('Nombre requerido');
-      if (!landlord.paternalLastName) errors.push('Apellido paterno requerido');
-      if (!landlord.maternalLastName) errors.push('Apellido materno requerido');
-    } else {
-      // Company validation
-      if (!landlord.companyName) errors.push('Razón social requerida');
-      if (!landlord.companyRfc) errors.push('RFC de empresa requerido');
-      if (!landlord.legalRepFirstName) errors.push('Nombre del representante requerido');
-      if (!landlord.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
-      if (!landlord.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
-    }
-
-    // Common required fields
-    if (!landlord.email) errors.push('Email requerido');
-    if (!landlord.phone) errors.push('Teléfono requerido');
-    if (!landlord.addressDetails) errors.push('Dirección requerida');
-
-    // Primary landlord specific
-    if (landlord.isPrimary) {
-      if (!landlord.bankName) errors.push('Nombre del banco requerido');
-      if (!landlord.accountNumber) errors.push('Número de cuenta requerido');
-      if (!landlord.clabe) errors.push('CLABE requerida');
-      if (!landlord.accountHolder) errors.push('Titular de cuenta requerido');
-    }
-
-    // Property info
-    if (!landlord.propertyDeedNumber) errors.push('Número de escritura requerido');
-    if (!landlord.propertyRegistryFolio) errors.push('Folio de registro requerido');
-
-    if (errors.length > 0) {
+    if (!completenessCheck.valid) {
       return Result.error(
         new ServiceError(
           ErrorCode.VALIDATION_ERROR,
           'Información incompleta',
           400,
-          { missingFields: errors }
+          { missingFields: completenessCheck.errors }
         )
       );
     }
@@ -969,17 +943,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       results.push(result.value);
     }
 
-    // Verify ownership percentages total 100%
-    const totalPercentage = results.reduce((sum, l) => sum + ((l as any).ownershipPercentage ?? 0), 0);
-    if (Math.abs(totalPercentage - 100) > 0.01) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          `Los porcentajes de propiedad deben sumar 100% (actual: ${totalPercentage}%)`,
-          400
-        )
-      );
-    }
+    // Ownership percentage validation removed - not needed per requirements
 
     return Result.ok(results);
   }
