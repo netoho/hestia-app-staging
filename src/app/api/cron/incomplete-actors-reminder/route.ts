@@ -9,7 +9,8 @@ import { sendIncompleteActorReminders } from '@/services/reminderService';
 export async function GET(request: NextRequest) {
   try {
     // Verify the request is from Vercel Cron
-    const authHeader = headers().get('authorization');
+    const headersList = await headers();
+    const authHeader = headersList.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
     // In production, verify the cron secret
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Additional Vercel cron header check
-    const isVercelCron = headers().get('x-vercel-cron') === '1';
+    const isVercelCron = headersList.get('x-vercel-cron') === '1';
 
     // Allow manual triggers in development
     if (process.env.NODE_ENV === 'production' && !isVercelCron) {

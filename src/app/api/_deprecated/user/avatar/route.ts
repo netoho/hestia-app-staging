@@ -7,6 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 // Current storage provider (e.g., S3)
 const currentStorageProvider = getCurrentStorageProvider();
 
+interface ErrorResponse {
+  error: string;
+  status?: number;
+}
+
 // Maximum file size: 20MB
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
     const fileType = formData.get('fileType') as string;
 
     if (!file) {
-      return NextResponse.json(
+      return NextResponse.json<ErrorResponse>(
         { error: 'No file provided' },
         { status: 400 }
       );
