@@ -108,7 +108,6 @@ const createDefaultActorData = (actorType: ActorType): any => {
       return {
         ...baseData,
         isPrimary: true,
-        ownershipPercentage: 100,
         bankName: '',
         accountHolder: '',
         clabe: '',
@@ -230,7 +229,6 @@ export function useActorFormState<T extends ActorType>(
         {
           ...createDefaultActorData('landlord'),
           isPrimary: false,
-          ownershipPercentage: 0,
         },
       ]);
     }

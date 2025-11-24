@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cleanFormAddresses } from '@/lib/utils/addressUtils';
 import { emptyStringsToNull } from '@/lib/utils/dataTransform';
+import { filterTenantFieldsByTab } from '@/lib/constants/tenantTabFields';
 import { filterFieldsByTab } from '@/lib/constants/actorTabFields';
 import { trpc } from '@/lib/trpc/client';
 import type {
@@ -110,13 +111,27 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
 
       // Filter form data to only include fields relevant to current tab
       // This prevents validation errors on unfilled tabs
-      // Map actorType to match actorTabFields type names
-      const tabFieldsActorType = actorType === 'joint-obligor' ? 'jointObligor' : actorType;
-      const filteredFormData = filterFieldsByTab(
-        formData,
-        tabFieldsActorType as 'tenant' | 'landlord' | 'aval' | 'jointObligor',
-        tabName
-      );
+      let filteredFormData: any;
+
+      debugger;
+
+      if (actorType === 'tenant') {
+        // Use tenant-specific filtering with proper type handling
+        const tenantType = formData.tenantType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
+        filteredFormData = filterTenantFieldsByTab(
+          formData,
+          tenantType,
+          tabName
+        );
+      } else {
+        // Use generic filtering for other actors
+        const tabFieldsActorType = actorType === 'joint-obligor' ? 'jointObligor' : actorType;
+        filteredFormData = filterFieldsByTab(
+          formData,
+          tabFieldsActorType as 'landlord' | 'aval' | 'jointObligor',
+          tabName
+        );
+      }
 
       // Clean address fields before submission
       const addressFields = ACTOR_ADDRESS_FIELDS[actorType];
