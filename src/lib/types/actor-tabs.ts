@@ -151,6 +151,116 @@ export type LandlordTabData =
   | LandlordDocumentsTabData;
 
 // ============================================================================
+// AVAL TAB TYPES
+// ============================================================================
+
+export type AvalPersonalTabData = {
+  tabName: 'personal';
+  avalType: 'INDIVIDUAL' | 'COMPANY';
+  // Individual fields
+  firstName?: string;
+  middleName?: string | null;
+  paternalLastName?: string;
+  maternalLastName?: string | null;
+  nationality?: string | null;
+  curp?: string | null;
+  rfc?: string | null;
+  passport?: string | null;
+  // Company fields
+  companyName?: string;
+  companyRfc?: string;
+  legalRepFirstName?: string;
+  legalRepMiddleName?: string | null;
+  legalRepPaternalLastName?: string;
+  legalRepMaternalLastName?: string | null;
+  legalRepPosition?: string;
+  legalRepRfc?: string | null;
+  legalRepPhone?: string | null;
+  legalRepEmail?: string | null;
+  // Common fields
+  email: string;
+  phone: string;
+  workPhone?: string | null;
+  personalEmail?: string | null;
+  workEmail?: string | null;
+  addressDetails: any;
+  relationshipToTenant: string;
+};
+
+export type AvalEmploymentTabData = {
+  tabName: 'employment';
+  employmentStatus?: string | null;
+  occupation?: string | null;
+  employerName?: string | null;
+  employerAddressDetails?: any;
+  position?: string | null;
+  monthlyIncome?: number | null;
+  incomeSource?: string | null;
+};
+
+export type AvalPropertyTabData = {
+  tabName: 'property';
+  hasPropertyGuarantee: true; // Always true for Aval
+  guaranteeMethod: 'property'; // Always property for Aval
+  guaranteePropertyDetails: any;
+  propertyValue: number;
+  propertyDeedNumber: string;
+  propertyRegistry: string;
+  propertyTaxAccount?: string | null;
+  propertyUnderLegalProceeding?: boolean;
+  maritalStatus?: 'single' | 'married_joint' | 'married_separate' | null;
+  spouseName?: string | null;
+  spouseRfc?: string | null;
+  spouseCurp?: string | null;
+};
+
+export type AvalReferencesTabData = {
+  tabName: 'references';
+  personalReferences?: Array<{
+    firstName: string;
+    middleName?: string | null;
+    paternalLastName: string;
+    maternalLastName: string;
+    phone: string;
+    homePhone?: string | null;
+    cellPhone?: string | null;
+    email?: string | null;
+    relationship: string;
+    occupation?: string | null;
+    address?: string | null;
+  }>;
+  commercialReferences?: Array<{
+    companyName: string;
+    contactFirstName: string;
+    contactMiddleName?: string | null;
+    contactPaternalLastName: string;
+    contactMaternalLastName: string;
+    phone: string;
+    email?: string | null;
+    relationship: string;
+    yearsOfRelationship?: number | null;
+  }>;
+};
+
+export type AvalDocumentsTabData = {
+  tabName: 'documents';
+  additionalInfo?: string | null;
+  documents?: Array<{
+    type: string;
+    url: string;
+    uploadedAt: Date;
+  }>;
+};
+
+// Union type for all Aval tabs
+export type AvalTabData =
+  | AvalPersonalTabData
+  | AvalEmploymentTabData
+  | AvalPropertyTabData
+  | AvalReferencesTabData
+  | AvalDocumentsTabData;
+
+// ============================================================================
 // HELPER TYPES
 // ============================================================================
 
@@ -158,7 +268,8 @@ export type LandlordTabData =
 export type ActorTabDataMap = {
   tenant: TenantTabData;
   landlord: LandlordTabData;
-  // TODO: Add aval and jointObligor types
+  aval: AvalTabData;
+  // TODO: Add jointObligor types
 };
 
 // Extract tab names for a specific actor type
@@ -166,7 +277,7 @@ export type TabNamesForActor<T extends keyof ActorTabDataMap> =
   ActorTabDataMap[T]['tabName'];
 
 // Type guard to check if data is for a specific tab
-export function isTabData<T extends TenantTabData | LandlordTabData>(
+export function isTabData<T extends TenantTabData | LandlordTabData | AvalTabData>(
   data: any,
   tabName: string
 ): data is Extract<T, { tabName: typeof tabName }> {
