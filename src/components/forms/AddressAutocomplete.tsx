@@ -81,7 +81,6 @@ export function AddressAutocomplete({
   });
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Update form data when value prop changes
   useEffect(() => {

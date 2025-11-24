@@ -48,8 +48,8 @@ export default function TenantStep({
       <CardContent className="space-y-4">
         {/* Tenant Type Selector */}
         <div>
-          <Label htmlFor="tenantType">
-            Tipo de Inquilino <span className="text-red-500">*</span>
+          <Label htmlFor="tenantType" required>
+            Tipo de Inquilino
           </Label>
           <Select
             value={data.tenantType}
@@ -68,8 +68,8 @@ export default function TenantStep({
         {/* Company Fields */}
         {data.tenantType === TenantType.COMPANY && (
           <div>
-            <Label htmlFor="companyName">
-              Razón Social <span className="text-red-500">*</span>
+            <Label htmlFor="companyName" required>
+              Razón Social
             </Label>
             <Input
               id="companyName"
@@ -111,8 +111,8 @@ export default function TenantStep({
 
         {/* Contact Information */}
         <div>
-          <Label htmlFor="email">
-            Email <span className="text-red-500">*</span>
+          <Label htmlFor="email" required>
+            Email
           </Label>
           <Input
             id="email"
@@ -135,9 +135,8 @@ export default function TenantStep({
           </div>
 
           <div>
-            <Label htmlFor="rfc">
+            <Label htmlFor="rfc" optional={data.tenantType === TenantType.INDIVIDUAL}>
               {data.tenantType === TenantType.COMPANY ? 'RFC' : 'RFC/CURP'}
-              {data.tenantType === TenantType.INDIVIDUAL && ' (Opcional)'}
             </Label>
             <Input
               id="rfc"

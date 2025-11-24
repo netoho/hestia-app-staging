@@ -85,8 +85,8 @@ export default function PricingStep({
       <CardContent className="space-y-6">
         {/* Package Selection */}
         <div>
-          <Label htmlFor="package">
-            Paquete de Protección <span className="text-red-500">*</span>
+          <Label htmlFor="package" required>
+            Paquete de Protección
           </Label>
           {packagesLoading ? (
             <div className="flex items-center justify-center p-4 border rounded-md">

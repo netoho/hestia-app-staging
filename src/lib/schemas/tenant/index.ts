@@ -99,7 +99,6 @@ export const tenantEmploymentTabSchema = z.object({
   employmentStatus: employmentStatusSchema,
   occupation: z.string().min(1, 'Ocupación requerida'),
   employerName: z.string().min(1, 'Nombre del empleador requerido'),
-  employerAddress: z.string().min(1, 'Dirección del empleador requerida'),
   employerAddressDetails: partialAddressSchema.optional(),
   position: z.string().optional().nullable(),
   monthlyIncome: z.number().positive('Ingreso mensual debe ser mayor a 0'),
@@ -118,7 +117,6 @@ export const tenantRentalHistoryTabSchema = z.object({
   previousLandlordPhone: z.string().optional().nullable(),
   previousLandlordEmail: z.string().email().optional().nullable(),
   previousRentAmount: z.number().positive().optional().nullable(),
-  previousRentalAddress: z.string().optional().nullable(),
   previousRentalAddressDetails: partialAddressSchema.optional(),
   rentalHistoryYears: z.number().min(0).optional().nullable(),
   reasonForMoving: z.string().optional().nullable(),
@@ -315,7 +313,6 @@ export const TENANT_VALIDATION_MESSAGES = {
   required: {
     firstName: 'Nombre requerido',
     paternalLastName: 'Apellido paterno requerido',
-    maternalLastName: 'Apellido materno requerido',
     email: 'Email requerido',
     phone: 'Teléfono requerido',
     // currentAddress: 'Dirección actual requerida',

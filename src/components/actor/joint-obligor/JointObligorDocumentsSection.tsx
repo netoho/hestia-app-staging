@@ -280,8 +280,8 @@ export default function JointObligorDocumentsSection({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="additionalInfo">
-              Redes sociales, LinkedIn o información adicional (Opcional)
+            <Label htmlFor="additionalInfo" optional>
+              Redes sociales, LinkedIn o información adicional
             </Label>
             <Textarea
               id="additionalInfo"

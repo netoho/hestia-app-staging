@@ -28,7 +28,7 @@ export const commercialReferenceSchema = z.object({
   contactFirstName: z.string().min(1, 'Nombre del contacto requerido'),
   contactMiddleName: z.string().optional().nullable(),
   contactPaternalLastName: z.string().min(1, 'Apellido paterno del contacto requerido'),
-  contactMaternalLastName: z.string().min(1, 'Apellido materno del contacto requerido'),
+  contactMaternalLastName: z.string().optional().nullable(),
   phone: phoneSchema,
   email: optionalEmailSchema,
   relationship: z.string().min(1, 'Relación comercial requerida'),

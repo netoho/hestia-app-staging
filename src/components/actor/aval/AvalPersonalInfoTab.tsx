@@ -82,7 +82,7 @@ export default function AvalPersonalInfoTab({
           {/* Relationship to Tenant (Optional) */}
           {!formData.isCompany && (
             <div>
-              <Label htmlFor="relationshipToTenant">Relación con el Inquilino (Opcional)</Label>
+              <Label htmlFor="relationshipToTenant" optional>Relación con el Inquilino</Label>
               <Input
                 id="relationshipToTenant"
                 value={formData.relationshipToTenant || ''}

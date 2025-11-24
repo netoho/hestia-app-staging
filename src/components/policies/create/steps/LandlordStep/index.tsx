@@ -77,8 +77,8 @@ export default function LandlordStep({
           <>
             {/* Company Fields */}
             <div>
-              <Label htmlFor="companyName">
-                Razón Social <span className="text-red-500">*</span>
+              <Label htmlFor="companyName" required>
+                Razón Social
               </Label>
               <Input
                 id="companyName"
@@ -89,8 +89,8 @@ export default function LandlordStep({
             </div>
 
             <div>
-              <Label htmlFor="companyRfc">
-                RFC de la Empresa <span className="text-red-500">*</span>
+              <Label htmlFor="companyRfc" required>
+                RFC de la Empresa
               </Label>
               <Input
                 id="companyRfc"
@@ -106,8 +106,8 @@ export default function LandlordStep({
               <h4 className="font-medium text-sm text-gray-700">Representante Legal</h4>
 
               <div>
-                <Label htmlFor="legalRepName">
-                  Nombre del Representante <span className="text-red-500">*</span>
+                <Label htmlFor="legalRepName" required>
+                  Nombre del Representante
                 </Label>
                 <Input
                   id="legalRepName"
@@ -187,8 +187,8 @@ export default function LandlordStep({
 
         {/* Common Fields (both company and individual) */}
         <div>
-          <Label htmlFor="email">
-            Email de Contacto <span className="text-red-500">*</span>
+          <Label htmlFor="email" required>
+            Email de Contacto
           </Label>
           <Input
             id="email"
@@ -211,7 +211,7 @@ export default function LandlordStep({
           </div>
 
           <div>
-            <Label htmlFor="rfc">RFC {!data.isCompany && '(Opcional)'}</Label>
+            <Label htmlFor="rfc" optional={!data.isCompany}>RFC</Label>
             <Input
               id="rfc"
               value={data.rfc || ''}

@@ -33,8 +33,8 @@ export default function PropertyStep({
       <CardContent className="space-y-4">
         {/* Policy Number */}
         <div>
-          <Label htmlFor="policyNumber">
-            Número de Póliza <span className="text-red-500">*</span>
+          <Label htmlFor="policyNumber" required>
+            Número de Póliza
           </Label>
           <div className="flex gap-2">
             <Input
@@ -72,8 +72,8 @@ export default function PropertyStep({
 
         {/* Property Address */}
         <div>
-          <Label htmlFor="propertyAddress">
-            Dirección de la Propiedad <span className="text-red-500">*</span>
+          <Label htmlFor="propertyAddress" required>
+            Dirección de la Propiedad
           </Label>
           <Textarea
             id="propertyAddress"
@@ -108,8 +108,8 @@ export default function PropertyStep({
         {/* Rent and Deposit */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="rentAmount">
-              Renta Mensual <span className="text-red-500">*</span>
+            <Label htmlFor="rentAmount" required>
+              Renta Mensual
             </Label>
             <Input
               id="rentAmount"
@@ -134,8 +134,8 @@ export default function PropertyStep({
         {/* Contract Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="startDate">
-              Fecha de Inicio <span className="text-red-500">*</span>
+            <Label htmlFor="startDate" required>
+              Fecha de Inicio
             </Label>
             <Input
               id="startDate"
@@ -145,8 +145,8 @@ export default function PropertyStep({
             />
           </div>
           <div>
-            <Label htmlFor="endDate">
-              Fecha de Término <span className="text-red-500">*</span>
+            <Label htmlFor="endDate" required>
+              Fecha de Término
             </Label>
             <Input
               id="endDate"
