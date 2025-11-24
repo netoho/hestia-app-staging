@@ -11,7 +11,6 @@ import { useFormWizardSubmissionTRPC } from '@/hooks/useFormWizardSubmissionTRPC
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { formMessages } from '@/lib/constants/formMessages';
-import { validatePersonFields, validateContactInfo } from '@/lib/utils/actorValidation';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
 import { SaveTabButton } from '@/components/actor/shared/SaveTabButton';
@@ -20,6 +19,10 @@ import LandlordBankInfoTab from './LandlordBankInfoTab';
 import PropertyDetailsForm from './PropertyDetailsForm';
 import FinancialInfoForm from './FinancialInfoForm';
 import DocumentsSection from './DocumentsSection';
+// Import new schema validation
+import { validateLandlordData, getLandlordTabSchema } from '@/lib/schemas/landlord';
+import { filterLandlordFieldsByTab } from '@/lib/constants/landlordTabFields';
+import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 
 interface LandlordFormWizardProps {
   token: string;
@@ -99,125 +102,164 @@ export default function LandlordFormWizard({
     }
   }, [initialData]);
 
-  // Validation functions
-  const validateOwnerInfo = useCallback(() => {
-    let isValid = true;
+  // Schema-based validation functions
+  const validateTab = useCallback((tabName: string) => {
     const localErrors: Record<string, string> = {};
+    let isValid = true;
 
-    landlords.forEach((landlord: any, index: number) => {
-      if (landlord.isCompany) {
-        if (!landlord.companyName) {
-          localErrors[`landlord${index}.companyName`] = 'Nombre de empresa requerido';
+    switch (tabName) {
+      case 'owner-info':
+        // Validate each landlord using schema
+        landlords.forEach((landlord: any, index: number) => {
+          const result = validateLandlordData(landlord, {
+            isCompany: Boolean(landlord.isCompany),
+            mode: 'partial', // Tab validation is partial
+            tabName: 'owner-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`landlord${index}.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
+        });
+
+        // Validate primary landlord designation
+        const primaryCount = landlords.filter((l: any) => l.isPrimary).length;
+        if (primaryCount === 0) {
+          localErrors['general'] = 'Debe designar un arrendador principal';
+          isValid = false;
+        } else if (primaryCount > 1) {
+          localErrors['general'] = 'Solo puede haber un arrendador principal';
           isValid = false;
         }
-        if (!landlord.rfc) {
-          localErrors[`landlord${index}.rfc`] = 'RFC requerido';
-          isValid = false;
+        break;
+
+      case 'bank-info':
+        // Only validate primary landlord's bank info
+        const primaryLandlord = landlords.find((l: any) => l.isPrimary) || landlords[0];
+        if (primaryLandlord) {
+          const result = validateLandlordData(primaryLandlord, {
+            isCompany: Boolean(primaryLandlord.isCompany),
+            mode: 'partial',
+            tabName: 'bank-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`landlord0.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
         }
-        // Validate ownership percentage
-        if (!landlord.ownershipPercentage || landlord.ownershipPercentage <= 0) {
-          localErrors[`landlord${index}.ownershipPercentage`] = 'Porcentaje requerido';
-          isValid = false;
+        break;
+
+      case 'property-info':
+        // Use primary landlord for property validation
+        const primaryForProperty = landlords.find((l: any) => l.isPrimary) || landlords[0];
+        if (primaryForProperty) {
+          // Map propertyData to expected schema format
+          const propertyDataForValidation = {
+            ...primaryForProperty,
+            propertyDeedNumber: propertyData.propertyDeedNumber,
+            propertyRegistryFolio: propertyData.propertyRegistryFolio,
+            propertyValue: propertyData.propertyValue,
+          };
+
+          const result = validateLandlordData(propertyDataForValidation, {
+            isCompany: Boolean(primaryForProperty.isCompany),
+            mode: 'partial',
+            tabName: 'property-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`property.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
         }
-      } else {
-        validatePersonFields(landlord, localErrors);
-        if (Object.keys(localErrors).length > 0) isValid = false;
-      }
+        break;
 
-    });
+      case 'financial-info':
+        // Validate financial data
+        const primaryForFinancial = landlords.find((l: any) => l.isPrimary) || landlords[0];
+        if (primaryForFinancial) {
+          const financialDataForValidation = {
+            ...primaryForFinancial,
+            ...policyFinancialData,
+          };
 
-    setErrors(localErrors);
-    return isValid;
-  }, [landlords, setErrors]);
+          const result = validateLandlordData(financialDataForValidation, {
+            isCompany: Boolean(primaryForFinancial.isCompany),
+            mode: 'partial',
+            tabName: 'financial-info'
+          });
 
-  const validateBankInfo = useCallback(() => {
-    const primaryLandlord = landlords[0];
-    if (!primaryLandlord) return false;
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`financial.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
+        }
+        break;
 
-    const localErrors: Record<string, string> = {};
-    let isValid = true;
-
-    if (!primaryLandlord.bankName) {
-      localErrors['landlord0.bankName'] = 'Banco requerido';
-      isValid = false;
-    }
-    if (!primaryLandlord.accountHolder) {
-      localErrors['landlord0.accountHolder'] = 'Titular requerido';
-      isValid = false;
-    }
-    if (!primaryLandlord.clabe || primaryLandlord.clabe.length !== 18) {
-      localErrors['landlord0.clabe'] = 'CLABE debe tener 18 dígitos';
-      isValid = false;
-    }
-
-    setErrors(localErrors);
-    return isValid;
-  }, [landlords, setErrors]);
-
-  const validatePropertyInfo = useCallback(() => {
-    const localErrors: Record<string, string> = {};
-    let isValid = true;
-
-    if (!propertyData.address) {
-      localErrors['property.address'] = 'Dirección requerida';
-      isValid = false;
-    }
-    if (!propertyData.propertyType) {
-      localErrors['property.propertyType'] = 'Tipo de propiedad requerido';
-      isValid = false;
+      case 'documents':
+        // Documents validation is handled separately
+        break;
     }
 
     setErrors(localErrors);
     return isValid;
-  }, [propertyData, setErrors]);
-
-  const validateFinancialInfo = useCallback(() => {
-    const localErrors: Record<string, string> = {};
-    let isValid = true;
-
-    if (!policyFinancialData.monthlyRent || policyFinancialData.monthlyRent <= 0) {
-      localErrors['financial.monthlyRent'] = 'Renta mensual requerida';
-      isValid = false;
-    }
-    if (!policyFinancialData.deposit || policyFinancialData.deposit <= 0) {
-      localErrors['financial.deposit'] = 'Depósito requerido';
-      isValid = false;
-    }
-
-    setErrors(localErrors);
-    return isValid;
-  }, [policyFinancialData, setErrors]);
+  }, [landlords, propertyData, policyFinancialData, setErrors]);
 
   // Handle tab save
   const handleSaveTab = useCallback(async (tabName: string) => {
-    const validateTab = () => {
-      setErrors({}); // Clear errors
+    // Clear errors first
+    setErrors({});
 
-      if (tabName === 'owner-info') {
-        return validateOwnerInfo();
-      } else if (tabName === 'bank-info') {
-        return validateBankInfo();
-      } else if (tabName === 'property-info') {
-        return validatePropertyInfo();
-      } else if (tabName === 'financial-info') {
-        return validateFinancialInfo();
-      }
-      return true;
-    };
+    // Validate using schema validation
+    const isValid = validateTab(tabName);
+    if (!isValid) {
+      return false;
+    }
 
     // Save logic using consolidated hook
     const saveData = async () => {
+      // Prepare data for database using our utility
+      const { landlords: preparedLandlords, policyData } = prepareMultiLandlordsForDB(
+        landlords.map((l: any) => ({
+          ...l,
+          isPrimary: l.isPrimary || false,
+        })),
+        { isPartial: true }
+      );
+
+      // Combine all data
       const dataToSave = {
-        landlords,
-        propertyData,
-        policyFinancialData,
+        landlords: preparedLandlords,
+        propertyData: {
+          ...propertyData,
+          propertyDeedNumber: propertyData.propertyDeedNumber,
+          propertyRegistryFolio: propertyData.propertyRegistryFolio,
+        },
+        policyFinancialData: {
+          ...policyFinancialData,
+          ...policyData, // Include extracted policy fields
+        },
       };
 
       const success = await saveTabHandler(
         tabName,
-        validateTab,
+        () => true, // Validation already done above
         () => dataToSave,
-        () => ({})
+        () => filterLandlordFieldsByTab(dataToSave, Boolean(landlords[0]?.isCompany), tabName)
       );
 
       if (!success) {
@@ -225,15 +267,12 @@ export default function LandlordFormWizard({
       }
     };
 
-    return wizard.handleTabSave(tabName, validateTab, saveData);
+    return wizard.handleTabSave(tabName, () => isValid, saveData);
   }, [
     landlords,
     propertyData,
     policyFinancialData,
-    validateOwnerInfo,
-    validateBankInfo,
-    validatePropertyInfo,
-    validateFinancialInfo,
+    validateTab,
     saveTabHandler,
     setErrors,
     wizard,
@@ -244,10 +283,40 @@ export default function LandlordFormWizard({
     wizard.setSavingTab('final');
 
     try {
+      // Validate all tabs first
+      const allTabsValid = ['owner-info', 'bank-info', 'property-info', 'financial-info']
+        .every(tab => validateTab(tab));
+
+      if (!allTabsValid) {
+        toast({
+          title: 'Validación fallida',
+          description: 'Por favor revise todos los campos requeridos',
+          variant: 'destructive',
+        });
+        wizard.setSavingTab(null);
+        return;
+      }
+
+      // Prepare data for final submission
+      const { landlords: preparedLandlords, policyData } = prepareMultiLandlordsForDB(
+        landlords.map((l: any) => ({
+          ...l,
+          isPrimary: l.isPrimary || false,
+        })),
+        { isPartial: false } // Final submission is not partial
+      );
+
       const finalData = {
-        landlords,
-        propertyData,
-        policyFinancialData,
+        landlords: preparedLandlords,
+        propertyData: {
+          ...propertyData,
+          propertyDeedNumber: propertyData.propertyDeedNumber,
+          propertyRegistryFolio: propertyData.propertyRegistryFolio,
+        },
+        policyFinancialData: {
+          ...policyFinancialData,
+          ...policyData,
+        },
       };
 
       const success = await submitHandler(
@@ -268,9 +337,11 @@ export default function LandlordFormWizard({
     landlords,
     propertyData,
     policyFinancialData,
+    validateTab,
     submitHandler,
     requiredDocsUploaded,
     wizard,
+    toast,
     onComplete,
   ]);
 
