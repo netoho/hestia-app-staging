@@ -86,7 +86,7 @@ export function PersonNameFields({
         </div>
 
         <div>
-          <Label htmlFor="maternalLastName" required={required}>
+          <Label htmlFor="maternalLastName" optional>
             Apellido Materno
           </Label>
           <Input

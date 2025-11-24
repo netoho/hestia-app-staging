@@ -72,7 +72,7 @@ export const landlordOwnerInfoCompanySchema = z.object({
   legalRepFirstName: z.string().min(1, 'Nombre del representante requerido'),
   legalRepMiddleName: z.string().optional().nullable(),
   legalRepPaternalLastName: z.string().min(1, 'Apellido paterno del representante requerido'),
-  legalRepMaternalLastName: z.string().min(1, 'Apellido materno del representante requerido'),
+  legalRepMaternalLastName: z.string().optional().nullable(),
   legalRepPosition: z.string().min(1, 'Cargo del representante requerido'),
   legalRepRfc: rfcPersonSchema,
   legalRepCurp: curpSchema,

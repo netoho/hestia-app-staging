@@ -13,7 +13,7 @@ export const personNameSchema = z.object({
   firstName: z.string().min(1, 'Nombre requerido').nullable(),
   middleName: z.string().optional().nullable(),
   paternalLastName: z.string().min(1, 'Apellido paterno requerido'),
-  maternalLastName: z.string().min(1, 'Apellido materno requerido'),
+  maternalLastName: z.string().optional().nullable(),
 });
 
 /**
@@ -28,7 +28,7 @@ export const personNameUpdateSchema = z.object({
   firstName: z.string().min(1).optional().nullable(),
   middleName: z.string().optional().nullable(),
   paternalLastName: z.string().min(1).optional().nullable(),
-  maternalLastName: z.string().min(1).optional().nullable(),
+  maternalLastName: z.string().optional().nullable(),
 });
 
 /**
