@@ -9,51 +9,16 @@ import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
 import {ActorData, CompanyActorData, PersonActorData} from '@/lib/types/actor';
 import type {JointObligorWithRelations} from './types';
-import {z} from 'zod';
-import {personWithNationalitySchema} from '@/lib/validations/actors/person.schema';
-import {companyActorSchema} from '@/lib/validations/actors/company.schema';
-
-// JointObligor-specific validation schemas
-const jointObligorPersonSchema = personWithNationalitySchema.extend({
-  relationshipToTenant: z.string().min(1, 'Relationship to tenant is required'),
-  guaranteeMethod: z.enum(['income', 'property']).optional(),
-  hasPropertyGuarantee: z.boolean().optional(),
-  hasProperties: z.boolean().optional(),
-
-  // Property guarantee fields
-  propertyAddress: z.string().optional().nullable(),
-  propertyValue: z.number().optional().nullable(),
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistry: z.string().optional().nullable(),
-  propertyTaxAccount: z.string().optional().nullable(),
-  propertyUnderLegalProceeding: z.boolean().optional(),
-
-  // Employment fields
-  employmentStatus: z.string().optional().nullable(),
-  position: z.string().optional().nullable(),
-  employerAddress: z.string().optional().nullable(),
-  incomeSource: z.string().optional().nullable(),
-
-  // Marriage information (for property guarantee)
-  maritalStatus: z.string().optional().nullable(),
-  spouseName: z.string().optional().nullable(),
-  spouseRfc: z.string().optional().nullable(),
-  spouseCurp: z.string().optional().nullable(),
-});
-
-const jointObligorCompanySchema = companyActorSchema.extend({
-  relationshipToTenant: z.string().min(1, 'Relationship to tenant is required'),
-  guaranteeMethod: z.enum(['income', 'property']).optional(),
-  hasPropertyGuarantee: z.boolean().optional(),
-
-  // Property guarantee fields (companies can also own guarantee properties)
-  propertyAddress: z.string().optional().nullable(),
-  propertyValue: z.number().optional().nullable(),
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistry: z.string().optional().nullable(),
-  propertyTaxAccount: z.string().optional().nullable(),
-  propertyUnderLegalProceeding: z.boolean().optional(),
-});
+import {
+  jointObligorStrictSchema,
+  jointObligorPartialSchema,
+  jointObligorAdminSchema,
+  validateJointObligorTab,
+  getJointObligorTabSchema,
+  JointObligorComplete,
+  JointObligorPartial,
+} from '@/lib/schemas/joint-obligor';
+import { prepareJointObligorForDB, prepareJointObligorForPartialUpdate } from '@/lib/utils/joint-obligor/prepareForDB';
 
 export class JointObligorService extends BaseActorService<JointObligorWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
@@ -82,10 +47,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   }
 
   /**
-   * Validate person joint obligor data
+   * Validate person joint obligor data using new schemas
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    const schema = isPartial ? jointObligorPersonSchema.partial() : jointObligorPersonSchema;
+    const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
 
     if (!result.success) {
@@ -103,10 +68,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   }
 
   /**
-   * Validate company joint obligor data
+   * Validate company joint obligor data using new schemas
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    const schema = isPartial ? jointObligorCompanySchema.partial() : jointObligorCompanySchema;
+    const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
 
     if (!result.success) {
@@ -124,7 +89,33 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   }
 
   /**
-   * Save joint obligor information
+   * Validate data for a specific tab
+   */
+  validateTabData(
+    tab: string,
+    data: any,
+    jointObligorType: 'INDIVIDUAL' | 'COMPANY',
+    guaranteeMethod?: 'income' | 'property',
+    isPartial: boolean = false
+  ): Result<any> {
+    const validation = validateJointObligorTab(tab, data, jointObligorType, guaranteeMethod, isPartial);
+
+    if (!validation.success) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          `Invalid data for ${tab} tab`,
+          400,
+          { errors: validation.errors }
+        )
+      );
+    }
+
+    return Result.ok(data);
+  }
+
+  /**
+   * Save joint obligor information using new prepareForDB utility
    */
   async saveJointObligorInformation(
     jointObligorId: string,
@@ -133,43 +124,52 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     skipValidation: boolean = false,
     tabName?: string
   ): AsyncResult<JointObligorWithRelations> {
-    // Fetch existing joint obligor to get current addressId
-    const existingJointObligor = await this.prisma.jointObligor.findUnique({
-      where: { id: jointObligorId },
-      select: { addressId: true }
-    });
+    return this.executeTransaction(async (tx) => {
+      // Fetch existing joint obligor to get policyId
+      const existingJointObligor = await tx.jointObligor.findUnique({
+        where: { id: jointObligorId },
+        select: { policyId: true, actorId: true }
+      });
 
-    // Add joint-obligor-specific fields to the update data
-    const saveData = {
-      ...data,
-      addressId: existingJointObligor?.addressId || undefined,
-      relationshipToTenant: data.relationshipToTenant,
-      guaranteeMethod: data.guaranteeMethod,
-      hasPropertyGuarantee: data.hasPropertyGuarantee,
-      hasProperties: data.hasProperties,
+      if (!existingJointObligor) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Joint Obligor not found',
+          404
+        );
+      }
 
-      // Property guarantee fields
-      propertyAddress: data.propertyAddress,
-      propertyValue: data.propertyValue,
-      propertyDeedNumber: data.propertyDeedNumber,
-      propertyRegistry: data.propertyRegistry,
-      propertyTaxAccount: data.propertyTaxAccount,
-      propertyUnderLegalProceeding: data.propertyUnderLegalProceeding,
+      // Validate data if not skipping validation
+      if (!skipValidation) {
+        const validation = isPartial
+          ? this.validateTabData(tabName || 'personal', data, data.jointObligorType || 'INDIVIDUAL', data.guaranteeMethod, true)
+          : this.validatePersonData(data, false);
 
-      // Employment fields
-      employmentStatus: data.employmentStatus,
-      position: data.position,
-      employerAddress: data.employerAddress,
-      incomeSource: data.incomeSource,
+        if (!validation.ok) {
+          throw validation.error;
+        }
+      }
 
-      // Marriage information
-      maritalStatus: data.maritalStatus,
-      spouseName: data.spouseName,
-      spouseRfc: data.spouseRfc,
-      spouseCurp: data.spouseCurp,
-    };
+      // Prepare data for database using utility
+      const dbData = isPartial
+        ? prepareJointObligorForPartialUpdate(data as JointObligorPartial, existingJointObligor)
+        : prepareJointObligorForDB(data as JointObligorComplete, existingJointObligor.policyId, existingJointObligor.actorId);
 
-    return this.saveActorData(jointObligorId, saveData as any, isPartial, skipValidation, tabName);
+      // Update joint obligor
+      const updatedJointObligor = await tx.jointObligor.update({
+        where: { id: jointObligorId },
+        data: dbData as any,
+        include: this.getIncludes()
+      });
+
+      this.log('info', 'Joint obligor information saved', {
+        jointObligorId,
+        isPartial,
+        tabName
+      });
+
+      return updatedJointObligor as JointObligorWithRelations;
+    }, 'saveJointObligorInformation');
   }
 
   /**
