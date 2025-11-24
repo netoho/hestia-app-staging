@@ -377,7 +377,7 @@ model Tenant {
   addressDetails    PropertyAddress? @relation("TenantAddress", fields: [addressId], references: [id])
 
   // Employment (for individuals)
-  employmentStatus  String?
+  employmentStatus  EmploymentStatus?
   occupation        String?
   employerName      String?
   employerAddress   String?
@@ -1034,6 +1034,17 @@ model ReviewNote {
 // ============================================
 // ENUMS
 // ============================================
+
+
+enum EmploymentStatus {
+  EMPLOYED
+  SELF_EMPLOYED
+  BUSINESS_OWNER
+  RETIRED
+  STUDENT
+  UNEMPLOYED
+  OTHER
+}
 
 enum UserRole {
   ADMIN
