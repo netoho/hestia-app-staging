@@ -33,19 +33,19 @@ export default function JointObligorPersonalInfoTab({
         </CardHeader>
         <CardContent>
           <RadioGroup
-            value={formData.isCompany ? 'company' : 'individual'}
-            onValueChange={(value) => onFieldChange('isCompany', value === 'company')}
+            value={formData.jointObligorType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL'}
+            onValueChange={(value) => onFieldChange('jointObligorType', value as 'INDIVIDUAL' | 'COMPANY')}
             disabled={disabled}
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="individual" id="obligor-individual" />
+              <RadioGroupItem value="INDIVIDUAL" id="obligor-individual" />
               <Label htmlFor="obligor-individual" className="flex items-center cursor-pointer">
                 <User className="h-4 w-4 mr-2" />
                 Persona Física
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="company" id="obligor-company" />
+              <RadioGroupItem value="COMPANY" id="obligor-company" />
               <Label htmlFor="obligor-company" className="flex items-center cursor-pointer">
                 <Building2 className="h-4 w-4 mr-2" />
                 Persona Moral (Empresa)
@@ -58,10 +58,10 @@ export default function JointObligorPersonalInfoTab({
       {/* Information Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Información {formData.isCompany ? 'de la Empresa' : 'Personal'}</CardTitle>
+          <CardTitle>Información {formData.jointObligorType === 'COMPANY' ? 'de la Empresa' : 'Personal'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {formData.isCompany ? (
+          {formData.jointObligorType === 'COMPANY' ? (
             <CompanyInformation
               data={formData}
               onChange={onFieldChange}

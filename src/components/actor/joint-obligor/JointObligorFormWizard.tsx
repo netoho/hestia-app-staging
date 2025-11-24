@@ -84,7 +84,7 @@ export default function JointObligorFormWizard({
 
   // Get tab configuration
   const config = actorConfig.jointObligor;
-  const tabs = (formData.isCompany ? config.companyTabs : config.personTabs) as any;
+  const tabs = (formData.jointObligorType === 'COMPANY' ? config.companyTabs : config.personTabs) as any;
 
   // Use wizard tabs hook
   const wizard = useFormWizardTabs({
@@ -115,7 +115,7 @@ export default function JointObligorFormWizard({
   const validatePersonalTab = useCallback(() => {
     const localErrors: Record<string, string> = {};
 
-    if (formData.isCompany) {
+    if (formData.jointObligorType === 'COMPANY') {
       validatePersonFields({
         ...formData,
         firstName: formData.legalRepFirstName,
@@ -156,7 +156,7 @@ export default function JointObligorFormWizard({
 
       if (tabName === 'personal') {
         return validatePersonalTab();
-      } else if (tabName === 'employment' && !formData.isCompany) {
+      } else if (tabName === 'employment' && !formData.jointObligorType === 'COMPANY') {
         return validateEmploymentTab();
       } else if (tabName === 'guarantee') {
         return validateGuaranteeTab();
@@ -173,8 +173,8 @@ export default function JointObligorFormWizard({
     const getAdditionalData = () => {
       if (tabName === 'references') {
         return {
-          personalReferences: formData.isCompany ? undefined : personalReferences,
-          commercialReferences: formData.isCompany ? commercialReferences : undefined,
+          personalReferences: formData.jointObligorType === 'COMPANY' ? undefined : personalReferences,
+          commercialReferences: formData.jointObligorType === 'COMPANY' ? commercialReferences : undefined,
         };
       }
       return {};
@@ -220,8 +220,8 @@ export default function JointObligorFormWizard({
     try {
       const finalData = {
         ...formData,
-        references: formData.isCompany ? undefined : personalReferences,
-        commercialReferences: formData.isCompany ? commercialReferences : undefined,
+        references: formData.jointObligorType === 'COMPANY' ? undefined : personalReferences,
+        commercialReferences: formData.jointObligorType === 'COMPANY' ? commercialReferences : undefined,
       };
 
       const success = await submitHandler(
@@ -319,7 +319,7 @@ export default function JointObligorFormWizard({
             </TabsContent>
 
             {/* Employment Tab (Individuals only) */}
-            {!formData.isCompany && (
+            {!formData.jointObligorType === 'COMPANY' && (
               <TabsContent value="employment">
                 <JointObligorEmploymentTab
                   formData={formData}
@@ -358,7 +358,7 @@ export default function JointObligorFormWizard({
             {/* References Tab */}
             <TabsContent value="references">
               <JointObligorReferencesTab
-                isCompany={formData.isCompany}
+                isCompany={formData.jointObligorType === 'COMPANY'}
                 personalReferences={personalReferences}
                 commercialReferences={commercialReferences}
                 onUpdatePersonalReference={updatePersonalReference}
@@ -379,7 +379,7 @@ export default function JointObligorFormWizard({
               <JointObligorDocumentsSection
                 obligorId={formData.id}
                 token={token}
-                isCompany={formData.isCompany}
+                isCompany={formData.jointObligorType === 'COMPANY'}
                 guaranteeMethod={formData.guaranteeMethod}
                 nationality={formData.nationality}
                 allTabsSaved={isAdminEdit || allTabsSaved}
