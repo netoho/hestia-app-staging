@@ -15,8 +15,22 @@ import { ActorAuthService } from '@/lib/services/ActorAuthService';
 import { TenantType } from '@prisma/client';
 import { getTabFields } from '@/lib/constants/actorTabFields';
 
-// Import centralized schemas
-import { addressSchema, partialAddressSchema } from '@/lib/validations/actors/base.schema';
+// Import master schemas
+import {
+  getTenantSchema,
+  tenantIndividualCompleteSchema,
+  tenantCompanyCompleteSchema,
+} from '@/lib/schemas/tenant';
+import {
+  getLandlordSchema,
+  validateLandlordData,
+  landlordIndividualCompleteSchema,
+  landlordCompanyCompleteSchema,
+  type Landlord,
+} from '@/lib/schemas/landlord';
+import { personNameSchema } from '@/lib/schemas/shared/person.schema';
+import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
+import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 
 // Actor types enum
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
@@ -29,112 +43,21 @@ const LAST_TABS = {
   jointObligor: 'documents',
 } as const;
 
-// Base person schema (Mexican 4-field naming) - temporary until we centralize all
-const PersonSchema = z.object({
-  firstName: z.string().min(1),
-  middleName: z.string().optional(),
-  paternalLastName: z.string().min(1),
-  maternalLastName: z.string().min(1),
-});
+// Base person schema (Mexican 4-field naming) - will be replaced for other actors
+const PersonSchema = personNameSchema;
 
-// Strict schemas for self-service (token-based) - all fields required
-const TenantStrictSchema = z.object({
-  // Personal info
-  tenantType: z.nativeEnum(TenantType),
-  firstName: z.string().min(1),
-  middleName: z.string().optional(),
-  paternalLastName: z.string().min(1),
-  maternalLastName: z.string().min(1),
-  companyName: z.string().optional(),
+// For backward compatibility, create TenantStrictSchema dynamically
+// This will be removed once all references are updated
+const TenantStrictSchema = z.union([
+  tenantIndividualCompleteSchema,
+  tenantCompanyCompleteSchema,
+]);
 
-  // Contact
-  email: z.string().email(),
-  phone: z.string().min(1),
-  personalEmail: z.string().email().optional().nullable(),
-  workEmail: z.string().email().optional().nullable(),
-
-  // Identification
-  rfc: z.string().optional(),
-  curp: z.string().optional(),
-
-  // Address
-  currentAddress: z.string().min(1),
-  currentAddressDetails: partialAddressSchema.optional(),
-
-  // Employment
-  employmentStatus: z.string().optional().nullable(),
-  occupation: z.string().min(1),
-  position: z.string().optional().nullable(),
-  companyWorkName: z.string().min(1),
-  companyWorkAddress: z.string().min(1),
-  monthlyIncome: z.number().positive(),
-  incomeSource: z.string().optional().nullable(),
-  employerAddressDetails: partialAddressSchema.optional().nullable(),
-
-  // Rental History
-  previousAddress: z.string().optional().nullable(),
-  previousLandlordName: z.string().optional().nullable(),
-  previousLandlordPhone: z.string().optional().nullable(),
-  previousLandlordEmail: z.string().email().optional().nullable(),
-  previousRentAmount: z.number().optional().nullable(),
-  rentalHistoryYears: z.number().optional().nullable(),
-  previousRentalAddressDetails: partialAddressSchema.optional().nullable(),
-  reasonForMoving: z.string().optional().nullable(),
-  numberOfOccupants: z.number().optional(),
-  petDetails: z.string().optional().nullable(),
-
-  // References
-  references: z.array(z.object({
-    name: z.string().min(1),
-    relationship: z.string().min(1),
-    phone: z.string().min(1),
-    email: z.string().email().optional(),
-  })).min(2),
-}).transform(data => {
-  const isCompany = data.tenantType === 'COMPANY';
-  return {
-    ...data,
-    isCompany,
-  };
-});
-
-const LandlordStrictSchema = z.object({
-  // Personal/Company info
-  isCompany: z.boolean(),
-  firstName: z.string().optional(),
-  middleName: z.string().optional(),
-  paternalLastName: z.string().optional(),
-  maternalLastName: z.string().optional(),
-  companyName: z.string().optional(),
-
-  // Contact
-  email: z.string().email(),
-  phone: z.string().min(1),
-  personalEmail: z.string().email().optional().nullable(),
-  workEmail: z.string().email().optional().nullable(),
-
-  // Identification
-  rfc: z.string().min(1),
-
-  // Property Ownership
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistryFolio: z.string().optional().nullable(),
-  propertyValue: z.number().optional().nullable(),
-  ownershipPercentage: z.number().optional().nullable(),
-
-  // Legal rep (for companies)
-  legalRepName: z.string().optional(),
-  legalRepPosition: z.string().optional(),
-  legalRepRfc: z.string().optional(),
-  legalRepPhone: z.string().optional(),
-  legalRepEmail: z.string().email().optional(),
-
-  // Bank info
-  bankName: z.string().min(1),
-  accountHolder: z.string().min(1),
-  accountNumber: z.string().min(1),
-  clabe: z.string().length(18),
-});
+// Use the new schema for backward compatibility
+const LandlordStrictSchema = z.union([
+  landlordIndividualCompleteSchema,
+  landlordCompanyCompleteSchema,
+]);
 
 // Admin schemas - flexible updates with proper typing
 const ActorAdminUpdateSchema = z.object({
@@ -210,8 +133,6 @@ export const actorRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const service = getActorService(input.type);
       const result = await service.getByToken(input.token);
-
-      console.log(`[Actor GetByToken] Type: ${input.type}, Token: ${input.token}, Result:`, result);
 
       if (!result.ok) {
         throw new TRPCError({
@@ -799,6 +720,123 @@ export const actorRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Failed to mark as complete',
+        });
+      }
+
+      return result.value;
+    }),
+
+  /**
+   * Landlord-specific: Save multiple landlords for a policy
+   * Handles co-ownership scenarios
+   */
+  saveMultipleLandlords: dualAuthProcedure
+    .input(z.object({
+      policyId: z.string(),
+      landlords: z.array(LandlordStrictSchema),
+      propertyDetails: z.any().optional(),
+      isPartial: z.boolean().default(false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const service = new LandlordService();
+
+      // Prepare landlords for database
+      const { landlords, policyData, error } = prepareMultiLandlordsForDB(
+        input.landlords,
+        { isPartial: input.isPartial }
+      );
+
+      if (error) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error,
+        });
+      }
+
+      // Save all landlords
+      const results = [];
+      for (const landlordData of landlords) {
+        const result = await service.save(
+          landlordData.id || '',
+          landlordData,
+          input.isPartial,
+          false
+        );
+
+        if (!result.ok) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: result.error?.message || 'Failed to save landlord',
+          });
+        }
+
+        results.push(result.value);
+      }
+
+      // Update policy with financial data if present
+      if (policyData && Object.keys(policyData).length > 0) {
+        await ctx.prisma.policy.update({
+          where: { id: input.policyId },
+          data: policyData,
+        });
+      }
+
+      return {
+        landlords: results,
+        policyData,
+      };
+    }),
+
+  /**
+   * Landlord-specific: Validate landlord data
+   * Used for form validation before submission
+   */
+  validateLandlord: publicProcedure
+    .input(z.object({
+      data: z.any(),
+      isCompany: z.boolean(),
+      mode: z.enum(['strict', 'partial', 'admin']).default('strict'),
+      tabName: z.string().optional(),
+    }))
+    .query(({ input }) => {
+      const result = validateLandlordData(input.data, {
+        isCompany: input.isCompany,
+        mode: input.mode as any,
+        tabName: input.tabName,
+      });
+
+      if (!result.success) {
+        return {
+          valid: false,
+          errors: result.error.issues.map(issue => ({
+            path: issue.path.join('.'),
+            message: issue.message,
+          })),
+        };
+      }
+
+      return {
+        valid: true,
+        data: result.data,
+      };
+    }),
+
+  /**
+   * Landlord-specific: Get all landlords for a policy
+   * Returns array since multiple landlords are supported
+   */
+  getLandlordsByPolicy: protectedProcedure
+    .input(z.object({
+      policyId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const service = new LandlordService();
+      const result = await service.getAllByPolicyId(input.policyId);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: result.error?.message || 'Landlords not found',
         });
       }
 
