@@ -437,7 +437,8 @@ model JointObligor {
   policyId          String
 
   // Type
-  isCompany         Boolean     @default(false)
+  jointObligorType  JointObligorType?
+
 
   // Personal Information (for individuals)
   firstName         String?     // First name
@@ -547,7 +548,7 @@ model Aval {
   policyId          String
 
   // Type
-  isCompany         Boolean     @default(false)
+  avalType          AvalType    @default(INDIVIDUAL)
 
   // Personal Information (for individuals)
   firstName         String?     // First name
@@ -1053,6 +1054,17 @@ enum UserRole {
 }
 
 enum TenantType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum AvalType {
+  INDIVIDUAL
+  COMPANY
+}
+
+
+enum JointObligorType {
   INDIVIDUAL
   COMPANY
 }

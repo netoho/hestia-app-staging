@@ -30,4 +30,4 @@ SET "employmentStatus" =
             END;
 
 -- 4. Drop the old column
--- ALTER TABLE "Tenant" DROP COLUMN "oldEmploymentStatus";
+ALTER TABLE "Tenant" DROP COLUMN "oldEmploymentStatus";
