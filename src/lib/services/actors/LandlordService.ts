@@ -3,41 +3,94 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import { PrismaClient } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { Result, AsyncResult } from '../types/result';
-import { ServiceError, ErrorCode } from '../types/errors';
+import {Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
 import {
-  PersonActorData,
+  ActorData,
   CompanyActorData,
   LandlordData,
-  LandlordSubmissionData,
   LandlordResponse,
+  LandlordSubmissionData,
+  PersonActorData,
   PropertyDetails as PropertyDetailsType,
 } from '@/lib/types/actor';
 import {
-  validateLandlordSubmission,
-  individualLandlordSchema,
-  companyLandlordSchema,
-  partialIndividualLandlordSchema,
-  partialCompanyLandlordSchema,
-} from '@/lib/validations/landlord/landlord.schema';
-import { validatePropertyDetails, PropertyDetails } from '@/lib/validations/landlord/property.schema';
-import { validateLandlordToken } from '@/lib/services/actorTokenService';
-import { logPolicyActivity } from '@/lib/services/policyService';
-import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
+  validateLandlordData,
+  validateMultiLandlordSubmission,
+  isLandlordComplete,
+  validatePrimaryLandlord,
+  type LandlordIndividual,
+  type LandlordCompany,
+} from '@/lib/schemas/landlord';
+import {validateLandlordToken} from '@/lib/services/actorTokenService';
+import {logPolicyActivity} from '@/lib/services/policyService';
+import {PropertyDetailsService} from '@/lib/services/PropertyDetailsService';
+import type {LandlordWithRelations} from './types';
 
-export class LandlordService extends BaseActorService {
+export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
     super('landlord', prisma);
+  }
+
+  /**
+   * Get the Prisma delegate for landlord operations
+   */
+  protected getPrismaDelegate(tx?: any): Prisma.LandlordDelegate {
+    return (tx || this.prisma).landlord;
+  }
+
+  /**
+   * Get includes for landlord queries
+   */
+  protected getIncludes(): Record<string, boolean | object> {
+    return {
+      addressDetails: true,
+      policy: true
+    };
+  }
+
+  /**
+   * Build update data object from actor data
+   * Overrides base method to include landlord-specific fields
+   */
+  protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
+    const updateData = super.buildUpdateData(data, addressId);
+    const landlordData = data as any;
+
+    // Property fields
+    if (landlordData.propertyDeedNumber !== undefined) updateData.propertyDeedNumber = landlordData.propertyDeedNumber || null;
+    if (landlordData.propertyRegistryFolio !== undefined) updateData.propertyRegistryFolio = landlordData.propertyRegistryFolio || null;
+    if (landlordData.propertyValue !== undefined) updateData.propertyValue = landlordData.propertyValue || null;
+
+    // Financial fields
+    if (landlordData.hasAdditionalIncome !== undefined) updateData.hasAdditionalIncome = landlordData.hasAdditionalIncome;
+    if (landlordData.additionalIncomeSource !== undefined) updateData.additionalIncomeSource = landlordData.additionalIncomeSource || null;
+    if (landlordData.additionalIncomeAmount !== undefined) updateData.additionalIncomeAmount = landlordData.additionalIncomeAmount || null;
+
+    // Company specific
+    if (landlordData.businessType !== undefined) updateData.businessType = landlordData.businessType || null;
+    if (landlordData.monthlyIncome !== undefined && data.isCompany) {
+      // Base service only handles monthlyIncome for persons
+      updateData.monthlyIncome = landlordData.monthlyIncome || null;
+    }
+
+    // CFDI
+    if (landlordData.requiresCFDI !== undefined) updateData.requiresCFDI = landlordData.requiresCFDI;
+    if (landlordData.cfdiData !== undefined) updateData.cfdiData = landlordData.cfdiData;
+
+    return updateData;
   }
 
   /**
    * Validate person landlord data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    const schema = isPartial ? partialIndividualLandlordSchema : individualLandlordSchema;
-    const result = schema.safeParse(data);
+    const result = validateLandlordData(data, {
+      isCompany: false,
+      mode: isPartial ? 'partial' : 'strict',
+    });
 
     if (!result.success) {
       return Result.error(
@@ -57,8 +110,10 @@ export class LandlordService extends BaseActorService {
    * Validate company landlord data
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    const schema = isPartial ? partialCompanyLandlordSchema : companyLandlordSchema;
-    const result = schema.safeParse(data);
+    const result = validateLandlordData(data, {
+      isCompany: true,
+      mode: isPartial ? 'partial' : 'strict',
+    });
 
     if (!result.success) {
       return Result.error(
@@ -81,8 +136,9 @@ export class LandlordService extends BaseActorService {
     landlordId: string,
     data: LandlordData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<LandlordData> {
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<LandlordWithRelations> {
     // Fetch existing landlord to get current addressId
     const existingLandlord = await this.prisma.landlord.findUnique({
       where: { id: landlordId },
@@ -99,7 +155,7 @@ export class LandlordService extends BaseActorService {
       cfdiData: data.cfdiData,
     };
 
-    return this.saveActorData('landlord', landlordId, saveData as any, isPartial, skipValidation);
+    return this.saveActorData(landlordId, saveData, isPartial, skipValidation, tabName);
   }
 
   /**
@@ -201,9 +257,9 @@ export class LandlordService extends BaseActorService {
       // Set partial flag
       const partial = isPartial ?? data.partial ?? false;
 
-      // Validate submission data
-      const validationResult = validateLandlordSubmission(data);
-      if (!validationResult.success) {
+      // Validate submission data using new schema
+      const validationResult = validateMultiLandlordSubmission(data);
+      if (!validationResult.success && 'error' in validationResult) {
         return Result.error(
           new ServiceError(
             ErrorCode.VALIDATION_ERROR,
@@ -226,8 +282,8 @@ export class LandlordService extends BaseActorService {
       }
 
       // Start transaction
-      const result = await this.executeTransaction(async (tx) => {
-        const { landlord } = tokenValidation;
+      return await this.executeTransaction(async (tx) => {
+        const {landlord} = tokenValidation;
 
         // Save all landlords in the array
         for (const landlordData of data.landlords) {
@@ -303,8 +359,6 @@ export class LandlordService extends BaseActorService {
           },
         } as LandlordResponse;
       });
-
-      return result;
     } catch (error) {
       this.log('error', 'Landlord submission error', error);
       return Result.error(
@@ -337,32 +391,30 @@ export class LandlordService extends BaseActorService {
    */
   async getPrimaryLandlord(policyId: string): AsyncResult<LandlordData> {
     return this.executeDbOperation(async () => {
-      const landlord = await this.prisma.landlord.findFirst({
-        where: { policyId, isPrimary: true },
-        include: {
-          addressDetails: true,
-          documents: true,
-          policy: {
-            include: {
-              propertyDetails: {
-                include: {
-                  propertyAddressDetails: true,
-                },
-              },
-            },
-          },
+      const landlordRecord = await this.prisma.landlord.findFirst({
+        where: {
+          policyId,
+          isPrimary: true,
         },
+        select: { id: true },
       });
 
-      if (!landlord) {
-        throw new ServiceError(
-          ErrorCode.NOT_FOUND,
-          'Primary landlord not found for policy',
-          404
+      if (!landlordRecord) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.NOT_FOUND,
+            'Primary landlord not found for policy',
+            404
+          )
         );
       }
 
-      return landlord as LandlordData;
+      const landlordResult = await this.getActorById(landlordRecord.id);
+      if (!landlordResult.ok) {
+        return Result.error(landlordResult.error);
+      }
+
+      return landlordResult.value as unknown as LandlordData;
     }, 'getPrimaryLandlord');
   }
 
@@ -388,6 +440,20 @@ export class LandlordService extends BaseActorService {
   }
 
   /**
+   * Get all landlords by policy ID (alias for getAllLandlords)
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<LandlordData[]> {
+    return this.getAllLandlords(policyId);
+  }
+
+  /**
+   * Create a new landlord (alias for createLandlord)
+   */
+  async create(data: any): AsyncResult<LandlordData> {
+    return this.createLandlord(data.policyId, data, data.isPrimary);
+  }
+
+  /**
    * Create a new landlord for a policy
    */
   async createLandlord(
@@ -396,6 +462,7 @@ export class LandlordService extends BaseActorService {
     isPrimary: boolean = false
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
+      const landlordData = data as any;
       // If setting as primary, unmark existing primary
       if (isPrimary) {
         await tx.landlord.updateMany({
@@ -409,42 +476,42 @@ export class LandlordService extends BaseActorService {
         data: {
           policyId,
           isPrimary,
-          isCompany: data.isCompany || false,
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
+          isCompany: landlordData.isCompany || false,
+          email: landlordData.email || '',
+          phone: landlordData.phone || '',
+          address: landlordData.address || '',
           // Individual name fields
-          firstName: data.firstName,
-          middleName: data.middleName,
-          paternalLastName: data.paternalLastName,
-          maternalLastName: data.maternalLastName,
-          rfc: data.rfc,
-          curp: data.curp,
-          companyName: data.companyName,
-          companyRfc: data.companyRfc,
+          firstName: landlordData.firstName,
+          middleName: landlordData.middleName,
+          paternalLastName: landlordData.paternalLastName,
+          maternalLastName: landlordData.maternalLastName,
+          rfc: landlordData.rfc,
+          curp: landlordData.curp,
+          companyName: landlordData.companyName,
+          companyRfc: landlordData.companyRfc,
           // Legal rep name fields
-          legalRepFirstName: data.legalRepFirstName,
-          legalRepMiddleName: data.legalRepMiddleName,
-          legalRepPaternalLastName: data.legalRepPaternalLastName,
-          legalRepMaternalLastName: data.legalRepMaternalLastName,
-          legalRepPosition: data.legalRepPosition,
-          legalRepRfc: data.legalRepRfc,
-          legalRepPhone: data.legalRepPhone,
-          legalRepEmail: data.legalRepEmail,
-          workPhone: data.workPhone,
-          personalEmail: data.personalEmail,
-          workEmail: data.workEmail,
-          occupation: data.occupation,
-          employerName: data.employerName,
-          monthlyIncome: data.monthlyIncome,
-          bankName: data.bankName,
-          accountNumber: data.accountNumber,
-          clabe: data.clabe,
-          accountHolder: data.accountHolder,
-          propertyDeedNumber: data.propertyDeedNumber,
-          propertyRegistryFolio: data.propertyRegistryFolio,
-          requiresCFDI: data.requiresCFDI,
-          cfdiData: data.cfdiData,
+          legalRepFirstName: landlordData.legalRepFirstName,
+          legalRepMiddleName: landlordData.legalRepMiddleName,
+          legalRepPaternalLastName: landlordData.legalRepPaternalLastName,
+          legalRepMaternalLastName: landlordData.legalRepMaternalLastName,
+          legalRepPosition: landlordData.legalRepPosition,
+          legalRepRfc: landlordData.legalRepRfc,
+          legalRepPhone: landlordData.legalRepPhone,
+          legalRepEmail: landlordData.legalRepEmail,
+          workPhone: landlordData.workPhone,
+          personalEmail: landlordData.personalEmail,
+          workEmail: landlordData.workEmail,
+          occupation: landlordData.occupation,
+          employerName: landlordData.employerName,
+          monthlyIncome: landlordData.monthlyIncome,
+          bankName: landlordData.bankName,
+          accountNumber: landlordData.accountNumber,
+          clabe: landlordData.clabe,
+          accountHolder: landlordData.accountHolder,
+          propertyDeedNumber: landlordData.propertyDeedNumber,
+          propertyRegistryFolio: landlordData.propertyRegistryFolio,
+          requiresCFDI: landlordData.requiresCFDI,
+          cfdiData: landlordData.cfdiData,
         },
         include: {
           addressDetails: true,
@@ -453,7 +520,7 @@ export class LandlordService extends BaseActorService {
       });
 
       this.log('info', 'Landlord created', { landlordId: landlord.id, policyId, isPrimary });
-      return landlord as LandlordData;
+      return landlord as unknown as LandlordData;
     });
   }
 
@@ -501,13 +568,14 @@ export class LandlordService extends BaseActorService {
     fileUrl: string
   ): AsyncResult<any> {
     return this.executeDbOperation(async () => {
-      const document = await this.prisma.document.create({
+      const document = await this.prisma.actorDocument.create({
         data: {
           landlordId,
-          documentType,
+          category: documentType as any,
           fileName,
-          fileUrl,
-          uploadedAt: new Date(),
+          filePath: fileUrl,
+          fileSize: 0, // Default or pass as arg
+          mimeType: 'application/octet-stream', // Default or pass as arg
         },
       });
 
@@ -542,9 +610,49 @@ export class LandlordService extends BaseActorService {
   }
 
   /**
+   * Get an actor by token
+   * Used by tRPC router for actor self-service access
+   */
+  public async getManyByToken(token: string): AsyncResult<LandlordWithRelations[]> {
+    return this.executeDbOperation(async () => {
+      const delegate = this.getPrismaDelegate();
+
+      const landlord = await delegate.findFirst({
+        where: { accessToken: token },
+        select: {
+          policyId: true,
+          tokenExpiry: true,
+        }
+      });
+
+      if (!landlord) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Actor no encontrado con el token proporcionado'
+        );
+      }
+
+      // Check token expiry
+      if (landlord.tokenExpiry && landlord.tokenExpiry < new Date()) {
+        throw new ServiceError(
+          ErrorCode.TOKEN_EXPIRED,
+          'Token expirado'
+        );
+      }
+
+      return delegate.findMany({
+        where: { policyId: landlord?.policyId },
+        include: this.getIncludes(),
+      });
+    }, 'getByToken');
+  }
+
+
+
+  /**
    * Check if landlord has required documents
    */
-  private async hasRequiredDocuments(landlordId: string): Promise<boolean> {
+  async hasRequiredDocuments(landlordId: string): Promise<boolean> {
     const result = await this.executeDbOperation(async () => {
       const landlord = await this.prisma.landlord.findUnique({
         where: { id: landlordId },
@@ -592,11 +700,11 @@ export class LandlordService extends BaseActorService {
   ): AsyncResult<LandlordData> {
     try {
       // Start transaction for data consistency
-      const result = await this.executeTransaction(async (tx) => {
+      return await this.executeTransaction(async (tx) => {
         // Get the primary landlord to find the policyId
         const primaryLandlord = await tx.landlord.findUnique({
-          where: { id: primaryLandlordId },
-          select: { policyId: true }
+          where: {id: primaryLandlordId},
+          select: {policyId: true}
         });
 
         if (!primaryLandlord) {
@@ -677,17 +785,15 @@ export class LandlordService extends BaseActorService {
 
         // Return the primary landlord data
         const updatedLandlord = await tx.landlord.findUnique({
-          where: { id: primaryLandlordId },
+          where: {id: primaryLandlordId},
           include: {
             addressDetails: true,
             documents: true,
           }
         });
 
-        return updatedLandlord as LandlordData;
+        return updatedLandlord as unknown as LandlordData;
       });
-
-      return result;
     } catch (error) {
       this.log('error', 'Multi-landlord save error', error);
       return Result.error(
@@ -707,26 +813,33 @@ export class LandlordService extends BaseActorService {
    */
   public async save(
     landlordId: string,
-    data: LandlordData | LandlordSubmissionData,
+    data: LandlordData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<LandlordData> {
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<LandlordWithRelations> {
     // Check if data is the complex LandlordSubmissionData structure
-    if ('landlords' in data && Array.isArray((data as any).landlords)) {
+    if ('landlords' in data && Array.isArray((data as LandlordSubmissionData).landlords)) {
       // Complex multi-landlord submission with property/financial details
-      return this.saveMultiLandlordData(
+      const result = await this.saveMultiLandlordData(
         landlordId,
         data as LandlordSubmissionData,
         isPartial,
         skipValidation
       );
+      // Return the specific landlord that was updated
+      if (result.ok) {
+        return Result.ok(result.value as unknown as LandlordWithRelations);
+      }
+      return Result.error(result.error);
     } else {
       // Simple single landlord update
       return this.saveLandlordInformation(
         landlordId,
-        data as LandlordData,
+        data,
         isPartial,
-        skipValidation
+        skipValidation,
+        tabName
       );
     }
   }
@@ -736,6 +849,102 @@ export class LandlordService extends BaseActorService {
    * Admin only operation
    */
   public async delete(landlordId: string): AsyncResult<void> {
-    return this.deleteActor('Landlord', landlordId);
+    return this.deleteActor(landlordId);
+  }
+
+  /**
+   * Validate landlord completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(landlord: LandlordWithRelations): Result<boolean> {
+    // Use the new isLandlordComplete function from the schema
+    const completenessCheck = isLandlordComplete(landlord, Boolean(landlord.isCompany));
+
+    if (!completenessCheck.valid) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: completenessCheck.errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(landlordId: string): AsyncResult<boolean> {
+    const landlord = await this.getById(landlordId);
+    if (!landlord.ok) return landlord;
+
+    const requiredDocs: any[] = landlord.value.isCompany
+      ? ['ESCRITURA', 'PREDIAL', 'IDENTIFICACION', 'ACTA_CONSTITUTIVA']
+      : ['ESCRITURA', 'PREDIAL', 'IDENTIFICACION'];
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        landlordId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Submit all landlords for a policy
+   * Special method for multi-landlord submission
+   */
+  public async submitAllLandlords(
+    policyId: string,
+    options?: {
+      skipValidation?: boolean;
+      submittedBy?: string;
+    }
+  ): AsyncResult<LandlordWithRelations[]> {
+    const landlords = await this.getAllByPolicyId(policyId);
+    if (!landlords.ok) return landlords;
+
+    const results: LandlordWithRelations[] = [];
+
+    // Submit each landlord
+    for (const landlord of landlords.value) {
+      if (!landlord.id) continue;
+      const result = await this.submitActor(landlord.id, options);
+      if (!result.ok) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.VALIDATION_ERROR,
+            `Error submitting landlord ${(landlord as any).firstName || (landlord as any).companyName}: ${result.error?.message}`,
+            400
+          )
+        );
+      }
+      results.push(result.value);
+    }
+
+    // Ownership percentage validation removed - not needed per requirements
+
+    return Result.ok(results);
   }
 }

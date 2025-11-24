@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldError } from '@/components/ui/field-error';
 import { LandlordData, PolicyFinancialDetails } from '@/lib/types/actor';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';

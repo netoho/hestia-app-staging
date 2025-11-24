@@ -34,6 +34,7 @@ import { SectionValidationInfo } from '@/lib/services/reviewService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { ReviewIcon, StatusIconComponent } from '@/types/review';
+import { trpc } from '@/lib/trpc/client';
 
 interface SectionValidatorProps {
   section: SectionValidationInfo;
@@ -55,7 +56,19 @@ export default function SectionValidator({
   const [isOpen, setIsOpen] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
+
+  // Use tRPC mutation for section validation
+  const validateSectionMutation = trpc.review.validateSection.useMutation({
+    onSuccess: () => {
+      setShowRejectDialog(false);
+      setRejectionReason('');
+      onValidationComplete();
+    },
+    onError: (error) => {
+      console.error('Validation error:', error);
+      alert(`Error al validar: ${error.message}`);
+    },
+  });
 
   const getStatusIcon = (): StatusIconComponent => {
     switch (section.status) {
@@ -89,35 +102,14 @@ export default function SectionValidator({
       return;
     }
 
-    setIsValidating(true);
-    try {
-      const response = await fetch(`/api/policies/${policyId}/review/validate-section`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actorType,
-          actorId,
-          section: section.section,
-          status,
-          rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
-        })
-      });
-
-      if (response.ok) {
-        setShowRejectDialog(false);
-        setRejectionReason('');
-        onValidationComplete();
-      } else {
-        const error = await response.json();
-        console.error('Validation error:', error);
-        alert(`Error al validar: ${error.message}`);
-      }
-    } catch (error) {
-      console.error('Error validating section:', error);
-      alert('Error al validar la sección');
-    } finally {
-      setIsValidating(false);
-    }
+    validateSectionMutation.mutate({
+      policyId,
+      actorType: actorType as 'landlord' | 'tenant' | 'jointObligor' | 'aval',
+      actorId,
+      section: section.section as 'personal_info' | 'work_info' | 'financial_info' | 'references' | 'address' | 'company_info',
+      status,
+      rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
+    });
   };
 
   const renderFieldValue = (value: any): string => {
@@ -256,9 +248,9 @@ export default function SectionValidator({
                     size="sm"
                     className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => handleValidate('APPROVED')}
-                    disabled={isValidating}
+                    disabled={validateSectionMutation.isPending}
                   >
-                    {isValidating ? (
+                    {validateSectionMutation.isPending ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : (
                       <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -270,7 +262,7 @@ export default function SectionValidator({
                     variant="destructive"
                     className="flex-1"
                     onClick={() => setShowRejectDialog(true)}
-                    disabled={isValidating}
+                    disabled={validateSectionMutation.isPending}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Rechazar
@@ -314,9 +306,9 @@ export default function SectionValidator({
             <Button
               variant="destructive"
               onClick={() => handleValidate('REJECTED')}
-              disabled={!rejectionReason.trim() || isValidating}
+              disabled={!rejectionReason.trim() || validateSectionMutation.isPending}
             >
-              {isValidating ? (
+              {validateSectionMutation.isPending ? (
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <XCircle className="h-4 w-4 mr-2" />

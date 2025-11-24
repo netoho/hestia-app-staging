@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Check } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-import { useAvalForm } from '@/hooks/useAvalForm';
-import { useAvalReferences } from '@/hooks/useAvalReferences';
+import { useActorFormState } from '@/hooks/useActorFormState';
+import { useActorReferences } from '@/hooks/useActorReferences';
+import { useFormWizardSubmissionTRPC } from '@/hooks/useFormWizardSubmissionTRPC';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
+import { actorConfig } from '@/lib/constants/actorConfig';
+import { formMessages } from '@/lib/constants/formMessages';
+import { validatePersonFields, validateContactInfo, validateFinancialInfo } from '@/lib/utils/actorValidation';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
 import { SaveTabButton } from '@/components/actor/shared/SaveTabButton';
-import { cleanFormAddresses } from '@/lib/utils/addressUtils';
 import AvalPersonalInfoTab from './AvalPersonalInfoTab';
 import AvalEmploymentTab from './AvalEmploymentTab';
 import AvalPropertyGuaranteeTab from './AvalPropertyGuaranteeTab';
@@ -37,57 +39,122 @@ export default function AvalFormWizard({
   const { toast } = useToast();
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
-  // Use custom form hooks
-  const {
-    formData,
-    updateField,
-    errors,
-    setErrors,
-    saving,
-    validatePersonalTab,
-    validatePropertyTab,
-    saveTab: saveFormTab,
-  } = useAvalForm(initialData, isAdminEdit);
+  // Use generic form state hook
+  const formState = useActorFormState({
+    actorType: 'aval',
+    initialData,
+    policy,
+    isAdminEdit,
+    token,
+  });
 
-  const {
-    personalReferences,
-    commercialReferences,
-    updatePersonalReference,
-    updateCommercialReference,
-    validatePersonalReferences,
-    validateCommercialReferences,
-  } = useAvalReferences(
-    initialData.references || [],
-    initialData.commercialReferences || []
-  );
+  // Extract what we need
+  const { formData, updateField, errors, setErrors } = formState as any;
 
-  const isCompany = formData.isCompany;
+  // References hook
+  const referencesHook = useActorReferences({
+    actorType: 'aval',
+    initialPersonalReferences: initialData,
+    allowAddRemove: false,
+    minReferences: 3,
+    maxReferences: 3,
+    errorKeyPrefix: 'personalReference',
+  });
 
-  // Tab configuration
-  const tabs = isCompany
-    ? [
-        { id: 'personal', label: 'Información', needsSave: true },
-        { id: 'property', label: 'Propiedad', needsSave: true },
-        { id: 'references', label: 'Referencias', needsSave: true },
-        { id: 'documents', label: 'Documentos', needsSave: false },
-      ]
-    : [
-        { id: 'personal', label: 'Personal', needsSave: true },
-        { id: 'employment', label: 'Empleo', needsSave: true },
-        { id: 'property', label: 'Propiedad', needsSave: true },
-        { id: 'references', label: 'Referencias', needsSave: true },
-        { id: 'documents', label: 'Documentos', needsSave: false },
-      ];
+  const personalReferences = (referencesHook as any).personalReferences || [];
+  const commercialReferences = (referencesHook as any).commercialReferences || [];
+  const updatePersonalReference = (referencesHook as any).updatePersonalReference || (() => {});
+  const updateCommercialReference = (referencesHook as any).updateCommercialReference || (() => {});
+  const validatePersonalReferences = (referencesHook as any).validatePersonalReferences || (() => ({ valid: true, errors: {} }));
+  const validateCommercialReferences = (referencesHook as any).validateCommercialReferences || (() => ({ valid: true, errors: {} }));
+
+  // Use submission hook
+  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmissionTRPC({
+    actorType: 'aval',
+    token,
+    isAdminEdit,
+  });
+
+  // Use avalType enum instead of isCompany boolean
+  // Default to INDIVIDUAL if not set, or convert from legacy isCompany
+  const avalType = formData.avalType;
+  const isCompany = avalType === 'COMPANY';
+
+  // Tab configuration using centralized config
+  const config = actorConfig.aval;
+  const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
 
   // Use wizard tabs hook
   const wizard = useFormWizardTabs({ tabs, isAdminEdit });
 
-  // Save tab handler
+  // Initialize tabs as saved based on initial data
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.fullName || initialData.companyName) {
+        wizard.markTabSaved('personal');
+      }
+      if (initialData.occupation || initialData.monthlyIncome) {
+        wizard.markTabSaved('employment');
+      }
+      if (initialData.propertyAddress || initialData.propertyValue) {
+        wizard.markTabSaved('property');
+      }
+      if (initialData.personalReferences?.length > 0 || initialData.commercialReferences?.length > 0) {
+        wizard.markTabSaved('references');
+      }
+    }
+  }, [initialData]);
+
+  // Validation functions
+  const validatePersonalTab = useCallback(() => {
+    const localErrors: Record<string, string> = {};
+
+    if (isCompany) {
+      validatePersonFields({
+        ...formData,
+        firstName: formData.legalRepFirstName,
+        paternalLastName: formData.legalRepPaternalLastName,
+        maternalLastName: formData.legalRepMaternalLastName,
+      }, localErrors);
+    } else {
+      validatePersonFields(formData, localErrors);
+    }
+
+    setErrors(localErrors);
+    return Object.keys(localErrors).length === 0;
+  }, [formData, isCompany, setErrors]);
+
+  const validateEmploymentTab = useCallback(() => {
+    const localErrors: Record<string, string> = {};
+
+    validateContactInfo(formData, localErrors);
+    const financialValid = validateFinancialInfo(formData, setErrors);
+
+    setErrors(localErrors);
+    return Object.keys(localErrors).length === 0 && financialValid;
+  }, [formData, setErrors]);
+
+  const validatePropertyTab = useCallback(() => {
+    // Basic validation for property guarantee
+    if (!formData.propertyAddress || !formData.propertyValue) {
+      setErrors({
+        propertyAddress: !formData.propertyAddress ? 'La dirección es requerida' : '',
+        propertyValue: !formData.propertyValue ? 'El valor es requerido' : '',
+      });
+      return false;
+    }
+    return true;
+  }, [formData, setErrors]);
+
+  // Save tab handler using consolidated logic
   const handleSaveTab = useCallback(async (tabName: string) => {
-    // Validation logic
     const validateTab = () => {
+      setErrors({}); // Clear errors before validation
+
       if (tabName === 'personal') {
         return validatePersonalTab();
+      } else if (tabName === 'employment' && !isCompany) {
+        return validateEmploymentTab();
       } else if (tabName === 'property') {
         return validatePropertyTab();
       } else if (tabName === 'references') {
@@ -102,95 +169,78 @@ export default function AvalFormWizard({
       return true;
     };
 
-    // Save logic
-    const saveData = async () => {
-      const additionalData: any = {};
+    const getAdditionalData = () => {
       if (tabName === 'references') {
-        additionalData.references = isCompany ? undefined : personalReferences;
-        additionalData.commercialReferences = isCompany ? commercialReferences : undefined;
+        return {
+          references: isCompany ? undefined : personalReferences,
+          commercialReferences: isCompany ? commercialReferences : undefined,
+        };
       }
+      return {};
+    };
 
-      const success = await saveFormTab(token, tabName, additionalData);
+    // Use consolidated save logic
+    const saveData = async () => {
+      const dataToSave = {
+        ...formData,
+        avalType, // Ensure avalType is included
+        ...getAdditionalData(),
+      };
+
+      const success = await saveTabHandler(
+        tabName,
+        validateTab,
+        () => dataToSave,
+        () => getAdditionalData()
+      );
+
       if (!success) {
-        throw new Error('Failed to save');
+        throw new Error(formMessages.error.saveFailed);
       }
     };
 
     return wizard.handleTabSave(tabName, validateTab, saveData);
   }, [
     validatePersonalTab,
+    validateEmploymentTab,
     validatePropertyTab,
     validatePersonalReferences,
     validateCommercialReferences,
-    saveFormTab,
-    token,
+    saveTabHandler,
+    formData,
     isCompany,
     personalReferences,
     commercialReferences,
     setErrors,
-    wizard
+    wizard,
+    formMessages.error.saveFailed,
   ]);
 
-  // Final submit handler
+  // Final submit handler using consolidated logic
   const handleFinalSubmit = useCallback(async () => {
-    if (!requiredDocsUploaded) {
-      toast({
-        title: "Documentos requeridos",
-        description: "Por favor cargue todos los documentos requeridos antes de enviar. La escritura y boleta predial de la propiedad en garantía son obligatorias.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     wizard.setSavingTab('final');
 
     try {
-      // Clean address fields before final submission
-      const cleanFormData = cleanFormAddresses(
-        { ...formData },
-        ['addressDetails', 'employerAddressDetails', 'guaranteePropertyDetails']
+      const getReferences = () => ({
+        personal: isCompany ? undefined : personalReferences,
+        commercial: isCompany ? commercialReferences : undefined,
+      });
+
+      const success = await submitHandler(
+        () => formData,
+        requiredDocsUploaded,
+        getReferences,
+        onComplete
       );
 
-      const submissionData = {
-        ...cleanFormData,
-        references: isCompany ? undefined : personalReferences,
-        commercialReferences: isCompany ? commercialReferences : undefined,
-        informationComplete: true,
-      };
-
-      // Use unified route - token can be either UUID (admin) or access token (actor)
-      const submitUrl = `/api/actors/aval/${token}`;
-
-      const response = await fetch(submitUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit information');
-      }
-
-      toast({
-        title: "✓ Información Enviada",
-        description: 'Tu información ha sido enviada exitosamente',
-      });
-
-      if (onComplete) {
-        onComplete();
+      if (!success) {
+        wizard.setSavingTab(null);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      toast({
-        title: "Error",
-        description: 'Error al enviar la información',
-        variant: "destructive",
-      });
-    } finally {
       wizard.setSavingTab(null);
     }
-  }, [formData, isCompany, personalReferences, commercialReferences, token, toast, onComplete, requiredDocsUploaded, wizard]);
+  }, [formData, isCompany, personalReferences, commercialReferences, submitHandler, onComplete, requiredDocsUploaded, wizard]);
 
   const { getProgress } = wizard;
   const progress = getProgress();

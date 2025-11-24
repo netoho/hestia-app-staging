@@ -4,39 +4,33 @@ import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Building2, User, Loader2, CheckCircle, Check } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useLandlordForm } from '@/hooks/useLandlordForm';
+import { useActorFormState } from '@/hooks/useActorFormState';
+import { useFormWizardSubmissionTRPC } from '@/hooks/useFormWizardSubmissionTRPC';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
+import { actorConfig } from '@/lib/constants/actorConfig';
+import { formMessages } from '@/lib/constants/formMessages';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
 import { SaveTabButton } from '@/components/actor/shared/SaveTabButton';
-import { cleanFormAddresses } from '@/lib/utils/addressUtils';
-
-import PersonInformation from '@/components/actor/shared/PersonInformation';
-import CompanyInformation from '@/components/actor/shared/CompanyInformation';
+import LandlordOwnerInfoTab from './LandlordOwnerInfoTab';
+import LandlordBankInfoTab from './LandlordBankInfoTab';
 import PropertyDetailsForm from './PropertyDetailsForm';
 import FinancialInfoForm from './FinancialInfoForm';
 import DocumentsSection from './DocumentsSection';
-import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
-
-import {
-  LandlordData,
-  PropertyDetails,
-  PolicyFinancialDetails,
-  PersonActorData,
-  CompanyActorData
-} from '@/lib/types/actor';
+// Import new schema validation
+import { validateLandlordData, getLandlordTabSchema } from '@/lib/schemas/landlord';
+import { filterLandlordFieldsByTab } from '@/lib/constants/landlordTabFields';
+import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 
 interface LandlordFormWizardProps {
   token: string;
-  initialData?: Partial<LandlordData>;
+  initialData?: any;
   policy?: any;
   onComplete?: () => void;
-  isAdminEdit?: boolean; // New prop to indicate admin mode
+  isAdminEdit?: boolean;
+  canEdit?: boolean;
 }
 
 export default function LandlordFormWizard({
@@ -45,117 +39,311 @@ export default function LandlordFormWizard({
   policy,
   onComplete,
   isAdminEdit = false,
+  canEdit = true,
 }: LandlordFormWizardProps) {
   const { toast } = useToast();
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
-  // Use the landlord form hook
+  // Use generic form state hook (multi-actor mode for landlord)
+  const formState = useActorFormState({
+    actorType: 'landlord',
+    initialData: initialData?.landlords || initialData,
+    policy,
+    isAdminEdit,
+    token,
+  });
+
+  // Extract what we need - Landlord has special multi-actor structure
   const {
-    landlords,
+    actors: landlords,
+    updateActorField: updateLandlordField,
+    addActor: addCoOwner,
+    removeActor: removeCoOwner,
     propertyData,
-    policyFinancialData,
-    errors,
-    saving,
-    updateLandlordField,
     updatePropertyField,
+    policyFinancialData,
     updateFinancialField,
-    addCoOwner,
-    removeCoOwner,
+    errors,
     setErrors,
-    validatePersonalTab,
-    validatePropertyTab,
-    validateFinancialTab,
-    saveTab: saveFormTab
-  } = useLandlordForm({ token, initialData, policy, isAdminEdit });
+  } = formState as any;
 
-  const isCompany = landlords[0]?.isCompany || false;
+  const isCompany = landlords?.[0]?.isCompany || false;
 
-  // Tab configuration
-  const tabs = [
-    { id: 'personal', label: isCompany ? 'Información' : 'Personal', needsSave: true },
-    { id: 'property', label: 'Propiedad', needsSave: true },
-    { id: 'financial', label: 'Fiscal', needsSave: true },
-    { id: 'documents', label: 'Documentos', needsSave: false },
-  ];
+  // Tab configuration using centralized config
+  const config = actorConfig.landlord;
+  const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
 
   // Use wizard tabs hook
   const wizard = useFormWizardTabs({ tabs, isAdminEdit });
 
-  // Handle tab save
-  const handleSaveTab = async (tabName: string) => {
-    // Validation logic
-    const validateTab = () => {
-      if (tabName === 'personal') {
-        const result = validatePersonalTab();
-        if (!result.valid && result.errors) {
-          setErrors(result.errors);
-        }
-        return result.valid;
-      } else if (tabName === 'property') {
-        const result = validatePropertyTab();
-        if (!result.valid && result.errors) {
-          setErrors(result.errors);
-        }
-        return result.valid;
-      } else if (tabName === 'financial') {
-        const result = validateFinancialTab();
-        if (!result.valid && result.errors) {
-          setErrors(result.errors);
-        }
-        return result.valid;
+  // Use submission hook
+  const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmissionTRPC({
+    actorType: 'landlord',
+    token,
+    isAdminEdit,
+    isMultiActor: true,
+  });
+
+  // Initialize tabs as saved based on initial data
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.landlords?.length > 0 || initialData.fullName || initialData.companyName) {
+        wizard.markTabSaved('owner-info');
       }
-      return true;
-    };
-
-    // Save logic
-    const saveData = async () => {
-      const success = await saveFormTab(tabName, true);
-      if (!success) {
-        throw new Error('Failed to save');
+      if (initialData.landlords?.[0]?.bankName || initialData.bankName) {
+        wizard.markTabSaved('bank-info');
       }
-    };
+      if (initialData.propertyAddress || propertyData?.address) {
+        wizard.markTabSaved('property-info');
+      }
+      if (initialData.monthlyRent || policyFinancialData?.monthlyRent) {
+        wizard.markTabSaved('financial-info');
+      }
+    }
+  }, [initialData]);
 
-    return wizard.handleTabSave(tabName, validateTab, saveData);
-  };
+  // Schema-based validation functions
+  const validateTab = useCallback((tabName: string) => {
+    const localErrors: Record<string, string> = {};
+    let isValid = true;
 
-  // Handle final submission
-  const handleFinalSubmit = async () => {
-    if (!requiredDocsUploaded) {
-      toast({
-        title: "Documentos requeridos",
-        description: "Por favor cargue todos los documentos requeridos antes de enviar.",
-        variant: "destructive",
-      });
-      return;
+    switch (tabName) {
+      case 'owner-info':
+        // Validate each landlord using schema
+        landlords.forEach((landlord: any, index: number) => {
+          const result = validateLandlordData(landlord, {
+            isCompany: Boolean(landlord.isCompany),
+            mode: 'partial', // Tab validation is partial
+            tabName: 'owner-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`landlord${index}.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
+        });
+
+        // Validate primary landlord designation
+        const primaryCount = landlords.filter((l: any) => l.isPrimary).length;
+        if (primaryCount === 0) {
+          localErrors['general'] = 'Debe designar un arrendador principal';
+          isValid = false;
+        } else if (primaryCount > 1) {
+          localErrors['general'] = 'Solo puede haber un arrendador principal';
+          isValid = false;
+        }
+        break;
+
+      case 'bank-info':
+        // Only validate primary landlord's bank info
+        const primaryLandlord = landlords.find((l: any) => l.isPrimary) || landlords[0];
+        if (primaryLandlord) {
+          const result = validateLandlordData(primaryLandlord, {
+            isCompany: Boolean(primaryLandlord.isCompany),
+            mode: 'partial',
+            tabName: 'bank-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`landlord0.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
+        }
+        break;
+
+      case 'property-info':
+        // Use primary landlord for property validation
+        const primaryForProperty = landlords.find((l: any) => l.isPrimary) || landlords[0];
+        if (primaryForProperty) {
+          // Map propertyData to expected schema format
+          const propertyDataForValidation = {
+            ...primaryForProperty,
+            propertyDeedNumber: propertyData.propertyDeedNumber,
+            propertyRegistryFolio: propertyData.propertyRegistryFolio,
+            propertyValue: propertyData.propertyValue,
+          };
+
+          const result = validateLandlordData(propertyDataForValidation, {
+            isCompany: Boolean(primaryForProperty.isCompany),
+            mode: 'partial',
+            tabName: 'property-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`property.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
+        }
+        break;
+
+      case 'financial-info':
+        // Validate financial data
+        const primaryForFinancial = landlords.find((l: any) => l.isPrimary) || landlords[0];
+        if (primaryForFinancial) {
+          const financialDataForValidation = {
+            ...primaryForFinancial,
+            ...policyFinancialData,
+          };
+
+          const result = validateLandlordData(financialDataForValidation, {
+            isCompany: Boolean(primaryForFinancial.isCompany),
+            mode: 'partial',
+            tabName: 'financial-info'
+          });
+
+          if (!result.success) {
+            result.error.issues.forEach(issue => {
+              const fieldPath = issue.path.join('.');
+              localErrors[`financial.${fieldPath}`] = issue.message;
+            });
+            isValid = false;
+          }
+        }
+        break;
+
+      case 'documents':
+        // Documents validation is handled separately
+        break;
     }
 
+    setErrors(localErrors);
+    return isValid;
+  }, [landlords, propertyData, policyFinancialData, setErrors]);
+
+  // Handle tab save
+  const handleSaveTab = useCallback(async (tabName: string) => {
+    // Clear errors first
+    setErrors({});
+
+    // Validate using schema validation
+    const isValid = validateTab(tabName);
+    if (!isValid) {
+      return false;
+    }
+
+    // Save logic using consolidated hook
+    const saveData = async () => {
+      // Prepare data for database using our utility
+      const { landlords: preparedLandlords, policyData } = prepareMultiLandlordsForDB(
+        landlords.map((l: any) => ({
+          ...l,
+          isPrimary: l.isPrimary || false,
+        })),
+        { isPartial: true }
+      );
+
+      // Combine all data
+      const dataToSave = {
+        landlords: preparedLandlords,
+        propertyData: {
+          ...propertyData,
+          propertyDeedNumber: propertyData.propertyDeedNumber,
+          propertyRegistryFolio: propertyData.propertyRegistryFolio,
+        },
+        policyFinancialData: {
+          ...policyFinancialData,
+          ...policyData, // Include extracted policy fields
+        },
+      };
+
+      const success = await saveTabHandler(
+        tabName,
+        () => true, // Validation already done above
+        () => dataToSave,
+        () => filterLandlordFieldsByTab(dataToSave, Boolean(landlords[0]?.isCompany), tabName)
+      );
+
+      if (!success) {
+        throw new Error(formMessages.error.saveFailed);
+      }
+    };
+
+    return wizard.handleTabSave(tabName, () => isValid, saveData);
+  }, [
+    landlords,
+    propertyData,
+    policyFinancialData,
+    validateTab,
+    saveTabHandler,
+    setErrors,
+    wizard,
+  ]);
+
+  // Handle final submission
+  const handleFinalSubmit = useCallback(async () => {
     wizard.setSavingTab('final');
 
     try {
-      // Final submission is just a save with partial=false
-      const success = await saveFormTab('final', false);
+      // Validate all tabs first
+      const allTabsValid = ['owner-info', 'bank-info', 'property-info', 'financial-info']
+        .every(tab => validateTab(tab));
 
-      if (success) {
+      if (!allTabsValid) {
         toast({
-          title: "✓ Información Enviada",
-          description: 'Tu información ha sido enviada exitosamente. Gracias por completar el formulario.',
+          title: 'Validación fallida',
+          description: 'Por favor revise todos los campos requeridos',
+          variant: 'destructive',
         });
+        wizard.setSavingTab(null);
+        return;
+      }
 
-        if (onComplete) {
-          onComplete();
-        }
+      // Prepare data for final submission
+      const { landlords: preparedLandlords, policyData } = prepareMultiLandlordsForDB(
+        landlords.map((l: any) => ({
+          ...l,
+          isPrimary: l.isPrimary || false,
+        })),
+        { isPartial: false } // Final submission is not partial
+      );
+
+      const finalData = {
+        landlords: preparedLandlords,
+        propertyData: {
+          ...propertyData,
+          propertyDeedNumber: propertyData.propertyDeedNumber,
+          propertyRegistryFolio: propertyData.propertyRegistryFolio,
+        },
+        policyFinancialData: {
+          ...policyFinancialData,
+          ...policyData,
+        },
+      };
+
+      const success = await submitHandler(
+        () => finalData,
+        requiredDocsUploaded,
+        () => ({}),
+        onComplete
+      );
+
+      if (!success) {
+        wizard.setSavingTab(null);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      toast({
-        title: "Error",
-        description: 'Error al enviar la información',
-        variant: "destructive",
-      });
-    } finally {
       wizard.setSavingTab(null);
     }
-  };
+  }, [
+    landlords,
+    propertyData,
+    policyFinancialData,
+    validateTab,
+    submitHandler,
+    requiredDocsUploaded,
+    wizard,
+    toast,
+    onComplete,
+  ]);
 
   const { getProgress } = wizard;
   const progress = getProgress();
@@ -179,174 +367,89 @@ export default function LandlordFormWizard({
         onTabChange={wizard.setActiveTab}
       >
 
-        {/* Personal Information Tab */}
-        <TabsContent value="personal" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tipo de Arrendador</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup
-                value={isCompany ? 'company' : 'individual'}
-                onValueChange={(value) => {
-                  const newIsCompany = value === 'company';
-                  updateLandlordField(0, 'isCompany', newIsCompany);
-                }}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="individual" id="individual" />
-                  <Label htmlFor="individual" className="flex items-center cursor-pointer">
-                    <User className="h-4 w-4 mr-2" />
-                    Persona Física
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="company" id="company" />
-                  <Label htmlFor="company" className="flex items-center cursor-pointer">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Persona Moral (Empresa)
-                  </Label>
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
-
-          {/* Render all landlords */}
-          {landlords.map((landlord, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>
-                    {index === 0 ? 'Arrendador Principal (Contacto Principal)' : `Co-propietario ${index}`}
-                  </CardTitle>
-                  {index > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeCoOwner(index)}
-                      disabled={wizard.savingTab === 'personal'}
-                    >
-                      ✕ Eliminar
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {landlord.isCompany ? (
-                  <CompanyInformation
-                    data={landlord as Partial<CompanyActorData>}
-                    onChange={(field, value) => updateLandlordField(index, field, value)}
-                    errors={errors}
-                    disabled={wizard.savingTab === 'personal'}
-                    showAdditionalContact={index === 0} // Only show for primary
-                  />
-                ) : (
-                  <PersonInformation
-                    data={landlord as Partial<PersonActorData>}
-                    onChange={(field, value) => updateLandlordField(index, field, value)}
-                    errors={errors}
-                    disabled={wizard.savingTab === 'personal'}
-                    // showEmploymentInfo={index === 0} // Only show for primary
-                    // showAdditionalContact={index === 0} // Only show for primary
-                  />
-                )}
-
-                <div className="mt-4">
-                  <AddressAutocomplete
-                    label="Dirección Residencial"
-                    value={landlord.addressDetails || {}}
-                    onChange={(addressData) => {
-                      updateLandlordField(index, 'addressDetails', addressData);
-                      updateLandlordField(index, 'address',
-                        `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
-                      );
-                    }}
-                    required
-                    disabled={wizard.savingTab === 'personal'}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {/* Add Co-owner Button */}
-          <Card>
-            <CardContent className="pt-6">
-              <Button
-                variant="outline"
-                onClick={addCoOwner}
-                disabled={wizard.savingTab === 'personal'}
-                className="w-full"
-              >
-                + Agregar Co-propietario
-              </Button>
-              <p className="text-sm text-muted-foreground mt-2 text-center">
-                Agregue co-propietarios si la propiedad tiene múltiples dueños (ej: cónyuges, socios)
-              </p>
-            </CardContent>
-          </Card>
-
+        {/* Owner Info Tab */}
+        <TabsContent value="owner-info" className="space-y-4">
+          <LandlordOwnerInfoTab
+            landlords={landlords}
+            updateLandlordField={updateLandlordField}
+            addCoOwner={addCoOwner}
+            removeCoOwner={removeCoOwner}
+            errors={errors}
+            isAdminEdit={isAdminEdit}
+            canEdit={canEdit}
+          />
           <SaveTabButton
-            tabName="personal"
+            tabName="owner-info"
             savingTab={wizard.savingTab}
-            isSaved={wizard.tabSaved.personal}
-            onSave={() => handleSaveTab('personal')}
+            isSaved={wizard.tabSaved['owner-info']}
+            onSave={() => handleSaveTab('owner-info')}
+          />
+        </TabsContent>
+
+        {/* Bank Info Tab */}
+        <TabsContent value="bank-info" className="space-y-4">
+          <LandlordBankInfoTab
+            landlords={landlords}
+            updateLandlordField={updateLandlordField}
+            errors={errors}
+            isAdminEdit={isAdminEdit}
+            canEdit={canEdit}
+          />
+          <SaveTabButton
+            tabName="bank-info"
+            savingTab={wizard.savingTab}
+            isSaved={wizard.tabSaved['bank-info']}
+            onSave={() => handleSaveTab('bank-info')}
           />
         </TabsContent>
 
         {/* Property Details Tab */}
-        <TabsContent value="property" className="space-y-4">
+        <TabsContent value="property-info" className="space-y-4">
           <PropertyDetailsForm
             data={propertyData}
             onChange={updatePropertyField}
             errors={errors}
-            disabled={wizard.savingTab === 'property'}
+            disabled={wizard.savingTab === 'property-info'}
           />
 
           <SaveTabButton
-            tabName="property"
+            tabName="property-info"
             savingTab={wizard.savingTab}
-            isSaved={wizard.tabSaved.property}
-            onSave={() => handleSaveTab('property')}
+            isSaved={wizard.tabSaved['property-info']}
+            onSave={() => handleSaveTab('property-info')}
           />
         </TabsContent>
 
-        {/* Financial Information Tab - Only for Primary Landlord */}
-        <TabsContent value="financial" className="space-y-4">
+        {/* Financial Information Tab */}
+        <TabsContent value="financial-info" className="space-y-4">
           <FinancialInfoForm
             landlordData={landlords[0]}
             policyFinancialData={policyFinancialData}
             onLandlordChange={(field, value) => updateLandlordField(0, field, value)}
             onPolicyFinancialChange={updateFinancialField}
             errors={errors}
-            disabled={wizard.savingTab === 'financial'}
+            disabled={wizard.savingTab === 'financial-info'}
             policy={policy}
             token={token}
-            landlordId={landlords[0].id}
+            landlordId={landlords[0]?.id}
             isAdminEdit={isAdminEdit}
           />
 
           <SaveTabButton
-            tabName="financial"
+            tabName="financial-info"
             savingTab={wizard.savingTab}
-            isSaved={wizard.tabSaved.financial}
-            onSave={() => handleSaveTab('financial')}
+            isSaved={wizard.tabSaved['financial-info']}
+            onSave={() => handleSaveTab('financial-info')}
           />
         </TabsContent>
 
-        {/* Documents Tab - Only for Primary Landlord */}
+        {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
-          <Alert className="mb-4">
-            <AlertDescription>
-              Los documentos (escrituras, información bancaria, CFDI) solo son requeridos del arrendador principal.
-              Los co-propietarios solo necesitan proporcionar identificación.
-            </AlertDescription>
-          </Alert>
           <DocumentsSection
-            landlordId={landlords[0].id} // Primary landlord only
+            landlordId={landlords[0]?.id}
             token={token}
-            isCompany={landlords[0].isCompany || false}
-            allTabsSaved={isAdminEdit || (wizard.tabSaved.personal && wizard.tabSaved.property && wizard.tabSaved.financial)}
+            isCompany={landlords[0]?.isCompany || false}
+            allTabsSaved={isAdminEdit || allTabsSaved}
             onRequiredDocsChange={setRequiredDocsUploaded}
             isAdminEdit={isAdminEdit}
           />

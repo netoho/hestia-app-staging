@@ -3,67 +3,54 @@
  * Handles all joint obligor-related business logic and data operations
  */
 
-import { PrismaClient } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { Result, AsyncResult } from '../types/result';
-import { ServiceError, ErrorCode } from '../types/errors';
-import { PersonActorData, CompanyActorData } from '@/lib/types/actor';
-import { z } from 'zod';
-import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
-import { companyActorSchema } from '@/lib/validations/actors/company.schema';
+import {Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
+import {ActorData, CompanyActorData, PersonActorData} from '@/lib/types/actor';
+import type {JointObligorWithRelations} from './types';
+import {
+  jointObligorStrictSchema,
+  jointObligorPartialSchema,
+  jointObligorAdminSchema,
+  validateJointObligorTab,
+  getJointObligorTabSchema,
+  JointObligorComplete,
+  JointObligorPartial,
+} from '@/lib/schemas/joint-obligor';
+import { prepareJointObligorForDB, prepareJointObligorForPartialUpdate } from '@/lib/utils/joint-obligor/prepareForDB';
 
-// JointObligor-specific validation schemas
-const jointObligorPersonSchema = personWithNationalitySchema.extend({
-  relationshipToTenant: z.string().min(1, 'Relationship to tenant is required'),
-  guaranteeMethod: z.enum(['income', 'property']).optional(),
-  hasPropertyGuarantee: z.boolean().optional(),
-  hasProperties: z.boolean().optional(),
-
-  // Property guarantee fields
-  propertyAddress: z.string().optional().nullable(),
-  propertyValue: z.number().optional().nullable(),
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistry: z.string().optional().nullable(),
-  propertyTaxAccount: z.string().optional().nullable(),
-  propertyUnderLegalProceeding: z.boolean().optional(),
-
-  // Employment fields
-  employmentStatus: z.string().optional().nullable(),
-  position: z.string().optional().nullable(),
-  employerAddress: z.string().optional().nullable(),
-  incomeSource: z.string().optional().nullable(),
-
-  // Marriage information (for property guarantee)
-  maritalStatus: z.string().optional().nullable(),
-  spouseName: z.string().optional().nullable(),
-  spouseRfc: z.string().optional().nullable(),
-  spouseCurp: z.string().optional().nullable(),
-});
-
-const jointObligorCompanySchema = companyActorSchema.extend({
-  relationshipToTenant: z.string().min(1, 'Relationship to tenant is required'),
-  guaranteeMethod: z.enum(['income', 'property']).optional(),
-  hasPropertyGuarantee: z.boolean().optional(),
-
-  // Property guarantee fields (companies can also own guarantee properties)
-  propertyAddress: z.string().optional().nullable(),
-  propertyValue: z.number().optional().nullable(),
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistry: z.string().optional().nullable(),
-  propertyTaxAccount: z.string().optional().nullable(),
-  propertyUnderLegalProceeding: z.boolean().optional(),
-});
-
-export class JointObligorService extends BaseActorService {
+export class JointObligorService extends BaseActorService<JointObligorWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
     super('jointObligor', prisma);
   }
 
   /**
-   * Validate person joint obligor data
+   * Get the Prisma delegate for joint obligor operations
+   */
+  protected getPrismaDelegate(tx?: any): Prisma.JointObligorDelegate {
+    return (tx || this.prisma).jointObligor;
+  }
+
+  /**
+   * Get includes for joint obligor queries
+   */
+  protected getIncludes(): Record<string, boolean | object> {
+    return {
+      addressDetails: true,
+      employerAddressDetails: true,
+      guaranteePropertyDetails: true,
+      personalReferences: true,
+      commercialReferences: true,
+      policy: true
+    };
+  }
+
+  /**
+   * Validate person joint obligor data using new schemas
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    const schema = isPartial ? jointObligorPersonSchema.partial() : jointObligorPersonSchema;
+    const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
 
     if (!result.success) {
@@ -81,10 +68,10 @@ export class JointObligorService extends BaseActorService {
   }
 
   /**
-   * Validate company joint obligor data
+   * Validate company joint obligor data using new schemas
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    const schema = isPartial ? jointObligorCompanySchema.partial() : jointObligorCompanySchema;
+    const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
 
     if (!result.success) {
@@ -102,51 +89,87 @@ export class JointObligorService extends BaseActorService {
   }
 
   /**
-   * Save joint obligor information
+   * Validate data for a specific tab
+   */
+  validateTabData(
+    tab: string,
+    data: any,
+    jointObligorType: 'INDIVIDUAL' | 'COMPANY',
+    guaranteeMethod?: 'income' | 'property',
+    isPartial: boolean = false
+  ): Result<any> {
+    const validation = validateJointObligorTab(tab, data, jointObligorType, guaranteeMethod, isPartial);
+
+    if (!validation.success) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          `Invalid data for ${tab} tab`,
+          400,
+          { errors: validation.errors }
+        )
+      );
+    }
+
+    return Result.ok(data);
+  }
+
+  /**
+   * Save joint obligor information using new prepareForDB utility
    */
   async saveJointObligorInformation(
     jointObligorId: string,
-    data: any,
+    data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<any> {
-    // Fetch existing joint obligor to get current addressId
-    const existingJointObligor = await this.prisma.jointObligor.findUnique({
-      where: { id: jointObligorId },
-      select: { addressId: true }
-    });
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<JointObligorWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      // Fetch existing joint obligor to get policyId
+      const existingJointObligor = await tx.jointObligor.findUnique({
+        where: { id: jointObligorId },
+        select: { policyId: true, actorId: true }
+      });
 
-    // Add joint-obligor-specific fields to the update data
-    const saveData = {
-      ...data,
-      addressId: existingJointObligor?.addressId || undefined,
-      relationshipToTenant: data.relationshipToTenant,
-      guaranteeMethod: data.guaranteeMethod,
-      hasPropertyGuarantee: data.hasPropertyGuarantee,
-      hasProperties: data.hasProperties,
+      if (!existingJointObligor) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Joint Obligor not found',
+          404
+        );
+      }
 
-      // Property guarantee fields
-      propertyAddress: data.propertyAddress,
-      propertyValue: data.propertyValue,
-      propertyDeedNumber: data.propertyDeedNumber,
-      propertyRegistry: data.propertyRegistry,
-      propertyTaxAccount: data.propertyTaxAccount,
-      propertyUnderLegalProceeding: data.propertyUnderLegalProceeding,
+      // Validate data if not skipping validation
+      if (!skipValidation) {
+        const validation = isPartial
+          ? this.validateTabData(tabName || 'personal', data, data.jointObligorType || 'INDIVIDUAL', data.guaranteeMethod, true)
+          : this.validatePersonData(data, false);
 
-      // Employment fields
-      employmentStatus: data.employmentStatus,
-      position: data.position,
-      employerAddress: data.employerAddress,
-      incomeSource: data.incomeSource,
+        if (!validation.ok) {
+          throw validation.error;
+        }
+      }
 
-      // Marriage information
-      maritalStatus: data.maritalStatus,
-      spouseName: data.spouseName,
-      spouseRfc: data.spouseRfc,
-      spouseCurp: data.spouseCurp,
-    };
+      // Prepare data for database using utility
+      const dbData = isPartial
+        ? prepareJointObligorForPartialUpdate(data as JointObligorPartial, existingJointObligor)
+        : prepareJointObligorForDB(data as JointObligorComplete, existingJointObligor.policyId, existingJointObligor.actorId);
 
-    return this.saveActorData('jointObligor', jointObligorId, saveData as any, isPartial, skipValidation);
+      // Update joint obligor
+      const updatedJointObligor = await tx.jointObligor.update({
+        where: { id: jointObligorId },
+        data: dbData as any,
+        include: this.getIncludes()
+      });
+
+      this.log('info', 'Joint obligor information saved', {
+        jointObligorId,
+        isPartial,
+        tabName
+      });
+
+      return updatedJointObligor as JointObligorWithRelations;
+    }, 'saveJointObligorInformation');
   }
 
   /**
@@ -295,7 +318,7 @@ export class JointObligorService extends BaseActorService {
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
           documents: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
         },
       });
@@ -324,7 +347,7 @@ export class JointObligorService extends BaseActorService {
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
           documents: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           policy: true,
         },
@@ -340,6 +363,44 @@ export class JointObligorService extends BaseActorService {
 
       return jointObligor;
     }, 'getJointObligorByPolicyId');
+  }
+
+  /**
+   * Get all joint obligors by policy ID
+   * Note: Currently usually one per policy, but method name aligns with other services
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<any[]> {
+    return this.executeDbOperation(async () => {
+      return await this.prisma.jointObligor.findMany({
+        where: {policyId},
+        include: this.getIncludes()
+      });
+    }, 'getAllByPolicyId');
+  }
+
+  /**
+   * Create a new joint obligor
+   */
+  async create(data: any): AsyncResult<JointObligorWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      const jointObligor = await tx.jointObligor.create({
+        data: {
+          policyId: data.policyId,
+          isCompany: data.isCompany,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          paternalLastName: data.paternalLastName,
+          maternalLastName: data.maternalLastName,
+          companyName: data.companyName,
+          email: data.email,
+          phone: data.phone || data.phoneNumber,
+          relationshipToTenant: data.relationshipToTenant,
+        },
+        include: this.getIncludes()
+      });
+
+      return jointObligor as JointObligorWithRelations;
+    });
   }
 
   /**
@@ -679,11 +740,11 @@ export class JointObligorService extends BaseActorService {
         const actorName = data.isCompany
           ? data.companyName
           : formatFullName(
-              data.firstName,
-              data.paternalLastName,
-              data.maternalLastName,
-              data.middleName,
-            );
+            data.firstName,
+            data.paternalLastName,
+            data.maternalLastName,
+            data.middleName,
+          );
 
         const { logPolicyActivity } = await import('@/lib/services/policyService');
         await logPolicyActivity({
@@ -715,11 +776,12 @@ export class JointObligorService extends BaseActorService {
    */
   public async save(
     obligorId: string,
-    data: JointObligorData,
+    data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<JointObligorData> {
-    return this.saveJointObligorInformation(obligorId, data, isPartial, skipValidation);
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<JointObligorWithRelations> {
+    return this.saveJointObligorInformation(obligorId, data, isPartial, skipValidation, tabName);
   }
 
   /**
@@ -727,6 +789,115 @@ export class JointObligorService extends BaseActorService {
    * Admin only operation
    */
   public async delete(obligorId: string): AsyncResult<void> {
-    return this.deleteActor('JointObligor', obligorId);
+    return this.deleteActor(obligorId);
+  }
+
+  /**
+   * Validate joint obligor completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(jointObligor: JointObligorWithRelations): Result<boolean> {
+    const errors: string[] = [];
+
+    if (!jointObligor.isCompany) {
+      // Person validation
+      if (!jointObligor.firstName) errors.push('Nombre requerido');
+      if (!jointObligor.paternalLastName) errors.push('Apellido paterno requerido');
+      if (!jointObligor.maternalLastName) errors.push('Apellido materno requerido');
+      if (!jointObligor.occupation) errors.push('Ocupación requerida');
+      if (!jointObligor.employerName) errors.push('Nombre del empleador requerido');
+      if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido');
+    } else {
+      // Company validation
+      if (!jointObligor.companyName) errors.push('Razón social requerida');
+      if (!jointObligor.companyRfc) errors.push('RFC de empresa requerido');
+      if (!jointObligor.legalRepFirstName) errors.push('Nombre del representante requerido');
+      if (!jointObligor.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
+      if (!jointObligor.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+    }
+
+    // Common required fields
+    if (!jointObligor.email) errors.push('Email requerido');
+    if (!jointObligor.phone) errors.push('Teléfono requerido');
+    if (!jointObligor.addressDetails) errors.push('Dirección requerida');
+
+    // Joint obligor specific - must have guarantee method
+    if (!jointObligor.guaranteeMethod) errors.push('Método de garantía requerido');
+
+    if (jointObligor.guaranteeMethod === 'property') {
+      // Property guarantee validation
+      if (!jointObligor.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
+      if (!jointObligor.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+      if (!jointObligor.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
+      if (!jointObligor.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+    } else if (jointObligor.guaranteeMethod === 'income') {
+      // Income guarantee validation
+      if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');
+      const minIncome = 10000; // Example minimum income requirement
+      if (jointObligor.monthlyIncome && jointObligor.monthlyIncome < minIncome) {
+        errors.push(`Ingreso mínimo de $${minIncome} requerido para garantía por ingresos`);
+      }
+    }
+
+    // Check references (minimum 3 for joint obligor with addresses)
+    const referenceCount = jointObligor.personalReferences?.length ?? 0;
+    if (referenceCount < 3) {
+      errors.push('Mínimo 3 referencias requeridas con dirección');
+    }
+
+    if (errors.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(obligorId: string): AsyncResult<boolean> {
+    const obligor = await this.getById(obligorId);
+    if (!obligor.ok) return obligor;
+
+    let requiredDocs: any[] = obligor.value.isCompany
+      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS', 'ACTA_CONSTITUTIVA']
+      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+
+    // Add property documents if using property guarantee
+    if (obligor.value.guaranteeMethod === 'property') {
+      requiredDocs = requiredDocs.concat(['ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA']);
+    }
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        jointObligorId: obligorId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
   }
 }

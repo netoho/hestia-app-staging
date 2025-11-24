@@ -80,7 +80,7 @@ class ReviewService {
           include: {
             documents: true,
             addressDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true
           }
         },
@@ -88,7 +88,7 @@ class ReviewService {
           include: {
             documents: true,
             addressDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true
           }
         },
@@ -96,7 +96,7 @@ class ReviewService {
           include: {
             documents: true,
             addressDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true
           }
         }

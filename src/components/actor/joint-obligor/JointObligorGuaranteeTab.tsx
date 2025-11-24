@@ -11,7 +11,7 @@ import { CreditCard, Home, Info, Shield } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { JointObligorFormData } from '@/hooks/useJointObligorForm';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 import { Document } from '@/types/documents';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 

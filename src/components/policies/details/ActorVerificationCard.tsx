@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -32,6 +33,7 @@ import { t } from '@/lib/i18n';
 interface Actor {
   id: string;
   fullName?: string;
+  isPrimary: boolean;
   companyName?: string;
   informationComplete: boolean;
   verificationStatus?: string;
@@ -127,7 +129,7 @@ export default function ActorVerificationCard({
   const renderActorVerification = (
     actor: Actor | undefined,
     actorType: string,
-    icon: React.ReactNode,
+    icon: ReactNode,
     label: string
   ) => {
     if (!actor) return null;

@@ -335,69 +335,71 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
             borderTop: `2px solid ${brandColors.border}`,
           }}>
             <table style={{ width: '100%' }}>
-              <tr>
-                <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
-                  <img
+              <tbody>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                    <img
                       src={`${brandUrls.production}/images/logo-hestia-azul-top.png`}
                       alt={brandInfo.name}
                       width="150"
                       style={{ margin: '0 auto', display: 'block', }}
-                  />
-                </td>
-              </tr>
-              <tr>
-                <td style={{ textAlign: 'center', paddingBottom: '15px' }}>
-                  <Text style={{
-                    margin: '0',
-                    fontSize: '14px',
-                    color: brandColors.textMuted,
-                    fontStyle: 'italic'
-                  }}>
-                    {brandInfo.tagline}
-                  </Text>
-                </td>
-              </tr>
-              <tr>
-                <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
-                  <table style={{ margin: '0 auto' }}>
-                    <tr>
-                      <td style={{ padding: '0 15px' }}>
-                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
-                          📧 {brandInfo.infoEmail}
-                        </Text>
-                      </td>
-                      <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
-                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
-                          📱 {brandInfo.supportPhone}
-                        </Text>
-                      </td>
-                      <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
-                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
-                          📍 {brandInfo.location}
-                        </Text>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style={{ textAlign: 'center', paddingTop: '15px', borderTop: `1px solid ${brandColors.border}` }}>
-                  <Text style={{
-                    margin: '10px 0 0 0',
-                    fontSize: '12px',
-                    color: brandColors.textMuted
-                  }}>
-                    © {new Date().getFullYear()} {brandInfo.companyLegalName}
-                  </Text>
-                  <Text style={{
-                    margin: '5px 0 0 0',
-                    fontSize: '11px',
-                    color: brandColors.textMuted
-                  }}>
-                    Todos los derechos reservados | <a href={privacyUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href={termsUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
-                  </Text>
-                </td>
-              </tr>
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingBottom: '15px' }}>
+                    <Text style={{
+                      margin: '0',
+                      fontSize: '14px',
+                      color: brandColors.textMuted,
+                      fontStyle: 'italic'
+                    }}>
+                      {brandInfo.tagline}
+                    </Text>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                    <table style={{ margin: '0 auto' }}>
+                      <tr>
+                        <td style={{ padding: '0 15px' }}>
+                          <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                            📧 {brandInfo.infoEmail}
+                          </Text>
+                        </td>
+                        <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
+                          <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                            📱 {brandInfo.supportPhone}
+                          </Text>
+                        </td>
+                        <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
+                          <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                            📍 {brandInfo.location}
+                          </Text>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingTop: '15px', borderTop: `1px solid ${brandColors.border}` }}>
+                    <Text style={{
+                      margin: '10px 0 0 0',
+                      fontSize: '12px',
+                      color: brandColors.textMuted
+                    }}>
+                      © {new Date().getFullYear()} {brandInfo.companyLegalName}
+                    </Text>
+                    <Text style={{
+                      margin: '5px 0 0 0',
+                      fontSize: '11px',
+                      color: brandColors.textMuted
+                    }}>
+                      Todos los derechos reservados | <a href={privacyUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href={termsUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
+                    </Text>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </Section>
         </Container>

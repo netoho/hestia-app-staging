@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowRight, Home, Building2, Factory } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
 import type { Package } from '@/lib/types';
 
 // Map the Package titles to calculator-specific descriptions
@@ -33,28 +34,9 @@ export function PricingCalculator() {
   const [city, setCity] = useState('');
   const [rentAmount, setRentAmount] = useState('');
   const [propertyType, setPropertyType] = useState<'residential' | 'commercial' | 'industrial'>('residential');
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const response = await fetch('/api/packages');
-        if (!response.ok) {
-          throw new Error('Failed to fetch packages');
-        }
-        const data = await response.json();
-        setPackages(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load packages');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPackages();
-  }, []);
+  // Use tRPC to fetch packages
+  const { data: packages = [], isLoading: loading, error } = trpc.package.getAll.useQuery();
 
   // Calculate price for each package based on rent amount
   const calculatePackagePrice = (pkg: Package): number => {

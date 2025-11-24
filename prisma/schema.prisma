@@ -343,7 +343,7 @@ model Tenant {
   middleName        String?     // Middle name (optional)
   paternalLastName  String?     // Father's last name
   maternalLastName  String?     // Mother's last name
-  nationality       NationalityType?
+  nationality       NationalityType? @default(MEXICAN)
   curp              String?
   rfc               String?
   passport          String?
@@ -377,7 +377,7 @@ model Tenant {
   addressDetails    PropertyAddress? @relation("TenantAddress", fields: [addressId], references: [id])
 
   // Employment (for individuals)
-  employmentStatus  String?
+  employmentStatus  EmploymentStatus?
   occupation        String?
   employerName      String?
   employerAddress   String?
@@ -407,7 +407,7 @@ model Tenant {
   tokenExpiry       DateTime?
 
   // References
-  references        PersonalReference[]
+  personalReferences   PersonalReference[]
   commercialReferences CommercialReference[]  // For companies
 
   // Documents
@@ -437,7 +437,8 @@ model JointObligor {
   policyId          String
 
   // Type
-  isCompany         Boolean     @default(false)
+  jointObligorType  JointObligorType?
+
 
   // Personal Information (for individuals)
   firstName         String?     // First name
@@ -517,7 +518,7 @@ model JointObligor {
   tokenExpiry       DateTime?
 
   // References (3 required)
-  references        PersonalReference[]
+  personalReferences   PersonalReference[]
   commercialReferences CommercialReference[]  // For companies
 
   // Documents
@@ -547,7 +548,7 @@ model Aval {
   policyId          String
 
   // Type
-  isCompany         Boolean     @default(false)
+  avalType          AvalType    @default(INDIVIDUAL)
 
   // Personal Information (for individuals)
   firstName         String?     // First name
@@ -622,7 +623,7 @@ model Aval {
   tokenExpiry       DateTime?
 
   // References (3 required)
-  references        PersonalReference[]
+  personalReferences   PersonalReference[]
   commercialReferences CommercialReference[]  // For companies
 
   // Documents
@@ -1035,6 +1036,17 @@ model ReviewNote {
 // ENUMS
 // ============================================
 
+
+enum EmploymentStatus {
+  EMPLOYED
+  SELF_EMPLOYED
+  BUSINESS_OWNER
+  RETIRED
+  STUDENT
+  UNEMPLOYED
+  OTHER
+}
+
 enum UserRole {
   ADMIN
   STAFF
@@ -1042,6 +1054,17 @@ enum UserRole {
 }
 
 enum TenantType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum AvalType {
+  INDIVIDUAL
+  COMPANY
+}
+
+
+enum JointObligorType {
   INDIVIDUAL
   COMPANY
 }

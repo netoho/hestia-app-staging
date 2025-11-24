@@ -17,11 +17,20 @@ import {
   ValidationError,
 } from '@/lib/types/actor';
 import { ZodError } from 'zod';
+import type {
+  ActorModelMap,
+  ActorTypeLiteral,
+  PersonalReferenceInput,
+  CommercialReferenceInput
+} from './types';
 
-export abstract class BaseActorService extends BaseService {
-  protected actorType: string;
+export abstract class BaseActorService<
+  TModel extends ActorModelMap[keyof ActorModelMap],
+  TData extends ActorData
+> extends BaseService {
+  protected actorType: ActorTypeLiteral;
 
-  constructor(actorType: string, prisma?: PrismaClient) {
+  constructor(actorType: ActorTypeLiteral, prisma?: PrismaClient) {
     super({ prisma });
     this.actorType = actorType;
   }
@@ -29,30 +38,33 @@ export abstract class BaseActorService extends BaseService {
   /**
    * Validate person actor data
    */
-  abstract validatePersonData(data: PersonActorData, isPartial?: boolean): Result<PersonActorData>;
+  abstract validatePersonData(data: Partial<PersonActorData>, isPartial?: boolean): Result<PersonActorData>;
 
   /**
    * Validate company actor data
    */
-  abstract validateCompanyData(data: CompanyActorData, isPartial?: boolean): Result<CompanyActorData>;
+  abstract validateCompanyData(data: Partial<CompanyActorData>, isPartial?: boolean): Result<CompanyActorData>;
+
+  /**
+   * Format Zod validation errors for API response
+   */
+  protected formatZodErrors(error: ZodError): ValidationError[] {
+    return error.errors.map(err => ({
+      field: err.path.join('.'),
+      message: err.message,
+      code: err.code,
+    }));
+  }
 
   /**
    * Validate actor data based on type
    */
-  protected validateActorData(data: ActorData, isPartial: boolean = false): Result<ActorData> {
+  protected validateActorData(data: Partial<ActorData>, isPartial: boolean = false): Result<ActorData> {
     try {
-      if (isPersonActor(data)) {
-        return this.validatePersonData(data as PersonActorData, isPartial);
-      } else if (isCompanyActor(data)) {
-        return this.validateCompanyData(data as CompanyActorData, isPartial);
+      if (isPersonActor(data as ActorData)) {
+        return this.validatePersonData(data as Partial<PersonActorData>, isPartial);
       } else {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid actor type: must be either person or company',
-            400
-          )
-        );
+        return this.validateCompanyData(data as Partial<CompanyActorData>, isPartial);
       }
     } catch (error) {
       if (error instanceof ZodError) {
@@ -67,17 +79,6 @@ export abstract class BaseActorService extends BaseService {
       }
       throw error;
     }
-  }
-
-  /**
-   * Format Zod validation errors for API response
-   */
-  protected formatZodErrors(error: ZodError): ValidationError[] {
-    return error.errors.map(err => ({
-      field: err.path.join('.'),
-      message: err.message,
-      code: err.code,
-    }));
   }
 
   /**
@@ -168,16 +169,15 @@ export abstract class BaseActorService extends BaseService {
 
   /**
    * Save personal references for an actor
+   * Public method to allow tRPC router to call directly
    */
-  protected async savePersonalReferences(
+  public async savePersonalReferences(
     actorId: string,
-    references: any[],
-    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
+    references: PersonalReferenceInput[]
   ): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       // Build where clause based on actor type
-      const whereClause: any = {};
-      whereClause[`${actorType}Id`] = actorId;
+      const whereClause = this.buildReferenceWhereClause(actorId);
 
       // Delete existing references
       await this.prisma.personalReference.deleteMany({
@@ -186,11 +186,10 @@ export abstract class BaseActorService extends BaseService {
 
       // Create new references if provided
       if (references && references.length > 0) {
-        const dataClause: any = {};
-        dataClause[`${actorType}Id`] = actorId;
+        const dataClause = this.buildReferenceDataClause(actorId);
 
         await this.prisma.personalReference.createMany({
-          data: references.map((ref: any) => ({
+          data: references.map((ref) => ({
             ...dataClause,
             firstName: ref.firstName,
             middleName: ref.middleName || null,
@@ -208,17 +207,32 @@ export abstract class BaseActorService extends BaseService {
   }
 
   /**
-   * Save commercial references for an actor
+   * Build where clause for reference queries based on actor type
    */
-  protected async saveCommercialReferences(
+  private buildReferenceWhereClause(actorId: string): Record<string, string> {
+    const key = `${this.actorType}Id`;
+    return { [key]: actorId };
+  }
+
+  /**
+   * Build data clause for reference creation based on actor type
+   */
+  private buildReferenceDataClause(actorId: string): Record<string, string> {
+    const key = `${this.actorType}Id`;
+    return { [key]: actorId };
+  }
+
+  /**
+   * Save commercial references for an actor
+   * Public method to allow tRPC router to call directly
+   */
+  public async saveCommercialReferences(
     actorId: string,
-    references: any[],
-    actorType: 'tenant' | 'aval' | 'jointObligor' | 'landlord'
+    references: CommercialReferenceInput[]
   ): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       // Build where clause based on actor type
-      const whereClause: any = {};
-      whereClause[`${actorType}Id`] = actorId;
+      const whereClause = this.buildReferenceWhereClause(actorId);
 
       // Delete existing references
       await this.prisma.commercialReference.deleteMany({
@@ -227,11 +241,10 @@ export abstract class BaseActorService extends BaseService {
 
       // Create new references if provided
       if (references && references.length > 0) {
-        const dataClause: any = {};
-        dataClause[`${actorType}Id`] = actorId;
+        const dataClause = this.buildReferenceDataClause(actorId);
 
         await this.prisma.commercialReference.createMany({
-          data: references.map((ref: any) => ({
+          data: references.map((ref) => ({
             ...dataClause,
             companyName: ref.companyName,
             contactFirstName: ref.contactFirstName,
@@ -251,17 +264,16 @@ export abstract class BaseActorService extends BaseService {
   /**
    * Build update data object from actor data
    */
-  protected buildUpdateData(data: ActorData, addressId?: string): any {
-    const updateData: any = {
-      isCompany: data.isCompany,
-      email: data.email,
-      phone: data.phone,
-    };
+  protected buildUpdateData(data: Partial<ActorData>): any {
+    const updateData: any = {};
+
+    if (data.isCompany !== undefined) updateData.isCompany = data.isCompany;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.phone !== undefined) updateData.phone = data.phone;
 
     // Add optional common fields if provided
     if (data.workPhone !== undefined) updateData.workPhone = data.workPhone || null;
     if (data.address !== undefined) updateData.address = data.address;
-    if (addressId) updateData.addressId = addressId;
 
     // Bank information
     if (data.bankName !== undefined) updateData.bankName = data.bankName || null;
@@ -273,8 +285,8 @@ export abstract class BaseActorService extends BaseService {
     if (data.additionalInfo !== undefined) updateData.additionalInfo = data.additionalInfo || null;
 
     // Add person-specific fields
-    if (isPersonActor(data)) {
-      const personData = data as PersonActorData;
+    if (data.isCompany === false || data.isCompany === undefined) {
+      const personData = data as Partial<PersonActorData>;
       // Individual name fields
       if (personData.firstName !== undefined) updateData.firstName = personData.firstName;
       if (personData.middleName !== undefined) updateData.middleName = personData.middleName || null;
@@ -290,8 +302,8 @@ export abstract class BaseActorService extends BaseService {
     }
 
     // Add company-specific fields
-    if (isCompanyActor(data)) {
-      const companyData = data as CompanyActorData;
+    if (data.isCompany === true || data.isCompany === undefined) {
+      const companyData = data as Partial<CompanyActorData>;
       if (companyData.companyName !== undefined) updateData.companyName = companyData.companyName;
       if (companyData.companyRfc !== undefined) updateData.companyRfc = companyData.companyRfc;
       // Legal rep name fields
@@ -312,17 +324,22 @@ export abstract class BaseActorService extends BaseService {
   /**
    * Save actor data (generic implementation)
    */
-  protected async saveActorData<T extends ActorData>(
-    tableName: string,
+  protected async saveActorData(
     actorId: string,
-    data: T,
+    data: Partial<TData>,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<T> {
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<TModel> {
     // Skip validation if requested (for admin endpoints)
     if (!skipValidation) {
+      // Log tab context for debugging
+      if (tabName && isPartial) {
+        this.log('info', `Saving ${this.actorType} tab "${tabName}" with fields:`, Object.keys(data));
+      }
+
       // Validate data
-      const validationResult = this.validateActorData(data, isPartial);
+      const validationResult = this.validateActorData(data as Partial<ActorData>, isPartial);
       if (!validationResult.ok) {
         return Result.error(validationResult.error);
       }
@@ -330,17 +347,39 @@ export abstract class BaseActorService extends BaseService {
 
     return this.executeTransaction(async (tx) => {
       // Handle address if provided
-      let addressId: string | undefined;
-      if (data.addressDetails) {
-        const addressResult = await this.upsertAddress(data.addressDetails, data.addressId);
-        if (!addressResult.ok) {
-          throw new Error('Failed to save address');
-        }
-        addressId = addressResult.value;
-      }
+
+      const {
+        addressDetails,
+        employerAddressDetails,
+        guaranteePropertyDetails,
+        previousRentalAddressDetails,
+        ...restData
+      } = data as any;
+
+      const upsertAddressesResult = await this.upsertMultipleAddresses({
+        addressDetails,
+        employerAddressDetails,
+        guaranteePropertyDetails,
+        previousRentalAddressDetails,
+      })
 
       // Build update data
-      const updateData = this.buildUpdateData(data, addressId);
+      const updateData = this.buildUpdateData(restData as Partial<ActorData>);
+
+      if (upsertAddressesResult.ok) {
+        if (upsertAddressesResult.value.addressId) {
+          updateData.addressId = upsertAddressesResult.value.addressId;
+        }
+        if (upsertAddressesResult.value.employerAddressId) {
+          updateData.employerAddressId = upsertAddressesResult.value.employerAddressId;
+        }
+        if (upsertAddressesResult.value.guaranteePropertyAddressId) {
+          updateData.guaranteePropertyAddressId = upsertAddressesResult.value.guaranteePropertyAddressId;
+        }
+        if (upsertAddressesResult.value.previousRentalAddressId) {
+          updateData.previousRentalAddressId = upsertAddressesResult.value.previousRentalAddressId;
+        }
+      }
 
       // Mark as complete if not partial
       if (!isPartial) {
@@ -348,33 +387,41 @@ export abstract class BaseActorService extends BaseService {
         updateData.completedAt = new Date();
       }
 
-      // Execute update based on table name
-      const result = await (tx as any)[tableName].update({
+      // Get the Prisma delegate for this actor type
+      const delegate = this.getPrismaDelegate(tx);
+
+      // Execute update using the proper delegate
+      const result = await delegate.update({
         where: { id: actorId },
         data: updateData,
+        include: this.getIncludes()
       });
 
       this.log('info', `${this.actorType} data saved`, {
         actorId,
-        isPartial,
-        tableName
+        isPartial
       });
 
-      return result as T;
+      return result as TModel;
     });
   }
 
   /**
+   * Get the Prisma delegate for this actor type
+   * Must be implemented by concrete services
+   */
+  protected abstract getPrismaDelegate(tx?: any): any;
+
+  /**
    * Get actor by ID
    */
-  protected async getActorById(tableName: string, actorId: string): AsyncResult<any> {
+  protected async getActorById(actorId: string): AsyncResult<TModel> {
     return this.executeDbOperation(async () => {
-      const actor = await (this.prisma as any)[tableName].findUnique({
+      const delegate = this.getPrismaDelegate();
+
+      const actor = await delegate.findUnique({
         where: { id: actorId },
-        include: {
-          address: true,
-          documents: true,
-        },
+        include: this.getIncludes()
       });
 
       if (!actor) {
@@ -385,7 +432,7 @@ export abstract class BaseActorService extends BaseService {
         );
       }
 
-      return actor;
+      return actor as TModel;
     }, `get${this.actorType}ById`);
   }
 
@@ -459,7 +506,13 @@ export abstract class BaseActorService extends BaseService {
       });
 
       if (!policy) {
-        return Result.error('Policy not found');
+        return Result.error(
+          new ServiceError(
+            ErrorCode.NOT_FOUND,
+            'Policy not found',
+            404
+          )
+        );
       }
 
       // Only transition if currently in COLLECTING_INFO status
@@ -513,11 +566,195 @@ export abstract class BaseActorService extends BaseService {
    * Delete an actor from the database
    * Used by concrete services to implement public delete methods
    */
-  protected async deleteActor(tableName: string, actorId: string): AsyncResult<void> {
+  protected async deleteActor(actorId: string): AsyncResult<void> {
     return this.executeDbOperation(async () => {
-      await (this.prisma as any)[tableName].delete({
+      const delegate = this.getPrismaDelegate();
+
+      await delegate.delete({
         where: { id: actorId }
       });
     }, 'delete');
+  }
+
+  /**
+   * Public methods required by tRPC router
+   * These wrap the protected methods to provide a consistent interface
+   */
+
+  /**
+   * Get an actor by ID
+   * Used by tRPC router for admin access
+   */
+  public async getById(id: string): AsyncResult<TModel> {
+    return this.getActorById(id);
+  }
+
+  /**
+   * Get an actor by token
+   * Used by tRPC router for actor self-service access
+   */
+  public async getByToken(token: string): AsyncResult<TModel> {
+    return this.executeDbOperation(async () => {
+      const delegate = this.getPrismaDelegate();
+
+      const actor = await delegate.findFirst({
+        where: { accessToken: token },
+        include: this.getIncludes()
+      });
+
+      if (!actor) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Actor no encontrado con el token proporcionado'
+        );
+      }
+
+      // Check token expiry
+      if (actor.tokenExpiry && actor.tokenExpiry < new Date()) {
+        throw new ServiceError(
+          ErrorCode.TOKEN_EXPIRED,
+          'Token expirado'
+        );
+      }
+
+      return actor as TModel;
+    }, 'getByToken');
+  }
+
+  /**
+   * Update an actor
+   * Wrapper for save method to match tRPC router expectations
+   */
+  public async update(
+    id: string,
+    data: Partial<TData>,
+    options?: {
+      skipValidation?: boolean;
+      updatedById?: string;
+      isPartial?: boolean;
+      tabName?: string;
+    }
+  ): AsyncResult<TModel> {
+    return this.save(
+      id,
+      data,
+      options?.isPartial ?? true,
+      options?.skipValidation ?? false,
+      options?.tabName
+    );
+  }
+
+  /**
+   * Submit actor information (mark as complete)
+   * Called AFTER the last tab has been successfully saved
+   * This method only validates completeness and marks the actor as done
+   */
+  public async submitActor(
+    id: string,
+    options?: {
+      skipValidation?: boolean;
+      submittedBy?: string;
+    }
+  ): AsyncResult<TModel> {
+    return this.executeTransaction(async (tx) => {
+      // 1. Get the current actor data
+      const delegate = this.getPrismaDelegate(tx);
+      const actor = await delegate.findUnique({
+        where: { id },
+        include: this.getIncludes()
+      });
+
+      if (!actor) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          `${this.actorType} not found`,
+          404
+        );
+      }
+
+      // 2. Validate completeness (all required fields filled)
+      if (!options?.skipValidation) {
+        const validationResult = this.validateCompleteness(actor);
+        if (!validationResult.ok) {
+          throw validationResult.error;
+        }
+      }
+
+      // 3. Check required documents
+      const docsCheckResult = await this.validateRequiredDocuments(id);
+      if (!docsCheckResult.ok) {
+        throw new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          docsCheckResult.error
+        );
+      }
+
+      // 4. Mark as complete
+      const updatedActor = await delegate.update({
+        where: { id },
+        data: {
+          informationComplete: true,
+          completedAt: new Date(),
+          submittedBy: options?.submittedBy ?? 'self',
+        },
+        include: this.getIncludes()
+      });
+
+      // 5. Check if all actors complete → transition policy status
+      await this.checkAndTransitionPolicyStatus(
+        actor.policyId,
+        options?.submittedBy ?? 'system'
+      );
+
+      // 6. Log the submission
+      await this.logActivity(
+        actor.policyId,
+        'ACTOR_SUBMITTED',
+        `${this.actorType} información completada`,
+        id,
+        { submittedBy: options?.submittedBy ?? 'self' }
+      );
+
+      this.log('info', `${this.actorType} submitted successfully`, { actorId: id });
+
+      return updatedActor as TModel;
+    });
+  }
+
+  /**
+   * Validate that all required fields are filled
+   * Uses the existing data in the database, not new input
+   * Must be implemented by concrete services based on actor type
+   */
+  protected abstract validateCompleteness(actor: TModel): Result<boolean>;
+
+  /**
+   * Validate required documents are uploaded
+   * Must be implemented by concrete services based on actor type
+   */
+  protected abstract validateRequiredDocuments(actorId: string): AsyncResult<boolean>;
+
+  /**
+   * Abstract save method to be implemented by concrete services
+   */
+  public abstract save(
+    id: string,
+    data: Partial<TData>,
+    isPartial?: boolean,
+    skipValidation?: boolean,
+    tabName?: string
+  ): AsyncResult<TModel>;
+
+  /**
+   * Get the includes for database queries
+   * Can be overridden by concrete services
+   */
+  protected getIncludes(): Record<string, boolean | object> {
+    return {
+      addressDetails: true,
+      policy: true
+    };
   }
 }

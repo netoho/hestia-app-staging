@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@/lib/enums';
 import prisma from '@/lib/prisma';
 import { ServiceError, ErrorCode } from './types/errors';
 import { isValidToken } from '@/lib/utils/tokenUtils';
@@ -28,7 +28,7 @@ export class ActorAuthService {
   async resolveActorAuth(
     type: string,
     identifier: string,
-    request: NextRequest
+    request: NextRequest | null
   ): Promise<ActorAuthResult> {
     // Check if identifier is UUID (admin access) or token (actor access)
     if (isValidToken(identifier)) {
@@ -44,21 +44,26 @@ export class ActorAuthService {
   private async handleAdminAuth(
     type: string,
     actorId: string,
-    request: NextRequest
+    request: NextRequest | null
   ): Promise<ActorAuthResult> {
     // Get session
     const session = await getServerSession(authOptions);
 
     // For document operations, allow access without session if it's a same-origin request
     // This allows dashboard components to access documents
-    const isDocumentRequest = request.url.includes('/documents');
-    const origin = request.headers.get('origin');
-    const referer = request.headers.get('referer');
-    const isSameOrigin = origin?.includes('localhost') || referer?.includes('localhost');
+    let isDocumentRequest = false;
+    let isSameOrigin = false;
+
+    if (request) {
+      isDocumentRequest = request.url.includes('/documents');
+      const origin = request.headers.get('origin');
+      const referer = request.headers.get('referer');
+      isSameOrigin = (origin?.includes('localhost') ?? false) || (referer?.includes('localhost') ?? false);
+    }
 
     if (!session?.user?.id) {
       // Allow document read operations from same origin without session
-      if (isDocumentRequest && isSameOrigin && request.method === 'GET') {
+      if (isDocumentRequest && isSameOrigin && request?.method === 'GET') {
         // Fetch actor directly for read-only access
         const actor = await this.fetchActorById(type, actorId);
 
@@ -72,7 +77,7 @@ export class ActorAuthService {
 
         return {
           actor,
-          actorName: this.formatActorName(actor, type),
+          actorName: this.getActorName(actor),
           canEdit: false, // Read-only access
           authType: 'admin',
           skipValidation: false
@@ -106,7 +111,7 @@ export class ActorAuthService {
     }
 
     // Check if user has appropriate role
-    const allowedRoles = [UserRole.ADMIN, UserRole.STAFF, UserRole.BROKER];
+    const allowedRoles: UserRole[] = [UserRole.ADMIN, UserRole.STAFF, UserRole.BROKER];
     if (!allowedRoles.includes(user.role)) {
       throw new ServiceError(
         ErrorCode.FORBIDDEN,
@@ -126,12 +131,14 @@ export class ActorAuthService {
       );
     }
 
+    const adminRoles: UserRole[] = [UserRole.ADMIN, UserRole.STAFF];
+
     return {
       authType: 'admin',
       actor,
       user,
       canEdit: true,
-      skipValidation: [UserRole.ADMIN, UserRole.STAFF].includes(user.role),
+      skipValidation: adminRoles.includes(user.role),
       userId: user.id,
       actorName: this.getActorName(actor)
     };
@@ -177,7 +184,7 @@ export class ActorAuthService {
    * Fetch actor by ID based on type
    */
   private async fetchActorById(type: string, id: string): Promise<any> {
-    switch(type) {
+    switch (type) {
       case 'tenant':
         return prisma.tenant.findUnique({
           where: { id },
@@ -185,7 +192,7 @@ export class ActorAuthService {
             addressDetails: true,
             employerAddressDetails: true,
             previousRentalAddressDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true,
             policy: true
           }
@@ -207,7 +214,7 @@ export class ActorAuthService {
             addressDetails: true,
             employerAddressDetails: true,
             guaranteePropertyDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true,
             policy: true
           }
@@ -220,7 +227,7 @@ export class ActorAuthService {
             addressDetails: true,
             employerAddressDetails: true,
             guaranteePropertyDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true,
             policy: true
           }
@@ -239,7 +246,7 @@ export class ActorAuthService {
    * Validate actor token based on type
    */
   private async validateActorToken(type: string, token: string): Promise<any> {
-    switch(type) {
+    switch (type) {
       case 'tenant':
         return prisma.tenant.findFirst({
           where: { accessToken: token },
@@ -247,7 +254,7 @@ export class ActorAuthService {
             addressDetails: true,
             employerAddressDetails: true,
             previousRentalAddressDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true,
             policy: true
           }
@@ -269,7 +276,7 @@ export class ActorAuthService {
             addressDetails: true,
             employerAddressDetails: true,
             guaranteePropertyDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true,
             policy: true
           }
@@ -282,7 +289,7 @@ export class ActorAuthService {
             addressDetails: true,
             employerAddressDetails: true,
             guaranteePropertyDetails: true,
-            references: true,
+            personalReferences: true,
             commercialReferences: true,
             policy: true
           }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { trpc } from '@/lib/trpc/client';
 import {
   Copy,
   Mail,
@@ -50,40 +51,21 @@ export default function ShareInvitationModal({
   policyNumber,
 }: ShareInvitationModalProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [shareLinks, setShareLinks] = useState<ActorShareLink[]>([]);
+  const utils = trpc.useUtils();
   const [selectedActors, setSelectedActors] = useState<Set<string>>(new Set());
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchShareLinks();
+  // Fetch share links using tRPC
+  const { data, isLoading, error } = trpc.policy.getShareLinks.useQuery(
+    { policyId },
+    {
+      enabled: isOpen && !!policyId,
+      refetchOnWindowFocus: false,
     }
-  }, [isOpen, policyId]);
+  );
 
-  const fetchShareLinks = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/policies/${policyId}/share-links`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch share links');
-      }
-
-      const data = await response.json();
-      setShareLinks(data.data.shareLinks || []);
-    } catch (error) {
-      console.error('Error fetching share links:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los enlaces de invitación',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const shareLinks = data?.shareLinks || [];
 
   const handleCopyLink = async (url: string, actorName: string) => {
     try {
@@ -111,35 +93,34 @@ export default function ShareInvitationModal({
     window.open(whatsappUrl, '_blank');
   };
 
-  const handleSendEmail = async (actorId: string, actorType: string) => {
-    try {
-      setSendingEmail(prev => new Set(prev).add(actorId));
-
-      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actors: [actorType],
-          resend: true,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send email');
-      }
-
+  // tRPC mutation for sending emails
+  const sendInvitations = trpc.policy.sendInvitations.useMutation({
+    onSuccess: () => {
       toast({
         title: 'Correo enviado',
         description: 'La invitación ha sido enviada exitosamente',
       });
-
-      await fetchShareLinks();
-    } catch (error) {
+      // Invalidate and refetch share links
+      utils.policy.getShareLinks.invalidate({ policyId });
+    },
+    onError: (error) => {
       console.error('Error sending email:', error);
       toast({
         title: 'Error',
         description: 'No se pudo enviar el correo',
         variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSendEmail = async (actorId: string, actorType: string) => {
+    setSendingEmail(prev => new Set(prev).add(actorId));
+
+    try {
+      await sendInvitations.mutateAsync({
+        policyId,
+        actors: [actorType],
+        resend: true,
       });
     } finally {
       setSendingEmail(prev => {
@@ -169,18 +150,11 @@ export default function ShareInvitationModal({
       .map(link => link.actorType);
 
     try {
-      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actors: selectedTypes,
-          resend: true,
-        }),
+      await sendInvitations.mutateAsync({
+        policyId,
+        actors: selectedTypes,
+        resend: true,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to send emails');
-      }
 
       toast({
         title: 'Correos enviados',
@@ -188,14 +162,8 @@ export default function ShareInvitationModal({
       });
 
       setSelectedActors(new Set());
-      await fetchShareLinks();
     } catch (error) {
-      console.error('Error sending batch emails:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron enviar los correos',
-        variant: 'destructive',
-      });
+      // Error is already handled by the mutation onError
     }
   };
 
@@ -243,9 +211,16 @@ export default function ShareInvitationModal({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="py-12 text-center">
+            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <p className="text-red-600">
+              Error al cargar los enlaces. Por favor, intenta de nuevo.
+            </p>
           </div>
         ) : shareLinks.length === 0 ? (
           <div className="py-12 text-center">
@@ -358,7 +333,7 @@ export default function ShareInvitationModal({
 
                         {/* URL Display */}
                         <div className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs font-mono max-w-md">
-                          <span className="flex-1 truncate">{link.url} jiii</span>
+                          <span className="flex-1 truncate">{link.url}</span>
                         </div>
 
                         {/* Action Buttons */}

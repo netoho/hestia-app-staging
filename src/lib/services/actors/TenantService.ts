@@ -1,52 +1,86 @@
 /**
- * Tenant-specific service - Example implementation
- * Shows how easily we can create new actor services by extending BaseActorService
+ * Tenant-specific service - Refactored with master schema
+ * Uses single source of truth for validation and data transformation
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
 import {
   PersonActorData,
   CompanyActorData,
+  ActorData,
 } from '@/lib/types/actor';
-import { z } from 'zod';
-import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
-import { companyActorSchema } from '@/lib/validations/actors/company.schema';
+import {
+  validateTenantData,
+  getTenantSchema,
+  ValidationMode,
+  TENANT_VALIDATION_MESSAGES,
+} from '@/lib/schemas/tenant';
+import {
+  prepareTenantForDB,
+  prepareReferencesForDB,
+} from '@/lib/utils/tenant/prepareForDB';
 import { validateTenantToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import type { TenantWithRelations } from './types';
 
-// Tenant-specific validation schemas
-const tenantPersonSchema = personWithNationalitySchema.extend({
-  // Tenant-specific fields
-  previousAddress: z.string().optional(),
-  previousLandlordName: z.string().optional(),
-  previousLandlordPhone: z.string().optional(),
-  reasonForMoving: z.string().optional(),
-  numberOfOccupants: z.number().int().positive().optional(),
-  hasPets: z.boolean().default(false),
-  petDescription: z.string().optional(),
-});
-
-const tenantCompanySchema = companyActorSchema.extend({
-  // Company tenant-specific fields
-  businessType: z.string().optional(),
-  employeeCount: z.number().int().positive().optional(),
-  yearsInBusiness: z.number().positive().optional(),
-});
-
-export class TenantService extends BaseActorService {
+export class TenantService extends BaseActorService<TenantWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
     super('tenant', prisma);
   }
 
   /**
-   * Validate person tenant data
+   * Get the Prisma delegate for tenant operations
    */
-  validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    const schema = isPartial ? tenantPersonSchema.partial() : tenantPersonSchema;
-    const result = schema.safeParse(data);
+  protected getPrismaDelegate(tx?: any): Prisma.TenantDelegate {
+    return (tx || this.prisma).tenant;
+  }
+
+  /**
+   * Get includes for tenant queries
+   */
+  protected getIncludes(): Record<string, boolean | object> {
+    return {
+      addressDetails: true,
+      employerAddressDetails: true,
+      previousRentalAddressDetails: true,
+      personalReferences: true,
+      commercialReferences: true,
+      policy: true
+    };
+  }
+
+  /**
+   * Build update data object from actor data
+   * Now uses prepareTenantForDB for consistent transformation
+   */
+  protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
+    // Use the new transformation utility
+    const tenantType = data.tenantType || (data.isCompany ? 'COMPANY' : 'INDIVIDUAL');
+    const prepared = prepareTenantForDB(data, {
+      tenantType: tenantType as 'INDIVIDUAL' | 'COMPANY',
+      isPartial: true,
+    });
+
+    // Add address ID if provided
+    if (addressId) {
+      prepared.addressId = addressId;
+    }
+
+    return prepared;
+  }
+
+  /**
+   * Validate person tenant data using master schema
+   */
+  validatePersonData(data: Partial<PersonActorData>, isPartial: boolean = false): Result<PersonActorData> {
+    const mode: ValidationMode = isPartial ? 'partial' : 'strict';
+    const result = validateTenantData(data, {
+      tenantType: 'INDIVIDUAL',
+      mode,
+    });
 
     if (!result.success) {
       return Result.error(
@@ -63,11 +97,14 @@ export class TenantService extends BaseActorService {
   }
 
   /**
-   * Validate company tenant data
+   * Validate company tenant data using master schema
    */
-  validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    const schema = isPartial ? tenantCompanySchema.partial() : tenantCompanySchema;
-    const result = schema.safeParse(data);
+  validateCompanyData(data: Partial<CompanyActorData>, isPartial: boolean = false): Result<CompanyActorData> {
+    const mode: ValidationMode = isPartial ? 'partial' : 'strict';
+    const result = validateTenantData(data, {
+      tenantType: 'COMPANY',
+      mode,
+    });
 
     if (!result.success) {
       return Result.error(
@@ -84,19 +121,108 @@ export class TenantService extends BaseActorService {
   }
 
   /**
-   * Save tenant information
+   * Public save method required by base class
+   * Now uses master schema validation and prepareForDB
    */
-  async saveTenantInformation(
+  public async save(
     tenantId: string,
-    data: any,
+    data: Partial<ActorData>,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<any> {
-    return this.saveActorData('tenant', tenantId, data, isPartial, skipValidation);
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<TenantWithRelations> {
+    try {
+      const tenant = await this.getById(tenantId);
+      if (!tenant.ok) return tenant;
+
+      const tenantType = tenant.value.tenantType || 'INDIVIDUAL';
+
+      // Validate unless explicitly skipped (admin mode)
+      if (!skipValidation) {
+        const mode: ValidationMode = isPartial ? 'partial' : 'strict';
+        const validation = validateTenantData(data, {
+          tenantType,
+          mode,
+          tabName,
+        });
+
+        if (!validation.success) {
+          return Result.error(
+            new ServiceError(
+              ErrorCode.VALIDATION_ERROR,
+              'Validation failed',
+              400,
+              { errors: this.formatZodErrors(validation.error) }
+            )
+          );
+        }
+      }
+
+      // Transform data for database
+      const dbData = prepareTenantForDB(data, {
+        tenantType,
+        isPartial,
+        tabName,
+      });
+
+      // Handle address relations if needed
+      if (dbData.addressDetails) {
+        const addressResult = await this.upsertAddress(
+          dbData.addressDetails,
+          tenant.value.addressId
+        );
+        if (addressResult.ok) {
+          dbData.addressId = addressResult.value;
+          delete dbData.addressDetails;
+        }
+      }
+
+      if (dbData.employerAddressDetails) {
+        const addressResult = await this.upsertAddress(
+          dbData.employerAddressDetails,
+          tenant.value.employerAddressId
+        );
+        if (addressResult.ok) {
+          dbData.employerAddressId = addressResult.value;
+          delete dbData.employerAddressDetails;
+        }
+      }
+
+      if (dbData.previousRentalAddressDetails) {
+        const addressResult = await this.upsertAddress(
+          dbData.previousRentalAddressDetails,
+          tenant.value.previousRentalAddressId
+        );
+        if (addressResult.ok) {
+          dbData.previousRentalAddressId = addressResult.value;
+          delete dbData.previousRentalAddressDetails;
+        }
+      }
+
+      // Update tenant in database
+      const updated = await this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: dbData,
+        include: this.getIncludes(),
+      });
+
+      return Result.ok(updated as TenantWithRelations);
+    } catch (error) {
+      this.log('error', 'Tenant save error', error);
+      return Result.error(
+        new ServiceError(
+          ErrorCode.INTERNAL_ERROR,
+          'Error saving tenant data',
+          500,
+          { error: (error as Error).message }
+        )
+      );
+    }
   }
 
   /**
    * Validate token and save tenant submission
+   * Simplified to use master schema and transformation utilities
    */
   async validateAndSave(
     token: string,
@@ -141,141 +267,47 @@ export class TenantService extends BaseActorService {
         );
       }
 
-      // Prepare update data
-      const updateData: any = {};
+      // Determine tenant type
+      const tenantType = data.tenantType || tenant.tenantType || 'INDIVIDUAL';
 
-      // Handle all tenant fields
-      if (data.tenantType !== undefined) updateData.tenantType = data.tenantType;
+      // Validate data using master schema
+      const mode: ValidationMode = isPartial ? 'partial' : 'strict';
+      const validationResult = validateTenantData(data, {
+        tenantType,
+        mode,
+      });
 
-      // Individual name fields
-      if (data.firstName !== undefined) updateData.firstName = data.firstName;
-      if (data.middleName !== undefined) updateData.middleName = data.middleName || null;
-      if (data.paternalLastName !== undefined) updateData.paternalLastName = data.paternalLastName;
-      if (data.maternalLastName !== undefined) updateData.maternalLastName = data.maternalLastName;
-      if (data.nationality !== undefined) updateData.nationality = data.nationality;
-      if (data.curp !== undefined) updateData.curp = data.curp || null;
-      if (data.rfc !== undefined) updateData.rfc = data.rfc || null;
-      if (data.passport !== undefined) updateData.passport = data.passport || null;
-
-      // Company fields
-      if (data.companyName !== undefined) updateData.companyName = data.companyName;
-      if (data.companyRfc !== undefined) updateData.companyRfc = data.companyRfc;
-      if (data.legalRepFirstName !== undefined) updateData.legalRepFirstName = data.legalRepFirstName;
-      if (data.legalRepMiddleName !== undefined) updateData.legalRepMiddleName = data.legalRepMiddleName || null;
-      if (data.legalRepPaternalLastName !== undefined) updateData.legalRepPaternalLastName = data.legalRepPaternalLastName;
-      if (data.legalRepMaternalLastName !== undefined) updateData.legalRepMaternalLastName = data.legalRepMaternalLastName;
-      if (data.legalRepId !== undefined) updateData.legalRepId = data.legalRepId;
-      if (data.legalRepPosition !== undefined) updateData.legalRepPosition = data.legalRepPosition;
-      if (data.legalRepRfc !== undefined) updateData.legalRepRfc = data.legalRepRfc;
-      if (data.legalRepPhone !== undefined) updateData.legalRepPhone = data.legalRepPhone;
-      if (data.legalRepEmail !== undefined) updateData.legalRepEmail = data.legalRepEmail;
-
-      // Contact fields
-      if (data.email !== undefined) updateData.email = data.email;
-      if (data.phone !== undefined) updateData.phone = data.phone;
-      if (data.workPhone !== undefined) updateData.workPhone = data.workPhone;
-      if (data.personalEmail !== undefined) updateData.personalEmail = data.personalEmail;
-      if (data.workEmail !== undefined) updateData.workEmail = data.workEmail;
-
-      // Address
-      if (data.currentAddress !== undefined) updateData.currentAddress = data.currentAddress;
-
-      // Employment
-      if (data.employmentStatus !== undefined) updateData.employmentStatus = data.employmentStatus;
-      if (data.occupation !== undefined) updateData.occupation = data.occupation;
-      if (data.employerName !== undefined) updateData.employerName = data.employerName;
-      if (data.employerAddress !== undefined) updateData.employerAddress = data.employerAddress;
-      if (data.position !== undefined) updateData.position = data.position;
-      if (data.monthlyIncome !== undefined) updateData.monthlyIncome = data.monthlyIncome;
-      if (data.incomeSource !== undefined) updateData.incomeSource = data.incomeSource;
-
-      // Rental history
-      if (data.previousLandlordName !== undefined) updateData.previousLandlordName = data.previousLandlordName;
-      if (data.previousLandlordPhone !== undefined) updateData.previousLandlordPhone = data.previousLandlordPhone;
-      if (data.previousLandlordEmail !== undefined) updateData.previousLandlordEmail = data.previousLandlordEmail;
-      if (data.previousRentAmount !== undefined) updateData.previousRentAmount = data.previousRentAmount;
-      if (data.previousRentalAddress !== undefined) updateData.previousRentalAddress = data.previousRentalAddress;
-      if (data.rentalHistoryYears !== undefined) updateData.rentalHistoryYears = data.rentalHistoryYears;
-
-      // Payment
-      if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod;
-      if (data.requiresCFDI !== undefined) updateData.requiresCFDI = data.requiresCFDI;
-      if (data.cfdiData !== undefined) updateData.cfdiData = data.cfdiData;
-
-      // Additional info
-      if (data.additionalInfo !== undefined) updateData.additionalInfo = data.additionalInfo;
-
-      // If final submission, mark as complete and set verification status
-      if (!isPartial) {
-        updateData.informationComplete = true;
-        updateData.completedAt = new Date();
-        updateData.verificationStatus = 'PENDING';
+      if (!validationResult.success) {
+        return Result.error(
+          new ServiceError(
+            ErrorCode.VALIDATION_ERROR,
+            'Validation failed',
+            400,
+            { errors: this.formatZodErrors(validationResult.error) }
+          )
+        );
       }
+
+      // Prepare data for database
+      const updateData = prepareTenantForDB(data, {
+        tenantType,
+        isPartial,
+      });
 
       // Update tenant in database
       const updatedTenant = await this.prisma.tenant.update({
         where: { id: tenant.id },
         data: updateData,
-        include: {
-          addressDetails: true,
-          employerAddressDetails: true,
-          previousRentalAddressDetails: true,
-          references: true,
-          documents: true,
-          policy: true
-        }
+        include: this.getIncludes()
       });
 
-      // Handle address details if provided
-      if (data.addressDetails) {
-        const addressResult = await this.upsertAddress(
-          data.addressDetails,
-          updatedTenant.addressId
-        );
-        if (addressResult.ok && addressResult.value !== updatedTenant.addressId) {
-          await this.prisma.tenant.update({
-            where: { id: tenant.id },
-            data: { addressId: addressResult.value }
-          });
-        }
+      // Handle references if provided
+      if (data.personalReferences && Array.isArray(data.personalReferences)) {
+        await this.savePersonalReferences(tenant.id, data.personalReferences);
       }
 
-      // Handle employer address details
-      if (data.employerAddressDetails) {
-        const employerAddressResult = await this.upsertAddress(
-          data.employerAddressDetails,
-          updatedTenant.employerAddressId
-        );
-        if (employerAddressResult.ok && employerAddressResult.value !== updatedTenant.employerAddressId) {
-          await this.prisma.tenant.update({
-            where: { id: tenant.id },
-            data: { employerAddressId: employerAddressResult.value }
-          });
-        }
-      }
-
-      // Handle previous rental address details
-      if (data.previousRentalAddressDetails) {
-        const previousRentalAddressResult = await this.upsertAddress(
-          data.previousRentalAddressDetails,
-          updatedTenant.previousRentalAddressId
-        );
-        if (previousRentalAddressResult.ok && previousRentalAddressResult.value !== updatedTenant.previousRentalAddressId) {
-          await this.prisma.tenant.update({
-            where: { id: tenant.id },
-            data: { previousRentalAddressId: previousRentalAddressResult.value }
-          });
-        }
-      }
-
-      // Handle personal references if provided
-      if (data.references && Array.isArray(data.references)) {
-        await this.savePersonalReferences(tenant.id, data.references, 'tenant');
-      }
-
-      // Handle commercial references if provided (for company tenants)
-      if (data.tenantType === 'COMPANY' && data.commercialReferences && Array.isArray(data.commercialReferences)) {
-        await this.saveCommercialReferences(tenant.id, data.commercialReferences, 'tenant');
+      if (data.commercialReferences && Array.isArray(data.commercialReferences)) {
+        await this.saveCommercialReferences(tenant.id, data.commercialReferences);
       }
 
       // Log activity
@@ -316,8 +348,62 @@ export class TenantService extends BaseActorService {
   /**
    * Get tenant by ID
    */
-  async getTenantById(tenantId: string): AsyncResult<any> {
-    return this.getActorById('tenant', tenantId);
+  async getTenantById(tenantId: string): AsyncResult<TenantWithRelations> {
+    return this.getActorById(tenantId);
+  }
+
+  /**
+   * Get tenant by policy ID
+   */
+  async getByPolicyId(policyId: string): AsyncResult<TenantWithRelations> {
+    return this.executeDbOperation(async () => {
+      const tenant = await this.prisma.tenant.findFirst({
+        where: { policyId },
+        include: this.getIncludes()
+      });
+
+      if (!tenant) {
+        throw new ServiceError(
+          ErrorCode.NOT_FOUND,
+          'Tenant not found for policy',
+          404
+        );
+      }
+
+      return tenant as TenantWithRelations;
+    }, 'getByPolicyId');
+  }
+
+  /**
+   * Create a new tenant
+   */
+  async create(data: any): AsyncResult<TenantWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      // Determine tenant type
+      const tenantType = data.tenantType || (data.companyName ? 'COMPANY' : 'INDIVIDUAL');
+
+      // Prepare data for creation
+      const createData = prepareTenantForDB(
+        {
+          ...data,
+          tenantType,
+        },
+        {
+          tenantType,
+          isPartial: true, // Allow partial for initial creation
+        }
+      );
+
+      const tenant = await tx.tenant.create({
+        data: {
+          policyId: data.policyId,
+          ...createData,
+        },
+        include: this.getIncludes()
+      });
+
+      return tenant as TenantWithRelations;
+    });
   }
 
   /**
@@ -325,7 +411,7 @@ export class TenantService extends BaseActorService {
    */
   async getTenantReferences(tenantId: string): AsyncResult<any[]> {
     return this.executeDbOperation(async () => {
-      const references = await this.prisma.reference.findMany({
+      const references = await this.prisma.personalReference.findMany({
         where: { tenantId },
         orderBy: { createdAt: 'desc' },
       });
@@ -346,10 +432,21 @@ export class TenantService extends BaseActorService {
     }
   ): AsyncResult<any> {
     return this.executeDbOperation(async () => {
-      const reference = await this.prisma.reference.create({
+      // Split name into components (best effort)
+      const nameParts = referenceData.name.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const paternalLastName = nameParts.length > 1 ? nameParts[1] : '';
+      const maternalLastName = nameParts.length > 2 ? nameParts.slice(2).join(' ') : '';
+
+      const reference = await this.prisma.personalReference.create({
         data: {
           tenantId,
-          ...referenceData,
+          firstName,
+          paternalLastName,
+          maternalLastName,
+          relationship: referenceData.relationship,
+          phone: referenceData.phone,
+          email: referenceData.email,
         },
       });
 
@@ -376,23 +473,7 @@ export class TenantService extends BaseActorService {
       tenant.monthlyIncome
     );
 
-    // You could add more sophisticated verification logic here
-    // like calling external APIs or checking documents
-
     return Result.ok(hasEmploymentInfo);
-  }
-
-  /**
-   * Public save method for admin use
-   * Wraps the internal saveTenantInformation method
-   */
-  public async save(
-    tenantId: string,
-    data: TenantData,
-    isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<TenantData> {
-    return this.saveTenantInformation(tenantId, data, isPartial, skipValidation);
   }
 
   /**
@@ -400,6 +481,97 @@ export class TenantService extends BaseActorService {
    * Admin only operation
    */
   public async delete(tenantId: string): AsyncResult<void> {
-    return this.deleteActor('Tenant', tenantId);
+    return this.deleteActor(tenantId);
+  }
+
+  /**
+   * Validate tenant completeness for submission
+   * Uses master schema for validation
+   */
+  protected validateCompleteness(tenant: TenantWithRelations): Result<boolean> {
+    const tenantType = tenant.tenantType || 'INDIVIDUAL';
+
+    // Use strict validation mode for completeness check
+    const validation = validateTenantData(tenant, {
+      tenantType,
+      mode: 'strict',
+    });
+
+    if (!validation.success) {
+      const errors = this.formatZodErrors(validation.error);
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    // Check references minimum requirement
+    const referenceCount = tenant.personalReferences?.length ?? 0;
+    const commercialRefCount = tenant.commercialReferences?.length ?? 0;
+    const totalRefs = referenceCount + commercialRefCount;
+
+    if (tenantType === 'COMPANY' && commercialRefCount < 1) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Mínimo 1 referencia comercial requerida',
+          400
+        )
+      );
+    } else if (tenantType === 'INDIVIDUAL' && referenceCount < 1) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Mínimo 1 referencia personal requerida',
+          400
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(tenantId: string): AsyncResult<boolean> {
+    const tenant = await this.getById(tenantId);
+    if (!tenant.ok) return tenant;
+
+    const isCompany = tenant.value.tenantType === 'COMPANY';
+
+    // Using DocumentCategory enum values
+    const requiredDocs: any[] = isCompany
+      ? ['ACTA_CONSTITUTIVA', 'COMPROBANTE_DOMICILIO', 'CONSTANCIA_SITUACION_FISCAL']
+      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        tenantId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
   }
 }

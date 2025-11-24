@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldError } from '@/components/ui/field-error';
-import { PersonalReference, CommercialReference } from '@/hooks/useTenantReferences';
+import { PersonalReference, CommercialReference } from '@/hooks/useActorReferences';
 import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
 
 interface ReferencesTabProps {

@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, UserPlus, Pencil, Trash2 } from 'lucide-react';
-import type { User, UserRole } from '@/lib/types';
+import type { User } from '@/lib/types';
+import type { UserRole } from '@/lib/enums';
 import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserDialog } from '@/components/dialogs/UserDialog';

@@ -21,7 +21,7 @@ interface LocalFile {
 export class LocalStorageProvider implements StorageProvider {
   private files: Map<string, LocalFile> = new Map();
   private basePath: string;
-  private baseUrl: string;
+  private readonly baseUrl: string;
 
   constructor(config: {
     basePath?: string;
@@ -49,13 +49,13 @@ export class LocalStorageProvider implements StorageProvider {
     };
 
     this.files.set(options.path, file);
-    
+
     return options.path;
   }
 
   async download(path: string): Promise<Buffer> {
     const file = this.files.get(path);
-    
+
     if (!file) {
       throw new Error(`File not found: ${path}`);
     }
@@ -66,10 +66,10 @@ export class LocalStorageProvider implements StorageProvider {
   async delete(path: string): Promise<boolean> {
     const existed = this.files.has(path);
     this.files.delete(path);
-    
+
     if (existed) {
     }
-    
+
     return existed;
   }
 
@@ -79,7 +79,7 @@ export class LocalStorageProvider implements StorageProvider {
 
   async getMetadata(path: string): Promise<StorageFileMetadata | null> {
     const file = this.files.get(path);
-    
+
     if (!file) {
       return null;
     }
@@ -91,29 +91,29 @@ export class LocalStorageProvider implements StorageProvider {
     // For local storage, generate a mock signed URL
     const token = crypto.randomBytes(16).toString('hex');
     const expires = Date.now() + ((options.expiresInSeconds || 10) * 1000);
-    
+
     // Store the token for validation (in a real implementation, this would be in a cache)
     const url = new URL(`${this.baseUrl}/signed`);
     url.searchParams.append('path', options.path);
     url.searchParams.append('token', token);
     url.searchParams.append('expires', expires.toString());
     url.searchParams.append('action', options.action);
-    
+
     if (options.responseDisposition) {
       url.searchParams.append('disposition', options.responseDisposition);
     }
-    
+
     if (options.fileName) {
       url.searchParams.append('filename', options.fileName);
     }
 
-    
+
     return url.toString();
   }
 
   async list(prefix: string): Promise<string[]> {
     const paths: string[] = [];
-    
+
     for (const [path] of this.files) {
       if (path.startsWith(prefix)) {
         paths.push(path);

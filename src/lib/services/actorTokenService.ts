@@ -146,7 +146,7 @@ export async function validateTenantToken(token: string): Promise<{ valid: boole
     include: {
       policy: true,
       documents: true,
-      references: true,
+      personalReferences: true,
       addressDetails: true,
       employerAddressDetails: true,
       previousRentalAddressDetails: true
@@ -179,7 +179,7 @@ export async function validateJointObligorToken(token: string): Promise<{ valid:
     include: {
       policy: true,
       documents: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       addressDetails: true,
       employerAddressDetails: true,
@@ -209,7 +209,7 @@ export async function validateAvalToken(token: string): Promise<{ valid: boolean
     include: {
       policy: true,
       documents: true,
-      references: true,
+      personalReferences: true,
       commercialReferences: true,
       addressDetails: true,
       employerAddressDetails: true,

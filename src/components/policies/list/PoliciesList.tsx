@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import PoliciesCards from './PoliciesCards';
 import PoliciesTable from './PoliciesTable';
-import { PolicyStatus } from '@/types/policy';
+import { PolicyStatus } from '@/lib/enums';
 
 interface Policy {
   id: string;

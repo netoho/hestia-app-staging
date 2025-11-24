@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { t } from '@/lib/i18n';
 import AuthProvider from '@/components/auth/AuthProvider';
 import ChatwootWidget from '@/components/ChatwootWidget';
+import { TRPCProviders } from '@/providers';
 
 export const metadata: Metadata = {
   title: t.layout.root.metaTitle,
@@ -19,16 +20,19 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <title>{t.layout.root.metaTitle}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          {children}
-          <Toaster />
-          <ChatwootWidget />
-        </AuthProvider>
+        <TRPCProviders>
+          <AuthProvider>
+            {children}
+            <Toaster />
+            <ChatwootWidget />
+          </AuthProvider>
+        </TRPCProviders>
       </body>
     </html>
   );

@@ -10,7 +10,7 @@ import { Shield } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { AvalFormData } from '@/hooks/useAvalForm';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 import { Document } from '@/types/documents';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 
@@ -152,7 +152,7 @@ export default function AvalPropertyGuaranteeTab({
       </Card>
 
       {/* Marital Status and Spouse Information (for Individuals) */}
-      {!formData.isCompany && (
+      {formData.avalType !== 'COMPANY' && (
         <Card>
           <CardHeader>
             <CardTitle>Estado Civil</CardTitle>

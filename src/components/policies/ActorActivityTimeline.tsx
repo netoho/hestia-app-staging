@@ -1,21 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  Activity,
-  User,
-  FileText,
-  CheckCircle,
-  XCircle,
-  Mail,
-  Upload,
-  Edit,
-  UserPlus,
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import {useMemo} from 'react';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
+import {Badge} from '@/components/ui/badge';
+import {Activity, CheckCircle, Edit, FileText, Mail, Upload, User, UserPlus, XCircle,} from 'lucide-react';
+import {format} from 'date-fns';
+import {es} from 'date-fns/locale';
 
 interface ActivityItem {
   id: string;
@@ -104,9 +94,8 @@ export default function ActorActivityTimeline({
 
       // Match by actorType in description or details
       if (actorType) {
-        const typeMatches = activity.description.toLowerCase().includes(actorType.toLowerCase()) ||
+        return activity.description.toLowerCase().includes(actorType.toLowerCase()) ||
           activity.details?.actorType === actorType;
-        return typeMatches;
       }
 
       // Check if activity mentions this actor in performedByType

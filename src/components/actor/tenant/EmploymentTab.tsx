@@ -39,12 +39,13 @@ export default function EmploymentTab({
                 <SelectValue placeholder="Seleccione..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="employed">Empleado</SelectItem>
-                <SelectItem value="self_employed">Trabajador Independiente</SelectItem>
-                <SelectItem value="business_owner">Dueño de Negocio</SelectItem>
-                <SelectItem value="retired">Jubilado</SelectItem>
-                <SelectItem value="student">Estudiante</SelectItem>
-                <SelectItem value="other">Otro</SelectItem>
+                <SelectItem value="EMPLOYED">Empleado</SelectItem>
+                <SelectItem value="SELF_EMPLOYED">Trabajador Independiente</SelectItem>
+                <SelectItem value="BUSINESS_OWNER">Dueño de Negocio</SelectItem>
+                <SelectItem value="RETIRED">Jubilado</SelectItem>
+                <SelectItem value="STUDENT">Estudiante</SelectItem>
+                <SelectItem value="UNEMPLOYED ">Desempleado</SelectItem>
+                <SelectItem value="OTHER">Otro</SelectItem>
               </SelectContent>
             </Select>
             <FieldError error={errors.employmentStatus} />

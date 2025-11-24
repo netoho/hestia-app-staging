@@ -33,7 +33,7 @@ export async function performOptimisticUpdate<T>({
 
   // Optimistic update
   const optimisticData = updateFn(currentData);
-  mutate(optimisticData, { revalidate: false });
+  await mutate(optimisticData, { revalidate: false });
 
   try {
     // Execute API call
@@ -55,7 +55,7 @@ export async function performOptimisticUpdate<T>({
     return result;
   } catch (error) {
     // Rollback on error
-    mutate(currentData, { revalidate: false });
+    await mutate(currentData, { revalidate: false });
 
     // Error callback
     if (onError && error instanceof Error) {

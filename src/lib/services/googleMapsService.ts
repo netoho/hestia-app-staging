@@ -3,8 +3,6 @@
  * Handles all interactions with Google Maps APIs
  */
 
-import { PropertyAddress } from '@prisma/client';
-
 interface GooglePlaceResult {
   placeId: string;
   description: string;
@@ -210,7 +208,7 @@ export async function parseGooglePlaceToAddress(
   const components = details.addressComponents;
 
   // Build the parsed address
-  const parsed: ParsedAddress = {
+  return {
     street: components.street || '',
     exteriorNumber: components.streetNumber || '',
     interiorNumber: additionalInfo?.interiorNumber,
@@ -225,8 +223,6 @@ export async function parseGooglePlaceToAddress(
     longitude: details.longitude,
     formattedAddress: details.formattedAddress,
   };
-
-  return parsed;
 }
 
 /**

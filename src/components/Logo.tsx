@@ -17,11 +17,11 @@ const Logo = ({ size = 'md', className, iconOnly = false }: LogoProps) => {
   return (
     <Link href="/" className={cn('flex items-center gap-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm', className)}>
       <Image 
-        src="/images/logo-hestia-azul-top.png" 
-        alt={`${t.siteName} Logo`} 
-        width={width} 
+        src="/images/logo-hestia-azul-top.png"
+        alt={`${t.siteName} Logo`}
+        width={width}
         height={height}
-        style={{ height: `${height}px`, width: 'auto' }}
+        style={{ height: `auto`, width: `${width}px` }}
         priority
       />
       <span className="sr-only">{t.siteName} Home</span>

@@ -2,75 +2,19 @@
 // POLICY TYPES & INTERFACES
 // ============================================
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  STAFF = 'STAFF',
-  BROKER = 'BROKER'
-}
+// Import and re-export enums from centralized generated file
+// These enums are generated from Prisma schema
+export {
+  UserRole,
+  TenantType,
+  GuarantorType,
+  PropertyType,
+  PolicyStatus,
+  DocumentCategory,
+  NationalityType
+} from '@/lib/enums';
 
-export enum TenantType {
-  INDIVIDUAL = 'INDIVIDUAL',
-  COMPANY = 'COMPANY'
-}
-
-export enum GuarantorType {
-  NONE = 'NONE',
-  JOINT_OBLIGOR = 'JOINT_OBLIGOR',
-  AVAL = 'AVAL',
-  BOTH = 'BOTH'
-}
-
-export enum PropertyType {
-  HOUSE = 'HOUSE',
-  APARTMENT = 'APARTMENT',
-  COMMERCIAL = 'COMMERCIAL',
-  OFFICE = 'OFFICE',
-  WAREHOUSE = 'WAREHOUSE',
-  OTHER = 'OTHER'
-}
-
-export enum PolicyStatus {
-  DRAFT = 'DRAFT',
-  COLLECTING_INFO = 'COLLECTING_INFO',
-  UNDER_INVESTIGATION = 'UNDER_INVESTIGATION',
-  INVESTIGATION_REJECTED = 'INVESTIGATION_REJECTED',
-  PENDING_APPROVAL = 'PENDING_APPROVAL',
-  APPROVED = 'APPROVED',
-  CONTRACT_PENDING = 'CONTRACT_PENDING',
-  CONTRACT_SIGNED = 'CONTRACT_SIGNED',
-  ACTIVE = 'ACTIVE',
-  EXPIRED = 'EXPIRED',
-  CANCELLED = 'CANCELLED'
-}
-
-export enum DocumentCategory {
-  IDENTIFICATION = 'IDENTIFICATION',
-  INCOME_PROOF = 'INCOME_PROOF',
-  ADDRESS_PROOF = 'ADDRESS_PROOF',
-  BANK_STATEMENT = 'BANK_STATEMENT',
-  PROPERTY_DEED = 'PROPERTY_DEED',
-  TAX_RETURN = 'TAX_RETURN',
-  EMPLOYMENT_LETTER = 'EMPLOYMENT_LETTER',
-  PROPERTY_TAX_STATEMENT = 'PROPERTY_TAX_STATEMENT',  // Boleta predial
-  MARRIAGE_CERTIFICATE = 'MARRIAGE_CERTIFICATE',
-  COMPANY_CONSTITUTION = 'COMPANY_CONSTITUTION',    // Escritura constitutiva
-  LEGAL_POWERS = 'LEGAL_POWERS',           // Poderes notariales
-  TAX_STATUS_CERTIFICATE = 'TAX_STATUS_CERTIFICATE', // Constancia de situación fiscal
-  CREDIT_REPORT = 'CREDIT_REPORT',         // Buró de crédito
-  PROPERTY_REGISTRY = 'PROPERTY_REGISTRY',     // Folio real del registro público
-  PROPERTY_APPRAISAL = 'PROPERTY_APPRAISAL',    // Avalúo de propiedad
-  PASSPORT = 'PASSPORT',
-  IMMIGRATION_DOCUMENT = 'IMMIGRATION_DOCUMENT',
-  UTILITY_BILL = 'UTILITY_BILL',
-  PAYROLL_RECEIPT = 'PAYROLL_RECEIPT',       // Recibo de nómina
-  OTHER = 'OTHER'
-}
-
-export enum NationalityType {
-  MEXICAN = 'MEXICAN',
-  FOREIGN = 'FOREIGN'
-}
-
+// Custom enums not in Prisma schema
 export enum ActorType {
   LANDLORD = 'LANDLORD',
   TENANT = 'TENANT',

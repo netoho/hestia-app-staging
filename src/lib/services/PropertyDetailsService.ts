@@ -8,7 +8,7 @@ import { BaseService } from './base/BaseService';
 import { Result, AsyncResult } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';
 import { PropertyDetails } from '@/lib/types/actor';
-import { validatePropertyDetails } from '@/lib/validations/landlord/property.schema';
+import { validatePropertyDetails } from '@/lib/schemas/shared/property.schema';
 import { AddressDetails } from '@/lib/types/actor';
 
 export interface PropertyDetailsInput {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import PolicyDetailsSkeleton from '@/components/ui/skeleton/PolicyDetailsSkeleton';
@@ -8,80 +8,7 @@ import PolicyErrorState from '@/components/ui/error/PolicyErrorState';
 import ErrorBoundary from '@/components/ui/error/ErrorBoundary';
 import PolicyDetailsContent from '@/components/policies/PolicyDetailsContent';
 import { usePolicyPermissions, useIsStaffOrAdmin } from '@/lib/hooks/usePolicyPermissions';
-
-interface PolicyDetails {
-  id: string;
-  policyNumber: string;
-  internalCode?: string;
-  status: string;
-
-  // Property Information
-  propertyAddress: string;
-  propertyType?: string;
-  propertyDescription?: string;
-  rentAmount: number;
-  contractLength?: number;
-
-  // Property Details (new separated model)
-  propertyDetails?: any;
-
-  // Guarantor Configuration
-  guarantorType: string;
-
-  // Package/Pricing
-  packageId?: string;
-  package?: {
-    id: string;
-    name: string;
-    price: number;
-    features?: string;
-  };
-  totalPrice: number;
-  tenantPercentage?: number;
-  landlordPercentage?: number;
-
-  // Actors with verification status
-  landlords?: any[];
-  tenant?: any;
-  jointObligors?: any[];
-  avals?: any[];
-
-  // Timestamps
-  createdAt: string;
-  updatedAt: string;
-  submittedAt?: string;
-  activatedAt?: string;
-  approvedAt?: string;
-
-  // Activities
-  activities?: any[];
-
-  // Documents
-  documents?: any[];
-
-  // User info
-  createdBy?: {
-    id?: string;
-    name?: string;
-    email: string;
-  };
-
-  // Progress metrics (from API with ?include=progress)
-  progress?: {
-    overall: number;
-    byActor: Record<string, {
-      percentage: number;
-      completedFields: number;
-      totalFields: number;
-      documentsUploaded: number;
-      documentsRequired: number;
-    }>;
-    completedActors: number;
-    totalActors: number;
-    documentsUploaded: number;
-    documentsRequired: number;
-  };
-}
+import { trpc } from '@/lib/trpc/client';
 
 export default function PolicyDetailsPage({
   params
@@ -90,61 +17,26 @@ export default function PolicyDetailsPage({
 }) {
   const { data: session } = useSession();
   const router = useRouter();
-  const [policyId, setPolicyId] = useState<string>('');
-  const [policy, setPolicy] = useState<PolicyDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<{
-    code?: number;
-    message?: string;
-    type?: 'network' | 'not-found' | 'server' | 'unauthorized' | 'unknown';
-  } | null>(null);
 
-  // Resolve params
-  useEffect(() => {
-    params.then(resolvedParams => {
-      setPolicyId(resolvedParams.id);
-    });
-  }, [params]);
+  // Unwrap the params promise using React's use() hook
+  const { id: policyId } = use(params);
 
-  useEffect(() => {
-    if (policyId) {
-      fetchPolicyDetails();
-    }
-  }, [policyId]);
-
-  const fetchPolicyDetails = async () => {
-    try {
-      setError(null);
-      // Fetch policy with progress calculation
-      const response = await fetch(`/api/policies/${policyId}?include=progress`);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        if (response.status === 404) {
-          setError({ code: 404, type: 'not-found', message: errorData.message });
-        } else if (response.status === 401 || response.status === 403) {
-          setError({ code: response.status, type: 'unauthorized', message: errorData.message });
-        } else if (response.status >= 500) {
-          setError({ code: response.status, type: 'server', message: errorData.message });
-        } else {
-          setError({ code: response.status, type: 'unknown', message: errorData.message });
+  // Use tRPC to fetch policy with progress
+  const { data: policy, isLoading, error, refetch } = trpc.policy.getById.useQuery(
+    {
+      id: policyId,
+      includeProgress: true
+    },
+    {
+      retry: (failureCount, error) => {
+        // Don't retry on 404 or 403
+        if (error?.data?.code === 'NOT_FOUND' || error?.data?.code === 'FORBIDDEN') {
+          return false;
         }
-        return;
+        return failureCount < 3;
       }
-
-      const data = await response.json();
-      setPolicy(data.data || data);
-    } catch (error) {
-      console.error('Error fetching policy:', error);
-      setError({
-        type: 'network',
-        message: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+  );
 
   // Use permission hooks
   const user = session?.user ? {
@@ -163,20 +55,26 @@ export default function PolicyDetailsPage({
   const isStaffOrAdmin = useIsStaffOrAdmin(user);
 
   // Handle loading state with skeleton
-  if (loading) {
+  if (isLoading) {
     return <PolicyDetailsSkeleton />;
   }
 
   // Handle error state
   if (error) {
+    const errorType =
+      error.data?.code === 'NOT_FOUND' ? 'not-found' :
+      error.data?.code === 'FORBIDDEN' ? 'unauthorized' :
+      error.data?.code === 'UNAUTHORIZED' ? 'unauthorized' :
+      error.message?.includes('fetch') ? 'network' : 'unknown';
+
     return (
       <PolicyErrorState
-        error={error}
-        onRetry={() => {
-          setLoading(true);
-          setError(null);
-          fetchPolicyDetails();
+        error={{
+          code: error.data?.httpStatus,
+          type: errorType as any,
+          message: error.message
         }}
+        onRetry={() => refetch()}
         onGoHome={() => router.push('/dashboard/policies')}
       />
     );
@@ -187,10 +85,7 @@ export default function PolicyDetailsPage({
     return (
       <PolicyErrorState
         error={{ code: 404, type: 'not-found' }}
-        onRetry={() => {
-          setLoading(true);
-          fetchPolicyDetails();
-        }}
+        onRetry={() => refetch()}
         onGoHome={() => router.push('/dashboard/policies')}
       />
     );
@@ -203,7 +98,7 @@ export default function PolicyDetailsPage({
         policyId={policyId}
         permissions={permissions}
         isStaffOrAdmin={isStaffOrAdmin}
-        onRefresh={fetchPolicyDetails}
+        onRefresh={() => refetch()}
       />
     </ErrorBoundary>
   );

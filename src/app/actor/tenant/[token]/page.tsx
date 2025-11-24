@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -8,31 +8,9 @@ import { Loader2, AlertCircle, CheckCircle2, Home, Calendar, DollarSign } from '
 import { useToast } from '@/hooks/use-toast';
 import { brandInfo } from '@/lib/config/brand';
 import { formatFullName } from '@/lib/utils/names';
+import { trpc } from '@/lib/trpc/client';
 
 import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard';
-
-interface TenantData {
-  id: string;
-  tenantType: 'INDIVIDUAL' | 'COMPANY';
-  firstName?: string;
-  middleName?: string;
-  paternalLastName?: string;
-  maternalLastName?: string;
-  email: string;
-  phone: string;
-  informationComplete: boolean;
-  [key: string]: any;
-}
-
-interface PolicyData {
-  id: string;
-  policyNumber: string;
-  propertyAddress: string;
-  propertyType?: string;
-  rentAmount: number;
-  contractLength?: number;
-  status: string;
-}
 
 export default function TenantPortalPage() {
   const params = useParams();
@@ -40,45 +18,31 @@ export default function TenantPortalPage() {
   const { toast } = useToast();
   const token = params.token as string;
 
-  const [loading, setLoading] = useState(true);
-  const [tenant, setTenant] = useState<TenantData | null>(null);
-  const [policy, setPolicy] = useState<PolicyData | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
-
+  // Store token in localStorage for tRPC client to use in Authorization header
   useEffect(() => {
-    validateToken();
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    return () => {
+      localStorage.removeItem('token');
+    };
   }, [token]);
 
-  const validateToken = async () => {
-    try {
-      const response = await fetch(`/api/actors/tenant/${token}`);
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        toast({
-          title: "Error",
-          description: data.error || 'Token inválido',
-          variant: "destructive",
-        });
-        router.push('/');
-        return;
-      }
-
-      setTenant(data.data);
-      setPolicy(data.policy);
-      setIsCompleted(data.data?.informationComplete || false);
-    } catch (error) {
-      console.error('Error validating token:', error);
-      toast({
-        title: "Error",
-        description: 'Error al validar el acceso',
-        variant: "destructive",
-      });
-      router.push('/');
-    } finally {
-      setLoading(false);
+  // Use tRPC to fetch actor data
+  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+    {
+      type: 'tenant',
+      token
+    },
+    {
+      retry: false
     }
-  };
+  );
+
+  const tenant = data?.data || null;
+  const policy = data?.policy || null;
+  const canEdit = data?.canEdit || false;
+  const isCompleted = data?.data?.informationComplete || false;
 
   const handleComplete = () => {
     toast({
@@ -87,15 +51,30 @@ export default function TenantPortalPage() {
     });
 
     // Refresh data
-    validateToken();
+    refetch();
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin mx-auto" style={{ color: '#173459' }} />
           <p className="mt-4 text-gray-600">Validando acceso...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-blue-50">
+        <div className="max-w-md w-full mx-4">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {error.message || 'Token inválido o expirado'}. Por favor, contacte a {brandInfo.supportEmail}
+            </AlertDescription>
+          </Alert>
         </div>
       </div>
     );
@@ -196,7 +175,7 @@ export default function TenantPortalPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="text-center">
             <h1 className="font-headline text-3xl md:text-4xl mb-3" style={{ color: '#173459' }}>
-              Bienvenido, {tenant.firstName ? formatFullName(tenant.firstName, tenant.paternalLastName || '', tenant.maternalLastName || '', tenant.middleName) : 'Inquilino'}
+              Bienvenido, {tenant.firstName ? formatFullName(tenant.firstName, tenant.paternalLastName || '', tenant.maternalLastName || '', tenant.middleName || undefined) : 'Inquilino'}
             </h1>
             <p className="text-lg text-gray-600 mb-4">
               Complete su información para la protección de arrendamiento
@@ -269,6 +248,7 @@ export default function TenantPortalPage() {
           initialData={tenant}
           policy={policy}
           onComplete={handleComplete}
+          isAdminEdit={false}
         />
       </div>
     </div>

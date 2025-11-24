@@ -100,6 +100,7 @@ export default function PersonalInfoTab({
                       <Label htmlFor="foreign">Extranjera</Label>
                     </div>
                   </RadioGroup>
+                  <FieldError error={errors.nationality} />
                 </div>
 
                 {formData.nationality === 'FOREIGN' && (

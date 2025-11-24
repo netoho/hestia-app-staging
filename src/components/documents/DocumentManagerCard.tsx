@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DocumentCategory } from '@/types/policy';
+import { DocumentCategory } from '@/lib/enums';
 import { Document } from '@/types/documents';
 import { DocumentList } from './DocumentList';
 import { DocumentUploader } from './DocumentUploader';

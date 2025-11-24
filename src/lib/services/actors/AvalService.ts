@@ -3,67 +3,56 @@
  * Handles all aval-related business logic and data operations
  */
 
-import { PrismaClient, DocumentCategory } from '@prisma/client';
-import { BaseActorService } from './BaseActorService';
-import { Result, AsyncResult } from '../types/result';
-import { ServiceError, ErrorCode } from '../types/errors';
-import { PersonActorData, CompanyActorData, AddressDetails } from '@/lib/types/actor';
-import { z } from 'zod';
-import { personWithNationalitySchema } from '@/lib/validations/actors/person.schema';
-import { companyActorSchema } from '@/lib/validations/actors/company.schema';
+import {AvalType, DocumentCategory, Prisma, PrismaClient} from '@prisma/client';
+import {BaseActorService} from './BaseActorService';
+import {AsyncResult, Result} from '../types/result';
+import {ErrorCode, ServiceError} from '../types/errors';
+import {ActorData, AddressDetails, CompanyActorData, PersonActorData} from '@/lib/types/actor';
+import type {AvalWithRelations} from './types';
+import {
+  avalStrictSchema,
+  avalPartialSchema,
+  avalAdminSchema,
+  getAvalSchema,
+  validateAvalData,
+  type AvalFormData
+} from '@/lib/schemas/aval';
+import { prepareAvalForDB } from '@/lib/utils/aval/prepareForDB';
 
-// Aval-specific validation schemas
-const avalPersonSchema = personWithNationalitySchema.extend({
-  relationshipToTenant: z.string().min(1, 'Relación con el inquilino es requerida').optional(),
-
-  // Employment
-  employmentStatus: z.string().optional().nullable(),
-  position: z.string().optional().nullable(),
-  employerAddress: z.string().optional().nullable(),
-  incomeSource: z.string().optional().nullable(),
-
-  // Property guarantee (MANDATORY for Aval)
-  hasPropertyGuarantee: z.boolean().default(true),
-  guaranteeMethod: z.enum(['income', 'property']).optional().nullable(),
-  propertyAddress: z.string().optional().nullable(),
-  propertyValue: z.number().positive().optional().nullable(),
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistry: z.string().optional().nullable(),
-  propertyTaxAccount: z.string().optional().nullable(),
-  propertyUnderLegalProceeding: z.boolean().default(false),
-
-  // Marriage information (for property guarantee)
-  maritalStatus: z.string().optional().nullable(),
-  spouseName: z.string().optional().nullable(),
-  spouseRfc: z.string().optional().nullable(),
-  spouseCurp: z.string().optional().nullable(),
-});
-
-const avalCompanySchema = companyActorSchema.extend({
-  relationshipToTenant: z.string().min(1, 'Relación con el inquilino es requerida').optional(),
-
-  // Property guarantee information
-  hasPropertyGuarantee: z.boolean().default(true),
-  guaranteeMethod: z.enum(['income', 'property']).optional().nullable(),
-  propertyAddress: z.string().optional().nullable(),
-  propertyValue: z.number().positive().optional().nullable(),
-  propertyDeedNumber: z.string().optional().nullable(),
-  propertyRegistry: z.string().optional().nullable(),
-  propertyTaxAccount: z.string().optional().nullable(),
-  propertyUnderLegalProceeding: z.boolean().default(false),
-});
-
-export class AvalService extends BaseActorService {
+export class AvalService extends BaseActorService<AvalWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
     super('aval', prisma);
+  }
+
+  /**
+   * Get the Prisma delegate for aval operations
+   */
+  protected getPrismaDelegate(tx?: any): Prisma.AvalDelegate {
+    return (tx || this.prisma).aval;
+  }
+
+  /**
+   * Get includes for aval queries
+   */
+  protected getIncludes(): Record<string, boolean | object> {
+    return {
+      addressDetails: true,
+      employerAddressDetails: true,
+      guaranteePropertyDetails: true,
+      personalReferences: true,
+      commercialReferences: true,
+      policy: true
+    };
   }
 
   /**
    * Validate person aval data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    const schema = isPartial ? avalPersonSchema.partial() : avalPersonSchema;
-    const result = schema.safeParse(data);
+    // Add avalType to data for validation
+    const dataWithType = { ...data, avalType: 'INDIVIDUAL' as const };
+    const mode = isPartial ? 'partial' : 'strict';
+    const result = validateAvalData(dataWithType, mode);
 
     if (!result.success) {
       return Result.error(
@@ -83,8 +72,10 @@ export class AvalService extends BaseActorService {
    * Validate company aval data
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    const schema = isPartial ? avalCompanySchema.partial() : avalCompanySchema;
-    const result = schema.safeParse(data);
+    // Add avalType to data for validation
+    const dataWithType = { ...data, avalType: 'COMPANY' as const };
+    const mode = isPartial ? 'partial' : 'strict';
+    const result = validateAvalData(dataWithType, mode);
 
     if (!result.success) {
       return Result.error(
@@ -101,24 +92,71 @@ export class AvalService extends BaseActorService {
   }
 
   /**
+   * Validate aval data with flexible mode support
+   */
+  validateAvalDataWithMode(
+    data: any,
+    mode: 'strict' | 'partial' | 'admin' = 'strict'
+  ): Result<AvalFormData> {
+    const result = validateAvalData(data, mode);
+
+    if (!result.success) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Invalid aval data',
+          400,
+          { errors: this.formatZodErrors(result.error) }
+        )
+      );
+    }
+
+    return Result.ok(result.data);
+  }
+
+  /**
    * Save aval information
    */
   async saveAvalInformation(
     avalId: string,
-    data: any,
+    data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<any> {
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<AvalWithRelations> {
     return this.executeTransaction(async (tx) => {
-      // Fetch existing aval to get current address IDs
+      // Fetch existing aval to determine avalType
       const existingAval = await tx.aval.findUnique({
         where: { id: avalId },
         select: {
+          avalType: true,
           addressId: true,
           employerAddressId: true,
           guaranteePropertyAddressId: true
         }
       });
+
+      if (!existingAval) {
+        throw new Error('Aval not found');
+      }
+
+      // Prepare data for database using the new utility
+      const preparedData = prepareAvalForDB(data, {
+        avalType: existingAval.avalType,
+        isPartial,
+        tabName
+      });
+
+      // Validate unless explicitly skipped
+      if (!skipValidation) {
+        const validationResult = this.validateAvalDataWithMode(
+          preparedData,
+          isPartial ? 'partial' : 'strict'
+        );
+        if (!validationResult.ok) {
+          throw new Error(validationResult.error.message);
+        }
+      }
 
       // Handle addresses
       let addressId: string | undefined;
@@ -126,9 +164,9 @@ export class AvalService extends BaseActorService {
       let guaranteePropertyAddressId: string | undefined;
 
       // Upsert current address
-      if (data.addressDetails) {
+      if (preparedData.addressDetails) {
         const addressResult = await this.upsertAddress(
-          data.addressDetails,
+          preparedData.addressDetails,
           existingAval?.addressId
         );
         if (!addressResult.ok) {
@@ -138,9 +176,9 @@ export class AvalService extends BaseActorService {
       }
 
       // Upsert employer address (if individual)
-      if (data.employerAddressDetails) {
+      if (preparedData.employerAddressDetails) {
         const employerAddressResult = await this.upsertAddress(
-          data.employerAddressDetails,
+          preparedData.employerAddressDetails,
           existingAval?.employerAddressId
         );
         if (!employerAddressResult.ok) {
@@ -150,9 +188,9 @@ export class AvalService extends BaseActorService {
       }
 
       // Upsert guarantee property address (MANDATORY for Aval)
-      if (data.guaranteePropertyDetails) {
+      if (preparedData.guaranteePropertyDetails) {
         const propertyAddressResult = await this.upsertAddress(
-          data.guaranteePropertyDetails,
+          preparedData.guaranteePropertyDetails,
           existingAval?.guaranteePropertyAddressId
         );
         if (!propertyAddressResult.ok) {
@@ -163,17 +201,11 @@ export class AvalService extends BaseActorService {
 
       // Build update data
       const updateData = this.buildAvalUpdateData(
-        data,
+        preparedData,
         addressId,
         employerAddressId,
         guaranteePropertyAddressId
       );
-
-      // Mark as complete if not partial
-      if (!isPartial) {
-        updateData.informationComplete = true;
-        updateData.completedAt = new Date();
-      }
 
       // Update aval
       const updatedAval = await tx.aval.update({
@@ -183,14 +215,16 @@ export class AvalService extends BaseActorService {
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
         }
       });
 
       this.log('info', 'Aval data saved', {
         avalId,
-        isPartial
+        isPartial,
+        tabName,
+        avalType: existingAval.avalType
       });
 
       return updatedAval;
@@ -208,6 +242,11 @@ export class AvalService extends BaseActorService {
   ): any {
     // Start with base actor update data
     const updateData = this.buildUpdateData(data, addressId);
+
+    // Handle avalType (should be set by prepareAvalForDB)
+    if (data.avalType !== undefined) {
+      updateData.avalType = data.avalType;
+    }
 
     // Add aval-specific fields
     if (data.relationshipToTenant !== undefined) {
@@ -516,7 +555,7 @@ export class AvalService extends BaseActorService {
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true,
           policy: {
@@ -546,21 +585,51 @@ export class AvalService extends BaseActorService {
    */
   async getAvalsByPolicyId(policyId: string): AsyncResult<any[]> {
     return this.executeDbOperation(async () => {
-      const avals = await this.prisma.aval.findMany({
-        where: { policyId },
+      return await this.prisma.aval.findMany({
+        where: {policyId},
         include: {
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          references: true,
+          personalReferences: true,
           commercialReferences: true,
           documents: true,
         },
-        orderBy: { createdAt: 'asc' }
+        orderBy: {createdAt: 'asc'}
+      });
+    }, 'getAvalsByPolicyId');
+  }
+
+  /**
+   * Get all avals by policy ID (alias for getAvalsByPolicyId)
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<any[]> {
+    return this.getAvalsByPolicyId(policyId);
+  }
+
+  /**
+   * Create a new aval
+   */
+  async create(data: any): AsyncResult<AvalWithRelations> {
+    return this.executeTransaction(async (tx) => {
+      const aval = await tx.aval.create({
+        data: {
+          policyId: data.policyId,
+          isCompany: data.isCompany,
+          firstName: data.firstName,
+          middleName: data.middleName,
+          paternalLastName: data.paternalLastName,
+          maternalLastName: data.maternalLastName,
+          companyName: data.companyName,
+          email: data.email,
+          phone: data.phone || data.phoneNumber,
+          relationshipToTenant: data.relationshipToTenant,
+        },
+        include: this.getIncludes()
       });
 
-      return avals;
-    }, 'getAvalsByPolicyId');
+      return aval as AvalWithRelations;
+    });
   }
 
   /**
@@ -685,7 +754,7 @@ export class AvalService extends BaseActorService {
   /**
    * Check if aval has required documents
    */
-  private async hasRequiredDocuments(avalId: string): Promise<boolean> {
+  async hasRequiredDocuments(avalId: string): Promise<boolean> {
     const result = await this.executeDbOperation(async () => {
       const aval = await this.prisma.aval.findUnique({
         where: { id: avalId },
@@ -711,11 +780,12 @@ export class AvalService extends BaseActorService {
    */
   public async save(
     avalId: string,
-    data: AvalData,
+    data: ActorData,
     isPartial: boolean = false,
-    skipValidation: boolean = false
-  ): AsyncResult<AvalData> {
-    return this.saveAvalInformation(avalId, data, isPartial, skipValidation);
+    skipValidation: boolean = false,
+    tabName?: string
+  ): AsyncResult<AvalWithRelations> {
+    return this.saveAvalInformation(avalId, data, isPartial, skipValidation, tabName);
   }
 
   /**
@@ -723,6 +793,98 @@ export class AvalService extends BaseActorService {
    * Admin only operation
    */
   public async delete(avalId: string): AsyncResult<void> {
-    return this.deleteActor('Aval', avalId);
+    return this.deleteActor(avalId);
+  }
+
+  /**
+   * Validate aval completeness for submission
+   * Implements abstract method from BaseActorService
+   */
+  protected validateCompleteness(aval: AvalWithRelations): Result<boolean> {
+    const errors: string[] = [];
+
+    if (!aval.isCompany) {
+      // Person validation
+      if (!aval.firstName) errors.push('Nombre requerido');
+      if (!aval.paternalLastName) errors.push('Apellido paterno requerido');
+      if (!aval.maternalLastName) errors.push('Apellido materno requerido');
+      if (!aval.occupation) errors.push('Ocupación requerida');
+      if (!aval.employerName) errors.push('Nombre del empleador requerido');
+      if (!aval.monthlyIncome) errors.push('Ingreso mensual requerido');
+    } else {
+      // Company validation
+      if (!aval.companyName) errors.push('Razón social requerida');
+      if (!aval.companyRfc) errors.push('RFC de empresa requerido');
+      if (!aval.legalRepFirstName) errors.push('Nombre del representante requerido');
+      if (!aval.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
+      if (!aval.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+    }
+
+    // Common required fields
+    if (!aval.email) errors.push('Email requerido');
+    if (!aval.phone) errors.push('Teléfono requerido');
+    if (!aval.addressDetails) errors.push('Dirección requerida');
+
+    // Aval specific - must have property guarantee
+    if (!aval.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
+    if (!aval.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+    if (!aval.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
+    if (!aval.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+
+    // Check references (minimum 3 for aval)
+    const referenceCount = aval.personalReferences?.length ?? 0;
+    if (referenceCount < 3) {
+      errors.push('Mínimo 3 referencias requeridas');
+    }
+
+    if (errors.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Información incompleta',
+          400,
+          { missingFields: errors }
+        )
+      );
+    }
+
+    return Result.ok(true);
+  }
+
+  /**
+   * Validate required documents are uploaded
+   * Implements abstract method from BaseActorService
+   */
+  protected async validateRequiredDocuments(avalId: string): AsyncResult<boolean> {
+    const aval = await this.getById(avalId);
+    if (!aval.ok) return aval;
+
+    const requiredDocs: any[] = aval.value.isCompany
+      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA', 'ACTA_CONSTITUTIVA']
+      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA'];
+
+    const uploadedDocs = await this.prisma.actorDocument.findMany({
+      where: {
+        avalId,
+        category: { in: requiredDocs }
+      },
+      select: { category: true }
+    });
+
+    const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
+    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+
+    if (missingDocs.length > 0) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Faltan documentos requeridos',
+          400,
+          { missingDocuments: missingDocs }
+        )
+      );
+    }
+
+    return Result.ok(true);
   }
 }
