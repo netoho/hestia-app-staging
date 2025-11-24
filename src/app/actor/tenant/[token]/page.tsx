@@ -10,7 +10,7 @@ import { brandInfo } from '@/lib/config/brand';
 import { formatFullName } from '@/lib/utils/names';
 import { trpc } from '@/lib/trpc/client';
 
-import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard';
+import TenantFormWizardSimplified from "@/components/actor/tenant/TenantFormWizard-Simplified";
 
 export default function TenantPortalPage() {
   const params = useParams();
@@ -243,7 +243,7 @@ export default function TenantPortalPage() {
         </Card>
 
         {/* Form Wizard */}
-        <TenantFormWizard
+        <TenantFormWizardSimplified
           token={token}
           initialData={tenant}
           policy={policy}
