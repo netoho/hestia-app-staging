@@ -33,8 +33,8 @@ export function PersonNameFields({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="firstName">
-            Nombre {required && <span className="text-red-500">*</span>}
+          <Label htmlFor="firstName" required={required}>
+            Nombre
           </Label>
           <Input
             id="firstName"
@@ -50,8 +50,8 @@ export function PersonNameFields({
         </div>
 
         <div>
-          <Label htmlFor="middleName">
-            Segundo Nombre <span className="text-gray-500">(opcional)</span>
+          <Label htmlFor="middleName" optional>
+            Segundo Nombre
           </Label>
           <Input
             id="middleName"
@@ -69,8 +69,8 @@ export function PersonNameFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="paternalLastName">
-            Apellido Paterno {required && <span className="text-red-500">*</span>}
+          <Label htmlFor="paternalLastName" required={required}>
+            Apellido Paterno
           </Label>
           <Input
             id="paternalLastName"
@@ -86,8 +86,8 @@ export function PersonNameFields({
         </div>
 
         <div>
-          <Label htmlFor="maternalLastName">
-            Apellido Materno {required && <span className="text-red-500">*</span>}
+          <Label htmlFor="maternalLastName" required={required}>
+            Apellido Materno
           </Label>
           <Input
             id="maternalLastName"

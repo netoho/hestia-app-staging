@@ -101,8 +101,8 @@ export default function GuarantorStep({
         />
 
         <div>
-          <Label htmlFor={`${type}-email-${index}`}>
-            Email <span className="text-red-500">*</span>
+          <Label htmlFor={`${type}-email-${index}`} required>
+            Email
           </Label>
           <Input
             id={`${type}-email-${index}`}
@@ -125,7 +125,7 @@ export default function GuarantorStep({
           </div>
 
           <div>
-            <Label htmlFor={`${type}-rfc-${index}`}>RFC (Opcional)</Label>
+            <Label htmlFor={`${type}-rfc-${index}`} optional>RFC</Label>
             <Input
               id={`${type}-rfc-${index}`}
               value={actor.rfc || ''}
@@ -148,8 +148,8 @@ export default function GuarantorStep({
       <CardContent className="space-y-6">
         {/* Guarantor Type Selector */}
         <div>
-          <Label htmlFor="guarantorType">
-            Tipo de Garantía <span className="text-red-500">*</span>
+          <Label htmlFor="guarantorType" required>
+            Tipo de Garantía
           </Label>
           <Select
             value={guarantorType}
