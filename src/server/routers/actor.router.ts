@@ -28,6 +28,20 @@ import {
   landlordCompanyCompleteSchema,
   type Landlord,
 } from '@/lib/schemas/landlord';
+import {
+  getAvalSchema,
+  validateAvalData,
+  avalIndividualCompleteSchema,
+  avalCompanyCompleteSchema,
+  type AvalFormData,
+} from '@/lib/schemas/aval';
+import {
+  jointObligorStrictSchema,
+  jointObligorIndividualIncomeCompleteSchema,
+  jointObligorIndividualPropertyCompleteSchema,
+  jointObligorCompanyIncomeCompleteSchema,
+  jointObligorCompanyPropertyCompleteSchema,
+} from '@/lib/schemas/joint-obligor';
 import { personNameSchema } from '@/lib/schemas/shared/person.schema';
 import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
@@ -57,6 +71,20 @@ const TenantStrictSchema = z.union([
 const LandlordStrictSchema = z.union([
   landlordIndividualCompleteSchema,
   landlordCompanyCompleteSchema,
+]);
+
+// Create Aval strict schema as union
+const AvalStrictSchema = z.union([
+  avalIndividualCompleteSchema,
+  avalCompanyCompleteSchema,
+]);
+
+// Create Joint Obligor strict schema with flexible guarantee
+const JointObligorStrictSchema = z.union([
+  jointObligorIndividualIncomeCompleteSchema,
+  jointObligorIndividualPropertyCompleteSchema,
+  jointObligorCompanyIncomeCompleteSchema,
+  jointObligorCompanyPropertyCompleteSchema,
 ]);
 
 // Admin schemas - flexible updates with proper typing
@@ -204,81 +232,12 @@ export const actorRouter = createTRPCRouter({
       z.object({
         type: z.literal('aval'),
         token: z.string(),
-        data: PersonSchema.extend({
-          isCompany: z.literal(false).default(false),
-          email: z.string().email(),
-          phone: z.string(),
-          personalEmail: z.string().email().optional().nullable(),
-          workEmail: z.string().email().optional().nullable(),
-          currentAddress: z.string(),
-
-          // Employment
-          employmentStatus: z.string().optional().nullable(),
-          occupation: z.string(),
-          position: z.string().optional().nullable(),
-          employerAddress: z.string().optional().nullable(),
-          monthlyIncome: z.number(),
-          incomeSource: z.string().optional().nullable(),
-
-          // Property guarantee (MANDATORY for Aval)
-          hasPropertyGuarantee: z.boolean().default(true),
-          guaranteeMethod: z.enum(['income', 'property']).optional().nullable(),
-          propertyAddress: z.string().optional().nullable(),
-          propertyValue: z.number().positive().optional().nullable(),
-          propertyDeedNumber: z.string().optional().nullable(),
-          propertyRegistry: z.string().optional().nullable(),
-          propertyTaxAccount: z.string().optional().nullable(),
-          propertyUnderLegalProceeding: z.boolean().default(false),
-
-          // Marriage information
-          maritalStatus: z.string().optional().nullable(),
-          spouseName: z.string().optional().nullable(),
-          spouseRfc: z.string().optional().nullable(),
-          spouseCurp: z.string().optional().nullable(),
-        }),
+        data: AvalStrictSchema,
       }),
       z.object({
         type: z.literal('jointObligor'),
         token: z.string(),
-        data: PersonSchema.extend({
-          isCompany: z.literal(false).default(false),
-          email: z.string().email(),
-          phone: z.string(),
-          personalEmail: z.string().email().optional().nullable(),
-          workEmail: z.string().email().optional().nullable(),
-          currentAddress: z.string(),
-
-          // Employment
-          employmentStatus: z.string().optional().nullable(),
-          occupation: z.string(),
-          position: z.string().optional().nullable(),
-          employerAddress: z.string().optional().nullable(),
-          monthlyIncome: z.number(),
-          incomeSource: z.string().optional().nullable(),
-
-          // Guarantee
-          guaranteeMethod: z.enum(['income', 'property']).optional(),
-          hasPropertyGuarantee: z.boolean().optional(),
-          hasProperties: z.boolean().optional(),
-
-          // Property guarantee fields
-          propertyAddress: z.string().optional().nullable(),
-          propertyValue: z.number().optional().nullable(),
-          propertyDeedNumber: z.string().optional().nullable(),
-          propertyRegistry: z.string().optional().nullable(),
-          propertyTaxAccount: z.string().optional().nullable(),
-          propertyUnderLegalProceeding: z.boolean().optional(),
-
-          // Financial Information (income guarantee)
-          bankName: z.string().optional().nullable(),
-          accountHolder: z.string().optional().nullable(),
-
-          // Marriage information
-          maritalStatus: z.string().optional().nullable(),
-          spouseName: z.string().optional().nullable(),
-          spouseRfc: z.string().optional().nullable(),
-          spouseCurp: z.string().optional().nullable(),
-        }),
+        data: JointObligorStrictSchema,
       }),
     ]))
     .mutation(async ({ input }) => {
