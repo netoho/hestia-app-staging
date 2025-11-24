@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createUser } from '@/lib/services/userService';
 import { z } from 'zod';
@@ -31,9 +31,16 @@ const createUserSchema = z.object({
   role: z.enum(['broker', 'tenant', 'landlord']).default('tenant'),
 });
 
-export async function POST(request: Request) {
+class UserDTO extends NextRequest {
+  email!: string
+  name?: string
+  password!: string
+  role!: 'broker' | 'tenant' | 'landlord'
+}
+
+export async function POST(request: UserDTO) {
   try {
-    const body = await request.json();
+    const body: UserDTO = await request.json();
     const validation = createUserSchema.safeParse(body);
 
     if (!validation.success) {

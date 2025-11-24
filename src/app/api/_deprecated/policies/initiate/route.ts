@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { createPolicy, updatePolicyStatus, addPolicyActivity } from '@/lib/services/policyApplicationService';
 import { sendPolicyInvitation } from '@/lib/services/emailService';
-import { PolicyStatus } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/lib/enums';
 import { z } from 'zod';
 
 // Request validation schema

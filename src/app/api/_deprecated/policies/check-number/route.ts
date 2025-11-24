@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { validatePolicyNumber } from "@/lib/services/policyService";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,10 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if policy number exists
-    const existingPolicy = await prisma.policy.findUnique({
-      where: { policyNumber },
-      select: { id: true },
-    });
+    const existingPolicy = validatePolicyNumber(policyNumber);
 
     return NextResponse.json({
       isUnique: !existingPolicy,
