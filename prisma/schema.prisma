@@ -386,6 +386,10 @@ model Tenant {
   position          String?
   monthlyIncome     Float?
   incomeSource      String?
+  yearsAtJob        Int?
+  hasAdditionalIncome    Boolean?   @default(false)
+  additionalIncomeSource String?
+  additionalIncomeAmount Float?
 
   // Rental History
   previousLandlordName String?
@@ -396,6 +400,10 @@ model Tenant {
   previousRentalAddressId String? @unique
   previousRentalAddressDetails PropertyAddress? @relation("TenantPreviousRentalAddress", fields: [previousRentalAddressId], references: [id])
   rentalHistoryYears Int?
+  numberOfOccupants Int?
+  reasonForMoving    String?
+  hasPets            Boolean?     @default(false)
+  petDescription     String?
 
   // Payment Preferences
   paymentMethod     String?     // monthly, biannual, annual, other
@@ -437,7 +445,7 @@ model JointObligor {
   policyId          String
 
   // Type
-  jointObligorType  JointObligorType?
+  jointObligorType  JointObligorType? @default(INDIVIDUAL)
 
 
   // Personal Information (for individuals)
