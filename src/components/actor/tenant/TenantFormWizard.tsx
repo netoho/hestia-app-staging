@@ -12,6 +12,11 @@ import { useFormWizardSubmissionTRPC } from '@/hooks/useFormWizardSubmissionTRPC
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { formMessages } from '@/lib/constants/formMessages';
+import {
+  validateTenantData,
+  TENANT_VALIDATION_MESSAGES,
+  getTenantTabSchema
+} from '@/lib/schemas/tenant';
 import { validatePersonFields, validateContactInfo, validateFinancialInfo } from '@/lib/utils/actorValidation';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
@@ -54,24 +59,21 @@ export default function TenantFormWizard({
 
   // References hook - Tenant allows dynamic add/remove
   const referencesHook = useActorReferences({
-    actorType: 'tenant',
     initialPersonal: initialData.personalReferences || [],
     allowAddRemove: true,
-    minReferences: 1,
-    maxReferences: 5,
     errorKeyPrefix: 'reference',
   });
 
-  const personalReferences = (referencesHook as any).personalReferences || [];
-  const commercialReferences = (referencesHook as any).commercialReferences || [];
-  const updatePersonalReference = (referencesHook as any).updatePersonalReference || (() => {});
-  const updateCommercialReference = (referencesHook as any).updateCommercialReference || (() => {});
-  const validatePersonalReferences = (referencesHook as any).validatePersonalReferences || (() => ({ valid: true, errors: {} }));
-  const validateCommercialReferences = (referencesHook as any).validateCommercialReferences || (() => ({ valid: true, errors: {} }));
-  const addPersonalReference = (referencesHook as any).addPersonalReference || (() => {});
-  const removePersonalReference = (referencesHook as any).removePersonalReference || (() => {});
-  const addCommercialReference = (referencesHook as any).addCommercialReference || (() => {});
-  const removeCommercialReference = (referencesHook as any).removeCommercialReference || (() => {});
+  const personalReferences = referencesHook.personalReferences || [];
+  const commercialReferences = referencesHook.commercialReferences || [];
+  const updatePersonalReference = referencesHook.updatePersonalReference || (() => {});
+  const updateCommercialReference = referencesHook.updateCommercialReference || (() => {});
+  const validatePersonalReferences = referencesHook.validatePersonalReferences || (() => ({ valid: true, errors: {} }));
+  const validateCommercialReferences = referencesHook.validateCommercialReferences || (() => ({ valid: true, errors: {} }));
+  const addPersonalReference = referencesHook.addPersonalReference || (() => {});
+  const removePersonalReference = referencesHook.removePersonalReference || (() => {});
+  const addCommercialReference = referencesHook.addCommercialReference || (() => {});
+  const removeCommercialReference = referencesHook.removeCommercialReference || (() => {});
 
   // Use submission hook
   const { handleSaveTab: saveTabHandler, handleFinalSubmit: submitHandler } = useFormWizardSubmissionTRPC({
@@ -107,33 +109,50 @@ export default function TenantFormWizard({
     }
   }, [initialData]);
 
-  // Validation functions
+  // Validation functions using master schema
   const validatePersonalTab = useCallback(() => {
-    const localErrors: Record<string, string> = {};
+    const tenantType = isCompany ? 'COMPANY' : 'INDIVIDUAL';
+    const result = validateTenantData(formData, {
+      tenantType,
+      mode: 'partial',
+      tabName: 'personal',
+    });
 
-    if (isCompany) {
-      validatePersonFields({
-        ...formData,
-        firstName: formData.legalRepFirstName,
-        paternalLastName: formData.legalRepPaternalLastName,
-        maternalLastName: formData.legalRepMaternalLastName,
-      }, localErrors);
-    } else {
-      validatePersonFields(formData, localErrors);
+    console.log('Personal Tab Validation Result:', result, formData);
+
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.errors.forEach((err: any) => {
+        const path = err.path.join('.');
+        errors[path] = err.message;
+      });
+      setErrors(errors);
+      return false;
     }
 
-    setErrors(localErrors);
-    return Object.keys(localErrors).length === 0;
+    setErrors({});
+    return true;
   }, [formData, isCompany, setErrors]);
 
   const validateEmploymentTab = useCallback(() => {
-    const localErrors: Record<string, string> = {};
+    const result = validateTenantData(formData, {
+      tenantType: 'INDIVIDUAL',
+      mode: 'partial',
+      tabName: 'employment',
+    });
 
-    validateContactInfo(formData, localErrors);
-    const financialValid = validateFinancialInfo(formData, setErrors);
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.errors.forEach((err: any) => {
+        const path = err.path.join('.');
+        errors[path] = err.message;
+      });
+      setErrors(errors);
+      return false;
+    }
 
-    setErrors(localErrors);
-    return Object.keys(localErrors).length === 0 && financialValid;
+    setErrors({});
+    return true;
   }, [formData, setErrors]);
 
   // Save tab handler using consolidated logic
@@ -146,7 +165,21 @@ export default function TenantFormWizard({
       } else if (tabName === 'employment' && !isCompany) {
         return validateEmploymentTab();
       } else if (tabName === 'rental' && !isCompany) {
-        // Rental history is optional
+        // Rental history is optional - validate if data provided
+        const result = validateTenantData(formData, {
+          tenantType: 'INDIVIDUAL',
+          mode: 'partial',
+          tabName: 'rental',
+        });
+        if (!result.success) {
+          const errors: Record<string, string> = {};
+          result.error.errors.forEach((err: any) => {
+            const path = err.path.join('.');
+            errors[path] = err.message;
+          });
+          setErrors(errors);
+          return false;
+        }
         return true;
       } else if (tabName === 'references') {
         const refValidation = isCompany
@@ -315,10 +348,6 @@ export default function TenantFormWizard({
             commercialReferences={commercialReferences}
             onUpdatePersonalReference={updatePersonalReference}
             onUpdateCommercialReference={updateCommercialReference}
-            onAddPersonalReference={addPersonalReference}
-            onAddCommercialReference={addCommercialReference}
-            onRemovePersonalReference={removePersonalReference}
-            onRemoveCommercialReference={removeCommercialReference}
             errors={errors}
             disabled={wizard.savingTab === 'references'}
           />
