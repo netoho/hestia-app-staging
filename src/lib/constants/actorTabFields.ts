@@ -56,8 +56,6 @@ export const LANDLORD_TAB_FIELDS = {
     'companyName',
     // Address
     'addressDetails',
-    // Co-ownership
-    'ownershipPercentage',
   ],
   'bank-info': [
     'bankName',
