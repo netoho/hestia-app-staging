@@ -19,17 +19,22 @@ interface LabelProps extends React.ComponentPropsWithoutRef<typeof LabelPrimitiv
 const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
   LabelProps
->(({ className, children, required, optional, ...props }, ref) => (
-  <LabelPrimitive.Root
-    ref={ref}
-    className={cn(labelVariants(), className)}
-    {...props}
-  >
-    {children}
-    {required && <span> *</span>}
-    {optional && <span className="text-gray-500"> (opcional)</span>}
-  </LabelPrimitive.Root>
-))
+>(({ className, children, required, optional, ...props }, ref) => {
+  if (required && optional) {
+    throw new Error("Label cannot be both required and optional")
+  }
+  return (
+    <LabelPrimitive.Root
+      ref={ref}
+      className={cn(labelVariants(), className)}
+      {...props}
+    >
+      {children}
+      {required && <span aria-hidden="true"> *</span>}
+      {optional && <span className="text-gray-500" aria-hidden="true"> (opcional)</span>}
+    </LabelPrimitive.Root>
+  )
+})
 Label.displayName = LabelPrimitive.Root.displayName
 
 export { Label }

@@ -529,7 +529,7 @@ export default function ApprovalWorkflow({
               <Label className="font-medium">Actor: {rejectDialog.actorName}</Label>
             </div>
             <div>
-              <Label htmlFor="reason" className="text-red-600" required>
+              <Label htmlFor="reason" required>
                 {t.pages.policies.actorVerification.rejectionReason}
               </Label>
               <Textarea
