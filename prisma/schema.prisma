@@ -343,7 +343,7 @@ model Tenant {
   middleName        String?     // Middle name (optional)
   paternalLastName  String?     // Father's last name
   maternalLastName  String?     // Mother's last name
-  nationality       NationalityType?
+  nationality       NationalityType? @default(MEXICAN)
   curp              String?
   rfc               String?
   passport          String?
