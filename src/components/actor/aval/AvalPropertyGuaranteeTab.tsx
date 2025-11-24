@@ -152,7 +152,7 @@ export default function AvalPropertyGuaranteeTab({
       </Card>
 
       {/* Marital Status and Spouse Information (for Individuals) */}
-      {!formData.isCompany && (
+      {formData.avalType !== 'COMPANY' && (
         <Card>
           <CardHeader>
             <CardTitle>Estado Civil</CardTitle>

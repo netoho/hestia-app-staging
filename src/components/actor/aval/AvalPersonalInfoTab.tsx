@@ -32,8 +32,8 @@ export default function AvalPersonalInfoTab({
         </CardHeader>
         <CardContent>
           <RadioGroup
-            value={formData.isCompany ? 'company' : 'individual'}
-            onValueChange={(value) => onFieldChange('isCompany', value === 'company')}
+            value={formData.avalType === 'COMPANY' ? 'company' : 'individual'}
+            onValueChange={(value) => onFieldChange('avalType', value === 'company' ? 'COMPANY' : 'INDIVIDUAL')}
             disabled={disabled}
           >
             <div className="flex items-center space-x-2">
@@ -57,10 +57,10 @@ export default function AvalPersonalInfoTab({
       {/* Information Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Información {formData.isCompany ? 'de la Empresa' : 'Personal'}</CardTitle>
+          <CardTitle>Información {formData.avalType === 'COMPANY' ? 'de la Empresa' : 'Personal'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {formData.isCompany ? (
+          {formData.avalType === 'COMPANY' ? (
             <CompanyInformation
               data={formData}
               onChange={onFieldChange}
