@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import debounce from 'lodash/debounce';
 
 interface AddressData {
+  id?: string;
   street: string;
   exteriorNumber: string;
   interiorNumber?: string;
@@ -63,6 +64,7 @@ export function AddressAutocomplete({
   const [showManualForm, setShowManualForm] = useState(showFullForm);
   const [sessionToken] = useState(() => crypto.randomUUID());
   const [formData, setFormData] = useState<AddressData>({
+    id: value?.id || '',
     street: value?.street || '',
     exteriorNumber: value?.exteriorNumber || '',
     interiorNumber: value?.interiorNumber || '',
