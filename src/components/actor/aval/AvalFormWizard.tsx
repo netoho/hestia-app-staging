@@ -75,7 +75,10 @@ export default function AvalFormWizard({
     isAdminEdit,
   });
 
-  const isCompany = formData.isCompany || false;
+  // Use avalType enum instead of isCompany boolean
+  // Default to INDIVIDUAL if not set, or convert from legacy isCompany
+  const avalType = formData.avalType;
+  const isCompany = avalType === 'COMPANY';
 
   // Tab configuration using centralized config
   const config = actorConfig.aval;
@@ -180,6 +183,7 @@ export default function AvalFormWizard({
     const saveData = async () => {
       const dataToSave = {
         ...formData,
+        avalType, // Ensure avalType is included
         ...getAdditionalData(),
       };
 
