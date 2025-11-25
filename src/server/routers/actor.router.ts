@@ -47,7 +47,7 @@ import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 
 // Actor types enum
-const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
+const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor' ]);
 
 // Define which tab is the last one for each actor type
 const LAST_TABS = {
@@ -800,5 +800,28 @@ export const actorRouter = createTRPCRouter({
       }
 
       return result.value;
+    }),
+
+  /**
+   * Landlord-specific: Delete a co-owner (non-primary landlord)
+   * Used by the landlord form wizard to remove co-owners
+   */
+  deleteCoOwner: dualAuthProcedure
+    .input(z.object({
+      type: z.literal('landlord'),
+      id: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const service = new LandlordService();
+      const result = await service.removeLandlord(input.id);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error?.message || 'Failed to delete landlord',
+        });
+      }
+
+      return { success: true };
     }),
 });
