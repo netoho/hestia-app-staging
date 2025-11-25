@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle, Loader2, Home, DollarSign, Calendar } from 'lucide-react';
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
-import AvalFormWizard from '@/components/actor/aval/AvalFormWizard';
+import AvalFormWizardSimplified from '@/components/actor/aval/AvalFormWizard-Simplified';
 
 export default function AvalPortalPage({
   params
@@ -207,7 +207,7 @@ export default function AvalPortalPage({
         </Card>
 
         {/* Form Wizard */}
-        <AvalFormWizard
+        <AvalFormWizardSimplified
           token={token}
           initialData={avalData}
           policy={policy}
