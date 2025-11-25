@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { TabsContent } from '@/components/ui/tabs';
+import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -47,6 +46,16 @@ export default function AvalFormWizard({
     isAdminEdit,
     initialActiveTab: 'personal',
   });
+
+  // Track required docs uploaded for documents tab
+  const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
+
+  // Check if all tabs before documents are saved
+  const allTabsSaved = useMemo(() => {
+    const docsTabIndex = tabs.findIndex((t: any) => t.id === 'documents');
+    const tabsBeforeDocs = tabs.slice(0, docsTabIndex);
+    return tabsBeforeDocs.every((tab: any) => wizard.tabSaved[tab.id]);
+  }, [tabs, wizard.tabSaved]);
 
   // tRPC mutation for saving
   const updateMutation = trpc.actor.update.useMutation({
@@ -165,15 +174,18 @@ export default function AvalFormWizard({
 
         {wizard.activeTab === 'documents' && (
           <AvalDocumentsSection
-            formData={initialData}
-            onFieldChange={(field, value) => {
-              // Simple update without complex state management
-              handleTabSave('documents', { [field]: value });
-            }}
-            errors={{}}
-            token={token}
             avalId={initialData?.id}
+            token={token}
+            isCompany={isCompany}
+            nationality={initialData?.nationality}
+            allTabsSaved={allTabsSaved || isAdminEdit}
             initialDocuments={initialData?.documents || []}
+            additionalInfo={initialData?.additionalInfo || ''}
+            onAdditionalInfoChange={(value) => {
+              handleTabSave('documents', { additionalInfo: value });
+            }}
+            onRequiredDocsChange={setRequiredDocsUploaded}
+            isAdminEdit={isAdminEdit}
           />
         )}
       </div>

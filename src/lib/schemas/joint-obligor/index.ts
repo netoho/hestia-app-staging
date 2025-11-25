@@ -87,8 +87,14 @@ const jointObligorPersonalCompanyTabSchema = companyWithLegalRepSchema
 
 // Employment Tab Schema (Individual only - required for income guarantee)
 const jointObligorEmploymentTabSchema = z.object({
-  employmentStatus: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
+  employmentStatus: z.enum([
+    'EMPLOYED',
+    'SELF_EMPLOYED',
+    'BUSINESS_OWNER',
+    'RETIRED',
+    'OTHER',
+    ], { message: "Tiene que seleccionar una opción" }),
+  occupation: z.string().min(5, 'La ocupación es requerida'),
   employerName: z.string().optional().nullable(),
   employerAddressDetails: partialAddressSchema.optional(),
   position: z.string().optional().nullable(),

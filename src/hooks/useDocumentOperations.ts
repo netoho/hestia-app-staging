@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentCategory } from '@/types/policy';
 import { Document } from '@/types/documents';
 import {
@@ -8,7 +10,7 @@ import {
   OperationProgress,
 } from '@/lib/documentManagement/types';
 import { uploadWithProgress } from '@/lib/documentManagement/upload';
-import { downloadWithProgress } from '@/lib/documentManagement/download';
+import { trpc } from '@/lib/trpc/client';
 
 interface UseDocumentOperationsProps {
   token: string | null;
@@ -26,63 +28,66 @@ const createEmptyDocumentMap = (): GroupedDocuments => {
   return map as GroupedDocuments;
 };
 
+// Map hook actorType to tRPC actorType (joint-obligor → jointObligor)
+const mapActorType = (type: string): 'tenant' | 'landlord' | 'aval' | 'jointObligor' => {
+  if (type === 'joint-obligor') return 'jointObligor';
+  return type as 'tenant' | 'landlord' | 'aval' | 'jointObligor';
+};
+
 export function useDocumentOperations({
   token,
   actorType,
   initialDocuments,
   isAdminEdit = false,
 }: UseDocumentOperationsProps) {
-  const [documents, setDocuments] = useState<GroupedDocuments>(() => {
-    if (initialDocuments && initialDocuments.length > 0) {
-      const grouped = createEmptyDocumentMap();
-      initialDocuments.forEach((doc) => {
-        if (grouped[doc.category]) {
-          grouped[doc.category].push(doc);
+  const [operations, setOperations] = useState<OperationRegistry>({});
+
+  // Map actorType for tRPC calls
+  const trpcActorType = mapActorType(actorType);
+
+  // tRPC query for listing documents
+  const {
+    data: documentsData,
+    isLoading: loading,
+    refetch,
+  } = trpc.actor.listDocuments.useQuery(
+    {
+      type: trpcActorType,
+      identifier: token || '',
+    },
+    {
+      enabled: !!token,
+      // Transform to grouped documents in select
+      select: (data) => {
+        const grouped = createEmptyDocumentMap();
+        if (data?.documents) {
+          data.documents.forEach((doc: Document) => {
+            if (grouped[doc.category]) {
+              grouped[doc.category].push(doc);
+            }
+          });
         }
-      });
-      return grouped;
+        return grouped;
+      },
+      // Use initial documents if available
+      initialData: initialDocuments && initialDocuments.length > 0
+        ? {
+            success: true,
+            documents: initialDocuments,
+          }
+        : undefined,
     }
-    return createEmptyDocumentMap();
+  );
+
+  // tRPC mutation for deleting documents
+  const deleteMutation = trpc.actor.deleteDocument.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
   });
 
-  const [operations, setOperations] = useState<OperationRegistry>({});
-  const [loading, setLoading] = useState(true);
-
-  // Load documents from server
-  const loadDocuments = useCallback(async () => {
-    if (!token) return;
-
-    setLoading(true);
-    try {
-      // Use unified route - token can be either UUID (admin) or access token (actor)
-      const endpoint = `/api/actors/${actorType}/${token}/documents`;
-
-      const response = await fetch(endpoint);
-      const result = await response.json();
-
-      if (result.success && result.documents) {
-        const groupedDocs = createEmptyDocumentMap();
-
-        result.documents.forEach((doc: Document) => {
-          if (groupedDocs[doc.category]) {
-            groupedDocs[doc.category].push(doc);
-          }
-        });
-
-        setDocuments(groupedDocs);
-      }
-    } catch (error) {
-      console.error('Error loading documents:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [token, actorType, isAdminEdit]);
-
-  useEffect(() => {
-    if (token && actorType) {
-      loadDocuments();
-    }
-  }, [token, actorType, loadDocuments]);
+  // Use the query data or create empty map
+  const documents = documentsData || createEmptyDocumentMap();
 
   // Create operation ID
   const createOperationId = (type: string, category: DocumentCategory, timestamp: number) => {
@@ -90,7 +95,7 @@ export function useDocumentOperations({
   };
 
   // Update operation state
-  const updateOperation = (id: string, updates: Partial<DocumentOperation>) => {
+  const updateOperation = useCallback((id: string, updates: Partial<DocumentOperation>) => {
     setOperations((prev) => ({
       ...prev,
       [id]: {
@@ -98,19 +103,19 @@ export function useDocumentOperations({
         ...updates,
       },
     }));
-  };
+  }, []);
 
   // Remove operation from registry
-  const removeOperation = (id: string) => {
+  const removeOperation = useCallback((id: string) => {
     setOperations((prev) => {
       const newOps = { ...prev };
       delete newOps[id];
       return newOps;
     });
-  };
+  }, []);
 
-  // Upload document with progress tracking
-  const uploadDocument = async (
+  // Upload document with progress tracking (REST endpoint for XMLHttpRequest progress)
+  const uploadDocument = useCallback(async (
     file: File,
     category: DocumentCategory,
     documentType: string
@@ -132,8 +137,8 @@ export function useDocumentOperations({
     }));
 
     try {
-      // Use unified route - token can be either UUID (admin) or access token (actor)
-      const endpoint = `/api/actors/${actorType}/${token}/documents`;
+      // REST endpoint for upload (supports progress tracking)
+      const endpoint = `/api/actors/${trpcActorType}/${token}/documents`;
 
       await uploadWithProgress({
         file,
@@ -146,7 +151,7 @@ export function useDocumentOperations({
         onSuccess: () => {
           updateOperation(operationId, { status: 'success' });
           // Reload documents after successful upload
-          loadDocuments();
+          refetch();
           // Remove operation after a delay
           setTimeout(() => removeOperation(operationId), 2000);
         },
@@ -164,10 +169,13 @@ export function useDocumentOperations({
       });
       setTimeout(() => removeOperation(operationId), 5000);
     }
-  };
+  }, [token, actorType, updateOperation, removeOperation, refetch]);
 
-  // Download document with progress tracking
-  const downloadDocument = async (documentId: string, fileName: string) => {
+  // Get tRPC utils for imperative queries
+  const utils = trpc.useUtils();
+
+  // Download document using tRPC to get presigned URL
+  const downloadDocument = useCallback(async (documentId: string, fileName: string) => {
     if (!token) return;
 
     const operationId = `download-${documentId}`;
@@ -183,33 +191,35 @@ export function useDocumentOperations({
     }));
 
     try {
-      // Use unified route - token can be either UUID (admin) or access token (actor)
-      const endpoint = `/api/actors/${actorType}/${token}/documents/${documentId}`;
-
-      await downloadWithProgress({
+      // Use tRPC utils to fetch download URL imperatively
+      const result = await utils.actor.getDocumentDownloadUrl.fetch({
+        type: trpcActorType,
+        identifier: token,
         documentId,
-        fileName,
-        endpoint,
-        onProgress: (progress: OperationProgress) => {
-          updateOperation(operationId, { progress });
-        },
-        onSuccess: () => {
-          updateOperation(operationId, { status: 'success' });
-          setTimeout(() => removeOperation(operationId), 2000);
-        },
-        onError: (error: string) => {
-          updateOperation(operationId, { status: 'error', error });
-          setTimeout(() => removeOperation(operationId), 5000);
-        },
       });
+
+      if (result.downloadUrl) {
+        // Open download URL in new tab (triggers browser download)
+        window.open(result.downloadUrl, '_blank');
+        updateOperation(operationId, { status: 'success' });
+        setTimeout(() => removeOperation(operationId), 2000);
+      } else {
+        throw new Error('No se pudo obtener la URL de descarga');
+      }
     } catch (error) {
       console.error('Download error:', error);
-      alert(error instanceof Error ? error.message : 'Error al descargar el documento');
+      const errorMessage = error instanceof Error ? error.message : 'Error al descargar el documento';
+      updateOperation(operationId, {
+        status: 'error',
+        error: errorMessage,
+      });
+      alert(errorMessage);
+      setTimeout(() => removeOperation(operationId), 5000);
     }
-  };
+  }, [token, trpcActorType, utils, updateOperation, removeOperation]);
 
-  // Delete document
-  const deleteDocument = async (documentId: string) => {
+  // Delete document using tRPC
+  const deleteDocument = useCallback(async (documentId: string) => {
     if (!token) return;
 
     if (!confirm('¿Está seguro de eliminar este documento?')) {
@@ -229,47 +239,40 @@ export function useDocumentOperations({
     }));
 
     try {
-      // Use unified route - token can be either UUID (admin) or access token (actor)
-      const endpoint = `/api/actors/${actorType}/${token}/documents?documentId=${documentId}`;
-
-      const response = await fetch(endpoint, {
-        method: 'DELETE',
+      await deleteMutation.mutateAsync({
+        type: trpcActorType,
+        identifier: token,
+        documentId,
       });
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Error al eliminar el documento');
-      }
-
       updateOperation(operationId, { status: 'success' });
-      await loadDocuments();
       setTimeout(() => removeOperation(operationId), 2000);
     } catch (error) {
       console.error('Delete error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al eliminar el documento';
       updateOperation(operationId, {
         status: 'error',
-        error: error instanceof Error ? error.message : 'Error al eliminar el documento',
+        error: errorMessage,
       });
-      alert(error instanceof Error ? error.message : 'Error al eliminar el documento');
+      alert(errorMessage);
       setTimeout(() => removeOperation(operationId), 5000);
     }
-  };
+  }, [token, trpcActorType, deleteMutation, updateOperation, removeOperation]);
 
   // Get operation for a specific document
-  const getDocumentOperation = (documentId: string) => {
+  const getDocumentOperation = useCallback((documentId: string) => {
     return Object.values(operations).find((op) => op.documentId === documentId);
-  };
+  }, [operations]);
 
   // Get operations for a category
-  const getCategoryOperations = (category: DocumentCategory) => {
+  const getCategoryOperations = useCallback((category: DocumentCategory) => {
     return Object.values(operations).filter((op) => op.category === category);
-  };
+  }, [operations]);
 
   // Check if any operation is pending for a category
-  const isCategoryBusy = (category: DocumentCategory) => {
+  const isCategoryBusy = useCallback((category: DocumentCategory) => {
     return getCategoryOperations(category).some((op) => op.status === 'pending');
-  };
+  }, [getCategoryOperations]);
 
   return {
     documents,
@@ -278,7 +281,7 @@ export function useDocumentOperations({
     uploadDocument,
     downloadDocument,
     deleteDocument,
-    reloadDocuments: loadDocuments,
+    reloadDocuments: refetch,
     getDocumentOperation,
     getCategoryOperations,
     isCategoryBusy,

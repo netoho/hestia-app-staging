@@ -108,7 +108,11 @@ export function DocumentValidationItem({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => onDownload(document.documentId, document.fileName)}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDownload(document.documentId, document.fileName)
+          }}
           disabled={isValidating}
           title="Descargar documento"
         >

@@ -45,6 +45,8 @@ import {
 import { personNameSchema } from '@/lib/schemas/shared/person.schema';
 import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
+import { getDocumentsByActor } from '@/lib/services/documentService';
+import { deleteDocument, getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
 
 // Actor types enum
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor' ]);
@@ -823,5 +825,191 @@ export const actorRouter = createTRPCRouter({
       }
 
       return { success: true };
+    }),
+
+  // ============================================
+  // DOCUMENT PROCEDURES
+  // ============================================
+
+  /**
+   * List documents for an actor
+   * Supports both admin (session) and actor (token) authentication
+   */
+  listDocuments: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No autorizado',
+        });
+      }
+
+      // Map actorType for the query (joint-obligor uses different format in some places)
+      const queryType = input.type === 'jointObligor' ? 'joint-obligor' : input.type;
+
+      const documents = await getDocumentsByActor(auth.actor.id, queryType);
+
+      return {
+        success: true,
+        documents,
+      };
+    }),
+
+  /**
+   * Delete a document
+   * Verifies ownership before deletion
+   */
+  deleteDocument: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(),
+      documentId: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No autorizado',
+        });
+      }
+
+      // Check if editing is allowed for actors
+      if (!auth.canEdit && auth.authType === 'actor') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'No puede eliminar documentos después de completar la información',
+        });
+      }
+
+      // Verify document ownership for actors
+      if (auth.authType === 'actor') {
+        const document = await ctx.prisma.actorDocument.findUnique({
+          where: { id: input.documentId },
+        });
+
+        if (!document) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Documento no encontrado',
+          });
+        }
+
+        // Check ownership based on actor type
+        const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
+        if ((document as any)[actorField] !== auth.actor.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Este documento no pertenece a este actor',
+          });
+        }
+      }
+
+      // Delete the document
+      const deleted = await deleteDocument(input.documentId, true);
+
+      if (!deleted) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Error al eliminar documento',
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Documento eliminado exitosamente',
+      };
+    }),
+
+  /**
+   * Get presigned download URL for a document
+   */
+  getDocumentDownloadUrl: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(),
+      documentId: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No autorizado',
+        });
+      }
+
+      // Fetch document
+      const document = await ctx.prisma.actorDocument.findUnique({
+        where: { id: input.documentId },
+      });
+
+      if (!document) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Documento no encontrado',
+        });
+      }
+
+      // Verify ownership for actors
+      if (auth.authType === 'actor') {
+        const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
+        if ((document as any)[actorField] !== auth.actor.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Este documento no pertenece a este actor',
+          });
+        }
+      }
+
+      if (!document.s3Key) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Documento sin archivo asociado',
+        });
+      }
+
+      // Generate presigned URL (5 min expiry)
+      const downloadUrl = await getDocumentDownloadUrl(
+        document.s3Key,
+        document.originalName || document.fileName,
+        300
+      );
+
+      return {
+        success: true,
+        downloadUrl,
+        fileName: document.originalName || document.fileName,
+        expiresIn: 300,
+      };
     }),
 });

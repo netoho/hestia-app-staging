@@ -65,6 +65,7 @@ export function DocumentUploader({
           disabled={isDisabled}
         />
         <Button
+          type="button"
           size="sm"
           variant="outline"
           onClick={handleButtonClick}
@@ -110,6 +111,7 @@ export function DocumentUploader({
             id={`upload-${documentType}`}
           />
           <Button
+            type="button"
             size="sm"
             variant="outline"
             onClick={handleButtonClick}
@@ -154,6 +156,7 @@ export function DocumentUploader({
           id={`upload-${documentType}`}
         />
         <Button
+          type="button"
           variant="outline"
           onClick={handleButtonClick}
           disabled={isDisabled}

@@ -1,12 +1,14 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { DocumentCategory } from '@/lib/enums';
 import { Document } from '@/types/documents';
-import { useMemo } from 'react';
+import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
+import { documentCategoryLabels } from '@/lib/constants/documentCategories';
 
 interface DocumentsSectionProps {
   landlordId?: string;
@@ -41,86 +43,32 @@ export default function DocumentsSection({
     isAdminEdit,
   });
 
-  const documentCategories = isCompany
-    ? [
-        {
-          category: DocumentCategory.COMPANY_CONSTITUTION,
-          type: 'company_constitution',
-          title: 'Escritura Constitutiva',
-          description: 'Documento constitutivo de la empresa',
-          required: true
-        },
-        {
-          category: DocumentCategory.LEGAL_POWERS,
-          type: 'legal_powers',
-          title: 'Poderes del Representante Legal',
-          description: 'Documentación de poderes legales',
-          required: true
-        },
-        {
-          category: DocumentCategory.TAX_STATUS_CERTIFICATE,
-          type: 'rfc_document',
-          title: 'Constancia de Situación Fiscal',
-          description: 'RFC y constancia fiscal',
-          required: true
-        },
-      ]
-    : [
-        {
-          category: DocumentCategory.IDENTIFICATION,
-          type: 'ine',
-          title: 'Identificación Oficial',
-          description: 'INE, Pasaporte u otra identificación oficial',
-          required: true
-        },
-        {
-          category: DocumentCategory.TAX_STATUS_CERTIFICATE,
-          type: 'rfc_document',
-          title: 'RFC',
-          description: 'Registro Federal de Contribuyentes (opcional)',
-          required: true
-        },
-      ];
+  // Get required documents from centralized config
+  const documentRequirements = useMemo(() => {
+    const requirements = getDocumentRequirements('landlord', isCompany);
 
-  const commonDocuments = [
-    {
-      category: DocumentCategory.PROPERTY_DEED,
-      type: 'property_deed',
-      title: 'Escritura de la Propiedad',
-      description: 'Documento que acredita la propiedad del inmueble',
-      required: true
-    },
-    {
-      category: DocumentCategory.PROPERTY_TAX_STATEMENT,
-      type: 'property_tax',
-      title: 'Boleta Predial',
-      description: 'Comprobante de pago del impuesto predial',
-      required: true
-    },
-    {
-      category: DocumentCategory.BANK_STATEMENT,
-      type: 'bank_statement',
-      title: 'Estado de Cuenta Bancario',
-      description: 'Últimos 3 meses de estados de cuenta',
-      required: false
-    },
-  ];
-
-  const allDocuments = [...documentCategories, ...commonDocuments];
+    return requirements.map((req) => ({
+      category: req.category,
+      type: req.category.toLowerCase(),
+      title: documentCategoryLabels[req.category]?.title || req.category,
+      description: documentCategoryLabels[req.category]?.description || '',
+      required: req.required,
+    }));
+  }, [isCompany]);
 
 
 
-    // Check if all required documents are uploaded
-    const requiredDocsUploaded = useMemo(() => {
-        const requiredCategories = documentCategories
-            .filter(doc => doc.required)
-            .map(doc => doc.category);
+  // Check if all required documents are uploaded (now includes ALL required docs)
+  const requiredDocsUploaded = useMemo(() => {
+    const requiredCategories = documentRequirements
+      .filter((doc) => doc.required)
+      .map((doc) => doc.category);
 
-        return requiredCategories.every(category => {
-            const categoryDocs = documents[category] || [];
-            return categoryDocs.length > 0;
-        });
-    }, [documents, documentCategories]);
+    return requiredCategories.every((category) => {
+      const categoryDocs = documents[category] || [];
+      return categoryDocs.length > 0;
+    });
+  }, [documents, documentRequirements]);
 
     // Notify parent of required docs status
     useMemo(() => {
@@ -142,7 +90,7 @@ export default function DocumentsSection({
 
   return (
     <div className="space-y-4">
-      {allDocuments.map(({ category, type, title, description, required }) => {
+      {documentRequirements.map(({ category, type, title, description, required }) => {
         const categoryDocs = documents[category] || [];
         const categoryOps = getCategoryOperations(category);
 

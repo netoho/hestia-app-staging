@@ -77,7 +77,7 @@ export default function JointObligorEmploymentTabRHF({
                 name="employmentStatus"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel optional>Situación Laboral</FormLabel>
+                    <FormLabel required>Situación Laboral</FormLabel>
                     <Select
                       value={field.value || ''}
                       onValueChange={field.onChange}
@@ -107,7 +107,7 @@ export default function JointObligorEmploymentTabRHF({
                 name="occupation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel optional>Ocupación</FormLabel>
+                    <FormLabel required>Ocupación</FormLabel>
                     <FormControl>
                       <Input
                         {...field}

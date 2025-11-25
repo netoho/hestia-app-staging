@@ -79,7 +79,11 @@ export function DocumentListItem({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onDownload(document.id, displayName)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload(document.id, displayName)
+              }}
               disabled={isDownloading || isDeleting}
               title="Descargar documento"
             >
@@ -95,7 +99,11 @@ export function DocumentListItem({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onDelete(document.id)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(document.id)
+              }}
               disabled={isDownloading || isDeleting}
               title="Eliminar documento"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"

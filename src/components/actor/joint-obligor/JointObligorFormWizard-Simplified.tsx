@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -47,6 +47,9 @@ export default function JointObligorFormWizardSimplified({
     isAdminEdit,
     initialActiveTab: 'personal',
   });
+
+  // Track required docs uploaded for documents tab
+  const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
   // tRPC mutation for saving
   const updateMutation = trpc.actor.update.useMutation({
@@ -164,12 +167,19 @@ export default function JointObligorFormWizardSimplified({
 
           {wizard.activeTab === 'documents' && (
             <JointObligorDocumentsSection
+              obligorId={initialData?.id}
               token={token}
-              jointObligorId={initialData?.id}
-              jointObligorType={jointObligorType}
+              isCompany={isCompany}
               guaranteeMethod={initialData?.guaranteeMethod}
-              allTabsSaved={allTabsSaved}
+              nationality={initialData?.nationality}
+              allTabsSaved={allTabsSaved || isAdminEdit}
               initialDocuments={initialData?.documents || []}
+              additionalInfo={initialData?.additionalInfo || ''}
+              onAdditionalInfoChange={(value) => {
+                handleTabSave('documents', { additionalInfo: value });
+              }}
+              onRequiredDocsChange={setRequiredDocsUploaded}
+              isAdminEdit={isAdminEdit}
             />
           )}
         </div>

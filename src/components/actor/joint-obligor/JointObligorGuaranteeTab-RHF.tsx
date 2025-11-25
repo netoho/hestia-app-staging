@@ -275,10 +275,14 @@ export default function JointObligorGuaranteeTab({
                     category={DocumentCategory.INCOME_PROOF}
                     title="Comprobante de Ingresos"
                     description="Recibos de nómina, estados de cuenta bancarios, o declaración de impuestos"
-                    token={token}
-                    actorType="joint-obligor"
+                    documentType="income_proof"
+                    documents={documents[DocumentCategory.INCOME_PROOF] || []}
                     required={true}
                     allowMultiple={true}
+                    onUpload={(file) => uploadDocument(file, DocumentCategory.INCOME_PROOF, 'income_proof')}
+                    onDelete={deleteDocument}
+                    onDownload={downloadDocument}
+                    operations={getCategoryOperations(DocumentCategory.INCOME_PROOF)}
                   />
                 </div>
               </CardContent>
@@ -433,20 +437,28 @@ export default function JointObligorGuaranteeTab({
                     category={DocumentCategory.PROPERTY_DEED}
                     title="Escritura de la Propiedad"
                     description="Escritura pública de la propiedad que se ofrece como garantía"
-                    token={token}
-                    actorType="joint-obligor"
+                    documentType="property_deed"
+                    documents={documents[DocumentCategory.PROPERTY_DEED] || []}
                     required={true}
                     allowMultiple={false}
+                    onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
+                    onDelete={deleteDocument}
+                    onDownload={downloadDocument}
+                    operations={getCategoryOperations(DocumentCategory.PROPERTY_DEED)}
                   />
 
                   <DocumentManagerCard
                     category={DocumentCategory.PROPERTY_TAX_STATEMENT}
                     title="Boleta Predial"
                     description="Último recibo de impuesto predial"
-                    token={token}
-                    actorType="joint-obligor"
+                    documentType="property_tax_statement"
+                    documents={documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []}
                     required={true}
                     allowMultiple={false}
+                    onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_TAX_STATEMENT, 'property_tax_statement')}
+                    onDelete={deleteDocument}
+                    onDownload={downloadDocument}
+                    operations={getCategoryOperations(DocumentCategory.PROPERTY_TAX_STATEMENT)}
                   />
                 </div>
               </CardContent>

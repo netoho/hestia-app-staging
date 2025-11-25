@@ -52,12 +52,16 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
                 </div>
                 <Button
                   size="sm"
+                  type="button"
                   variant="outline"
-                  onClick={() => downloadDocument({
-                    documentId: doc.id,
-                    documentType: 'policy',
-                    fileName: doc.originalName
-                  })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadDocument({
+                      documentId: doc.id,
+                      documentType: 'policy',
+                      fileName: doc.originalName
+                    })
+                  }}
                   disabled={downloading === doc.id}
                   title="Descargar documento"
                 >

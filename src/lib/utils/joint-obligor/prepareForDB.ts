@@ -102,8 +102,8 @@ export function prepareJointObligorForDB(
 
   // Contact information (common)
   dbData.email = (data as any).email || null;
-  dbData.phoneNumber = (data as any).phoneNumber || null;
-  dbData.alternatePhoneNumber = (data as any).alternatePhoneNumber || null;
+  dbData.phone = (data as any).phone || null;
+  dbData.workPhone = (data as any).workPhone || null;
 
   // Handle main address
   if ((data as any).addressDetails) {
@@ -172,12 +172,15 @@ export function prepareJointObligorForDB(
     dbData.personalReferences = {
       deleteMany: {},  // Clear existing references
       create: (data as any).personalReferences.map((ref: any) => ({
-        name: ref.name || null,
-        relationship: ref.relationship || null,
-        phoneNumber: ref.phoneNumber || null,
+        firstName: ref.firstName || null,
+        middleName: ref.middleName || null,
+        paternalLastName: ref.paternalLastName || null,
+        maternalLastName: ref.maternalLastName || null,
+        phone: ref.phone || null,
         email: ref.email || null,
+        relationship: ref.relationship || null,
+        occupation: ref.occupation || null,
         address: ref.address || null,
-        yearsKnown: ref.yearsKnown || null,
       }))
     };
   }
@@ -187,12 +190,14 @@ export function prepareJointObligorForDB(
       deleteMany: {},  // Clear existing references
       create: (data as any).commercialReferences.map((ref: any) => ({
         companyName: ref.companyName || null,
-        contactName: ref.contactName || null,
-        position: ref.position || null,
-        phoneNumber: ref.phoneNumber || null,
+        contactFirstName: ref.contactFirstName || null,
+        contactMiddleName: ref.contactMiddleName || null,
+        contactPaternalLastName: ref.contactPaternalLastName || null,
+        contactMaternalLastName: ref.contactMaternalLastName || null,
+        phone: ref.phone || null,
         email: ref.email || null,
         relationship: ref.relationship || null,
-        yearsKnown: ref.yearsKnown || null,
+        yearsOfRelationship: ref.yearsOfRelationship || null,
       }))
     };
   }
@@ -229,7 +234,7 @@ export function prepareJointObligorForPartialUpdate(
       case 'employerAddressDetails':
       case 'guaranteePropertyDetails':
         // Handle address updates
-        if (value && typeof value === 'object') {
+        if (value && typeof value === 'object' && Object.keys(value).length > 0) {
           dbData[key] = {
             upsert: {
               create: value,
