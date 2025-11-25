@@ -294,10 +294,8 @@ export function getAvalSchema(mode: 'strict' | 'partial' | 'admin' = 'strict') {
 export function getAvalTabSchema(
   avalType: AvalTypeEnum,
   tab: AvalTab
-): z.ZodSchema<any> | undefined {
+): z.ZodSchema<any> {
   const schemas = AVAL_TAB_SCHEMAS[avalType];
-  if (!schemas) return undefined;
-
   return (schemas as any)[tab];
 }
 

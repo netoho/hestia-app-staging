@@ -52,13 +52,24 @@ export type JointObligorTab = JointObligorIndividualTab | JointObligorCompanyTab
 const jointObligorPersonalIndividualTabSchema = personWithNationalitySchema
   .merge(extendedContactSchema)
   .extend({
+    curp: curpSchema,
+    rfc: rfcPersonSchema,
+
     jointObligorType: z.literal('INDIVIDUAL'),
 
     // Address (required)
     addressDetails: addressSchema,
 
     // Relationship to tenant (required for Joint Obligor)
-    relationshipToTenant: z.string().min(1, 'Relationship to tenant is required'),
+    relationshipToTenant: z.enum([
+      'parent',
+      'sibling',
+      'spouse',
+      'friend',
+      'business_partner',
+      'employer',
+      'other',
+    ], { message: "Tiene que seleccionar una opción" }),
   });
 
 // Personal Tab Schema (Company)

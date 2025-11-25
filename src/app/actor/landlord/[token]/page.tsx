@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
 
-import LandlordFormWizard from '@/components/actor/landlord/LandlordFormWizard';
+import LandlordFormWizardSimplified from "@/components/actor/landlord/LandlordFormWizard-Simplified";
 
 export default function LandlordPortalPage() {
   const params = useParams();
@@ -38,7 +38,7 @@ export default function LandlordPortalPage() {
     }
   );
 
-  const landlord = data?.data || null;
+  const landlords = data?.data || null;
   const policy = data?.policy || null;
   const canEdit = data?.canEdit || false;
   const informationComplete = data?.data?.[0].informationComplete
@@ -80,7 +80,7 @@ export default function LandlordPortalPage() {
     );
   }
 
-  if (!landlord) {
+  if (!landlords) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-blue-50">
         <div className="max-w-md w-full mx-4">
@@ -239,9 +239,9 @@ export default function LandlordPortalPage() {
         </Card>
 
         {/* Form Wizard */}
-        <LandlordFormWizard
+        <LandlordFormWizardSimplified
           token={token}
-          initialData={landlord}
+          initialData={{ landlords }}
           policy={policy}
           canEdit={canEdit}
           onComplete={handleComplete}

@@ -54,7 +54,7 @@ export const landlordOwnerInfoIndividualSchema = personWithNationalitySchema.ext
   curp: curpSchema,
   rfc: rfcPersonSchema,
   ...extendedContactSchema.shape,
-  address: z.string().min(1, 'Dirección requerida'),
+  // address: z.string().min(1, 'Dirección requerida'),
   addressDetails: partialAddressSchema.optional(),
   isPrimary: z.boolean().default(false),
 });

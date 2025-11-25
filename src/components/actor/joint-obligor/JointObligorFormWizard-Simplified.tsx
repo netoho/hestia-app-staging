@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -8,14 +8,14 @@ import { trpc } from '@/lib/trpc/client';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
-import TenantPersonalInfoTabRHF from './TenantPersonalInfoTab-RHF';
-import TenantEmploymentTabRHF from './TenantEmploymentTab-RHF';
-import TenantRentalHistoryTabRHF from './TenantRentalHistoryTab-RHF';
-import TenantReferencesTabRHF from './TenantReferencesTab-RHF';
-import TenantDocumentsSection from './TenantDocumentsSection';
-import type { TenantType } from '@/lib/schemas/tenant';
+import JointObligorPersonalInfoTabRHF from './JointObligorPersonalInfoTab-RHF';
+import JointObligorEmploymentTabRHF from './JointObligorEmploymentTab-RHF';
+import JointObligorGuaranteeTabRHF from './JointObligorGuaranteeTab-RHF';
+import JointObligorReferencesTabRHF from './JointObligorReferencesTab-RHF';
+import JointObligorDocumentsSection from './JointObligorDocumentsSection';
+import type { JointObligorType } from '@prisma/client';
 
-interface TenantFormWizardProps {
+interface JointObligorFormWizardProps {
   token: string;
   initialData?: any;
   policy?: any;
@@ -23,23 +23,22 @@ interface TenantFormWizardProps {
   isAdminEdit?: boolean;
 }
 
-export default function TenantFormWizardSimplified({
+export default function JointObligorFormWizardSimplified({
   token,
   initialData = {},
   policy,
   onComplete,
   isAdminEdit = false,
-}: TenantFormWizardProps) {
+}: JointObligorFormWizardProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
-  const [additionalInfo, setAdditionalInfo] = useState(initialData?.additionalInfo || '');
 
-  // Determine tenant type from initial data
-  const tenantType: TenantType = initialData?.tenantType || 'INDIVIDUAL';
-  const isCompany = tenantType === 'COMPANY';
+  // Joint Obligor data
+  const jointObligorType: JointObligorType = initialData?.jointObligorType || 'INDIVIDUAL';
+  const isCompany = jointObligorType === 'COMPANY';
 
   // Tab configuration
-  const config = actorConfig.tenant;
+  const config = actorConfig.jointObligor;
   const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
 
   // Wizard tabs for navigation
@@ -53,7 +52,7 @@ export default function TenantFormWizardSimplified({
   const updateMutation = trpc.actor.update.useMutation({
     onSuccess: () => {
       utils.actor.getByToken.invalidate({
-        type: 'tenant',
+        type: 'jointObligor',
         token,
       });
     },
@@ -68,7 +67,7 @@ export default function TenantFormWizardSimplified({
       });
 
       await updateMutation.mutateAsync({
-        type: 'tenant',
+        type: 'jointObligor',
         identifier: token,
         data: {
           ...data,
@@ -130,46 +129,47 @@ export default function TenantFormWizardSimplified({
         {/* Tab Content - Using RHF versions */}
         <div className="mt-6">
           {wizard.activeTab === 'personal' && (
-            <TenantPersonalInfoTabRHF
-              tenantType={tenantType}
+            <JointObligorPersonalInfoTabRHF
+              jointObligorType={jointObligorType}
               initialData={initialData}
               onSave={(data) => handleTabSave('personal', data)}
             />
           )}
 
           {wizard.activeTab === 'employment' && !isCompany && (
-            <TenantEmploymentTabRHF
+            <JointObligorEmploymentTabRHF
               initialData={initialData}
               onSave={(data) => handleTabSave('employment', data)}
             />
           )}
 
-          {wizard.activeTab === 'rental' && !isCompany && (
-            <TenantRentalHistoryTabRHF
+          {wizard.activeTab === 'guarantee' && (
+            <JointObligorGuaranteeTabRHF
+              jointObligorType={jointObligorType}
               initialData={initialData}
-              onSave={(data) => handleTabSave('rental', data)}
+              onSave={(data) => handleTabSave('guarantee', data)}
+              token={token}
+              jointObligorId={initialData?.id}
+              initialDocuments={initialData?.documents || []}
             />
           )}
 
           {wizard.activeTab === 'references' && (
-            <TenantReferencesTabRHF
-              tenantType={tenantType}
+            <JointObligorReferencesTabRHF
+              jointObligorType={jointObligorType}
               initialData={initialData}
               onSave={(data) => handleTabSave('references', data)}
             />
           )}
 
           {wizard.activeTab === 'documents' && (
-            <TenantDocumentsSection
+            <JointObligorDocumentsSection
               token={token}
-              tenantId={initialData?.id}
-              tenantType={tenantType}
-              nationality={initialData?.nationality}
+              jointObligorId={initialData?.id}
+              jointObligorType={jointObligorType}
+              guaranteeMethod={initialData?.guaranteeMethod}
               allTabsSaved={allTabsSaved}
               initialDocuments={initialData?.documents || []}
-              additionalInfo={additionalInfo}
-              onAdditionalInfoChange={setAdditionalInfo}
-              isAdminEdit={isAdminEdit}
             />
           )}
         </div>

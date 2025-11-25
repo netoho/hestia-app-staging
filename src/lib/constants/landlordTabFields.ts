@@ -29,7 +29,6 @@ export const LANDLORD_TAB_FIELDS = {
       'workEmail',
       'workPhone',
       // Address
-      'address',
       'addressDetails',
       // Multi-landlord specific
       'isPrimary',

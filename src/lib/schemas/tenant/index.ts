@@ -26,8 +26,6 @@ import {
 import {
   personalReferenceSchema,
   commercialReferenceSchema,
-  personalReferencesArraySchema,
-  commercialReferencesArraySchema,
 } from '../shared/references.schema';
 import {
   companyWithLegalRepSchema,
@@ -126,14 +124,27 @@ export const tenantRentalHistoryTabSchema = z.object({
 });
 
 /**
+ * Tenant-specific reference arrays (1-5 references, dynamic)
+ */
+export const tenantPersonalReferencesArraySchema = z
+  .array(personalReferenceSchema)
+  .min(1, 'Al menos una referencia personal es requerida')
+  .max(5, 'Máximo 5 referencias personales permitidas');
+
+export const tenantCommercialReferencesArraySchema = z
+  .array(commercialReferenceSchema)
+  .min(1, 'Al menos una referencia comercial es requerida')
+  .max(5, 'Máximo 5 referencias comerciales permitidas');
+
+/**
  * REFERENCES TAB - Conditional based on tenant type
  */
 export const tenantReferencesTabIndividualSchema = z.object({
-  personalReferences: personalReferencesArraySchema,
+  personalReferences: tenantPersonalReferencesArraySchema,
 });
 
 export const tenantReferencesTabCompanySchema = z.object({
-  commercialReferences: commercialReferencesArraySchema,
+  commercialReferences: tenantCommercialReferencesArraySchema,
 });
 
 /**
@@ -162,7 +173,7 @@ export const tenantIndividualCompleteSchema = tenantPersonalTabIndividualSchema
   .merge(tenantDocumentsTabSchema)
   .extend({
     tenantType: z.literal('INDIVIDUAL'),
-    personalReferences: personalReferencesArraySchema.optional(),
+    personalReferences: tenantPersonalReferencesArraySchema.optional(),
   });
 
 /**
@@ -173,7 +184,7 @@ export const tenantCompanyCompleteSchema = tenantPersonalTabCompanySchema
   .merge(tenantDocumentsTabSchema)
   .extend({
     tenantType: z.literal('COMPANY'),
-    commercialReferences: commercialReferencesArraySchema.optional(),
+    commercialReferences: tenantCommercialReferencesArraySchema.optional(),
     // Company-specific optional fields
     businessType: z.string().optional().nullable(),
     employeeCount: z.number().positive().optional().nullable(),
@@ -195,16 +206,24 @@ export function getTenantSchema(
   tenantType: 'INDIVIDUAL' | 'COMPANY',
   mode: ValidationMode = 'strict',
   tabName?: string
-) {
-  // Get base schema
-  let schema = tenantType === 'COMPANY'
-    ? tenantCompanyCompleteSchema
-    : tenantIndividualCompleteSchema;
-
+): z.ZodSchema {
   // If tab is specified, get only that tab's schema
   if (tabName) {
-    schema = getTenantTabSchema(tenantType, tabName);
+    const tabSchema = getTenantTabSchema(tenantType, tabName);
+    switch (mode) {
+      case 'partial':
+        return (tabSchema as any).partial();
+      case 'admin':
+        return (tabSchema as any).partial().passthrough();
+      default:
+        return tabSchema;
+    }
   }
+
+  // Get base schema
+  const schema = tenantType === 'COMPANY'
+    ? tenantCompanyCompleteSchema
+    : tenantIndividualCompleteSchema;
 
   // Apply validation mode
   switch (mode) {

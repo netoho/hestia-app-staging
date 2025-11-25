@@ -463,6 +463,16 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
       const landlordData = data as any;
+
+      // Handle address if provided
+      let addressId: string | undefined;
+      if (landlordData.addressDetails) {
+        const addressResult = await this.upsertAddress(landlordData.addressDetails);
+        if (addressResult.ok) {
+          addressId = addressResult.value;
+        }
+      }
+
       // If setting as primary, unmark existing primary
       if (isPrimary) {
         await tx.landlord.updateMany({
@@ -476,6 +486,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         data: {
           policyId,
           isPrimary,
+          addressId,
           isCompany: landlordData.isCompany || false,
           email: landlordData.email || '',
           phone: landlordData.phone || '',
@@ -644,7 +655,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         where: { policyId: landlord?.policyId },
         include: this.getIncludes(),
       });
-    }, 'getByToken');
+    }, 'getManyByToken');
   }
 
 
@@ -721,6 +732,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         if (data.landlords && Array.isArray(data.landlords)) {
           for (const landlordData of data.landlords) {
             if (landlordData.id) {
+              // UPDATE existing landlord
               const saveResult = await this.saveLandlordInformation(
                 landlordData.id,
                 landlordData as LandlordData,
@@ -730,6 +742,17 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
 
               if (!saveResult.ok) {
                 throw saveResult.error;
+              }
+            } else {
+              // CREATE new landlord (co-owner)
+              const createResult = await this.createLandlord(
+                policyId,
+                landlordData as Partial<LandlordData>,
+                landlordData.isPrimary ?? false
+              );
+
+              if (!createResult.ok) {
+                throw createResult.error;
               }
             }
           }

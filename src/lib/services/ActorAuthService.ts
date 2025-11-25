@@ -207,7 +207,7 @@ export class ActorAuthService {
           }
         });
 
-      case 'joint-obligor':
+      case 'jointObligor':
         return prisma.jointObligor.findUnique({
           where: { id },
           include: {
@@ -269,7 +269,7 @@ export class ActorAuthService {
           }
         });
 
-      case 'joint-obligor':
+      case 'jointObligor':
         return prisma.jointObligor.findFirst({
           where: { accessToken: token },
           include: {

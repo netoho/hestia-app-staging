@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -8,14 +8,13 @@ import { trpc } from '@/lib/trpc/client';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
-import TenantPersonalInfoTabRHF from './TenantPersonalInfoTab-RHF';
-import TenantEmploymentTabRHF from './TenantEmploymentTab-RHF';
-import TenantRentalHistoryTabRHF from './TenantRentalHistoryTab-RHF';
-import TenantReferencesTabRHF from './TenantReferencesTab-RHF';
-import TenantDocumentsSection from './TenantDocumentsSection';
-import type { TenantType } from '@/lib/schemas/tenant';
+import LandlordOwnerInfoTabRHF from './LandlordOwnerInfoTab-RHF';
+import LandlordBankInfoTabRHF from './LandlordBankInfoTab-RHF';
+import PropertyDetailsFormRHF from './PropertyDetailsForm-RHF';
+import FinancialInfoFormRHF from './FinancialInfoForm-RHF';
+import DocumentsSection from './DocumentsSection';
 
-interface TenantFormWizardProps {
+interface LandlordFormWizardProps {
   token: string;
   initialData?: any;
   policy?: any;
@@ -23,41 +22,59 @@ interface TenantFormWizardProps {
   isAdminEdit?: boolean;
 }
 
-export default function TenantFormWizardSimplified({
+export default function LandlordFormWizardSimplified({
   token,
   initialData = {},
   policy,
   onComplete,
   isAdminEdit = false,
-}: TenantFormWizardProps) {
+}: LandlordFormWizardProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
-  const [additionalInfo, setAdditionalInfo] = useState(initialData?.additionalInfo || '');
 
-  // Determine tenant type from initial data
-  const tenantType: TenantType = initialData?.tenantType || 'INDIVIDUAL';
-  const isCompany = tenantType === 'COMPANY';
+  // Landlord data - can be array (multi-actor) or single
+  const landlords = initialData?.landlords || (initialData ? [initialData] : []);
+  const primaryLandlord = landlords[0] || {};
+  const isCompany = primaryLandlord?.isCompany ?? false;
 
   // Tab configuration
-  const config = actorConfig.tenant;
+  const config = actorConfig.landlord;
   const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
 
   // Wizard tabs for navigation
   const wizard = useFormWizardTabs({
     tabs,
     isAdminEdit,
-    initialActiveTab: 'personal',
+    initialActiveTab: 'owner-info',
   });
 
   // tRPC mutation for saving
   const updateMutation = trpc.actor.update.useMutation({
     onSuccess: () => {
       utils.actor.getByToken.invalidate({
-        type: 'tenant',
+        type: 'landlord',
         token,
       });
     },
   });
+
+  // tRPC mutation for deleting co-owners
+  const deleteMutation = trpc.actor.deleteCoOwner.useMutation({
+    onSuccess: () => {
+      utils.actor.getByToken.invalidate({
+        type: 'landlord',
+        token,
+      });
+    },
+  });
+
+  // Delete handler for co-owners
+  const handleDeleteLandlord = useCallback(async (landlordId: string) => {
+    await deleteMutation.mutateAsync({
+      type: 'landlord',
+      id: landlordId,
+    });
+  }, [deleteMutation]);
 
   // Simplified save handler - each tab manages its own validation
   const handleTabSave = useCallback(async (tabName: string, data: any): Promise<void> => {
@@ -68,7 +85,7 @@ export default function TenantFormWizardSimplified({
       });
 
       await updateMutation.mutateAsync({
-        type: 'tenant',
+        type: 'landlord',
         identifier: token,
         data: {
           ...data,
@@ -129,46 +146,49 @@ export default function TenantFormWizardSimplified({
       >
         {/* Tab Content - Using RHF versions */}
         <div className="mt-6">
-          {wizard.activeTab === 'personal' && (
-            <TenantPersonalInfoTabRHF
-              tenantType={tenantType}
-              initialData={initialData}
-              onSave={(data) => handleTabSave('personal', data)}
+          {wizard.activeTab === 'owner-info' && (
+            <LandlordOwnerInfoTabRHF
+              initialData={landlords}
+              onSave={(data) => handleTabSave('owner-info', data)}
+              onDelete={handleDeleteLandlord}
             />
           )}
 
-          {wizard.activeTab === 'employment' && !isCompany && (
-            <TenantEmploymentTabRHF
-              initialData={initialData}
-              onSave={(data) => handleTabSave('employment', data)}
+          {wizard.activeTab === 'bank-info' && (
+            <LandlordBankInfoTabRHF
+              initialData={primaryLandlord}
+              onSave={(data) => handleTabSave('bank-info', data)}
             />
           )}
 
-          {wizard.activeTab === 'rental' && !isCompany && (
-            <TenantRentalHistoryTabRHF
-              initialData={initialData}
-              onSave={(data) => handleTabSave('rental', data)}
+          {wizard.activeTab === 'property-info' && (
+            <PropertyDetailsFormRHF
+              initialData={initialData?.propertyDetails || {}}
+              onSave={(data) => handleTabSave('property-info', data)}
             />
           )}
 
-          {wizard.activeTab === 'references' && (
-            <TenantReferencesTabRHF
-              tenantType={tenantType}
-              initialData={initialData}
-              onSave={(data) => handleTabSave('references', data)}
+          {wizard.activeTab === 'financial-info' && (
+            <FinancialInfoFormRHF
+              initialData={{
+                landlord: primaryLandlord,
+                policyFinancial: initialData?.policyFinancialData || {},
+              }}
+              onSave={(data) => handleTabSave('financial-info', data)}
+              policy={policy}
+              token={token}
+              landlordId={primaryLandlord?.id}
+              isAdminEdit={isAdminEdit}
             />
           )}
 
           {wizard.activeTab === 'documents' && (
-            <TenantDocumentsSection
+            <DocumentsSection
               token={token}
-              tenantId={initialData?.id}
-              tenantType={tenantType}
-              nationality={initialData?.nationality}
+              landlordId={primaryLandlord?.id}
+              isCompany={isCompany}
               allTabsSaved={allTabsSaved}
               initialDocuments={initialData?.documents || []}
-              additionalInfo={additionalInfo}
-              onAdditionalInfoChange={setAdditionalInfo}
               isAdminEdit={isAdminEdit}
             />
           )}

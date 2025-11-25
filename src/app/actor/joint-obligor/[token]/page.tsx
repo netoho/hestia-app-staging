@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle2, AlertCircle, Home, DollarSign, Calendar } from 'lucide-react';
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
-import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard';
+import JointObligorFormWizardSimplified from "@/components/actor/joint-obligor/JointObligorFormWizard-Simplified";
 
 export default function JointObligorPortalPage({
   params
@@ -183,7 +183,7 @@ export default function JointObligorPortalPage({
         )}
 
         {/* Form Wizard */}
-        <JointObligorFormWizard
+        <JointObligorFormWizardSimplified
           token={token}
           initialData={obligorData}
           policy={policy}

@@ -128,7 +128,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       // Fetch existing joint obligor to get policyId
       const existingJointObligor = await tx.jointObligor.findUnique({
         where: { id: jointObligorId },
-        select: { policyId: true, actorId: true }
+        select: { policyId: true }
       });
 
       if (!existingJointObligor) {

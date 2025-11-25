@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState, useCallback } from 'react';
+import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -8,14 +9,13 @@ import { trpc } from '@/lib/trpc/client';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
-import TenantPersonalInfoTabRHF from './TenantPersonalInfoTab-RHF';
-import TenantEmploymentTabRHF from './TenantEmploymentTab-RHF';
-import TenantRentalHistoryTabRHF from './TenantRentalHistoryTab-RHF';
-import TenantReferencesTabRHF from './TenantReferencesTab-RHF';
-import TenantDocumentsSection from './TenantDocumentsSection';
-import type { TenantType } from '@/lib/schemas/tenant';
+import AvalPersonalInfoTabRHF from './AvalPersonalInfoTab-RHF';
+import AvalEmploymentTabRHF from './AvalEmploymentTab-RHF';
+import AvalPropertyGuaranteeTabRHF from './AvalPropertyGuaranteeTab-RHF';
+import AvalReferencesTabRHF from './AvalReferencesTab-RHF';
+import AvalDocumentsSection from './AvalDocumentsSection';
 
-interface TenantFormWizardProps {
+interface AvalFormWizardProps {
   token: string;
   initialData?: any;
   policy?: any;
@@ -23,23 +23,22 @@ interface TenantFormWizardProps {
   isAdminEdit?: boolean;
 }
 
-export default function TenantFormWizardSimplified({
+export default function AvalFormWizard({
   token,
   initialData = {},
   policy,
   onComplete,
   isAdminEdit = false,
-}: TenantFormWizardProps) {
+}: AvalFormWizardProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
-  const [additionalInfo, setAdditionalInfo] = useState(initialData?.additionalInfo || '');
 
-  // Determine tenant type from initial data
-  const tenantType: TenantType = initialData?.tenantType || 'INDIVIDUAL';
-  const isCompany = tenantType === 'COMPANY';
+  // Determine aval type from initial data
+  const avalType = initialData?.avalType || 'INDIVIDUAL';
+  const isCompany = avalType === 'COMPANY';
 
   // Tab configuration
-  const config = actorConfig.tenant;
+  const config = actorConfig.aval;
   const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
 
   // Wizard tabs for navigation
@@ -53,14 +52,14 @@ export default function TenantFormWizardSimplified({
   const updateMutation = trpc.actor.update.useMutation({
     onSuccess: () => {
       utils.actor.getByToken.invalidate({
-        type: 'tenant',
+        type: 'aval',
         token,
       });
     },
   });
 
   // Simplified save handler - each tab manages its own validation
-  const handleTabSave = useCallback(async (tabName: string, data: any): Promise<void> => {
+  const handleTabSave = useCallback(async (tabName: string, data: any) => {
     try {
       toast({
         title: "Guardando...",
@@ -68,7 +67,7 @@ export default function TenantFormWizardSimplified({
       });
 
       await updateMutation.mutateAsync({
-        type: 'tenant',
+        type: 'aval',
         identifier: token,
         data: {
           ...data,
@@ -86,6 +85,8 @@ export default function TenantFormWizardSimplified({
       const newTabSaved = { ...wizard.tabSaved, [tabName]: true };
       wizard.markTabSaved(tabName);
       wizard.goToNextTab(newTabSaved);
+
+      return true;
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -93,18 +94,15 @@ export default function TenantFormWizardSimplified({
         description: error instanceof Error ? error.message : "Error al guardar",
         variant: "destructive",
       });
+      return false;
     }
-  }, [token, updateMutation, wizard, toast]);
-
-  // Check if all tabs before documents are saved
-  const allTabsSaved = tabs
-    .filter((t: any) => t.id !== 'documents' && t.needsSave)
-    .every((t: any) => wizard.tabSaved[t.id]);
+  }, [token, updateMutation, wizard, toast, utils]);
 
   return (
     <div className="space-y-6">
       {/* Progress Indicator */}
       <FormWizardProgress
+        currentTab={wizard.activeTab}
         tabs={tabs}
         tabSaved={wizard.tabSaved}
       />
@@ -126,56 +124,61 @@ export default function TenantFormWizardSimplified({
             });
           }
         }}
-      >
-        {/* Tab Content - Using RHF versions */}
-        <div className="mt-6">
-          {wizard.activeTab === 'personal' && (
-            <TenantPersonalInfoTabRHF
-              tenantType={tenantType}
-              initialData={initialData}
-              onSave={(data) => handleTabSave('personal', data)}
-            />
-          )}
+      />
 
-          {wizard.activeTab === 'employment' && !isCompany && (
-            <TenantEmploymentTabRHF
-              initialData={initialData}
-              onSave={(data) => handleTabSave('employment', data)}
-            />
-          )}
+      {/* Tab Content - Using RHF versions */}
+      <div className="mt-6">
+        {wizard.activeTab === 'personal' && (
+          <AvalPersonalInfoTabRHF
+            avalType={avalType}
+            initialData={initialData}
+            onSave={(data) => handleTabSave('personal', data)}
+          />
+        )}
 
-          {wizard.activeTab === 'rental' && !isCompany && (
-            <TenantRentalHistoryTabRHF
-              initialData={initialData}
-              onSave={(data) => handleTabSave('rental', data)}
-            />
-          )}
+        {wizard.activeTab === 'employment' && !isCompany && (
+          <AvalEmploymentTabRHF
+            avalType={avalType}
+            initialData={initialData}
+            onSave={(data) => handleTabSave('employment', data)}
+          />
+        )}
 
-          {wizard.activeTab === 'references' && (
-            <TenantReferencesTabRHF
-              tenantType={tenantType}
-              initialData={initialData}
-              onSave={(data) => handleTabSave('references', data)}
-            />
-          )}
+        {wizard.activeTab === 'property' && (
+          <AvalPropertyGuaranteeTabRHF
+            avalType={avalType}
+            initialData={initialData}
+            onSave={(data) => handleTabSave('property', data)}
+            token={token}
+            avalId={initialData?.id}
+            initialDocuments={initialData?.documents || []}
+          />
+        )}
 
-          {wizard.activeTab === 'documents' && (
-            <TenantDocumentsSection
-              token={token}
-              tenantId={initialData?.id}
-              tenantType={tenantType}
-              nationality={initialData?.nationality}
-              allTabsSaved={allTabsSaved}
-              initialDocuments={initialData?.documents || []}
-              additionalInfo={additionalInfo}
-              onAdditionalInfoChange={setAdditionalInfo}
-              isAdminEdit={isAdminEdit}
-            />
-          )}
-        </div>
-      </FormWizardTabs>
+        {wizard.activeTab === 'references' && (
+          <AvalReferencesTabRHF
+            avalType={avalType}
+            initialData={initialData}
+            onSave={(data) => handleTabSave('references', data)}
+          />
+        )}
 
-      {/* Navigation Buttons */}
+        {wizard.activeTab === 'documents' && (
+          <AvalDocumentsSection
+            formData={initialData}
+            onFieldChange={(field, value) => {
+              // Simple update without complex state management
+              handleTabSave('documents', { [field]: value });
+            }}
+            errors={{}}
+            token={token}
+            avalId={initialData?.id}
+            initialDocuments={initialData?.documents || []}
+          />
+        )}
+      </div>
+
+      {/* Save Button for Current Tab */}
       <div className="flex justify-between items-center pt-6 border-t">
         <Button
           variant="outline"
@@ -194,6 +197,7 @@ export default function TenantFormWizardSimplified({
           <Button
             onClick={() => {
               // Trigger form submission in the active tab
+              // Note: This requires each RHF tab to expose form submission
               document.querySelector('form')?.requestSubmit();
             }}
             disabled={updateMutation.isPending}
