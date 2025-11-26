@@ -50,6 +50,9 @@ export default function AvalFormWizard({
   // Track required docs uploaded for documents tab
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
+  // Local state for additionalInfo (documents tab)
+  const [localAdditionalInfo, setLocalAdditionalInfo] = useState(initialData?.additionalInfo || '');
+
   // Check if all tabs before documents are saved
   const allTabsSaved = useMemo(() => {
     const docsTabIndex = tabs.findIndex((t: any) => t.id === 'documents');
@@ -173,20 +176,32 @@ export default function AvalFormWizard({
         )}
 
         {wizard.activeTab === 'documents' && (
-          <AvalDocumentsSection
-            avalId={initialData?.id}
-            token={token}
-            isCompany={isCompany}
-            nationality={initialData?.nationality}
-            allTabsSaved={allTabsSaved || isAdminEdit}
-            initialDocuments={initialData?.documents || []}
-            additionalInfo={initialData?.additionalInfo || ''}
-            onAdditionalInfoChange={(value) => {
-              handleTabSave('documents', { additionalInfo: value });
-            }}
-            onRequiredDocsChange={setRequiredDocsUploaded}
-            isAdminEdit={isAdminEdit}
-          />
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!requiredDocsUploaded) {
+              toast({
+                title: "Documentos requeridos",
+                description: "Por favor cargue todos los documentos requeridos antes de continuar",
+                variant: "destructive",
+              });
+              return;
+            }
+            handleTabSave('documents', { additionalInfo: localAdditionalInfo });
+          }}>
+            <AvalDocumentsSection
+              avalId={initialData?.id}
+              token={token}
+              isCompany={isCompany}
+              nationality={initialData?.nationality}
+              allTabsSaved={allTabsSaved || isAdminEdit}
+              initialDocuments={initialData?.documents || []}
+              additionalInfo={localAdditionalInfo}
+              onAdditionalInfoChange={setLocalAdditionalInfo}
+              onRequiredDocsChange={setRequiredDocsUploaded}
+              isAdminEdit={isAdminEdit}
+            />
+            <button type="submit" className="hidden" />
+          </form>
         )}
       </div>
 

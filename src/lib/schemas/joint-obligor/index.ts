@@ -160,8 +160,8 @@ export const jointObligorGuaranteeTabSchema = z.discriminatedUnion('guaranteeMet
 // References Tab Schema (Individual - exactly 3 personal references)
 const jointObligorReferencesIndividualTabSchema = z.object({
   personalReferences: z.array(personalReferenceSchema)
-    .min(3, 'Exactly 3 references are required')
-    .max(3, 'Exactly 3 references are required'),
+    .min(3, 'Se requieren exactamente 3 referencias')
+    .max(3, 'Se requieren exactamente 3 referencias'),
 });
 
 // References Tab Schema (Company - exactly 3 commercial references)

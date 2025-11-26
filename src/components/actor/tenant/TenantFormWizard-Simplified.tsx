@@ -33,6 +33,7 @@ export default function TenantFormWizardSimplified({
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const [additionalInfo, setAdditionalInfo] = useState(initialData?.additionalInfo || '');
+  const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
   // Determine tenant type from initial data
   const tenantType: TenantType = initialData?.tenantType || 'INDIVIDUAL';
@@ -160,17 +161,32 @@ export default function TenantFormWizardSimplified({
           )}
 
           {wizard.activeTab === 'documents' && (
-            <TenantDocumentsSection
-              token={token}
-              tenantId={initialData?.id}
-              tenantType={tenantType}
-              nationality={initialData?.nationality}
-              allTabsSaved={allTabsSaved}
-              initialDocuments={initialData?.documents || []}
-              additionalInfo={additionalInfo}
-              onAdditionalInfoChange={setAdditionalInfo}
-              isAdminEdit={isAdminEdit}
-            />
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!requiredDocsUploaded) {
+                toast({
+                  title: "Documentos requeridos",
+                  description: "Por favor cargue todos los documentos requeridos antes de continuar",
+                  variant: "destructive",
+                });
+                return;
+              }
+              handleTabSave('documents', { additionalInfo });
+            }}>
+              <TenantDocumentsSection
+                token={token}
+                tenantId={initialData?.id}
+                tenantType={tenantType}
+                nationality={initialData?.nationality}
+                allTabsSaved={allTabsSaved}
+                initialDocuments={initialData?.documents || []}
+                additionalInfo={additionalInfo}
+                onAdditionalInfoChange={setAdditionalInfo}
+                onRequiredDocsChange={setRequiredDocsUploaded}
+                isAdminEdit={isAdminEdit}
+              />
+              <button type="submit" className="hidden" />
+            </form>
           )}
         </div>
       </FormWizardTabs>

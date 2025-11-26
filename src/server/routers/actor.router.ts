@@ -584,10 +584,10 @@ export const actorRouter = createTRPCRouter({
         }
       }
 
-      // STEP 3: Check if this is the last tab and auto-submit
+      // STEP 3: Check if this is the last tab and auto-submit (only for actor self-service, NOT admins)
       const isLastTab = tabName && LAST_TABS[input.type] === tabName;
 
-      if (isLastTab && partial !== false) {
+      if (isLastTab && partial !== false && auth.authType === 'actor') {
         // STEP 4: Call submitActor to validate and mark as complete
         const submitResult = await service.submitActor(auth.actor.id, {
           skipValidation: auth.skipValidation,
@@ -657,6 +657,38 @@ export const actorRouter = createTRPCRouter({
       }
 
       return result.value;
+    }),
+
+  /**
+   * Admin-only: Submit actor after admin review
+   * Validates data and marks as complete
+   */
+  adminSubmitActor: adminProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      id: z.string(),
+      skipValidation: z.boolean().default(false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const service = getActorService(input.type);
+
+      // Validate and submit
+      const result = await service.submitActor(input.id, {
+        skipValidation: input.skipValidation,
+        submittedBy: ctx.userId,
+      });
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error?.message || 'Error al enviar información del actor',
+        });
+      }
+
+      return {
+        ...result.value,
+        submitted: true,
+      };
     }),
 
   /**

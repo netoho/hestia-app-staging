@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -31,6 +31,7 @@ export default function LandlordFormWizardSimplified({
 }: LandlordFormWizardProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
   // Landlord data - can be array (multi-actor) or single
   const landlords = initialData?.landlords || (initialData ? [initialData] : []);
@@ -183,14 +184,29 @@ export default function LandlordFormWizardSimplified({
           )}
 
           {wizard.activeTab === 'documents' && (
-            <DocumentsSection
-              token={token}
-              landlordId={primaryLandlord?.id}
-              isCompany={isCompany}
-              allTabsSaved={allTabsSaved}
-              initialDocuments={initialData?.documents || []}
-              isAdminEdit={isAdminEdit}
-            />
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!requiredDocsUploaded) {
+                toast({
+                  title: "Documentos requeridos",
+                  description: "Por favor cargue todos los documentos requeridos antes de continuar",
+                  variant: "destructive",
+                });
+                return;
+              }
+              handleTabSave('documents', {});
+            }}>
+              <DocumentsSection
+                token={token}
+                landlordId={primaryLandlord?.id}
+                isCompany={isCompany}
+                allTabsSaved={allTabsSaved}
+                initialDocuments={initialData?.documents || []}
+                onRequiredDocsChange={setRequiredDocsUploaded}
+                isAdminEdit={isAdminEdit}
+              />
+              <button type="submit" className="hidden" />
+            </form>
           )}
         </div>
       </FormWizardTabs>

@@ -50,7 +50,7 @@ import { emptyStringsToNull } from '@/lib/utils/dataTransform';
 /**
  * OWNER INFO TAB - Individual Landlord
  */
-export const landlordOwnerInfoIndividualSchema = personWithNationalitySchema.extend({
+export const landlordOwnerInfoIndividualSchema = personNameSchema.extend({
   curp: curpSchema,
   rfc: rfcPersonSchema,
   ...extendedContactSchema.shape,

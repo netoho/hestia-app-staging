@@ -113,9 +113,9 @@ export const tenantEmploymentTabSchema = z.object({
 export const tenantRentalHistoryTabSchema = z.object({
   previousLandlordName: z.string().optional().nullable(),
   previousLandlordPhone: z.string().optional().nullable(),
-  previousLandlordEmail: z.string().email().optional().nullable(),
+  previousLandlordEmail: z.string().email().optional().nullable().or(z.literal('')),
   previousRentAmount: z.number().positive().optional().nullable(),
-  previousRentalAddressDetails: partialAddressSchema.optional(),
+  previousRentalAddressDetails: partialAddressSchema.optional().nullable(),
   rentalHistoryYears: z.number().min(0).optional().nullable(),
   reasonForMoving: z.string().optional().nullable(),
   numberOfOccupants: z.number().positive().optional().nullable(),
@@ -152,7 +152,7 @@ export const tenantReferencesTabCompanySchema = z.object({
  */
 export const tenantDocumentsTabSchema = z.object({
   additionalInfo: z.string().max(1000).optional().nullable(),
-  paymentMethod: paymentMethodSchema.optional(),
+  paymentMethod: paymentMethodSchema.optional().nullable(),
   requiresCFDI: z.boolean().default(false),
   cfdiData: z.string().optional().nullable(), // JSON string with fiscal data
 });

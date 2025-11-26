@@ -63,7 +63,7 @@ export default function AvalPropertyGuaranteeTab({
                          maritalStatus === 'married_separate' ||
                          maritalStatus === 'common_law';
 
-  const { documents, operations } = useDocumentOperations({
+  const { documents, uploadDocument, deleteDocument, downloadDocument, getCategoryOperations } = useDocumentOperations({
     token,
     actorType: 'aval',
     initialDocuments
@@ -230,8 +230,12 @@ export default function AvalPropertyGuaranteeTab({
                 category={DocumentCategory.PROPERTY_DEED}
                 title="Escritura de la Propiedad"
                 description="Escritura pública de la propiedad que se ofrece como garantía"
-                token={token}
-                actorType="aval"
+                documentType="property_deed"
+                documents={documents[DocumentCategory.PROPERTY_DEED] || []}
+                onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_DEED, 'property_deed')}
+                onDelete={deleteDocument}
+                onDownload={downloadDocument}
+                operations={getCategoryOperations(DocumentCategory.PROPERTY_DEED)}
                 required={true}
                 allowMultiple={false}
               />
@@ -241,8 +245,12 @@ export default function AvalPropertyGuaranteeTab({
                 category={DocumentCategory.PROPERTY_TAX_STATEMENT}
                 title="Boleta Predial"
                 description="Último recibo de impuesto predial de la propiedad en garantía"
-                token={token}
-                actorType="aval"
+                documentType="property_tax_statement"
+                documents={documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []}
+                onUpload={(file) => uploadDocument(file, DocumentCategory.PROPERTY_TAX_STATEMENT, 'property_tax_statement')}
+                onDelete={deleteDocument}
+                onDownload={downloadDocument}
+                operations={getCategoryOperations(DocumentCategory.PROPERTY_TAX_STATEMENT)}
                 required={true}
                 allowMultiple={false}
               />

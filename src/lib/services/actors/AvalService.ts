@@ -4,6 +4,8 @@
  */
 
 import {AvalType, DocumentCategory, Prisma, PrismaClient} from '@prisma/client';
+import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
+import { DocumentCategory as DocumentCategoryEnum } from '@/lib/enums';
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
@@ -725,33 +727,6 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
   }
 
   /**
-   * Check if aval can submit information
-   */
-  async canSubmit(avalId: string): AsyncResult<boolean> {
-    const avalResult = await this.getAvalById(avalId);
-    if (!avalResult.ok) {
-      return Result.ok(false);
-    }
-
-    const aval = avalResult.value;
-
-    // Check if basic information is complete
-    const hasBasicInfo = this.isInformationComplete(aval as any);
-
-    // Check if property guarantee information is provided (MANDATORY for aval)
-    const hasPropertyInfo = !!(
-      aval.propertyValue &&
-      aval.propertyDeedNumber &&
-      aval.guaranteePropertyAddressId
-    );
-
-    // Check if required documents are uploaded (if applicable)
-    const hasRequiredDocs = await this.hasRequiredDocuments(avalId);
-
-    return Result.ok(hasBasicInfo && hasPropertyInfo && hasRequiredDocs);
-  }
-
-  /**
    * Check if aval has required documents
    */
   async hasRequiredDocuments(avalId: string): Promise<boolean> {
@@ -808,9 +783,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       if (!aval.firstName) errors.push('Nombre requerido');
       if (!aval.paternalLastName) errors.push('Apellido paterno requerido');
       if (!aval.maternalLastName) errors.push('Apellido materno requerido');
-      if (!aval.occupation) errors.push('Ocupación requerida');
-      if (!aval.employerName) errors.push('Nombre del empleador requerido');
-      if (!aval.monthlyIncome) errors.push('Ingreso mensual requerido');
+      // Employment fields are optional in schema - removed occupation, employerName, monthlyIncome checks
     } else {
       // Company validation
       if (!aval.companyName) errors.push('Razón social requerida');
@@ -824,6 +797,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     if (!aval.email) errors.push('Email requerido');
     if (!aval.phone) errors.push('Teléfono requerido');
     if (!aval.addressDetails) errors.push('Dirección requerida');
+    if (!aval.relationshipToTenant) errors.push('Relación con el inquilino requerida');
 
     // Aval specific - must have property guarantee
     if (!aval.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
@@ -859,20 +833,23 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     const aval = await this.getById(avalId);
     if (!aval.ok) return aval;
 
-    const requiredDocs: any[] = aval.value.isCompany
-      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA', 'ACTA_CONSTITUTIVA']
-      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA'];
+    const isCompany = aval.value.isCompany;
+    const nationality = aval.value.nationality;
+
+    const requiredDocs = getRequiredDocuments('aval', isCompany, {
+      nationality: nationality as 'MEXICAN' | 'FOREIGN' | undefined,
+    });
 
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         avalId,
-        category: { in: requiredDocs }
+        category: { in: requiredDocs.map(d => d.category) }
       },
       select: { category: true }
     });
 
     const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
-    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+    const missingDocs = requiredDocs.filter(d => !uploadedCategories.has(d.category as DocumentCategoryEnum));
 
     if (missingDocs.length > 0) {
       return Result.error(
@@ -880,7 +857,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           ErrorCode.VALIDATION_ERROR,
           'Faltan documentos requeridos',
           400,
-          { missingDocuments: missingDocs }
+          { missingDocuments: missingDocs.map(d => d.category) }
         )
       );
     }

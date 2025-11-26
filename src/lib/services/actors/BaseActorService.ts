@@ -697,7 +697,7 @@ export abstract class BaseActorService<
         data: {
           informationComplete: true,
           completedAt: new Date(),
-          submittedBy: options?.submittedBy ?? 'self',
+          // submittedBy: options?.submittedBy ?? 'self',
         },
         include: this.getIncludes()
       });

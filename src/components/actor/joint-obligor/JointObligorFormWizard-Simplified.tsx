@@ -51,6 +51,9 @@ export default function JointObligorFormWizardSimplified({
   // Track required docs uploaded for documents tab
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
 
+  // Local state for additionalInfo (documents tab)
+  const [localAdditionalInfo, setLocalAdditionalInfo] = useState(initialData?.additionalInfo || '');
+
   // tRPC mutation for saving
   const updateMutation = trpc.actor.update.useMutation({
     onSuccess: () => {
@@ -166,21 +169,33 @@ export default function JointObligorFormWizardSimplified({
           )}
 
           {wizard.activeTab === 'documents' && (
-            <JointObligorDocumentsSection
-              obligorId={initialData?.id}
-              token={token}
-              isCompany={isCompany}
-              guaranteeMethod={initialData?.guaranteeMethod}
-              nationality={initialData?.nationality}
-              allTabsSaved={allTabsSaved || isAdminEdit}
-              initialDocuments={initialData?.documents || []}
-              additionalInfo={initialData?.additionalInfo || ''}
-              onAdditionalInfoChange={(value) => {
-                handleTabSave('documents', { additionalInfo: value });
-              }}
-              onRequiredDocsChange={setRequiredDocsUploaded}
-              isAdminEdit={isAdminEdit}
-            />
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!requiredDocsUploaded) {
+                toast({
+                  title: "Documentos requeridos",
+                  description: "Por favor cargue todos los documentos requeridos antes de continuar",
+                  variant: "destructive",
+                });
+                return;
+              }
+              handleTabSave('documents', { additionalInfo: localAdditionalInfo });
+            }}>
+              <JointObligorDocumentsSection
+                obligorId={initialData?.id}
+                token={token}
+                isCompany={isCompany}
+                guaranteeMethod={initialData?.guaranteeMethod}
+                nationality={initialData?.nationality}
+                allTabsSaved={allTabsSaved || isAdminEdit}
+                initialDocuments={initialData?.documents || []}
+                additionalInfo={localAdditionalInfo}
+                onAdditionalInfoChange={setLocalAdditionalInfo}
+                onRequiredDocsChange={setRequiredDocsUploaded}
+                isAdminEdit={isAdminEdit}
+              />
+              <button type="submit" className="hidden" />
+            </form>
           )}
         </div>
       </FormWizardTabs>
@@ -203,7 +218,7 @@ export default function JointObligorFormWizardSimplified({
         <div className="flex gap-2">
           <Button
             onClick={() => {
-              // Trigger form submission in the active tab
+              // Trigger form submission in the active tab (now works for documents too)
               document.querySelector('form')?.requestSubmit();
             }}
             disabled={updateMutation.isPending}

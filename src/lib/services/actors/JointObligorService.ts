@@ -4,6 +4,8 @@
  */
 
 import {Prisma, PrismaClient} from '@prisma/client';
+import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
+import { DocumentCategory } from '@/lib/enums';
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
@@ -256,7 +258,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
         await this.prisma.personalReference.createMany({
           data: references.map(ref => ({
             jointObligorId,
-            name: ref.name,
+            firstName: ref.firstName,
+            maternalLastName: ref.maternalLastName,
+            middleName: ref.middleName,
+            paternalLastName: ref.paternalLastName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -512,32 +517,6 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   }
 
   /**
-   * Check if joint obligor can submit information
-   */
-  async canSubmit(jointObligorId: string): AsyncResult<boolean> {
-    const jointObligorResult = await this.getJointObligorById(jointObligorId);
-    if (!jointObligorResult.ok) {
-      return Result.ok(false);
-    }
-
-    const jointObligor = jointObligorResult.value;
-
-    // Check if basic information is complete
-    const hasBasicInfo = this.isInformationComplete(jointObligor as any);
-
-    // Check if guarantee method is valid
-    const guaranteeVerification = await this.verifyGuaranteeMethod(jointObligorId);
-    const hasValidGuarantee = guaranteeVerification.ok ? guaranteeVerification.value : false;
-
-    // Check if required documents are uploaded
-    const docsResult = await this.hasRequiredDocuments(jointObligorId);
-    const hasRequiredDocs = docsResult.ok ? docsResult.value : false;
-
-    return Result.ok(hasBasicInfo && hasValidGuarantee && hasRequiredDocs);
-  }
-
-
-  /**
    * Public save method for admin use
    * Wraps the internal saveJointObligorInformation method
    */
@@ -571,9 +550,12 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       if (!jointObligor.firstName) errors.push('Nombre requerido');
       if (!jointObligor.paternalLastName) errors.push('Apellido paterno requerido');
       if (!jointObligor.maternalLastName) errors.push('Apellido materno requerido');
-      if (!jointObligor.occupation) errors.push('Ocupación requerida');
-      if (!jointObligor.employerName) errors.push('Nombre del empleador requerido');
-      if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido');
+      if (!jointObligor.curp) errors.push('CURP requerido');
+      if (!jointObligor.rfc) errors.push('RFC requerido');
+      // Employment fields: occupation required only when employmentStatus is set, monthlyIncome only for income guarantee
+      if (jointObligor.employmentStatus && !jointObligor.occupation) {
+        errors.push('Ocupación requerida');
+      }
     } else {
       // Company validation
       if (!jointObligor.companyName) errors.push('Razón social requerida');
@@ -587,6 +569,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     if (!jointObligor.email) errors.push('Email requerido');
     if (!jointObligor.phone) errors.push('Teléfono requerido');
     if (!jointObligor.addressDetails) errors.push('Dirección requerida');
+    if (!jointObligor.relationshipToTenant) errors.push('Relación con el inquilino requerida');
 
     // Joint obligor specific - must have guarantee method
     if (!jointObligor.guaranteeMethod) errors.push('Método de garantía requerido');
@@ -600,10 +583,11 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     } else if (jointObligor.guaranteeMethod === 'income') {
       // Income guarantee validation
       if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');
-      const minIncome = 10000; // Example minimum income requirement
-      if (jointObligor.monthlyIncome && jointObligor.monthlyIncome < minIncome) {
-        errors.push(`Ingreso mínimo de $${minIncome} requerido para garantía por ingresos`);
-      }
+      // TODO: Validate minimum income rule with business before enabling
+      // const minIncome = 10000;
+      // if (jointObligor.monthlyIncome && jointObligor.monthlyIncome < minIncome) {
+      //   errors.push(`Ingreso mínimo de $${minIncome} requerido para garantía por ingresos`);
+      // }
     }
 
     // Check references (minimum 3 for joint obligor with addresses)
@@ -634,25 +618,25 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     const obligor = await this.getById(obligorId);
     if (!obligor.ok) return obligor;
 
-    let requiredDocs: any[] = obligor.value.isCompany
-      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS', 'ACTA_CONSTITUTIVA']
-      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+    const isCompany = obligor.value.jointObligorType === 'COMPANY';
+    const guaranteeMethod = obligor.value.guaranteeMethod as 'income' | 'property' | undefined;
+    const nationality = obligor.value.nationality;
 
-    // Add property documents if using property guarantee
-    if (obligor.value.guaranteeMethod === 'property') {
-      requiredDocs = requiredDocs.concat(['ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA']);
-    }
+    const requiredDocs = getRequiredDocuments('jointObligor', isCompany, {
+      nationality: nationality as 'MEXICAN' | 'FOREIGN' | undefined,
+      guaranteeMethod,
+    });
 
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         jointObligorId: obligorId,
-        category: { in: requiredDocs }
+        category: { in: requiredDocs.map(d => d.category) }
       },
       select: { category: true }
     });
 
     const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
-    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+    const missingDocs = requiredDocs.filter(d => !uploadedCategories.has(d.category as DocumentCategory));
 
     if (missingDocs.length > 0) {
       return Result.error(
@@ -660,7 +644,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           ErrorCode.VALIDATION_ERROR,
           'Faltan documentos requeridos',
           400,
-          { missingDocuments: missingDocs }
+          { missingDocuments: missingDocs.map(d => d.category) }
         )
       );
     }

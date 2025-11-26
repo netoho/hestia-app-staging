@@ -270,25 +270,26 @@ export default function JointObligorDocumentsSection({
       </div>
 
       {/* Additional Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Información Adicional</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="additionalInfo" optional>
-              Redes sociales, LinkedIn o información adicional
-            </Label>
-            <Textarea
-              id="additionalInfo"
-              value={additionalInfo}
-              onChange={(e) => onAdditionalInfoChange?.(e.target.value)}
-              placeholder="Proporcione cualquier información adicional que considere relevante..."
-              rows={4}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Don't trigger the save directly, we need to add the useForm or something similar */}
+      {/*<Card>*/}
+      {/*  <CardHeader>*/}
+      {/*    <CardTitle>Información Adicional</CardTitle>*/}
+      {/*  </CardHeader>*/}
+      {/*  <CardContent>*/}
+      {/*    <div className="space-y-2">*/}
+      {/*      <Label htmlFor="additionalInfo" optional>*/}
+      {/*        Redes sociales, LinkedIn o información adicional*/}
+      {/*      </Label>*/}
+      {/*      <Textarea*/}
+      {/*        id="additionalInfo"*/}
+      {/*        value={additionalInfo}*/}
+      {/*        onChange={(e) => onAdditionalInfoChange?.(e.target.value)}*/}
+      {/*        placeholder="Proporcione cualquier información adicional que considere relevante..."*/}
+      {/*        rows={4}*/}
+      {/*      />*/}
+      {/*    </div>*/}
+      {/*  </CardContent>*/}
+      {/*</Card>*/}
 
       {/* Warning if missing required docs */}
       {uploadedRequiredCount < requiredDocsCount && (

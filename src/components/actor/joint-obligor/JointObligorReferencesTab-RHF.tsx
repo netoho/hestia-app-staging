@@ -33,16 +33,18 @@ export default function JointObligorReferencesTabRHF({
   // Get schema - automatically validates exactly 3 references
   const schema = getJointObligorTabSchema('references', jointObligorType);
 
+  console.log('Initial Data:', initialData);
+
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
     defaultValues: {
-      personalReferences: initialData?.personalReferences || [
+      personalReferences: initialData?.personalReferences.length > 0 ? initialData?.personalReferences : [
         { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
         { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
         { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
       ],
-      commercialReferences: initialData?.commercialReferences || [
+      commercialReferences: initialData?.commercialReferences.length > 0 ? initialData?.commercialReferences : [
         { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
         { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
         { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
