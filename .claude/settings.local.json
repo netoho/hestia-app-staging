@@ -46,7 +46,8 @@
       "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/2024-11-13-1445-forms-refactors.md)",
       "Bash(echo:*)",
       "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/2024-11-17-1345-migration-to-trpc.md)",
-      "Bash(bunx tsx:*)"
+      "Bash(bunx tsx:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []
