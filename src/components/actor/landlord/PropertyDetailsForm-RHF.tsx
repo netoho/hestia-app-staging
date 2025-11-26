@@ -14,8 +14,23 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { propertyDetailsSchema } from '@/lib/schemas/shared/property.schema';
+
+// Helper to format date for HTML date input (YYYY-MM-DD)
+const formatDateForInput = (date: Date | string | null | undefined): string => {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString().split('T')[0];
+};
 
 interface PropertyDetailsFormRHFProps {
   initialData: any;
@@ -32,8 +47,9 @@ export default function PropertyDetailsFormRHF({
     resolver: zodResolver(propertyDetailsSchema as any),
     mode: 'onChange',
     defaultValues: {
-      // Address
+      // Addresses
       propertyAddressDetails: initialData?.propertyAddressDetails || {},
+      contractSigningAddressDetails: initialData?.contractSigningAddressDetails || {},
       // Parking
       parkingSpaces: initialData?.parkingSpaces || 0,
       parkingNumbers: initialData?.parkingNumbers || '',
@@ -51,10 +67,10 @@ export default function PropertyDetailsFormRHF({
       petsAllowed: initialData?.petsAllowed ?? false,
       hasInventory: initialData?.hasInventory ?? false,
       hasRules: initialData?.hasRules ?? false,
-      // Dates
-      propertyDeliveryDate: initialData?.propertyDeliveryDate || '',
-      contractSigningDate: initialData?.contractSigningDate || '',
-      contractSigningLocation: initialData?.contractSigningLocation || '',
+      rulesType: initialData?.rulesType || null,
+      // Dates (format Date objects to YYYY-MM-DD strings for HTML input)
+      propertyDeliveryDate: formatDateForInput(initialData?.propertyDeliveryDate),
+      contractSigningDate: formatDateForInput(initialData?.contractSigningDate),
     },
   });
 
@@ -67,36 +83,6 @@ export default function PropertyDetailsFormRHF({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* Property Location */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ubicación de la Propiedad</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormField
-              control={form.control}
-              name="propertyAddressDetails"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>Dirección de la Propiedad</FormLabel>
-                  <FormControl>
-                    <AddressAutocomplete
-                      label=""
-                      value={field.value || {}}
-                      onChange={(addressData) => {
-                        field.onChange(addressData);
-                      }}
-                      required
-                      disabled={disabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
         {/* Property Characteristics */}
         <Card>
           <CardHeader>
@@ -361,7 +347,13 @@ export default function PropertyDetailsFormRHF({
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            // Clear rulesType when hasRules is unchecked
+                            if (!checked) {
+                              form.setValue('rulesType', null);
+                            }
+                          }}
                           disabled={disabled}
                         />
                       </FormControl>
@@ -370,6 +362,35 @@ export default function PropertyDetailsFormRHF({
                   )}
                 />
               </div>
+
+              {/* Rules Type Dropdown - shown when hasRules is true */}
+              {hasRules && (
+                <FormField
+                  control={form.control}
+                  name="rulesType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Reglamento</FormLabel>
+                      <Select
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        disabled={disabled}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona el tipo de reglamento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="CONDOMINIOS">Condominios</SelectItem>
+                          <SelectItem value="COLONOS">Colonos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -422,15 +443,50 @@ export default function PropertyDetailsFormRHF({
 
             <FormField
               control={form.control}
-              name="contractSigningLocation"
+              name="contractSigningAddressDetails"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel optional>Lugar de Firma del Contrato</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      value={field.value || ''}
-                      placeholder="Ciudad o dirección de firma"
+                    <AddressAutocomplete
+                      label=""
+                      value={field.value || {}}
+                      onChange={(addressData) => {
+                        field.onChange(addressData);
+                      }}
+                      disabled={disabled}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Dirección donde se firmará el contrato
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Property Location */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ubicación de la Propiedad</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FormField
+              control={form.control}
+              name="propertyAddressDetails"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Dirección de la Propiedad</FormLabel>
+                  <FormControl>
+                    <AddressAutocomplete
+                      label=""
+                      value={field.value || {}}
+                      onChange={(addressData) => {
+                        field.onChange(addressData);
+                      }}
+                      required
                       disabled={disabled}
                     />
                   </FormControl>

@@ -127,7 +127,7 @@ export function calculatePolicyProgress(policy: PolicyWithActors): PolicyProgres
 
   // Process all landlords
   if (policy.landlords && policy.landlords.length > 0) {
-    policy.landlords.forEach((landlord) => {
+    policy.landlords.filter(landlord => landlord.isPrimary).forEach((landlord) => {
       const progress = calculateActorProgress(landlord, 'landlord');
       actorProgressMap[`landlord-${landlord.id}`] = progress;
       totalActors++;

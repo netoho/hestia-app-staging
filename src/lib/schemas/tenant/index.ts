@@ -185,10 +185,6 @@ export const tenantCompanyCompleteSchema = tenantPersonalTabCompanySchema
   .extend({
     tenantType: z.literal('COMPANY'),
     commercialReferences: tenantCommercialReferencesArraySchema.optional(),
-    // Company-specific optional fields
-    businessType: z.string().optional().nullable(),
-    employeeCount: z.number().positive().optional().nullable(),
-    yearsInBusiness: z.number().positive().optional().nullable(),
   });
 
 /**

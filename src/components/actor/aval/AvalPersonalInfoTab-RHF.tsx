@@ -341,10 +341,10 @@ export default function AvalPersonalInfoTab({
 
             <FormField
               control={form.control}
-              name="alternativePhone"
+              name="workPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel optional>Teléfono Alternativo</FormLabel>
+                  <FormLabel optional>Teléfono de Trabajo</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
                   </FormControl>

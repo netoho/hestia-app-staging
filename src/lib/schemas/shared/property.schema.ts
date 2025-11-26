@@ -25,6 +25,11 @@ export const propertyUtilitiesSchema = z.object({
 });
 
 /**
+ * Rules type enum (matches Prisma RulesType)
+ */
+export const rulesTypeSchema = z.enum(['CONDOMINIOS', 'COLONOS']);
+
+/**
  * Property characteristics schema
  */
 export const propertyCharacteristicsSchema = z.object({
@@ -32,6 +37,7 @@ export const propertyCharacteristicsSchema = z.object({
   petsAllowed: z.boolean().default(false),
   hasInventory: z.boolean().default(false),
   hasRules: z.boolean().default(false),
+  rulesType: rulesTypeSchema.nullable().optional(),
 });
 
 /**
@@ -65,11 +71,8 @@ export const propertyDatesSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha debe ser YYYY-MM-DD')
     .nullable()
     .optional(),
-  contractSigningLocation: z
-    .string()
-    .transform((val) => val === '' ? null : val)
-    .nullable()
-    .optional(),
+  // Structured address for contract signing location
+  contractSigningAddressDetails: partialAddressSchema.nullable().optional(),
 });
 
 /**
@@ -153,3 +156,4 @@ export type PropertyCharacteristics = z.infer<typeof propertyCharacteristicsSche
 export type PropertyParking = z.infer<typeof propertyParkingSchema>;
 export type PropertyDates = z.infer<typeof propertyDatesSchema>;
 export type PropertyDeed = z.infer<typeof propertyDeedSchema>;
+export type RulesType = z.infer<typeof rulesTypeSchema>;

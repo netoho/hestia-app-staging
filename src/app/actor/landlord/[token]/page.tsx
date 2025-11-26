@@ -41,8 +41,8 @@ export default function LandlordPortalPage() {
   const landlords = data?.data || null;
   const policy = data?.policy || null;
   const canEdit = data?.canEdit || false;
-  const informationComplete = data?.data?.[0].informationComplete
-  const isCompleted = data?.data?.[0].informationComplete || false;
+  const isCompleted = data?.data?.some(l => l.informationComplete) ? true : false;
+  const informationComplete = isCompleted
 
   const handleComplete = () => {
     toast({
@@ -241,9 +241,20 @@ export default function LandlordPortalPage() {
         {/* Form Wizard */}
         <LandlordFormWizardSimplified
           token={token}
-          initialData={{ landlords }}
+          initialData={{
+            landlords,
+            propertyDetails: policy?.propertyDetails,
+            policyFinancialData: {
+              securityDeposit: policy?.securityDeposit,
+              maintenanceFee: policy?.maintenanceFee,
+              maintenanceIncludedInRent: policy?.maintenanceIncludedInRent,
+              issuesTaxReceipts: policy?.issuesTaxReceipts,
+              hasIVA: policy?.hasIVA,
+              rentIncreasePercentage: policy?.rentIncreasePercentage,
+              paymentMethod: policy?.paymentMethod,
+            },
+          }}
           policy={policy}
-          canEdit={canEdit}
           onComplete={handleComplete}
         />
       </div>

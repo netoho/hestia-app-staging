@@ -106,16 +106,6 @@ export type LandlordOwnerInfoTabData = {
   curp?: string | null;
 };
 
-export type LandlordBankInfoTabData = {
-  tabName: 'bank-info';
-  bankName?: string | null;
-  accountNumber?: string | null;
-  clabe?: string | null;
-  accountHolder?: string | null;
-  requiresCFDI?: boolean;
-  cfdiData?: any;
-};
-
 export type LandlordPropertyInfoTabData = {
   tabName: 'property-info';
   propertyDeedNumber?: string | null;
@@ -126,6 +116,12 @@ export type LandlordPropertyInfoTabData = {
 
 export type LandlordFinancialInfoTabData = {
   tabName: 'financial-info';
+  bankName?: string | null;
+  accountNumber?: string | null;
+  clabe?: string | null;
+  accountHolder?: string | null;
+  requiresCFDI?: boolean;
+  cfdiData?: any;
   monthlyRentAmount?: number;
   securityDeposit?: number;
   maintenanceFee?: number | null;
@@ -145,7 +141,6 @@ export type LandlordDocumentsTabData = {
 // Union type for all landlord tabs
 export type LandlordTabData =
   | LandlordOwnerInfoTabData
-  | LandlordBankInfoTabData
   | LandlordPropertyInfoTabData
   | LandlordFinancialInfoTabData
   | LandlordDocumentsTabData;

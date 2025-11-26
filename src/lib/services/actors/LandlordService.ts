@@ -49,7 +49,16 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
-      policy: true
+      policy: {
+        include: {
+          propertyDetails: {
+            include: {
+              propertyAddressDetails: true,
+              contractSigningAddressDetails: true,
+            }
+          }
+        }
+      }
     };
   }
 

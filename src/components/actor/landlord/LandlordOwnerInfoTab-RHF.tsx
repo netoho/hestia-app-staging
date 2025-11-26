@@ -165,8 +165,6 @@ export default function LandlordOwnerInfoTabRHF({
 
     const landlord = form.getValues(`landlords.${index}`);
 
-    debugger;
-
     if (landlord?.id) {
       // Has ID → delete from DB first
       try {

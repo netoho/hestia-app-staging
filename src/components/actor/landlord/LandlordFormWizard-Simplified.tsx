@@ -35,7 +35,7 @@ export default function LandlordFormWizardSimplified({
 
   // Landlord data - can be array (multi-actor) or single
   const landlords = initialData?.landlords || (initialData ? [initialData] : []);
-  const primaryLandlord = landlords[0] || {};
+  const primaryLandlord = landlords.find((landlord: any) => landlord.isPrimary) || {};
   const isCompany = primaryLandlord?.isCompany ?? false;
 
   // Tab configuration
@@ -49,8 +49,28 @@ export default function LandlordFormWizardSimplified({
     initialActiveTab: 'owner-info',
   });
 
-  // tRPC mutation for saving
+  // tRPC mutation for saving actor data (owner-info, financial-info, documents)
   const updateMutation = trpc.actor.update.useMutation({
+    onSuccess: () => {
+      utils.actor.getByToken.invalidate({
+        type: 'landlord',
+        token,
+      });
+    },
+  });
+
+  // tRPC mutation for saving property details (property-info tab)
+  const savePropertyDetailsMutation = trpc.actor.savePropertyDetails.useMutation({
+    onSuccess: () => {
+      utils.actor.getByToken.invalidate({
+        type: 'landlord',
+        token,
+      });
+    },
+  });
+
+  // tRPC mutation for saving policy financial data (financial-info tab)
+  const savePolicyFinancialMutation = trpc.actor.savePolicyFinancial.useMutation({
     onSuccess: () => {
       utils.actor.getByToken.invalidate({
         type: 'landlord',
@@ -85,15 +105,48 @@ export default function LandlordFormWizardSimplified({
         description: "Guardando información...",
       });
 
-      await updateMutation.mutateAsync({
-        type: 'landlord',
-        identifier: token,
-        data: {
-          ...data,
-          partial: true,
-          tabName,
-        },
-      });
+      // Property-info tab uses a dedicated mutation for PropertyDetails
+      if (tabName === 'property-info') {
+        await savePropertyDetailsMutation.mutateAsync({
+          type: 'landlord',
+          identifier: token,
+          propertyDetails: data,
+        });
+      } else if (tabName === 'financial-info') {
+        // Financial-info tab needs to save both landlord banking data AND policy financial data
+        const { policyFinancial, ...landlordData } = data;
+
+        // 1. Save landlord banking data (bankName, accountNumber, clabe, etc.)
+        await updateMutation.mutateAsync({
+          type: 'landlord',
+          identifier: token,
+          data: {
+            ...landlordData,
+            partial: true,
+            tabName,
+          },
+        });
+
+        // 2. Save policy financial data (securityDeposit, maintenanceFee, hasIVA, etc.)
+        if (policyFinancial) {
+          await savePolicyFinancialMutation.mutateAsync({
+            type: 'landlord',
+            identifier: token,
+            policyFinancial,
+          });
+        }
+      } else {
+        // Other tabs use the standard actor update
+        await updateMutation.mutateAsync({
+          type: 'landlord',
+          identifier: token,
+          data: {
+            ...data,
+            partial: true,
+            tabName,
+          },
+        });
+      }
 
       toast({
         title: "✓ Guardado",
@@ -112,7 +165,7 @@ export default function LandlordFormWizardSimplified({
         variant: "destructive",
       });
     }
-  }, [token, updateMutation, wizard, toast]);
+  }, [token, updateMutation, savePropertyDetailsMutation, savePolicyFinancialMutation, wizard, toast]);
 
   // Check if all tabs before documents are saved
   const allTabsSaved = tabs
@@ -155,12 +208,12 @@ export default function LandlordFormWizardSimplified({
             />
           )}
 
-          {wizard.activeTab === 'bank-info' && (
-            <LandlordBankInfoTabRHF
-              initialData={primaryLandlord}
-              onSave={(data) => handleTabSave('bank-info', data)}
-            />
-          )}
+          {/*{wizard.activeTab === 'bank-info' && (*/}
+          {/*  <LandlordBankInfoTabRHF*/}
+          {/*    initialData={primaryLandlord}*/}
+          {/*    onSave={(data) => handleTabSave('bank-info', data)}*/}
+          {/*  />*/}
+          {/*)}*/}
 
           {wizard.activeTab === 'property-info' && (
             <PropertyDetailsFormRHF
@@ -232,9 +285,9 @@ export default function LandlordFormWizardSimplified({
               // Trigger form submission in the active tab
               document.querySelector('form')?.requestSubmit();
             }}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || savePropertyDetailsMutation.isPending || savePolicyFinancialMutation.isPending}
           >
-            {updateMutation.isPending ? 'Guardando...' : 'Guardar y Continuar'}
+            {(updateMutation.isPending || savePropertyDetailsMutation.isPending || savePolicyFinancialMutation.isPending) ? 'Guardando...' : 'Guardar y Continuar'}
           </Button>
         </div>
       </div>

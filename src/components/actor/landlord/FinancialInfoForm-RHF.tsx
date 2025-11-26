@@ -106,7 +106,7 @@ export default function FinancialInfoFormRHF({
   const showRentIncrease = policy?.contractLength > 12;
 
   const handleSubmit = async (data: any) => {
-    // Separate the data back into landlord and policy financial
+    // Flat landlord fields (will go to actor.update)
     const landlordData = {
       bankName: data.bankName,
       accountNumber: data.accountNumber,
@@ -116,7 +116,8 @@ export default function FinancialInfoFormRHF({
       additionalInfo: data.additionalInfo,
     };
 
-    const policyFinancialData = {
+    // Policy financial (will go to savePolicyFinancial)
+    const policyFinancial = {
       securityDeposit: data.securityDeposit,
       maintenanceFee: data.maintenanceFee,
       maintenanceIncludedInRent: data.maintenanceIncludedInRent,
@@ -126,7 +127,8 @@ export default function FinancialInfoFormRHF({
       paymentMethod: data.paymentMethod,
     };
 
-    await onSave({ landlord: landlordData, policyFinancial: policyFinancialData });
+    // Spread landlord fields flat + policyFinancial as nested object
+    await onSave({ ...landlordData, policyFinancial });
   };
 
   return (

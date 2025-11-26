@@ -113,8 +113,6 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
       // This prevents validation errors on unfilled tabs
       let filteredFormData: any;
 
-      debugger;
-
       if (actorType === 'tenant') {
         // Use tenant-specific filtering with proper type handling
         const tenantType = formData.tenantType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';

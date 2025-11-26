@@ -12,6 +12,7 @@ import { LandlordService } from '@/lib/services/actors/LandlordService';
 import { AvalService } from '@/lib/services/actors/AvalService';
 import { JointObligorService } from '@/lib/services/actors/JointObligorService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
+import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import { TenantType } from '@prisma/client';
 import { getTabFields } from '@/lib/constants/actorTabFields';
 
@@ -778,6 +779,119 @@ export const actorRouter = createTRPCRouter({
         landlords: results,
         policyData,
       };
+    }),
+
+  /**
+   * Landlord-specific: Save property details for a policy
+   * Used by the property-info tab to save PropertyDetails (parking, utilities, dates, addresses, etc.)
+   */
+  savePropertyDetails: dualAuthProcedure
+    .input(z.object({
+      type: z.literal('landlord'),
+      identifier: z.string(), // token or landlord ID
+      propertyDetails: z.any(), // PropertyDetailsInput
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication - get landlord from token/id
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Unauthorized',
+        });
+      }
+
+      // Get the policy ID from the landlord
+      const landlord = await ctx.prisma.landlord.findUnique({
+        where: { id: auth.actor.id },
+        select: { policyId: true },
+      });
+
+      if (!landlord?.policyId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Landlord not associated with a policy',
+        });
+      }
+
+      // Save property details using PropertyDetailsService
+      const propertyDetailsService = new PropertyDetailsService(ctx.prisma);
+      const result = await propertyDetailsService.upsert(landlord.policyId, input.propertyDetails);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error?.message || 'Failed to save property details',
+        });
+      }
+
+      console.log('[Actor Router] Property details saved for policy:', landlord.policyId);
+      return result.value;
+    }),
+
+  /**
+   * Landlord-specific: Save policy financial data
+   * Used by the financial-info tab to save financial fields to the Policy table
+   */
+  savePolicyFinancial: dualAuthProcedure
+    .input(z.object({
+      type: z.literal('landlord'),
+      identifier: z.string(), // token or landlord ID
+      policyFinancial: z.object({
+        securityDeposit: z.number().optional().nullable(),
+        maintenanceFee: z.number().optional().nullable(),
+        maintenanceIncludedInRent: z.boolean().optional(),
+        issuesTaxReceipts: z.boolean().optional(),
+        hasIVA: z.boolean().optional(),
+        rentIncreasePercentage: z.number().optional().nullable(),
+        paymentMethod: z.string().optional().nullable(),
+      }),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication - get landlord from token/id
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Unauthorized',
+        });
+      }
+
+      // Get the policy ID from the landlord
+      const landlord = await ctx.prisma.landlord.findUnique({
+        where: { id: auth.actor.id },
+        select: { policyId: true },
+      });
+
+      if (!landlord?.policyId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Landlord not associated with a policy',
+        });
+      }
+
+      // Update Policy with financial fields
+      const updatedPolicy = await ctx.prisma.policy.update({
+        where: { id: landlord.policyId },
+        data: input.policyFinancial,
+      });
+
+      console.log('[Actor Router] Policy financial data saved for policy:', landlord.policyId);
+      return updatedPolicy;
     }),
 
   /**
