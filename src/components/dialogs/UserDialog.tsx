@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,10 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { User } from '@/lib/types';
+import { trpc } from '@/lib/trpc/client';
 
 const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -50,23 +50,38 @@ interface UserDialogProps {
 }
 
 export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
   });
 
   const isEditMode = !!user;
 
+  const createMutation = trpc.staff.create.useMutation({
+    onSuccess: () => {
+      onSuccess();
+      onOpenChange(false);
+    },
+  });
+
+  const updateMutation = trpc.staff.update.useMutation({
+    onSuccess: () => {
+      onSuccess();
+      onOpenChange(false);
+    },
+  });
+
+  const error = createMutation.error?.message || updateMutation.error?.message;
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
   useEffect(() => {
     if (open) {
-      setError(null);
+      createMutation.reset();
+      updateMutation.reset();
       if (user) {
         form.reset({
           name: user.name || '',
           email: user.email || '',
-          role: (user.role as any) || 'BROKER',
+          role: (user.role as 'BROKER' | 'ADMIN' | 'STAFF') || 'BROKER',
         });
       } else {
         form.reset({
@@ -79,39 +94,14 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
   }, [user, open, form]);
 
   const onSubmit = async (data: UserFormData) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const url = isEditMode ? `/api/staff/users/${user?.id}` : '/api/staff/users';
-      const method = isEditMode ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+    if (isEditMode && user) {
+      await updateMutation.mutateAsync({
+        id: user.id,
+        name: data.name,
+        role: data.role,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save user');
-      }
-
-      // If creating a new user, show success message about invitation
-      if (!isEditMode) {
-        onSuccess();
-        onOpenChange(false);
-        // The API will handle sending the invitation email
-      } else {
-        onSuccess();
-        onOpenChange(false);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
+    } else {
+      await createMutation.mutateAsync(data);
     }
   };
 
@@ -128,7 +118,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         </DialogHeader>
 
         {error && (
-          <Alert variant={error.includes('successfully') ? 'default' : 'destructive'}>
+          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -205,8 +195,8 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditMode ? 'Update User' : 'Create User'}
               </Button>
             </DialogFooter>

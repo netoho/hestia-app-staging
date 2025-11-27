@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,13 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, CheckCircle, AlertCircle, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
-
-interface UserInfo {
-  id: string;
-  name?: string;
-  email: string;
-  role: string;
-}
+import { trpc } from '@/lib/trpc/client';
 
 export default function OnboardingPage() {
   const params = useParams();
@@ -25,10 +19,7 @@ export default function OnboardingPage() {
   const { toast } = useToast();
   const token = params.token as string;
 
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -38,30 +29,49 @@ export default function OnboardingPage() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
 
-  // Validate token on mount
-  useEffect(() => {
-    const validateToken = async () => {
-      try {
-        const response = await fetch(`/api/onboard/${token}`);
+  // tRPC query to validate token
+  const { data, isLoading, error: tokenError } = trpc.onboard.validateToken.useQuery(
+    { token },
+    { enabled: !!token }
+  );
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || 'Invalid or expired invitation');
+  // tRPC mutation to complete onboarding
+  const completeMutation = trpc.onboard.complete.useMutation({
+    onSuccess: async () => {
+      // Upload avatar if provided (keep as REST for FormData)
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+
+        try {
+          const avatarResponse = await fetch('/api/user/avatar', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!avatarResponse.ok) {
+            console.error('Failed to upload avatar');
+            // Don't fail the whole process if avatar upload fails
+          }
+        } catch (err) {
+          console.error('Avatar upload error:', err);
         }
-
-        const data = await response.json();
-        setUserInfo(data.user);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
       }
-    };
 
-    if (token) {
-      validateToken();
-    }
-  }, [token]);
+      toast({
+        title: t.pages.onboard.toast.success.title,
+        description: t.pages.onboard.toast.success.description,
+      });
+
+      // Redirect to profile page
+      router.push('/dashboard/profile');
+    },
+    onError: (err) => {
+      setFormError(err.message);
+    },
+  });
+
+  const userInfo = data?.user;
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,71 +109,28 @@ export default function OnboardingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
 
     // Validate passwords
     if (password !== confirmPassword) {
-      setError(t.pages.onboard.validation.passwordMismatch);
+      setFormError(t.pages.onboard.validation.passwordMismatch);
       return;
     }
 
     if (password.length < 6) {
-      setError(t.pages.onboard.validation.passwordMinLength);
+      setFormError(t.pages.onboard.validation.passwordMinLength);
       return;
     }
 
-    setSubmitting(true);
-
-    try {
-      // First, set the password and profile info
-      const response = await fetch(`/api/onboard/${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          password,
-          phone,
-          address,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to complete onboarding');
-      }
-
-      // Upload avatar if provided
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append('file', avatarFile);
-
-        const avatarResponse = await fetch('/api/user/avatar', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!avatarResponse.ok) {
-          console.error('Failed to upload avatar');
-          // Don't fail the whole process if avatar upload fails
-        }
-      }
-
-      toast({
-        title: t.pages.onboard.toast.success.title,
-        description: t.pages.onboard.toast.success.description,
-      });
-
-      // Redirect to profile page
-      router.push('/dashboard/profile');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setSubmitting(false);
-    }
+    await completeMutation.mutateAsync({
+      token,
+      password,
+      phone: phone || undefined,
+      address: address || undefined,
+    });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -176,14 +143,14 @@ export default function OnboardingPage() {
     );
   }
 
-  if (error && !userInfo) {
+  if (tokenError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
             <CardTitle>{t.pages.onboard.invalidInvitation.title}</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardDescription>{tokenError.message}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground mb-4">
@@ -223,10 +190,10 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {error && (
+          {formError && (
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{formError}</AlertDescription>
             </Alert>
           )}
 
@@ -274,7 +241,7 @@ export default function OnboardingPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t.pages.onboard.form.password.placeholder}
                   required
-                  disabled={submitting}
+                  disabled={completeMutation.isPending}
                 />
                 <p className="text-xs text-muted-foreground">
                   {t.pages.onboard.form.password.minLength}
@@ -290,7 +257,7 @@ export default function OnboardingPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder={t.pages.onboard.form.confirmPassword.placeholder}
                   required
-                  disabled={submitting}
+                  disabled={completeMutation.isPending}
                 />
               </div>
 
@@ -303,7 +270,7 @@ export default function OnboardingPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={t.pages.onboard.form.phone.placeholder}
-                  disabled={submitting}
+                  disabled={completeMutation.isPending}
                 />
               </div>
 
@@ -315,7 +282,7 @@ export default function OnboardingPage() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder={t.pages.onboard.form.address.placeholder}
-                  disabled={submitting}
+                  disabled={completeMutation.isPending}
                 />
               </div>
             </div>
@@ -323,9 +290,9 @@ export default function OnboardingPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={submitting || !password || !confirmPassword}
+              disabled={completeMutation.isPending || !password || !confirmPassword}
             >
-              {submitting ? (
+              {completeMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t.pages.onboard.submit.submitting}

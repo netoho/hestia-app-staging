@@ -21,7 +21,7 @@ model User {
   name          String?
   email         String?         @unique
   emailVerified DateTime?
-  image         String?
+  avatarUrl     String?
   password      String?
   role          UserRole        @default(STAFF)
   phone         String?
@@ -1215,5 +1215,6 @@ enum ValidationStatus {
 
 enum RulesType {
   CONDOMINIOS
+  CONDOMINOS
   COLONOS
 }

@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         email: true,
-        image: true,
+        avatarUrl: true,
       },
     });
 
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      avatarUrl: user.image,
+      avatarUrl: user.avatarUrl,
       user,
     });
   } catch (error) {

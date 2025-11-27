@@ -27,7 +27,7 @@ export const propertyUtilitiesSchema = z.object({
 /**
  * Rules type enum (matches Prisma RulesType)
  */
-export const rulesTypeSchema = z.enum(['CONDOMINIOS', 'COLONOS']);
+export const rulesTypeSchema = z.enum(['CONDOMINIOS', 'CONDOMINOS', 'COLONOS']);
 
 /**
  * Property characteristics schema

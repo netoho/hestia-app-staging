@@ -9,7 +9,7 @@ interface PropertyFeaturesSectionProps {
   petsAllowed?: boolean;
   hasInventory?: boolean;
   hasRules?: boolean;
-  rulesType?: 'condominios' | 'colonos';
+  rulesType?: 'condominos' | 'colonos';
   onChange: (field: string, value: any) => void;
   disabled?: boolean;
   errors?: Record<string, string>;
@@ -84,7 +84,7 @@ export function PropertyFeaturesSection({
               <SelectValue placeholder="Selecciona el tipo de reglamento" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="condominios">Condominios</SelectItem>
+              <SelectItem value="condominos">Condóminos</SelectItem>
               <SelectItem value="colonos">Colonos</SelectItem>
             </SelectContent>
           </Select>

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { trpc } from '@/lib/trpc/client';
 
 interface ActorShareLink {
   actorId: string;
@@ -12,11 +13,6 @@ interface ActorShareLink {
   informationComplete: boolean;
 }
 
-interface ShareLinksData {
-  policyNumber: string;
-  shareLinks: ActorShareLink[];
-}
-
 interface UseShareLinksReturn {
   loading: boolean;
   error: Error | null;
@@ -25,7 +21,7 @@ interface UseShareLinksReturn {
   copyToClipboard: (url: string, actorName: string) => Promise<void>;
   generateWhatsAppUrl: (phone: string, url: string, actorName: string, policyNumber: string) => string;
   resendEmail: (actorId: string, actorType: string) => Promise<void>;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 /**
@@ -38,50 +34,31 @@ interface UseShareLinksReturn {
  */
 export function useShareLinks(policyId: string): UseShareLinksReturn {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [shareLinks, setShareLinks] = useState<ActorShareLink[]>([]);
-  const [policyNumber, setPolicyNumber] = useState<string | null>(null);
 
-  const fetchShareLinks = useCallback(async () => {
-    if (!policyId) return;
+  // tRPC query for share links
+  const { data, isLoading, error, refetch } = trpc.policy.getShareLinks.useQuery(
+    { policyId },
+    { enabled: !!policyId }
+  );
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/policies/${policyId}/share-links`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch share links');
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setShareLinks(data.data.shareLinks || []);
-        setPolicyNumber(data.data.policyNumber || null);
-      } else {
-        throw new Error(data.error || 'Failed to fetch share links');
-      }
-    } catch (err) {
-      console.error('Error fetching share links:', err);
-      const errorObj = err instanceof Error ? err : new Error('Unknown error');
-      setError(errorObj);
-
+  // tRPC mutation for sending invitations
+  const sendInvitationsMutation = trpc.policy.sendInvitations.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Correo enviado',
+        description: 'La invitación ha sido enviada exitosamente',
+      });
+      refetch();
+    },
+    onError: (err) => {
+      console.error('Error sending email:', err);
       toast({
         title: 'Error',
-        description: 'No se pudieron cargar los enlaces de invitación',
+        description: 'No se pudo enviar el correo',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
-    }
-  }, [policyId, toast]);
-
-  useEffect(() => {
-    fetchShareLinks();
-  }, [fetchShareLinks]);
+    },
+  });
 
   const copyToClipboard = useCallback(async (url: string, actorName: string) => {
     try {
@@ -116,48 +93,21 @@ export function useShareLinks(policyId: string): UseShareLinksReturn {
   }, []);
 
   const resendEmail = useCallback(async (actorId: string, actorType: string) => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/send-invitations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actors: [actorType],
-          resend: true,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send email');
-      }
-
-      toast({
-        title: 'Correo enviado',
-        description: 'La invitación ha sido enviada exitosamente',
-      });
-
-      // Refetch share links after sending email
-      await fetchShareLinks();
-    } catch (err) {
-      console.error('Error sending email:', err);
-
-      toast({
-        title: 'Error',
-        description: 'No se pudo enviar el correo',
-        variant: 'destructive',
-      });
-
-      throw err;
-    }
-  }, [policyId, toast, fetchShareLinks]);
+    await sendInvitationsMutation.mutateAsync({
+      policyId,
+      actors: [actorType],
+      resend: true,
+    });
+  }, [policyId, sendInvitationsMutation]);
 
   return {
-    loading,
-    error,
-    shareLinks,
-    policyNumber,
+    loading: isLoading,
+    error: error ? new Error(error.message) : null,
+    shareLinks: (data?.shareLinks || []) as ActorShareLink[],
+    policyNumber: data?.policyNumber || null,
     copyToClipboard,
     generateWhatsAppUrl,
     resendEmail,
-    refetch: fetchShareLinks,
+    refetch,
   };
 }
