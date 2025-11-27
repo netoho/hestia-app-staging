@@ -108,9 +108,9 @@ class EmailProvider {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
-        // Additional HostGator-specific settings
+        // TLS settings - require valid certificates in production
         tls: {
-          rejectUnauthorized: false // May be needed for some shared hosting providers
+          rejectUnauthorized: process.env.NODE_ENV === 'production'
         }
       });
     }

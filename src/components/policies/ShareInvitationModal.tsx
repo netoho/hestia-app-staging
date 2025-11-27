@@ -100,8 +100,10 @@ export default function ShareInvitationModal({
         title: 'Correo enviado',
         description: 'La invitación ha sido enviada exitosamente',
       });
-      // Invalidate and refetch share links
+      // Invalidate and refetch share links and related data
       utils.policy.getShareLinks.invalidate({ policyId });
+      utils.policy.getById.invalidate({ id: policyId });
+      utils.actor.listByPolicy.invalidate({ policyId });
     },
     onError: (error) => {
       console.error('Error sending email:', error);
