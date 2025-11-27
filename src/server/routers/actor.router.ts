@@ -48,6 +48,7 @@ import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 import { getDocumentsByActor } from '@/lib/services/documentService';
 import { deleteDocument, getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
+import { logPolicyActivity } from '@/lib/services/policyService';
 
 // Actor types enum
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor' ]);
@@ -563,6 +564,24 @@ export const actorRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: saveResult.error?.message || 'Update failed',
+        });
+      }
+
+      // Log activity for admin edits
+      if (auth.authType === 'admin' && tabName && auth.actor.policyId) {
+        const actorTypeLabels: Record<string, string> = {
+          tenant: 'inquilino',
+          landlord: 'arrendador',
+          aval: 'aval',
+          jointObligor: 'obligado solidario',
+        };
+        await logPolicyActivity({
+          policyId: auth.actor.policyId,
+          action: 'ACTOR_EDITED_BY_ADMIN',
+          description: `Admin editó la pestaña "${tabName}" del ${actorTypeLabels[input.type] || input.type}`,
+          performedById: auth.userId,
+          performedByType: 'user',
+          details: { tabName, actorType: input.type, actorId: auth.actor.id },
         });
       }
 

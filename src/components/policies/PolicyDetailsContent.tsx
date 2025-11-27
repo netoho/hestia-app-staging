@@ -8,6 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft,
@@ -81,14 +93,21 @@ export default function PolicyDetailsContent({
   onRefresh
 }: PolicyDetailsContentProps) {
   const router = useRouter();
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
   const [currentTab, setCurrentTab] = useState('overview');
   const [tabLoading, setTabLoading] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [editingActor, setEditingActor] = useState<{
     type: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
-    actor: any;
+    actorId: string;
   } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [markCompleteActor, setMarkCompleteActor] = useState<{
+    type: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
+    actorId: string;
+    name: string;
+  } | null>(null);
 
   // Toggle states for actor views
   const [landlordView, setLandlordView] = useState<'info' | 'history'>('info');
@@ -121,6 +140,27 @@ export default function PolicyDetailsContent({
     },
   });
 
+  // Admin submit actor mutation (mark as complete)
+  const adminSubmitMutation = trpc.actor.adminSubmitActor.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Actor marcado como completo',
+        description: `El actor ha sido marcado como completo exitosamente`,
+      });
+      // Invalidate queries
+      utils.actor.listByPolicy.invalidate({ policyId });
+      onRefresh();
+      setMarkCompleteActor(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al marcar como completo',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSendInvitations = async () => {
     setSending('all');
     sendInvitationsMutation.mutate({
@@ -145,6 +185,25 @@ export default function PolicyDetailsContent({
       policyId,
       status: 'APPROVED' as const,
     });
+  };
+
+  const handleMarkComplete = (skipValidation: boolean) => {
+    if (!markCompleteActor) return;
+    adminSubmitMutation.mutate({
+      type: markCompleteActor.type,
+      id: markCompleteActor.actorId,
+      skipValidation,
+    });
+  };
+
+  const getActorTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      tenant: 'Inquilino',
+      landlord: 'Arrendador',
+      aval: 'Aval',
+      jointObligor: 'Obligado Solidario',
+    };
+    return labels[type] || 'Actor';
   };
 
   const getStatusBadge = (status: string) => {
@@ -254,10 +313,19 @@ export default function PolicyDetailsContent({
       actorType={actorType}
       policyId={policyId}
       getVerificationBadge={getVerificationBadge}
-      onEditClick={() => setEditingActor({ type: actorType, actor })}
+      onEditClick={() => setEditingActor({ type: actorType, actorId: actor?.id })}
       onSendInvitation={
         permissions.canSendInvitations && !actor?.informationComplete
           ? () => sendIndividualInvitation(actorType, actor?.id)
+          : undefined
+      }
+      onMarkComplete={
+        permissions.canEdit && !actor?.informationComplete
+          ? () => setMarkCompleteActor({
+              type: actorType,
+              actorId: actor?.id,
+              name: actor?.companyName || actor?.fullName || `${actor?.firstName || ''} ${actor?.paternalLastName || ''}`.trim() || 'Actor',
+            })
           : undefined
       }
       canEdit={permissions.canEdit}
@@ -699,11 +767,12 @@ export default function PolicyDetailsContent({
         <InlineActorEditor
           isOpen={!!editingActor}
           onClose={() => setEditingActor(null)}
-          actor={editingActor.actor}
+          actorId={editingActor.actorId}
           actorType={editingActor.type}
+          policyId={policyId}
           policy={policy}
-          onSave={async () => {
-            await onRefresh();
+          onSave={() => {
+            onRefresh();
             setEditingActor(null);
           }}
         />
@@ -716,6 +785,48 @@ export default function PolicyDetailsContent({
         policyId={policyId}
         policyNumber={policy.policyNumber}
       />
+
+      {/* Mark Complete Confirmation Dialog */}
+      <AlertDialog open={!!markCompleteActor} onOpenChange={(open) => !open && setMarkCompleteActor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Marcar {markCompleteActor ? getActorTypeLabel(markCompleteActor.type) : 'Actor'} como Completo
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion marcara a {markCompleteActor?.name} como completo.
+              Si faltan documentos requeridos, puede elegir continuar de todas formas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                Si hay documentos faltantes, se mostrara un error. Use &quot;Forzar Completo&quot; para omitir la validacion.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => handleMarkComplete(true)}
+              disabled={adminSubmitMutation.isPending}
+            >
+              Forzar Completo
+            </Button>
+            <AlertDialogAction
+              onClick={() => handleMarkComplete(false)}
+              disabled={adminSubmitMutation.isPending}
+            >
+              {adminSubmitMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Marcar Completo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

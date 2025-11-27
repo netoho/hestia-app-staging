@@ -253,7 +253,7 @@ export default function LandlordFormWizardSimplified({
                 token={token}
                 landlordId={primaryLandlord?.id}
                 isCompany={isCompany}
-                allTabsSaved={allTabsSaved}
+                allTabsSaved={allTabsSaved || isAdminEdit}
                 initialDocuments={initialData?.documents || []}
                 onRequiredDocsChange={setRequiredDocsUploaded}
                 isAdminEdit={isAdminEdit}
