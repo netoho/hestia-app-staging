@@ -252,7 +252,7 @@ export default function QuickComparisonPanel({
           <div className="mt-3 pt-2 border-t flex items-center justify-between text-xs text-gray-500">
             <span>Renta mensual: {formatCurrency(rentAmount)}</span>
             <span className="text-[10px]">
-              RTI = Ingreso / Renta (verde ≥3x, amarillo 2-3x, rojo &lt;2x)
+              RTI = Ingreso / Renta (verde ≥3x, amarillo 2-3x, rojo {'<'}2x)
             </span>
           </div>
         </CardContent>
