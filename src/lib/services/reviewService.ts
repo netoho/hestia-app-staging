@@ -8,6 +8,7 @@ export interface PolicyReviewData {
   policyNumber: string;
   status: string;
   propertyAddress: string;
+  rentAmount: number;
   actors: ActorReviewInfo[];
   progress: {
     overall: number;
@@ -25,6 +26,7 @@ export interface ActorReviewInfo {
   name: string;
   email?: string;
   isCompany: boolean;
+  monthlyIncome?: number;
   sections: SectionValidationInfo[];
   documents: DocumentValidationInfo[];
   progress: {
@@ -141,6 +143,7 @@ class ReviewService {
       policyNumber: policy.policyNumber,
       status: policy.status,
       propertyAddress: policy.propertyAddress,
+      rentAmount: policy.rentAmount,
       actors,
       progress: {
         overall: progress.overallProgress,
@@ -222,6 +225,7 @@ class ReviewService {
         ) : 'Sin nombre'),
       email: actor.email,
       isCompany: actor.isCompany || false,
+      monthlyIncome: actor.monthlyIncome || undefined,
       sections,
       documents,
       progress: {

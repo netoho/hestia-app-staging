@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import SectionValidator from './SectionValidator';
 import ReviewDocumentCard from './ReviewDocumentCard';
+import FieldSearchBar, { SearchResults } from './FieldSearchBar';
 import { ActorReviewInfo, SectionValidationInfo, DocumentValidationInfo } from '@/lib/services/reviewService';
 import type { ReviewIcon } from '@/types/review';
 
@@ -31,6 +32,15 @@ export default function ActorReviewCard({
   onValidationUpdate
 }: ActorReviewCardProps) {
   const [activeTab, setActiveTab] = useState('sections');
+  const [searchResults, setSearchResults] = useState<SearchResults>({
+    query: '',
+    matchingSections: [],
+    matchCount: 0,
+  });
+
+  const handleSearchResults = useCallback((results: SearchResults) => {
+    setSearchResults(results);
+  }, []);
 
   const getSectionIcon = (section: string): ReviewIcon => {
     switch (section) {
@@ -164,6 +174,12 @@ export default function ActorReviewCard({
           </TabsList>
 
           <TabsContent value="sections" className="mt-6">
+            {/* Field Search Bar */}
+            <FieldSearchBar
+              sections={actor.sections}
+              onSearchResults={handleSearchResults}
+            />
+
             <ScrollArea className="h-[500px] pr-4">
               <div className="space-y-4">
                 {actor.sections.map((section) => (
@@ -175,6 +191,8 @@ export default function ActorReviewCard({
                     policyId={policyId}
                     icon={getSectionIcon(section.section)}
                     onValidationComplete={onValidationUpdate}
+                    searchQuery={searchResults.query}
+                    forceExpanded={searchResults.matchingSections.includes(section.section)}
                   />
                 ))}
               </div>
