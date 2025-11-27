@@ -226,7 +226,7 @@ model PropertyDetails {
   // Additional Property Info
   hasInventory      Boolean     @default(false)
   hasRules          Boolean     @default(false)
-  rulesType         RulesType?  // Type of rules (Condominios or Colonos)
+  rulesType         RulesType?  // Type of rules (Condominios or Colonos or Condóminos)
   petsAllowed       Boolean     @default(false)
   propertyDeliveryDate DateTime?
   contractSigningDate DateTime?
