@@ -1215,5 +1215,6 @@ enum ValidationStatus {
 
 enum RulesType {
   CONDOMINIOS
+  CONDOMINOS
   COLONOS
 }
