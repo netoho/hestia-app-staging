@@ -382,7 +382,7 @@ export default function PropertyDetailsFormRHF({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="CONDOMINIOS">Condominios</SelectItem>
+                          <SelectItem value="CONDOMINOS">Condóminos</SelectItem>
                           <SelectItem value="COLONOS">Colonos</SelectItem>
                         </SelectContent>
                       </Select>

@@ -98,6 +98,11 @@ export default function AvalFormWizard({
       wizard.markTabSaved(tabName);
       wizard.goToNextTab(newTabSaved);
 
+      // Call onComplete when all tabs are saved (only for public portal, not admin)
+      if (wizard.isLastTabAndAllSaved() && !isAdminEdit) {
+        onComplete?.();
+      }
+
       return true;
     } catch (error) {
       console.error('Save error:', error);

@@ -33,8 +33,6 @@ export default function JointObligorReferencesTabRHF({
   // Get schema - automatically validates exactly 3 references
   const schema = getJointObligorTabSchema('references', jointObligorType);
 
-  console.log('Initial Data:', initialData);
-
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',

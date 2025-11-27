@@ -7,35 +7,90 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
 
-// Import existing form wizards
-import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard';
-import LandlordFormWizard from '@/components/actor/landlord/LandlordFormWizard';
-import AvalFormWizard from '@/components/actor/aval/AvalFormWizard';
-import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard';
+// Import simplified form wizards
+import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
+import LandlordFormWizard from '@/components/actor/landlord/LandlordFormWizard-Simplified';
+import AvalFormWizard from '@/components/actor/aval/AvalFormWizard-Simplified';
+import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard-Simplified';
 
 interface InlineActorEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  actor: any;
+  actorId: string;
   actorType: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
+  policyId: string;
   policy: any;
-  onSave?: () => Promise<void>;
+  onSave?: () => void;
 }
 
 export default function InlineActorEditor({
   isOpen,
   onClose,
-  actor,
+  actorId,
   actorType,
+  policyId,
   policy,
   onSave,
 }: InlineActorEditorProps) {
+  const utils = trpc.useUtils();
   const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+
+  // Admin submit mutation
+  const adminSubmitMutation = trpc.actor.adminSubmitActor.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Actor marcado como completo',
+        description: `El ${getActorTypeLabel().toLowerCase()} ha sido marcado como completo exitosamente`,
+      });
+      // Invalidate queries
+      utils.actor.listByPolicy.invalidate({ policyId });
+      if (actorType !== 'landlord') {
+        utils.actor.getById.invalidate({ type: actorType, id: actorId });
+      }
+      onSave?.();
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al marcar como completo',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Fetch data using admin endpoints (same data shape as public pages)
+
+  // For non-landlord actors: use getById
+  const singleActorQuery = trpc.actor.getById.useQuery(
+    { type: actorType, id: actorId },
+    { enabled: actorType !== 'landlord' && isOpen && !!actorId }
+  );
+
+  // For landlords: get ALL landlords for this policy (to match public page behavior)
+  const landlordsQuery = trpc.actor.listByPolicy.useQuery(
+    { policyId, type: 'landlord' },
+    { enabled: actorType === 'landlord' && isOpen && !!policyId }
+  );
 
   const getActorTypeLabel = () => {
     switch (actorType) {
@@ -52,41 +107,76 @@ export default function InlineActorEditor({
     }
   };
 
-  const handleComplete = async () => {
-    try {
-      setSaving(true);
-
-      if (onSave) {
-        await onSave();
-      }
-
-      toast({
-        title: 'Información actualizada',
-        description: `La información del ${getActorTypeLabel().toLowerCase()} ha sido actualizada exitosamente`,
-      });
-
-      onClose();
-    } catch (error) {
-      console.error('Error saving actor:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al actualizar la información',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
+  const handleComplete = () => {
+    // Invalidate admin queries to ensure fresh data
+    if (actorType === 'landlord') {
+      utils.actor.listByPolicy.invalidate({ policyId, type: 'landlord' });
+    } else {
+      utils.actor.getById.invalidate({ type: actorType, id: actorId });
     }
+    // Also invalidate the general listByPolicy for policy details refresh
+    utils.actor.listByPolicy.invalidate({ policyId });
+
+    onSave?.();
+    onClose();
+  };
+
+  // Build initialData matching public page structure exactly
+  const getInitialData = () => {
+    if (actorType === 'landlord') {
+      const landlords = landlordsQuery.data?.map(l => l.actor) || [];
+      return {
+        landlords,
+        propertyDetails: policy?.propertyDetails,
+        policyFinancialData: {
+          securityDeposit: policy?.securityDeposit,
+          maintenanceFee: policy?.maintenanceFee,
+          maintenanceIncludedInRent: policy?.maintenanceIncludedInRent,
+          issuesTaxReceipts: policy?.issuesTaxReceipts,
+          hasIVA: policy?.hasIVA,
+          rentIncreasePercentage: policy?.rentIncreasePercentage,
+          paymentMethod: policy?.paymentMethod,
+        },
+      };
+    }
+    // For tenant/aval/jointObligor - direct actor object
+    return singleActorQuery.data;
+  };
+
+  // Check loading state
+  const isLoading = actorType === 'landlord'
+    ? landlordsQuery.isLoading
+    : singleActorQuery.isLoading;
+
+  const hasData = actorType === 'landlord'
+    ? landlordsQuery.data && landlordsQuery.data.length > 0
+    : !!singleActorQuery.data;
+
+  // Check if actor is already complete
+  const isActorComplete = actorType === 'landlord'
+    ? landlordsQuery.data?.some(l => l.actor?.informationComplete)
+    : singleActorQuery.data?.informationComplete;
+
+  // Handle mark as complete
+  const handleMarkComplete = (skipValidation: boolean) => {
+    adminSubmitMutation.mutate({
+      type: actorType,
+      id: actorId,
+      skipValidation,
+    });
+    setShowCompleteConfirm(false);
   };
 
   const getFormWizard = () => {
-    // For admin editing, pass the actor ID and indicate admin mode
-    // The form wizards will use admin endpoints instead of token-based endpoints
+    const initialData = getInitialData();
+
+    // Common props for all wizards
     const wizardProps = {
-      token: actor?.id, // Pass actor ID instead of token
-      isAdminEdit: true, // Flag to indicate this is an admin edit
-      initialData: actor,
+      token: actorId, // Will be used as identifier in actor.update
+      initialData,
       policy,
       onComplete: handleComplete,
+      isAdminEdit: true,
     };
 
     switch (actorType) {
@@ -109,20 +199,94 @@ export default function InlineActorEditor({
         <DialogHeader>
           <DialogTitle>Editar {getActorTypeLabel()}</DialogTitle>
           <DialogDescription>
-            Actualice la información del {getActorTypeLabel().toLowerCase()} para esta protección
+            Actualice la informacion del {getActorTypeLabel().toLowerCase()} para esta proteccion
           </DialogDescription>
         </DialogHeader>
 
-        {saving ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : hasData ? (
+          <>
+            <div className="mt-4">
+              {getFormWizard()}
+            </div>
+
+            {/* Mark Complete Section */}
+            {!isActorComplete && (
+              <DialogFooter className="mt-6 pt-4 border-t">
+                <div className="flex w-full items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Marcar como completo cuando toda la informacion este lista
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCompleteConfirm(true)}
+                    disabled={adminSubmitMutation.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Marcar como Completo
+                  </Button>
+                </div>
+              </DialogFooter>
+            )}
+
+            {isActorComplete && (
+              <Alert className="mt-4 border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  Este {getActorTypeLabel().toLowerCase()} ya esta marcado como completo
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
         ) : (
-          <div className="mt-4">
-            {getFormWizard()}
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            No se encontraron datos del actor
           </div>
         )}
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar {getActorTypeLabel()} como Completo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion marcara al {getActorTypeLabel().toLowerCase()} como completo.
+              Si faltan documentos requeridos, puede elegir continuar de todas formas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                Si hay documentos faltantes, se mostrara un error. Use &quot;Forzar Completo&quot; para omitir la validacion.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => handleMarkComplete(true)}
+              disabled={adminSubmitMutation.isPending}
+            >
+              Forzar Completo
+            </Button>
+            <AlertDialogAction
+              onClick={() => handleMarkComplete(false)}
+              disabled={adminSubmitMutation.isPending}
+            >
+              {adminSubmitMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Marcar Completo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

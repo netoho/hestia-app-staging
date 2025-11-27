@@ -52,7 +52,7 @@ export default function LandlordFormWizardSimplified({
   // tRPC mutation for saving actor data (owner-info, financial-info, documents)
   const updateMutation = trpc.actor.update.useMutation({
     onSuccess: () => {
-      utils.actor.getByToken.invalidate({
+      utils.actor.getManyByToken.invalidate({
         type: 'landlord',
         token,
       });
@@ -62,7 +62,7 @@ export default function LandlordFormWizardSimplified({
   // tRPC mutation for saving property details (property-info tab)
   const savePropertyDetailsMutation = trpc.actor.savePropertyDetails.useMutation({
     onSuccess: () => {
-      utils.actor.getByToken.invalidate({
+      utils.actor.getManyByToken.invalidate({
         type: 'landlord',
         token,
       });
@@ -72,7 +72,7 @@ export default function LandlordFormWizardSimplified({
   // tRPC mutation for saving policy financial data (financial-info tab)
   const savePolicyFinancialMutation = trpc.actor.savePolicyFinancial.useMutation({
     onSuccess: () => {
-      utils.actor.getByToken.invalidate({
+      utils.actor.getManyByToken.invalidate({
         type: 'landlord',
         token,
       });
@@ -82,7 +82,7 @@ export default function LandlordFormWizardSimplified({
   // tRPC mutation for deleting co-owners
   const deleteMutation = trpc.actor.deleteCoOwner.useMutation({
     onSuccess: () => {
-      utils.actor.getByToken.invalidate({
+      utils.actor.getManyByToken.invalidate({
         type: 'landlord',
         token,
       });
@@ -157,6 +157,11 @@ export default function LandlordFormWizardSimplified({
       const newTabSaved = { ...wizard.tabSaved, [tabName]: true };
       wizard.markTabSaved(tabName);
       wizard.goToNextTab(newTabSaved);
+
+      // Call onComplete when all tabs are saved (only for public portal, not admin)
+      if (wizard.isLastTabAndAllSaved() && !isAdminEdit) {
+        onComplete?.();
+      }
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -253,7 +258,7 @@ export default function LandlordFormWizardSimplified({
                 token={token}
                 landlordId={primaryLandlord?.id}
                 isCompany={isCompany}
-                allTabsSaved={allTabsSaved}
+                allTabsSaved={allTabsSaved || isAdminEdit}
                 initialDocuments={initialData?.documents || []}
                 onRequiredDocsChange={setRequiredDocsUploaded}
                 isAdminEdit={isAdminEdit}

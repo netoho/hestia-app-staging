@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import {
   Dialog,
   DialogContent,
@@ -100,8 +100,10 @@ export default function ShareInvitationModal({
         title: 'Correo enviado',
         description: 'La invitación ha sido enviada exitosamente',
       });
-      // Invalidate and refetch share links
+      // Invalidate and refetch share links and related data
       utils.policy.getShareLinks.invalidate({ policyId });
+      utils.policy.getById.invalidate({ id: policyId });
+      utils.actor.listByPolicy.invalidate({ policyId });
     },
     onError: (error) => {
       console.error('Error sending email:', error);
@@ -200,6 +202,12 @@ export default function ShareInvitationModal({
   const isTokenExpired = (expiry: string) => {
     return new Date(expiry) < new Date();
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      utils.policy.getShareLinks.invalidate({ policyId });
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -413,7 +421,7 @@ export default function ShareInvitationModal({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={() => { handleClose(); }}>
             Cerrar
           </Button>
         </DialogFooter>

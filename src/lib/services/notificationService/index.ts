@@ -201,18 +201,5 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
     ipAddress,
   });
 
-  // Log summary for debugging
-  console.log('Invitations sent summary:', {
-    targetedActors: actors || 'all',
-    resendMode: resend,
-    total: invitations.length,
-    landlord: invitations.filter(i => i.actorType === 'landlord').length,
-    tenant: invitations.filter(i => i.actorType === 'tenant').length,
-    jointObligors: invitations.filter(i => i.actorType === 'jointObligor').length,
-    avals: invitations.filter(i => i.actorType === 'aval').length,
-    details: invitations.map(i => ({type: i.actorType, email: i.email, sent: i.sent}))
-  });
-
-
   return invitations;
 }

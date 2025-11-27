@@ -48,6 +48,7 @@ import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 import { getDocumentsByActor } from '@/lib/services/documentService';
 import { deleteDocument, getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
+import { logPolicyActivity } from '@/lib/services/policyService';
 
 // Actor types enum
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor' ]);
@@ -500,7 +501,6 @@ export const actorRouter = createTRPCRouter({
       data: ActorAdminUpdateSchema,
     }))
     .mutation(async ({ input, ctx }) => {
-      console.log('[Actor Update] Received update request for type:', input.type, input.data);
       const authService = new ActorAuthService();
       const service = getActorService(input.type);
 
@@ -533,22 +533,12 @@ export const actorRouter = createTRPCRouter({
       if (tabName) {
         const validTabFields = getTabFields(input.type, tabName);
 
-        console.log('Valid tab fields for', input.type, tabName, ':', validTabFields);
-
         if (!validTabFields) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: `Invalid tab name "${tabName}" for actor type "${input.type}"`,
           });
         }
-
-        // Log which fields are being updated for this tab
-        console.log(`[Actor Update] Type: ${input.type}, Tab: "${tabName}", Fields being updated:`, Object.keys(actualData));
-        console.log(`[Actor Update] Field values:`, Object.entries(actualData).map(([key, value]) =>
-          `${key}: ${value === null ? 'null' : value === '' ? 'empty string' : typeof value}`
-        ));
-      } else {
-        console.log(`[Actor Update] Type: ${input.type}, No tab specified, Partial: ${partial}, Fields:`, Object.keys(actualData));
       }
 
       // STEP 1: Always save the tab data first
@@ -566,23 +556,31 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
+      // Log activity for admin edits
+      if (auth.authType === 'admin' && tabName && auth.actor.policyId) {
+        const actorTypeLabels: Record<string, string> = {
+          tenant: 'inquilino',
+          landlord: 'arrendador',
+          aval: 'aval',
+          jointObligor: 'obligado solidario',
+        };
+        await logPolicyActivity({
+          policyId: auth.actor.policyId,
+          action: 'ACTOR_EDITED_BY_ADMIN',
+          description: `Admin editó la pestaña "${tabName}" del ${actorTypeLabels[input.type] || input.type}`,
+          performedById: auth.userId,
+          performedByType: 'user',
+          details: { tabName, actorType: input.type, actorId: auth.actor.id },
+        });
+      }
+
       // STEP 2: Save references if provided (typically for references tab)
       if (personalReferences && Array.isArray(personalReferences)) {
-        const refResult = await service.savePersonalReferences(auth.actor.id, personalReferences);
-        if (!refResult.ok) {
-          console.error('Failed to save personal references:', refResult.error);
-        } else {
-          console.log(`[Actor Update] Saved ${personalReferences.length} personal references`);
-        }
+        await service.savePersonalReferences(auth.actor.id, personalReferences);
       }
 
       if (commercialReferences && Array.isArray(commercialReferences)) {
-        const comRefResult = await service.saveCommercialReferences(auth.actor.id, commercialReferences);
-        if (!comRefResult.ok) {
-          console.error('Failed to save commercial references:', comRefResult.error);
-        } else {
-          console.log(`[Actor Update] Saved ${commercialReferences.length} commercial references`);
-        }
+        await service.saveCommercialReferences(auth.actor.id, commercialReferences);
       }
 
       // STEP 3: Check if this is the last tab and auto-submit (only for actor self-service, NOT admins)
@@ -832,7 +830,6 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      console.log('[Actor Router] Property details saved for policy:', landlord.policyId);
       return result.value;
     }),
 
@@ -890,7 +887,6 @@ export const actorRouter = createTRPCRouter({
         data: input.policyFinancial,
       });
 
-      console.log('[Actor Router] Policy financial data saved for policy:', landlord.policyId);
       return updatedPolicy;
     }),
 

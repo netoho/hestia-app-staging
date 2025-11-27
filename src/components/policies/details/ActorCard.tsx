@@ -18,6 +18,7 @@ interface ActorCardProps {
   getVerificationBadge?: (status: string) => React.ReactNode;
   onEditClick?: () => void;
   onSendInvitation?: () => void;
+  onMarkComplete?: () => void;
   canEdit?: boolean;
   sending?: boolean;
 }
@@ -48,6 +49,7 @@ export default function ActorCard({
   getVerificationBadge,
   onEditClick,
   onSendInvitation,
+  onMarkComplete,
   canEdit,
   sending
 }: ActorCardProps) {
@@ -242,6 +244,17 @@ export default function ActorCard({
                       <span className="hidden sm:inline">Invitar</span>
                     </>
                   )}
+                </Button>
+              )}
+              {!actor.informationComplete && isStaffOrAdmin && onMarkComplete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onMarkComplete}
+                  className="transition-all hover:scale-105"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Completar</span>
                 </Button>
               )}
               {isStaffOrAdmin && (

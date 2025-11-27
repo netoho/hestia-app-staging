@@ -1,12 +1,27 @@
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc';
+import type { Payment } from '@prisma/client';
 
+/**
+ * Payment Router
+ *
+ * TODO: Implement payment procedures when payment flow is ready:
+ * - createCheckoutSession: Create Stripe checkout session
+ * - createPaymentIntent: Create Stripe payment intent
+ * - getPaymentStatus: Get payment status by ID
+ * - processRefund: Process refund for a payment
+ * - webhookHandler: Handle Stripe webhooks (in API route)
+ */
 export const paymentRouter = createTRPCRouter({
-  // Payment procedures will be implemented as needed
+  /**
+   * List payments for a policy
+   */
   list: protectedProcedure
     .input(z.object({ policyId: z.string() }))
-    .query(async ({ input }) => {
-      // Placeholder
-      return [];
+    .query(async ({ input, ctx }): Promise<Payment[]> => {
+      return ctx.prisma.payment.findMany({
+        where: { policyId: input.policyId },
+        orderBy: { createdAt: 'desc' },
+      });
     }),
 });

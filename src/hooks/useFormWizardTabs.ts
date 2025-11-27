@@ -174,6 +174,13 @@ export function useFormWizardTabs({
     setErrors({});
   }, [tabs]);
 
+  // Check if we are on last tab and all tabs are saved
+  const isLastTabAndAllSaved = useCallback(() => {
+    const allSaved = tabs.filter(t => t.needsSave).every(t => tabSaved[t.id]);
+    const currentIndex = tabs.findIndex(t => t.id === activeTab);
+    return allSaved && currentIndex === tabs.length - 1;
+  }, [activeTab, tabs, tabSaved]);
+
   // Get progress information
   const getProgress = useCallback(() => {
     const savableTabs = tabs.filter(t => t.needsSave);
@@ -209,6 +216,7 @@ export function useFormWizardTabs({
 
     // Utilities
     canAccessTab,
-    getProgress
+    getProgress,
+    isLastTabAndAllSaved
   };
 }

@@ -199,6 +199,7 @@ model Policy {
   @@index([status])
   @@index([createdById])
   @@index([managedById])
+  @@index([status, createdAt])
 }
 
 model PropertyDetails {
@@ -226,7 +227,7 @@ model PropertyDetails {
   // Additional Property Info
   hasInventory      Boolean     @default(false)
   hasRules          Boolean     @default(false)
-  rulesType         RulesType?  // Type of rules (Condominios or Colonos)
+  rulesType         RulesType?  // Type of rules (Condominios or Colonos or Condóminos)
   petsAllowed       Boolean     @default(false)
   propertyDeliveryDate DateTime?
   contractSigningDate DateTime?
@@ -549,6 +550,8 @@ model JointObligor {
   updatedAt         DateTime    @updatedAt
 
   additionalInfo   String? @db.Char(1000)
+
+  @@index([policyId])
 }
 
 model Aval {
@@ -654,6 +657,8 @@ model Aval {
   updatedAt         DateTime    @updatedAt
 
   additionalInfo   String? @db.Char(1000)
+
+  @@index([policyId])
 }
 
 model PersonalReference {
@@ -683,6 +688,10 @@ model PersonalReference {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([jointObligorId])
+  @@index([avalId])
 }
 
 // New model for commercial references (companies)
@@ -711,6 +720,10 @@ model CommercialReference {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([jointObligorId])
+  @@index([avalId])
 }
 
 // New model for structured addresses
@@ -797,6 +810,10 @@ model ActorDocument {
   updatedAt         DateTime    @updatedAt
 
   @@index([s3Key])
+  @@index([landlordId])
+  @@index([tenantId])
+  @@index([jointObligorId])
+  @@index([avalId])
 }
 
 model PolicyDocument {
@@ -851,6 +868,7 @@ model PolicyActivity {
 
   @@index([performedById, performedByType])
   @@index([policyId])
+  @@index([policyId, createdAt])
 }
 
 model Investigation {
@@ -953,6 +971,9 @@ model Payment {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  @@index([policyId])
+  @@index([status])
 }
 
 // ============================================
@@ -991,6 +1012,9 @@ model Incident {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  @@index([policyId])
+  @@index([policyId, status])
 }
 
 // ============================================
