@@ -18,46 +18,21 @@ export default function PolicyReviewPage({
   const router = useRouter();
   const [policyId, setPolicyId] = useState<string>('');
 
-  // Resolve params
   useEffect(() => {
     params.then(resolvedParams => {
       setPolicyId(resolvedParams.id);
     });
   }, [params]);
 
-  // Redirect if unauthenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
-
-  // Fetch policy via tRPC
-  const {
-    data: policy,
-    error: policyError,
-    isLoading: policyLoading,
-    refetch
-  } = trpc.policy.getById.useQuery(
+  // tRPC query to check policy access
+  const { data: policy, isLoading, error, refetch } = trpc.policy.getById.useQuery(
     { id: policyId },
     { enabled: !!policyId && status === 'authenticated' }
   );
 
-  // Derive permission from session
-  const userRole = (session?.user as any)?.role;
+  // Check user role for permission
+  const userRole = session?.user?.role;
   const hasPermission = userRole === 'STAFF' || userRole === 'ADMIN';
-
-  // Combine loading states
-  const loading = status === 'loading' || (!!policyId && policyLoading);
-
-  // Derive error message
-  const error = policyError?.data?.code === 'NOT_FOUND'
-    ? 'Póliza no encontrada'
-    : policyError?.data?.code === 'FORBIDDEN'
-    ? 'No tienes permisos para revisar esta póliza'
-    : policyError
-    ? 'Error al cargar la póliza'
-    : null;
 
   const handleBack = () => {
     router.push(`/dashboard/policies/${policyId}`);
@@ -67,7 +42,14 @@ export default function PolicyReviewPage({
     refetch();
   };
 
-  if (loading) {
+  // Handle authentication
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -79,12 +61,19 @@ export default function PolicyReviewPage({
   }
 
   if (error) {
+    let errorMessage = 'Error al cargar la póliza';
+    if (error.data?.code === 'NOT_FOUND') {
+      errorMessage = 'Póliza no encontrada';
+    } else if (error.data?.code === 'FORBIDDEN') {
+      errorMessage = 'No tienes permisos para revisar esta póliza';
+    }
+
     return (
       <div className="container mx-auto p-6 max-w-2xl">
         <Alert className="bg-red-50 border-red-200">
           <AlertCircle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
-            {error}
+            {errorMessage}
           </AlertDescription>
         </Alert>
         <div className="flex gap-2 mt-4">
