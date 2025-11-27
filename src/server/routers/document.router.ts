@@ -19,21 +19,9 @@ export const documentRouter = createTRPCRouter({
   getDownloadUrl: protectedProcedure
     .input(z.object({ documentId: z.string() }))
     .query(async ({ input, ctx }) => {
-      // Fetch document with actor to trace policy ownership
+      // 1. Get document
       const document = await prisma.actorDocument.findUnique({
         where: { id: input.documentId },
-        include: {
-          actor: {
-            select: {
-              policy: {
-                select: {
-                  id: true,
-                  createdById: true,
-                },
-              },
-            },
-          },
-        },
       });
 
       if (!document) {
@@ -43,17 +31,6 @@ export const documentRouter = createTRPCRouter({
         });
       }
 
-      // Check access for brokers (ADMIN/STAFF bypass)
-      if (ctx.userRole === 'BROKER') {
-        const policyCreatorId = document.actor?.policy?.createdById;
-        if (policyCreatorId !== ctx.userId) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'You do not have access to this document',
-          });
-        }
-      }
-
       if (!document.s3Key) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -61,7 +38,31 @@ export const documentRouter = createTRPCRouter({
         });
       }
 
-      // Generate presigned URL (5 min expiry)
+      // 2. Check access for brokers (ADMIN/STAFF bypass)
+      if (ctx.userRole === 'BROKER') {
+        const actorId = document.landlordId || document.tenantId || document.jointObligorId || document.avalId;
+
+        const policy = await prisma.policy.findFirst({
+          where: {
+            OR: [
+              { landlords: { some: { id: actorId } } },
+              { tenants: { some: { id: actorId } } },
+              { jointObligors: { some: { id: actorId } } },
+              { avals: { some: { id: actorId } } },
+            ],
+          },
+          select: { createdById: true },
+        });
+
+        if (policy?.createdById !== ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not have access to this document',
+          });
+        }
+      }
+
+      // 3. Generate presigned URL (5 min expiry)
       const downloadUrl = await getDocumentDownloadUrl(
         document.s3Key,
         document.originalName || document.fileName,
