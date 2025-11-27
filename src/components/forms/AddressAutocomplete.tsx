@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, MapPin, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import debounce from 'lodash/debounce';
+import { trpc } from '@/lib/trpc/client';
 
 interface AddressData {
   id?: string;
@@ -81,6 +82,7 @@ export function AddressAutocomplete({
   });
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const utils = trpc.useUtils();
 
   // Update form data when value prop changes
   useEffect(() => {
@@ -135,7 +137,7 @@ export function AddressAutocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search for addresses
+  // Search for addresses using tRPC
   const searchAddresses = useCallback(
     debounce(async (input: string) => {
       if (!input || input.length < 3) {
@@ -145,19 +147,14 @@ export function AddressAutocomplete({
 
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `/api/address/autocomplete?${new URLSearchParams({
-            input,
-            sessionToken,
-            country: 'mx',
-          })}`
-        );
+        const data = await utils.address.autocomplete.fetch({
+          input,
+          sessionToken,
+          country: 'mx',
+        });
 
-        if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data.results || []);
-          setShowSuggestions(true);
-        }
+        setSuggestions(data.results || []);
+        setShowSuggestions(true);
       } catch (error) {
         console.error('Error searching addresses:', error);
         setSuggestions([]);
@@ -165,7 +162,7 @@ export function AddressAutocomplete({
         setIsLoading(false);
       }
     }, 300),
-    [sessionToken]
+    [sessionToken, utils]
   );
 
   // Handle search input change
@@ -181,23 +178,20 @@ export function AddressAutocomplete({
     }
   };
 
-  // Handle suggestion selection
+  // Handle suggestion selection using tRPC
   const handleSelectSuggestion = async (suggestion: Suggestion) => {
     setIsLoading(true);
     setShowSuggestions(false);
     setSearchInput(suggestion.description);
 
     try {
-      const response = await fetch(
-        `/api/address/details?${new URLSearchParams({
-          placeId: suggestion.placeId,
-          sessionToken,
-          ...(formData.interiorNumber ? { interiorNumber: formData.interiorNumber } : {}),
-        })}`
-      );
+      const data = await utils.address.details.fetch({
+        placeId: suggestion.placeId,
+        sessionToken,
+        interiorNumber: formData.interiorNumber || undefined,
+      });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data.address) {
         const address = data.address as AddressData;
 
         // Preserve interior number if it was manually entered

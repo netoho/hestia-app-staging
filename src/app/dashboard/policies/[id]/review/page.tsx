@@ -7,6 +7,7 @@ import ReviewLayout from '@/components/policies/review/ReviewLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
 
 export default function PolicyReviewPage({
   params
@@ -16,9 +17,6 @@ export default function PolicyReviewPage({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [policyId, setPolicyId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasPermission, setHasPermission] = useState(false);
 
   useEffect(() => {
     params.then(resolvedParams => {
@@ -26,74 +24,32 @@ export default function PolicyReviewPage({
     });
   }, [params]);
 
-  useEffect(() => {
-    if (status === 'loading') return;
+  // tRPC query to check policy access
+  const { data: policy, isLoading, error, refetch } = trpc.policy.getById.useQuery(
+    { id: policyId },
+    { enabled: !!policyId && status === 'authenticated' }
+  );
 
-    if (status === 'unauthenticated') {
-      router.push('/login');
-      return;
-    }
-
-    if (session?.user && policyId) {
-      checkPermissions();
-    }
-  }, [session, status, policyId]);
-
-  const checkPermissions = async () => {
-    try {
-      // Check user role and permissions
-      const response = await fetch(`/api/policies/${policyId}`);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError('Póliza no encontrada');
-        } else if (response.status === 403) {
-          setError('No tienes permisos para revisar esta póliza');
-        } else {
-          setError('Error al cargar la póliza');
-        }
-        return;
-      }
-
-      const policyData = await response.json();
-      const policy = policyData.data || policyData;
-
-      // Check if user has review permissions
-      const userResponse = await fetch('/api/auth/session');
-      const userData = await userResponse.json();
-
-      if (!userData?.user) {
-        setError('No se pudo verificar tu sesión');
-        return;
-      }
-
-      const userRole = (userData.user as any).role;
-
-      // Only STAFF and ADMIN can access review page
-      if (userRole === 'STAFF' || userRole === 'ADMIN') {
-        setHasPermission(true);
-      } else {
-        setError('Solo el personal administrativo puede acceder a la página de revisión');
-      }
-    } catch (err) {
-      console.error('Error checking permissions:', err);
-      setError('Error al verificar permisos');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Check user role for permission
+  const userRole = session?.user?.role;
+  const hasPermission = userRole === 'STAFF' || userRole === 'ADMIN';
 
   const handleBack = () => {
     router.push(`/dashboard/policies/${policyId}`);
   };
 
   const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    checkPermissions();
+    refetch();
   };
 
-  if (loading) {
+  // Handle authentication
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -105,12 +61,19 @@ export default function PolicyReviewPage({
   }
 
   if (error) {
+    let errorMessage = 'Error al cargar la póliza';
+    if (error.data?.code === 'NOT_FOUND') {
+      errorMessage = 'Póliza no encontrada';
+    } else if (error.data?.code === 'FORBIDDEN') {
+      errorMessage = 'No tienes permisos para revisar esta póliza';
+    }
+
     return (
       <div className="container mx-auto p-6 max-w-2xl">
         <Alert className="bg-red-50 border-red-200">
           <AlertCircle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
-            {error}
+            {errorMessage}
           </AlertDescription>
         </Alert>
         <div className="flex gap-2 mt-4">

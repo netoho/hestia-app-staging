@@ -3,7 +3,7 @@
  * Manages all property-related details for policies
  */
 
-import { PrismaClient, PropertyDetails as PrismaPropertyDetails } from '@prisma/client';
+import { PrismaClient, PropertyDetails as PrismaPropertyDetails, RulesType } from '@prisma/client';
 import { BaseService } from './base/BaseService';
 import { Result, AsyncResult } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';
@@ -28,13 +28,14 @@ export interface PropertyDetailsInput {
   // Additional Property Info
   hasInventory?: boolean;
   hasRules?: boolean;
+  rulesType?: RulesType | null;
   petsAllowed?: boolean;
   propertyDeliveryDate?: Date | string | null;
   contractSigningDate?: Date | string | null;
-  contractSigningLocation?: string | null;
 
-  // Address
+  // Addresses
   propertyAddressDetails?: AddressDetails;
+  contractSigningAddressDetails?: AddressDetails;
 }
 
 export class PropertyDetailsService extends BaseService {
@@ -51,6 +52,7 @@ export class PropertyDetailsService extends BaseService {
         where: { policyId },
         include: {
           propertyAddressDetails: true,
+          contractSigningAddressDetails: true,
         },
       });
 
@@ -89,11 +91,29 @@ export class PropertyDetailsService extends BaseService {
         propertyAddressId = addressResult.value;
       }
 
+      // Handle contract signing address if provided
+      let contractSigningAddressId: string | undefined;
+      if (data.contractSigningAddressDetails) {
+        const addressResult = await this.upsertPropertyAddress(
+          data.contractSigningAddressDetails,
+          tx
+        );
+        if (!addressResult.ok) {
+          throw new ServiceError(
+            ErrorCode.DATABASE_ERROR,
+            'Failed to save contract signing address',
+            500
+          );
+        }
+        contractSigningAddressId = addressResult.value;
+      }
+
       // Create property details
       const propertyDetails = await tx.propertyDetails.create({
         data: {
           policyId,
           propertyAddressId,
+          contractSigningAddressId,
           parkingSpaces: data.parkingSpaces,
           parkingNumbers: data.parkingNumbers,
           isFurnished: data.isFurnished ?? false,
@@ -107,13 +127,14 @@ export class PropertyDetailsService extends BaseService {
           utilitiesInLandlordName: data.utilitiesInLandlordName ?? false,
           hasInventory: data.hasInventory ?? false,
           hasRules: data.hasRules ?? false,
+          rulesType: data.rulesType,
           petsAllowed: data.petsAllowed ?? false,
           propertyDeliveryDate: data.propertyDeliveryDate ? new Date(data.propertyDeliveryDate) : null,
           contractSigningDate: data.contractSigningDate ? new Date(data.contractSigningDate) : null,
-          contractSigningLocation: data.contractSigningLocation,
         },
         include: {
           propertyAddressDetails: true,
+          contractSigningAddressDetails: true,
         },
       });
 
@@ -141,7 +162,7 @@ export class PropertyDetailsService extends BaseService {
       // Get existing property details to check if it exists
       const existing = await tx.propertyDetails.findUnique({
         where: { policyId },
-        select: { id: true, propertyAddressId: true },
+        select: { id: true, propertyAddressId: true, contractSigningAddressId: true },
       });
 
       if (!existing) {
@@ -170,10 +191,31 @@ export class PropertyDetailsService extends BaseService {
         propertyAddressId = addressResult.value;
       }
 
+      // Handle contract signing address update if provided
+      let contractSigningAddressId = existing.contractSigningAddressId;
+      if (data.contractSigningAddressDetails) {
+        const addressResult = await this.upsertPropertyAddress(
+          data.contractSigningAddressDetails,
+          tx,
+          contractSigningAddressId
+        );
+        if (!addressResult.ok) {
+          throw new ServiceError(
+            ErrorCode.DATABASE_ERROR,
+            'Failed to update contract signing address',
+            500
+          );
+        }
+        contractSigningAddressId = addressResult.value;
+      }
+
       // Build update data
       const updateData: any = {};
       if (propertyAddressId !== existing.propertyAddressId) {
         updateData.propertyAddressId = propertyAddressId;
+      }
+      if (contractSigningAddressId !== existing.contractSigningAddressId) {
+        updateData.contractSigningAddressId = contractSigningAddressId;
       }
 
       // Add all other fields if provided
@@ -190,6 +232,7 @@ export class PropertyDetailsService extends BaseService {
       if (data.utilitiesInLandlordName !== undefined) updateData.utilitiesInLandlordName = data.utilitiesInLandlordName;
       if (data.hasInventory !== undefined) updateData.hasInventory = data.hasInventory;
       if (data.hasRules !== undefined) updateData.hasRules = data.hasRules;
+      if (data.rulesType !== undefined) updateData.rulesType = data.rulesType;
       if (data.petsAllowed !== undefined) updateData.petsAllowed = data.petsAllowed;
       if (data.propertyDeliveryDate !== undefined) {
         updateData.propertyDeliveryDate = data.propertyDeliveryDate ? new Date(data.propertyDeliveryDate) : null;
@@ -197,7 +240,6 @@ export class PropertyDetailsService extends BaseService {
       if (data.contractSigningDate !== undefined) {
         updateData.contractSigningDate = data.contractSigningDate ? new Date(data.contractSigningDate) : null;
       }
-      if (data.contractSigningLocation !== undefined) updateData.contractSigningLocation = data.contractSigningLocation;
 
       // Update property details
       const updatedPropertyDetails = await tx.propertyDetails.update({
@@ -205,6 +247,7 @@ export class PropertyDetailsService extends BaseService {
         data: updateData,
         include: {
           propertyAddressDetails: true,
+          contractSigningAddressDetails: true,
         },
       });
 

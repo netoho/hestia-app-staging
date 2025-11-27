@@ -4,6 +4,8 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
+import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
+import { DocumentCategory } from '@/lib/enums';
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
@@ -544,22 +546,22 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
     if (!tenant.ok) return tenant;
 
     const isCompany = tenant.value.tenantType === 'COMPANY';
+    const nationality = tenant.value.nationality;
 
-    // Using DocumentCategory enum values
-    const requiredDocs: any[] = isCompany
-      ? ['ACTA_CONSTITUTIVA', 'COMPROBANTE_DOMICILIO', 'CONSTANCIA_SITUACION_FISCAL']
-      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+    const requiredDocs = getRequiredDocuments('tenant', isCompany, {
+      nationality: nationality as 'MEXICAN' | 'FOREIGN' | undefined,
+    });
 
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         tenantId,
-        category: { in: requiredDocs }
+        category: { in: requiredDocs.map(d => d.category) }
       },
       select: { category: true }
     });
 
     const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
-    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+    const missingDocs = requiredDocs.filter(d => !uploadedCategories.has(d.category as DocumentCategory));
 
     if (missingDocs.length > 0) {
       return Result.error(
@@ -567,7 +569,7 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
           ErrorCode.VALIDATION_ERROR,
           'Faltan documentos requeridos',
           400,
-          { missingDocuments: missingDocs }
+          { missingDocuments: missingDocs.map(d => d.category) }
         )
       );
     }

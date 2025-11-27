@@ -21,7 +21,7 @@ export type TabFieldConfig =
 /**
  * Landlord Tab Fields
  *
- * Tabs: owner-info, bank-info, property-info, financial-info, documents
+ * Tabs: owner-info, property-info, financial-info, documents
  */
 export const LANDLORD_TAB_FIELDS = {
   'owner-info': [
@@ -57,12 +57,6 @@ export const LANDLORD_TAB_FIELDS = {
     // Address
     'addressDetails',
   ],
-  'bank-info': [
-    'bankName',
-    'accountNumber',
-    'clabe',
-    'accountHolderName',
-  ],
   'property-info': [
     'propertyDeedNumber',
     'propertyRegistryFolio',
@@ -70,6 +64,10 @@ export const LANDLORD_TAB_FIELDS = {
     'hasPropertyGuarantee',
   ],
   'financial-info': [
+    'bankName',
+    'accountNumber',
+    'clabe',
+    'accountHolderName',
     'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',

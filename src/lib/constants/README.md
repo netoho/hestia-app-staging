@@ -8,13 +8,14 @@ This directory contains configuration constants, field mappings, and static data
 
 ```
 constants/
-├── actorConfig.ts          # Actor configuration and tabs
-├── actorTabFields.ts       # Common tab field utilities
-├── tenantTabFields.ts      # Tenant field mappings
-├── landlordTabFields.ts    # Landlord field mappings
-├── avalTabFields.ts        # Aval field mappings
-├── jointObligorTabFields.ts # Joint Obligor field mappings
-└── formMessages.ts         # Validation and UI messages
+├── actorConfig.ts              # Actor configuration and tabs
+├── actorDocumentRequirements.ts # Required documents per actor type
+├── actorTabFields.ts           # Common tab field utilities
+├── tenantTabFields.ts          # Tenant field mappings
+├── landlordTabFields.ts        # Landlord field mappings
+├── avalTabFields.ts            # Aval field mappings
+├── jointObligorTabFields.ts    # Joint Obligor field mappings
+└── formMessages.ts             # Validation and UI messages
 ```
 
 ## Actor Configuration (`actorConfig.ts`)
@@ -240,6 +241,82 @@ export const DOCUMENT_CATEGORIES = {
     maxFiles: 5,
   },
 } as const;
+```
+
+## Actor Document Requirements (`actorDocumentRequirements.ts`)
+
+Centralized configuration for required documents per actor type. Uses the Prisma-compatible `DocumentCategory` enum from `@/lib/enums`.
+
+### Data Structure
+
+```typescript
+export const ACTOR_DOCUMENT_REQUIREMENTS = {
+  tenant: {
+    individual: [
+      { category: DocumentCategory.IDENTIFICATION, required: true },
+      { category: DocumentCategory.INCOME_PROOF, required: true },
+      { category: DocumentCategory.ADDRESS_PROOF, required: true },
+      { category: DocumentCategory.BANK_STATEMENT, required: true },
+      { category: DocumentCategory.IMMIGRATION_DOCUMENT, required: true, condition: 'foreign' },
+    ],
+    company: [
+      { category: DocumentCategory.COMPANY_CONSTITUTION, required: true },
+      { category: DocumentCategory.LEGAL_POWERS, required: true },
+      { category: DocumentCategory.IDENTIFICATION, required: true },
+      { category: DocumentCategory.TAX_STATUS_CERTIFICATE, required: true },
+      { category: DocumentCategory.BANK_STATEMENT, required: true },
+    ],
+  },
+  // ... landlord, aval, jointObligor
+};
+```
+
+### Conditional Requirements
+
+Documents can have conditions that determine when they apply:
+
+- `'foreign'` - Required only for actors with foreign nationality
+- `'propertyGuarantee'` - Required only for property-based guarantees (Joint Obligor)
+- `'incomeGuarantee'` - Required only for income-based guarantees (Joint Obligor)
+
+### Helper Functions
+
+```typescript
+// Get all document requirements (filtered by conditions)
+getDocumentRequirements(
+  actorType: ActorType,
+  isCompany: boolean,
+  options?: { nationality?: 'MEXICAN' | 'FOREIGN'; guaranteeMethod?: 'income' | 'property' }
+): DocumentRequirement[]
+
+// Get only required documents
+getRequiredDocuments(actorType, isCompany, options): DocumentRequirement[]
+
+// Check if all required documents are uploaded
+areRequiredDocumentsUploaded(
+  actorType: ActorType,
+  isCompany: boolean,
+  uploadedCategories: Set<DocumentCategory> | DocumentCategory[],
+  options?: GetDocumentRequirementsOptions
+): boolean
+```
+
+### Usage in Services
+
+The `validateRequiredDocuments()` method in each actor service uses these helpers:
+
+```typescript
+// Example from TenantService
+protected async validateRequiredDocuments(tenantId: string): AsyncResult<boolean> {
+  const tenant = await this.getById(tenantId);
+  const isCompany = tenant.value.tenantType === 'COMPANY';
+
+  const requiredDocs = getRequiredDocuments('tenant', isCompany, {
+    nationality: tenant.value.nationality,
+  });
+
+  // Query uploaded documents and compare...
+}
 ```
 
 ## Status Enums

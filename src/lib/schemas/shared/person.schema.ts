@@ -49,25 +49,21 @@ export const personWithNationalitySchema = personNameSchema.extend({
  * Mexican identification schemas
  */
 export const curpSchema = z
-  .string()
+  .string({ message: 'CURP es requerido' })
   .regex(
     /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/,
     'CURP debe tener formato válido (18 caracteres)'
   )
-  .optional()
-  .nullable();
 
 export const rfcPersonSchema = z
-  .string()
+  .string({ message: 'RFC es requerido' })
   .regex(
     /^[A-Z&Ñ]{4}\d{6}[A-Z0-9]{3}$/,
     'RFC debe tener formato válido (13 caracteres para persona física)'
-  )
-  .optional()
-  .nullable();
+  );
 
 export const rfcCompanySchema = z
-  .string()
+  .string({ message: 'RFC es requerido', invalid_type_error: 'RFC debe ser una cadena' })
   .regex(
     /^[A-Z&Ñ]{3}\d{6}[A-Z0-9]{3}$/,
     'RFC debe tener formato válido (12 caracteres para persona moral)'

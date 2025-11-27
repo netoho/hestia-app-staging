@@ -52,13 +52,24 @@ export type JointObligorTab = JointObligorIndividualTab | JointObligorCompanyTab
 const jointObligorPersonalIndividualTabSchema = personWithNationalitySchema
   .merge(extendedContactSchema)
   .extend({
+    curp: curpSchema,
+    rfc: rfcPersonSchema,
+
     jointObligorType: z.literal('INDIVIDUAL'),
 
     // Address (required)
     addressDetails: addressSchema,
 
     // Relationship to tenant (required for Joint Obligor)
-    relationshipToTenant: z.string().min(1, 'Relationship to tenant is required'),
+    relationshipToTenant: z.enum([
+      'parent',
+      'sibling',
+      'spouse',
+      'friend',
+      'business_partner',
+      'employer',
+      'other',
+    ], { message: "Tiene que seleccionar una opción" }),
   });
 
 // Personal Tab Schema (Company)
@@ -76,8 +87,14 @@ const jointObligorPersonalCompanyTabSchema = companyWithLegalRepSchema
 
 // Employment Tab Schema (Individual only - required for income guarantee)
 const jointObligorEmploymentTabSchema = z.object({
-  employmentStatus: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
+  employmentStatus: z.enum([
+    'EMPLOYED',
+    'SELF_EMPLOYED',
+    'BUSINESS_OWNER',
+    'RETIRED',
+    'OTHER',
+    ], { message: "Tiene que seleccionar una opción" }),
+  occupation: z.string().min(5, 'La ocupación es requerida'),
   employerName: z.string().optional().nullable(),
   employerAddressDetails: partialAddressSchema.optional(),
   position: z.string().optional().nullable(),
@@ -128,7 +145,7 @@ const propertyGuaranteeSchema = guaranteeBaseSchema.extend({
   propertyUnderLegalProceeding: z.boolean().default(false),
 
   // Marriage information (conditional - required when property is owned by married person)
-  maritalStatus: z.enum(['single', 'married_joint', 'married_separate']).optional().nullable(),
+  maritalStatus: z.enum(['single', 'married_joint', 'married_separate', 'divorced', 'widowed', 'common_law']).optional().nullable(),
   spouseName: z.string().optional().nullable(),
   spouseRfc: z.string().optional().nullable(),
   spouseCurp: z.string().optional().nullable(),
@@ -143,8 +160,8 @@ export const jointObligorGuaranteeTabSchema = z.discriminatedUnion('guaranteeMet
 // References Tab Schema (Individual - exactly 3 personal references)
 const jointObligorReferencesIndividualTabSchema = z.object({
   personalReferences: z.array(personalReferenceSchema)
-    .min(3, 'Exactly 3 references are required')
-    .max(3, 'Exactly 3 references are required'),
+    .min(3, 'Se requieren exactamente 3 referencias')
+    .max(3, 'Se requieren exactamente 3 referencias'),
 });
 
 // References Tab Schema (Company - exactly 3 commercial references)

@@ -100,7 +100,7 @@ const avalPropertyTabBaseSchema = z.object({
   propertyUnderLegalProceeding: z.boolean().default(false),
 
   // Marriage information (conditional - required when property is owned by married person)
-  maritalStatus: z.enum(['single', 'married_joint', 'married_separate']).optional().nullable(),
+  maritalStatus: z.enum(['single', 'married_joint', 'married_separate', 'divorced', 'widowed', 'common_law']).optional().nullable(),
   spouseName: z.string().optional().nullable(),
   spouseRfc: z.string().optional().nullable(),
   spouseCurp: z.string().optional().nullable(),
@@ -294,10 +294,8 @@ export function getAvalSchema(mode: 'strict' | 'partial' | 'admin' = 'strict') {
 export function getAvalTabSchema(
   avalType: AvalTypeEnum,
   tab: AvalTab
-): z.ZodSchema<any> | undefined {
+): z.ZodSchema<any> {
   const schemas = AVAL_TAB_SCHEMAS[avalType];
-  if (!schemas) return undefined;
-
   return (schemas as any)[tab];
 }
 

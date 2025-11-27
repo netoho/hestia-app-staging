@@ -7,7 +7,7 @@ const es = {
     // Global & Reusable
     siteName: "Hestia",
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
-    contactEmail: "info@hestiaplp.com.mx",
+    contactEmail: "contacto@hestiaplp.com.mx",
     contactPhone: "55 1277 0883 | 55 2111 7610",
 
     actions: {
@@ -669,7 +669,7 @@ const es = {
             actions: {
                 label: "Acciones",
                 edit: "Editar Usuario",
-                delete: "Eliminar Usuario",
+                delete: "Desactivar Usuario",
             },
             noUsersFound: "No se encontraron usuarios.",
             errorLoading: "Error al cargar los usuarios.",

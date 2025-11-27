@@ -80,7 +80,7 @@ const guaranteeSchema = z.discriminatedUnion('guaranteeMethod', [
 - Supports multiple landlords per policy
 - Primary landlord designation
 - Financial data maps to Policy model
-- 5 tabs: owner-info, bank-info, property-info, financial-info, documents
+- 5 tabs: owner-info, property-info, financial-info, documents
 
 ### Aval (`/aval/index.ts`)
 - Mandatory property guarantee

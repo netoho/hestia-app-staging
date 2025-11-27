@@ -29,16 +29,9 @@ export const LANDLORD_TAB_FIELDS = {
       'workEmail',
       'workPhone',
       // Address
-      'address',
       'addressDetails',
       // Multi-landlord specific
       'isPrimary',
-    ],
-    'bank-info': [
-      'bankName',
-      'accountNumber',
-      'clabe',
-      'accountHolder',
     ],
     'property-info': [
       'propertyDeedNumber',
@@ -46,6 +39,10 @@ export const LANDLORD_TAB_FIELDS = {
       'propertyValue',
     ],
     'financial-info': [
+      'bankName',
+      'accountNumber',
+      'clabe',
+      'accountHolder',
       'requiresCFDI',
       'cfdiData',
       'hasIVA',
@@ -89,18 +86,16 @@ export const LANDLORD_TAB_FIELDS = {
       // Multi-landlord specific
       'isPrimary',
     ],
-    'bank-info': [
-      'bankName',
-      'accountNumber',
-      'clabe',
-      'accountHolder',
-    ],
     'property-info': [
       'propertyDeedNumber',
       'propertyRegistryFolio',
       'propertyValue',
     ],
     'financial-info': [
+      'bankName',
+      'accountNumber',
+      'clabe',
+      'accountHolder',
       'requiresCFDI',
       'cfdiData',
       'hasIVA',
@@ -196,7 +191,6 @@ export const LANDLORD_TAB_REQUIRED_FIELDS = {
       'phone',
       'address',
     ],
-    'bank-info': [], // Only required for primary landlord
     'property-info': [
       'propertyDeedNumber',
       'propertyRegistryFolio',
@@ -218,7 +212,6 @@ export const LANDLORD_TAB_REQUIRED_FIELDS = {
       'phone',
       'address',
     ],
-    'bank-info': [], // Only required for primary landlord
     'property-info': [
       'propertyDeedNumber',
       'propertyRegistryFolio',
@@ -233,13 +226,11 @@ export const LANDLORD_TAB_REQUIRED_FIELDS = {
  * Primary landlord has additional requirements
  */
 export const PRIMARY_LANDLORD_REQUIRED_FIELDS = {
-  'bank-info': [
+  'financial-info': [
     'bankName',
     'accountNumber',
     'clabe',
     'accountHolder',
-  ],
-  'financial-info': [
     'requiresCFDI',
   ],
 };
@@ -294,7 +285,7 @@ export function getLandlordFormProgress(
 /**
  * Type for landlord tab names
  */
-export type LandlordTabName = 'owner-info' | 'bank-info' | 'property-info' | 'financial-info' | 'documents';
+export type LandlordTabName = 'owner-info' | 'property-info' | 'financial-info' | 'documents';
 
 /**
  * Type for landlord types

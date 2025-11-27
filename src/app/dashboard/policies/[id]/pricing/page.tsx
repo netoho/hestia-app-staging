@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Save, CheckCircle2, AlertCircle, DollarSign, Package } from 'lucide-react';
-import { pricingSchema } from '@/lib/validations/policy';
-import { z } from 'zod';
+import { ArrowLeft, Save, CheckCircle2, DollarSign, Package } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
 
 interface PricingData {
   packageId?: string;
@@ -20,17 +19,6 @@ interface PricingData {
   tenantPercentage: number;
   landlordPercentage: number;
   guarantorType: 'NONE' | 'JOINT_OBLIGOR' | 'AVAL' | 'BOTH';
-}
-
-interface Package {
-  id: string;
-  name: string;
-  description?: string;
-  pricingType: 'FLAT' | 'PERCENTAGE';
-  price: number;
-  percentage?: number;
-  minimumPrice?: number;
-  features?: string;
 }
 
 export default function PricingEditPage({
@@ -41,13 +29,7 @@ export default function PricingEditPage({
   const router = useRouter();
   const { data: session } = useSession();
   const [policyId, setPolicyId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [rentAmount, setRentAmount] = useState<number>(0);
-  const [policyInfo, setPolicyInfo] = useState<{ policyNumber: string; propertyAddress: string } | null>(null);
 
   const [formData, setFormData] = useState<PricingData>({
     packageId: '',
@@ -71,53 +53,39 @@ export default function PricingEditPage({
     });
   }, [params]);
 
-  // Fetch pricing data and packages
+  // tRPC queries
+  const { data: pricingData, isLoading: loadingPricing } = trpc.pricing.getPolicyPricing.useQuery(
+    { policyId },
+    { enabled: !!policyId }
+  );
+
+  const { data: packages, isLoading: loadingPackages } = trpc.package.getAll.useQuery();
+
+  // tRPC mutation
+  const updateMutation = trpc.pricing.updatePolicyPricing.useMutation({
+    onSuccess: () => {
+      setSuccessMessage('Información de precio guardada exitosamente');
+      setTimeout(() => {
+        router.push(`/dashboard/policies/${policyId}`);
+      }, 2000);
+    },
+    onError: (error) => {
+      alert(error.message || 'Error al guardar la información');
+    },
+  });
+
+  // Update form when data loads
   useEffect(() => {
-    if (policyId) {
-      fetchPricingData();
-      fetchPackages();
+    if (pricingData?.data) {
+      setFormData({
+        packageId: pricingData.data.packageId || '',
+        totalPrice: pricingData.data.totalPrice || 0,
+        tenantPercentage: pricingData.data.tenantPercentage || 100,
+        landlordPercentage: pricingData.data.landlordPercentage || 0,
+        guarantorType: pricingData.data.guarantorType || 'NONE',
+      });
     }
-  }, [policyId]);
-
-  const fetchPricingData = async () => {
-    try {
-      const response = await fetch(`/api/policies/${policyId}/pricing`);
-      if (!response.ok) throw new Error('Failed to fetch pricing');
-
-      const data = await response.json();
-
-      if (data.success && data.data) {
-        setFormData({
-          packageId: data.data.packageId || '',
-          totalPrice: data.data.totalPrice || 0,
-          tenantPercentage: data.data.tenantPercentage || 100,
-          landlordPercentage: data.data.landlordPercentage || 0,
-          guarantorType: data.data.guarantorType || 'NONE',
-        });
-        setRentAmount(data.rentAmount || 0);
-        setPolicyInfo({
-          policyNumber: data.policyNumber || '',
-          propertyAddress: data.propertyAddress || '',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching pricing:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPackages = async () => {
-    try {
-      const response = await fetch('/api/packages');
-      if (!response.ok) throw new Error('Failed to fetch packages');
-
-      const data = await response.json();
-      setPackages(data.data || []);
-    } catch (error) {
-      console.error('Error fetching packages:', error);
-    }
-  };
+  }, [pricingData]);
 
   const updateFormData = (field: string, value: any) => {
     const newData = { ...formData, [field]: value };
@@ -130,85 +98,35 @@ export default function PricingEditPage({
     }
 
     // Recalculate price when package changes
-    if (field === 'packageId') {
+    if (field === 'packageId' && packages) {
       const selectedPackage = packages.find(p => p.id === value);
       if (selectedPackage) {
-        newData.totalPrice = calculatePrice(selectedPackage, rentAmount);
+        newData.totalPrice = calculatePrice(selectedPackage, pricingData?.rentAmount || 0);
       }
     }
 
     setFormData(newData);
-
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
   };
 
-  const calculatePrice = (pkg: Package, rent: number): number => {
-    if (pkg.pricingType === 'FLAT') {
+  const calculatePrice = (pkg: any, rent: number): number => {
+    if (pkg.price) {
       return pkg.price;
-    } else if (pkg.pricingType === 'PERCENTAGE' && pkg.percentage) {
+    } else if (pkg.percentage) {
       const calculated = rent * (pkg.percentage / 100);
-      return Math.max(calculated, pkg.minimumPrice || 0);
+      return Math.max(calculated, pkg.minAmount || 0);
     }
     return 0;
   };
 
-  const validateForm = (): boolean => {
-    try {
-      pricingSchema.parse(formData);
-      setErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
-          const path = err.path.join('.');
-          newErrors[path] = err.message;
-        });
-        setErrors(newErrors);
-      }
-      return false;
-    }
-  };
-
   const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    setSaving(true);
-    setSuccessMessage('');
-
-    try {
-      const response = await fetch(`/api/policies/${policyId}/pricing`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save pricing information');
-      }
-
-      setSuccessMessage('Información de precio guardada exitosamente');
-
-      // Redirect after a short delay
-      setTimeout(() => {
-        router.push(`/dashboard/policies/${policyId}`);
-      }, 2000);
-    } catch (error) {
-      console.error('Error saving pricing information:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar la información');
-    } finally {
-      setSaving(false);
-    }
+    await updateMutation.mutateAsync({
+      policyId,
+      packageId: formData.packageId || null,
+      totalPrice: formData.totalPrice,
+      tenantPercentage: formData.tenantPercentage,
+      landlordPercentage: formData.landlordPercentage,
+      guarantorType: formData.guarantorType,
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -229,6 +147,8 @@ export default function PricingEditPage({
     return labels[type] || type;
   };
 
+  const loading = loadingPricing || loadingPackages;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -240,7 +160,7 @@ export default function PricingEditPage({
     );
   }
 
-  const selectedPackage = packages.find(p => p.id === formData.packageId);
+  const selectedPackage = packages?.find(p => p.id === formData.packageId);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -262,12 +182,12 @@ export default function PricingEditPage({
           <CardDescription>
             Editar la configuración de precio
           </CardDescription>
-          {policyInfo && (
+          {pricingData && (
             <Alert className="mt-4">
               <AlertDescription>
-                <strong>Protección:</strong> {policyInfo.policyNumber}<br />
-                <strong>Propiedad:</strong> {policyInfo.propertyAddress}<br />
-                <strong>Renta Mensual:</strong> {formatCurrency(rentAmount)}
+                <strong>Protección:</strong> {pricingData.policyNumber}<br />
+                <strong>Propiedad:</strong> {pricingData.propertyAddress}<br />
+                <strong>Renta Mensual:</strong> {formatCurrency(pricingData.rentAmount || 0)}
               </AlertDescription>
             </Alert>
           )}
@@ -296,14 +216,14 @@ export default function PricingEditPage({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Sin paquete (precio manual)</SelectItem>
-                  {packages.map(pkg => (
+                  {packages?.map(pkg => (
                     <SelectItem key={pkg.id} value={pkg.id}>
                       <div className="flex flex-col">
                         <span className="font-medium">{pkg.name}</span>
                         <span className="text-sm text-gray-600">
-                          {pkg.pricingType === 'FLAT'
+                          {pkg.price
                             ? formatCurrency(pkg.price)
-                            : `${pkg.percentage}% de la renta (mín. ${formatCurrency(pkg.minimumPrice || 0)})`}
+                            : `${pkg.percentage}% de la renta (mín. ${formatCurrency(pkg.minAmount || 0)})`}
                         </span>
                       </div>
                     </SelectItem>
@@ -326,11 +246,7 @@ export default function PricingEditPage({
                 placeholder="0.00"
                 min="0"
                 step="100"
-                className={errors.totalPrice ? 'border-red-500' : ''}
               />
-              {errors.totalPrice && (
-                <p className="text-red-500 text-sm mt-1">{errors.totalPrice}</p>
-              )}
               <p className="text-sm text-gray-600 mt-1">
                 {formatCurrency(formData.totalPrice)}
               </p>
@@ -343,7 +259,7 @@ export default function PricingEditPage({
                 value={formData.guarantorType}
                 onValueChange={(value) => updateFormData('guarantorType', value)}
               >
-                <SelectTrigger className={errors.guarantorType ? 'border-red-500' : ''}>
+                <SelectTrigger>
                   <SelectValue placeholder="Seleccione el tipo de garantía" />
                 </SelectTrigger>
                 <SelectContent>
@@ -353,9 +269,6 @@ export default function PricingEditPage({
                   <SelectItem value="BOTH">Obligado Solidario y Aval</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.guarantorType && (
-                <p className="text-red-500 text-sm mt-1">{errors.guarantorType}</p>
-              )}
             </div>
 
             {/* Payment Split */}
@@ -383,9 +296,6 @@ export default function PricingEditPage({
                   </span>
                 </div>
               </div>
-              {errors.tenantPercentage && (
-                <p className="text-red-500 text-sm">{errors.tenantPercentage}</p>
-              )}
             </div>
 
             {/* Preview Card */}
@@ -452,13 +362,13 @@ export default function PricingEditPage({
             <Button
               variant="outline"
               onClick={() => router.push(`/dashboard/policies/${policyId}`)}
-              disabled={saving}
+              disabled={updateMutation.isPending}
             >
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Guardando...' : 'Guardar Cambios'}
+              {updateMutation.isPending ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
           </div>
         </CardContent>

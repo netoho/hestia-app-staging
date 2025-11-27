@@ -26,14 +26,12 @@ export const actorConfig = {
   landlord: {
     personTabs: [
       { id: 'owner-info', label: 'Información', needsSave: true, required: true },
-      { id: 'bank-info', label: 'Banco', needsSave: true, required: true },
       { id: 'property-info', label: 'Propiedad', needsSave: true, required: true },
       { id: 'financial-info', label: 'Financiero', needsSave: true, required: true },
       { id: 'documents', label: 'Documentos', needsSave: false, required: true },
     ],
     companyTabs: [
       { id: 'owner-info', label: 'Información', needsSave: true, required: true },
-      { id: 'bank-info', label: 'Banco', needsSave: true, required: true },
       { id: 'property-info', label: 'Propiedad', needsSave: true, required: true },
       { id: 'financial-info', label: 'Financiero', needsSave: true, required: true },
       { id: 'documents', label: 'Documentos', needsSave: false, required: true },

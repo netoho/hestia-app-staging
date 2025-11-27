@@ -26,8 +26,6 @@ import {
 import {
   personalReferenceSchema,
   commercialReferenceSchema,
-  personalReferencesArraySchema,
-  commercialReferencesArraySchema,
 } from '../shared/references.schema';
 import {
   companyWithLegalRepSchema,
@@ -115,9 +113,9 @@ export const tenantEmploymentTabSchema = z.object({
 export const tenantRentalHistoryTabSchema = z.object({
   previousLandlordName: z.string().optional().nullable(),
   previousLandlordPhone: z.string().optional().nullable(),
-  previousLandlordEmail: z.string().email().optional().nullable(),
+  previousLandlordEmail: z.string().email().optional().nullable().or(z.literal('')),
   previousRentAmount: z.number().positive().optional().nullable(),
-  previousRentalAddressDetails: partialAddressSchema.optional(),
+  previousRentalAddressDetails: partialAddressSchema.optional().nullable(),
   rentalHistoryYears: z.number().min(0).optional().nullable(),
   reasonForMoving: z.string().optional().nullable(),
   numberOfOccupants: z.number().positive().optional().nullable(),
@@ -126,14 +124,27 @@ export const tenantRentalHistoryTabSchema = z.object({
 });
 
 /**
+ * Tenant-specific reference arrays (1-5 references, dynamic)
+ */
+export const tenantPersonalReferencesArraySchema = z
+  .array(personalReferenceSchema)
+  .min(1, 'Al menos una referencia personal es requerida')
+  .max(5, 'Máximo 5 referencias personales permitidas');
+
+export const tenantCommercialReferencesArraySchema = z
+  .array(commercialReferenceSchema)
+  .min(1, 'Al menos una referencia comercial es requerida')
+  .max(5, 'Máximo 5 referencias comerciales permitidas');
+
+/**
  * REFERENCES TAB - Conditional based on tenant type
  */
 export const tenantReferencesTabIndividualSchema = z.object({
-  personalReferences: personalReferencesArraySchema,
+  personalReferences: tenantPersonalReferencesArraySchema,
 });
 
 export const tenantReferencesTabCompanySchema = z.object({
-  commercialReferences: commercialReferencesArraySchema,
+  commercialReferences: tenantCommercialReferencesArraySchema,
 });
 
 /**
@@ -141,7 +152,7 @@ export const tenantReferencesTabCompanySchema = z.object({
  */
 export const tenantDocumentsTabSchema = z.object({
   additionalInfo: z.string().max(1000).optional().nullable(),
-  paymentMethod: paymentMethodSchema.optional(),
+  paymentMethod: paymentMethodSchema.optional().nullable(),
   requiresCFDI: z.boolean().default(false),
   cfdiData: z.string().optional().nullable(), // JSON string with fiscal data
 });
@@ -162,7 +173,7 @@ export const tenantIndividualCompleteSchema = tenantPersonalTabIndividualSchema
   .merge(tenantDocumentsTabSchema)
   .extend({
     tenantType: z.literal('INDIVIDUAL'),
-    personalReferences: personalReferencesArraySchema.optional(),
+    personalReferences: tenantPersonalReferencesArraySchema.optional(),
   });
 
 /**
@@ -173,11 +184,7 @@ export const tenantCompanyCompleteSchema = tenantPersonalTabCompanySchema
   .merge(tenantDocumentsTabSchema)
   .extend({
     tenantType: z.literal('COMPANY'),
-    commercialReferences: commercialReferencesArraySchema.optional(),
-    // Company-specific optional fields
-    businessType: z.string().optional().nullable(),
-    employeeCount: z.number().positive().optional().nullable(),
-    yearsInBusiness: z.number().positive().optional().nullable(),
+    commercialReferences: tenantCommercialReferencesArraySchema.optional(),
   });
 
 /**
@@ -195,16 +202,24 @@ export function getTenantSchema(
   tenantType: 'INDIVIDUAL' | 'COMPANY',
   mode: ValidationMode = 'strict',
   tabName?: string
-) {
-  // Get base schema
-  let schema = tenantType === 'COMPANY'
-    ? tenantCompanyCompleteSchema
-    : tenantIndividualCompleteSchema;
-
+): z.ZodSchema {
   // If tab is specified, get only that tab's schema
   if (tabName) {
-    schema = getTenantTabSchema(tenantType, tabName);
+    const tabSchema = getTenantTabSchema(tenantType, tabName);
+    switch (mode) {
+      case 'partial':
+        return (tabSchema as any).partial();
+      case 'admin':
+        return (tabSchema as any).partial().passthrough();
+      default:
+        return tabSchema;
+    }
   }
+
+  // Get base schema
+  const schema = tenantType === 'COMPANY'
+    ? tenantCompanyCompleteSchema
+    : tenantIndividualCompleteSchema;
 
   // Apply validation mode
   switch (mode) {

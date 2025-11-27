@@ -50,11 +50,11 @@ import { emptyStringsToNull } from '@/lib/utils/dataTransform';
 /**
  * OWNER INFO TAB - Individual Landlord
  */
-export const landlordOwnerInfoIndividualSchema = personWithNationalitySchema.extend({
+export const landlordOwnerInfoIndividualSchema = personNameSchema.extend({
   curp: curpSchema,
   rfc: rfcPersonSchema,
   ...extendedContactSchema.shape,
-  address: z.string().min(1, 'Dirección requerida'),
+  // address: z.string().min(1, 'Dirección requerida'),
   addressDetails: partialAddressSchema.optional(),
   isPrimary: z.boolean().default(false),
 });
@@ -66,7 +66,6 @@ export const landlordOwnerInfoCompanySchema = z.object({
   // Company info
   companyName: z.string().min(1, 'Razón social requerida'),
   companyRfc: rfcCompanySchema,
-  businessType: z.string().optional().nullable(),
 
   // Legal representative - prefix fields with legalRep
   legalRepFirstName: z.string().min(1, 'Nombre del representante requerido'),
@@ -78,7 +77,6 @@ export const landlordOwnerInfoCompanySchema = z.object({
   legalRepCurp: curpSchema,
   legalRepPhone: phoneSchema,
   legalRepEmail: emailSchema,
-  legalRepNationality: z.string().optional().nullable(),
 
   // Company contact
   ...extendedContactSchema.shape,
@@ -203,8 +201,6 @@ export function getLandlordTabSchema(
       return isCompany
         ? landlordOwnerInfoCompanySchema
         : landlordOwnerInfoIndividualSchema;
-    case 'bank-info':
-      return landlordBankInfoTabSchema;
     case 'property-info':
       return landlordPropertyInfoTabSchema;
     case 'financial-info':
@@ -368,4 +364,4 @@ export type Landlord = z.infer<typeof landlordSchema>;
 export type MultiLandlordSubmission = z.infer<typeof multiLandlordSchema>;
 
 // Tab names type
-export type LandlordTabName = 'owner-info' | 'bank-info' | 'property-info' | 'financial-info' | 'documents';
+export type LandlordTabName = 'owner-info' | 'property-info' | 'financial-info' | 'documents';

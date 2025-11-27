@@ -9,6 +9,8 @@ import { Info, AlertCircle } from 'lucide-react';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentCategory } from '@/lib/enums';
+import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
+import { documentCategoryLabels } from '@/lib/constants/documentCategories';
 
 interface JointObligorDocumentsSectionProps {
   obligorId?: string;
@@ -53,40 +55,34 @@ export default function JointObligorDocumentsSection({
 
   const [checkedDocs, setCheckedDocs] = useState<Set<string>>(new Set());
 
-  // Define required documents based on type and guarantee method
+  // Get documents from centralized config
   // Note: INCOME_PROOF, PROPERTY_DEED, and PROPERTY_TAX_STATEMENT are uploaded in Guarantee tab
-  const getDocumentCategories = () => {
-    const baseIndividualDocs = [
-      { category: DocumentCategory.IDENTIFICATION, title: 'Identificación Oficial', required: true },
-      { category: DocumentCategory.ADDRESS_PROOF, title: 'Comprobante de Domicilio', required: true },
-      { category: DocumentCategory.BANK_STATEMENT, title: 'Estados de Cuenta', required: true },
+  const documentRequirements = useMemo(() => {
+    const allRequirements = getDocumentRequirements('jointObligor', isCompany, {
+      nationality,
+      guaranteeMethod,
+    });
+
+    // Guarantee documents are shown separately (uploaded in Guarantee tab)
+    const guaranteeCategories = [
+      DocumentCategory.INCOME_PROOF,
+      DocumentCategory.PROPERTY_DEED,
+      DocumentCategory.PROPERTY_TAX_STATEMENT,
     ];
 
-    const baseCompanyDocs = [
-      { category: DocumentCategory.COMPANY_CONSTITUTION, title: 'Acta Constitutiva', required: true },
-      { category: DocumentCategory.LEGAL_POWERS, title: 'Poderes Representante Legal', required: true },
-      { category: DocumentCategory.IDENTIFICATION, title: 'ID Representante', required: true },
-      { category: DocumentCategory.TAX_STATUS_CERTIFICATE, title: 'Constancia Situación Fiscal', required: true },
-      { category: DocumentCategory.BANK_STATEMENT, title: 'Estados de Cuenta', required: true },
-    ];
+    // Filter out guarantee docs from this section's upload list
+    return allRequirements
+      .filter((req) => !guaranteeCategories.includes(req.category))
+      .map((req) => ({
+        category: req.category,
+        title: documentCategoryLabels[req.category]?.title || req.category,
+        description: documentCategoryLabels[req.category]?.description || '',
+        required: req.required,
+      }));
+  }, [isCompany, nationality, guaranteeMethod]);
 
-    // Optional property registry certificate (only for property guarantee)
-    const propertyDocs = guaranteeMethod === 'property' ? [
-      { category: DocumentCategory.PROPERTY_REGISTRY, title: 'Certificado Libertad Gravamen', required: false },
-    ] : [];
-
-    if (isCompany) {
-      return [...baseCompanyDocs, ...propertyDocs];
-    } else {
-      const docs = [...baseIndividualDocs];
-      if (nationality === 'FOREIGN') {
-        docs.push({ category: DocumentCategory.IMMIGRATION_DOCUMENT, title: 'Documento Migratorio', required: true });
-      }
-      return [...docs, ...propertyDocs];
-    }
-  };
-
-  const documentCategories = useMemo(() => getDocumentCategories(), [isCompany, nationality, guaranteeMethod]);
+  // Alias for backward compatibility in JSX
+  const documentCategories = documentRequirements;
 
   // Get guarantee documents uploaded in previous tab
   const getGuaranteeDocuments = () => {
@@ -274,25 +270,26 @@ export default function JointObligorDocumentsSection({
       </div>
 
       {/* Additional Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Información Adicional</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="additionalInfo" optional>
-              Redes sociales, LinkedIn o información adicional
-            </Label>
-            <Textarea
-              id="additionalInfo"
-              value={additionalInfo}
-              onChange={(e) => onAdditionalInfoChange?.(e.target.value)}
-              placeholder="Proporcione cualquier información adicional que considere relevante..."
-              rows={4}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Don't trigger the save directly, we need to add the useForm or something similar */}
+      {/*<Card>*/}
+      {/*  <CardHeader>*/}
+      {/*    <CardTitle>Información Adicional</CardTitle>*/}
+      {/*  </CardHeader>*/}
+      {/*  <CardContent>*/}
+      {/*    <div className="space-y-2">*/}
+      {/*      <Label htmlFor="additionalInfo" optional>*/}
+      {/*        Redes sociales, LinkedIn o información adicional*/}
+      {/*      </Label>*/}
+      {/*      <Textarea*/}
+      {/*        id="additionalInfo"*/}
+      {/*        value={additionalInfo}*/}
+      {/*        onChange={(e) => onAdditionalInfoChange?.(e.target.value)}*/}
+      {/*        placeholder="Proporcione cualquier información adicional que considere relevante..."*/}
+      {/*        rows={4}*/}
+      {/*      />*/}
+      {/*    </div>*/}
+      {/*  </CardContent>*/}
+      {/*</Card>*/}
 
       {/* Warning if missing required docs */}
       {uploadedRequiredCount < requiredDocsCount && (

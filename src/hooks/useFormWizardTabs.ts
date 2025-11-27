@@ -18,10 +18,13 @@ interface UseFormWizardTabsOptions {
 const canAccessTab = (tabId: string, tabs: Tab[], isAdminEdit: boolean, tabSaved: Record<string, boolean>) => {
   if (isAdminEdit) return true;
 
+  // If this tab is already saved, allow access (can go back to edit)
+  if (tabSaved[tabId]) return true;
+
   const tabIndex = tabs.findIndex(t => t.id === tabId);
   if (tabIndex <= 0) return true;
 
-  // Check if all previous tabs that need saving are saved
+  // For unsaved tabs, check if all previous required tabs are saved
   for (let i = 0; i < tabIndex; i++) {
     const prevTab = tabs[i];
     if (prevTab.needsSave && !tabSaved[prevTab.id]) {

@@ -90,9 +90,9 @@ export default function LandlordFormWizard({
       if (initialData.landlords?.length > 0 || initialData.fullName || initialData.companyName) {
         wizard.markTabSaved('owner-info');
       }
-      if (initialData.landlords?.[0]?.bankName || initialData.bankName) {
-        wizard.markTabSaved('bank-info');
-      }
+      // if (initialData.landlords?.[0]?.bankName || initialData.bankName) {
+      //   wizard.markTabSaved('bank-info');
+      // }
       if (initialData.propertyAddress || propertyData?.address) {
         wizard.markTabSaved('property-info');
       }

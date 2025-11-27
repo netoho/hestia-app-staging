@@ -4,6 +4,8 @@
  */
 
 import {Prisma, PrismaClient} from '@prisma/client';
+import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
+import { DocumentCategory } from '@/lib/enums';
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
@@ -47,7 +49,16 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   protected getIncludes(): Record<string, boolean | object> {
     return {
       addressDetails: true,
-      policy: true
+      policy: {
+        include: {
+          propertyDetails: {
+            include: {
+              propertyAddressDetails: true,
+              contractSigningAddressDetails: true,
+            }
+          }
+        }
+      }
     };
   }
 
@@ -463,6 +474,16 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
       const landlordData = data as any;
+
+      // Handle address if provided
+      let addressId: string | undefined;
+      if (landlordData.addressDetails) {
+        const addressResult = await this.upsertAddress(landlordData.addressDetails);
+        if (addressResult.ok) {
+          addressId = addressResult.value;
+        }
+      }
+
       // If setting as primary, unmark existing primary
       if (isPrimary) {
         await tx.landlord.updateMany({
@@ -476,6 +497,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         data: {
           policyId,
           isPrimary,
+          addressId,
           isCompany: landlordData.isCompany || false,
           email: landlordData.email || '',
           phone: landlordData.phone || '',
@@ -590,26 +612,6 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   }
 
   /**
-   * Check if landlord can submit information
-   */
-  async canSubmit(landlordId: string): AsyncResult<boolean> {
-    const landlordResult = await this.getLandlordById(landlordId);
-    if (!landlordResult.ok) {
-      return Result.ok(false);
-    }
-
-    const landlord = landlordResult.value;
-
-    // Check if basic information is complete
-    const hasBasicInfo = this.isInformationComplete(landlord as any);
-
-    // Check if required documents are uploaded (if applicable)
-    const hasRequiredDocs = await this.hasRequiredDocuments(landlordId);
-
-    return Result.ok(hasBasicInfo && hasRequiredDocs);
-  }
-
-  /**
    * Get an actor by token
    * Used by tRPC router for actor self-service access
    */
@@ -644,7 +646,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         where: { policyId: landlord?.policyId },
         include: this.getIncludes(),
       });
-    }, 'getByToken');
+    }, 'getManyByToken');
   }
 
 
@@ -721,6 +723,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         if (data.landlords && Array.isArray(data.landlords)) {
           for (const landlordData of data.landlords) {
             if (landlordData.id) {
+              // UPDATE existing landlord
               const saveResult = await this.saveLandlordInformation(
                 landlordData.id,
                 landlordData as LandlordData,
@@ -730,6 +733,17 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
 
               if (!saveResult.ok) {
                 throw saveResult.error;
+              }
+            } else {
+              // CREATE new landlord (co-owner)
+              const createResult = await this.createLandlord(
+                policyId,
+                landlordData as Partial<LandlordData>,
+                landlordData.isPrimary ?? false
+              );
+
+              if (!createResult.ok) {
+                throw createResult.error;
               }
             }
           }
@@ -882,20 +896,20 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     const landlord = await this.getById(landlordId);
     if (!landlord.ok) return landlord;
 
-    const requiredDocs: any[] = landlord.value.isCompany
-      ? ['ESCRITURA', 'PREDIAL', 'IDENTIFICACION', 'ACTA_CONSTITUTIVA']
-      : ['ESCRITURA', 'PREDIAL', 'IDENTIFICACION'];
+    const isCompany = landlord.value.isCompany;
+
+    const requiredDocs = getRequiredDocuments('landlord', isCompany);
 
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         landlordId,
-        category: { in: requiredDocs }
+        category: { in: requiredDocs.map(d => d.category) }
       },
       select: { category: true }
     });
 
     const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
-    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+    const missingDocs = requiredDocs.filter(d => !uploadedCategories.has(d.category as DocumentCategory));
 
     if (missingDocs.length > 0) {
       return Result.error(
@@ -903,7 +917,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
           ErrorCode.VALIDATION_ERROR,
           'Faltan documentos requeridos',
           400,
-          { missingDocuments: missingDocs }
+          { missingDocuments: missingDocs.map(d => d.category) }
         )
       );
     }

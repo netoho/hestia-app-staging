@@ -10,6 +10,8 @@ import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { DocumentCategory } from '@/lib/enums';
 import { Document } from '@/types/documents';
+import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
+import { documentCategoryLabels } from '@/lib/constants/documentCategories';
 
 interface TenantDocumentsSectionProps {
   tenantId?: string;
@@ -59,93 +61,23 @@ export default function TenantDocumentsSection({
     }
   };
 
-  // Define required documents based on tenant type
-  const documentCategories = tenantType === 'COMPANY'
-    ? [
-        {
-          category: DocumentCategory.COMPANY_CONSTITUTION,
-          type: 'company_constitution',
-          title: 'Acta Constitutiva',
-          description: 'Documento constitutivo de la empresa',
-          required: true
-        },
-        {
-          category: DocumentCategory.LEGAL_POWERS,
-          type: 'legal_powers',
-          title: 'Poderes del Representante Legal',
-          description: 'Documentación de poderes legales',
-          required: true
-        },
-        {
-          category: DocumentCategory.IDENTIFICATION,
-          type: 'representative_id',
-          title: 'Identificación del Representante',
-          description: 'INE o Pasaporte del representante legal',
-          required: true
-        },
-        {
-          category: DocumentCategory.TAX_STATUS_CERTIFICATE,
-          type: 'rfc_document',
-          title: 'Constancia de Situación Fiscal',
-          description: 'RFC y constancia fiscal de la empresa',
-          required: true
-        },
-        {
-          category: DocumentCategory.BANK_STATEMENT,
-          type: 'bank_statement',
-          title: 'Estados de Cuenta Bancarios',
-          description: 'Últimos 6 meses de estados de cuenta',
-          required: true
-        },
-        {
-          category: DocumentCategory.ADDRESS_PROOF,
-          type: 'address_proof',
-          title: 'Comprobante de Domicilio Fiscal',
-          description: 'No mayor a 3 meses',
-          required: false
-        },
-      ]
-    : [
-        {
-          category: DocumentCategory.IDENTIFICATION,
-          type: 'ine',
-          title: 'Identificación Oficial',
-          description: 'INE, Pasaporte u otra identificación oficial',
-          required: true
-        },
-        ...(nationality === 'FOREIGN' ? [{
-          category: DocumentCategory.IMMIGRATION_DOCUMENT,
-          type: 'immigration_document',
-          title: 'Documento Migratorio',
-          description: 'FM2, FM3 o documento migratorio vigente',
-          required: true
-        }] : []),
-        {
-          category: DocumentCategory.INCOME_PROOF,
-          type: 'income_proof',
-          title: 'Comprobante de Ingresos',
-          description: 'Recibos de nómina, declaraciones, o estados financieros (últimos 3 meses)',
-          required: true
-        },
-        {
-          category: DocumentCategory.ADDRESS_PROOF,
-          type: 'address_proof',
-          title: 'Comprobante de Domicilio',
-          description: 'Recibo de luz, agua o teléfono (no mayor a 3 meses)',
-          required: true
-        },
-        {
-          category: DocumentCategory.BANK_STATEMENT,
-          type: 'bank_statement',
-          title: 'Estados de Cuenta Bancarios',
-          description: 'Últimos 3 meses de estados de cuenta',
-          required: true
-        },
-      ];
+  // Get required documents from centralized config
+  const documentRequirements = useMemo(() => {
+    const isCompany = tenantType === 'COMPANY';
+    const requirements = getDocumentRequirements('tenant', isCompany, { nationality });
+
+    return requirements.map((req) => ({
+      category: req.category,
+      type: req.category.toLowerCase(),
+      title: documentCategoryLabels[req.category]?.title || req.category,
+      description: documentCategoryLabels[req.category]?.description || '',
+      required: req.required,
+    }));
+  }, [tenantType, nationality]);
 
   // Check if all required documents are uploaded
   const requiredDocsUploaded = useMemo(() => {
-    const requiredCategories = documentCategories
+    const requiredCategories = documentRequirements
       .filter(doc => doc.required)
       .map(doc => doc.category);
 
@@ -153,7 +85,7 @@ export default function TenantDocumentsSection({
       const categoryDocs = documents[category] || [];
       return categoryDocs.length > 0;
     });
-  }, [documents, documentCategories]);
+  }, [documents, documentRequirements]);
 
   // Notify parent of required docs status
   useMemo(() => {
@@ -202,7 +134,7 @@ export default function TenantDocumentsSection({
 
       {/* Document Upload Cards */}
       <div className="space-y-4">
-        {documentCategories.map(({ category, type, title, description, required }) => {
+        {documentRequirements.map(({ category, type, title, description, required }) => {
           const categoryDocs = documents[category] || [];
           const categoryOps = getCategoryOperations(category);
 

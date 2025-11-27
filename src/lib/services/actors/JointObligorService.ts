@@ -4,6 +4,8 @@
  */
 
 import {Prisma, PrismaClient} from '@prisma/client';
+import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
+import { DocumentCategory } from '@/lib/enums';
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
@@ -128,7 +130,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       // Fetch existing joint obligor to get policyId
       const existingJointObligor = await tx.jointObligor.findUnique({
         where: { id: jointObligorId },
-        select: { policyId: true, actorId: true }
+        select: { policyId: true }
       });
 
       if (!existingJointObligor) {
@@ -256,7 +258,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
         await this.prisma.personalReference.createMany({
           data: references.map(ref => ({
             jointObligorId,
-            name: ref.name,
+            firstName: ref.firstName,
+            maternalLastName: ref.maternalLastName,
+            middleName: ref.middleName,
+            paternalLastName: ref.paternalLastName,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -512,265 +517,6 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   }
 
   /**
-   * Check if joint obligor can submit information
-   */
-  async canSubmit(jointObligorId: string): AsyncResult<boolean> {
-    const jointObligorResult = await this.getJointObligorById(jointObligorId);
-    if (!jointObligorResult.ok) {
-      return Result.ok(false);
-    }
-
-    const jointObligor = jointObligorResult.value;
-
-    // Check if basic information is complete
-    const hasBasicInfo = this.isInformationComplete(jointObligor as any);
-
-    // Check if guarantee method is valid
-    const guaranteeVerification = await this.verifyGuaranteeMethod(jointObligorId);
-    const hasValidGuarantee = guaranteeVerification.ok ? guaranteeVerification.value : false;
-
-    // Check if required documents are uploaded
-    const docsResult = await this.hasRequiredDocuments(jointObligorId);
-    const hasRequiredDocs = docsResult.ok ? docsResult.value : false;
-
-    return Result.ok(hasBasicInfo && hasValidGuarantee && hasRequiredDocs);
-  }
-
-  /**
-   * Validates and saves joint obligor information with token authentication
-   * Handles both partial saves (PUT) and final submissions (POST)
-   */
-  async validateAndSave(
-    token: string,
-    data: any,
-    isPartialSave: boolean = false
-  ): Promise<Result<any>> {
-    return this.executeTransaction(async (tx) => {
-      // Validate token using actorTokenService
-      const { validateJointObligorToken } = await import('@/lib/services/actorTokenService');
-      const validation = await validateJointObligorToken(token);
-
-      if (!validation.valid) {
-        throw new ServiceError(
-          ErrorCode.INVALID_TOKEN,
-          validation.message || 'Token inválido',
-          400
-        );
-      }
-
-      const { jointObligor } = validation;
-
-      // Check token expiry
-      if (jointObligor.tokenExpiry && jointObligor.tokenExpiry < new Date()) {
-        throw new ServiceError(
-          ErrorCode.TOKEN_EXPIRED,
-          'Token expirado',
-          400
-        );
-      }
-
-      // Check if already complete (only for final submission)
-      if (jointObligor.informationComplete && !isPartialSave) {
-        throw new ServiceError(
-          ErrorCode.ALREADY_COMPLETE,
-          'La información ya fue completada',
-          400
-        );
-      }
-
-      // Build update data
-      const updateData: any = {
-        // Type
-        isCompany: data.isCompany,
-
-        // Individual Information
-        firstName: data.firstName || null,
-        middleName: data.middleName || null,
-        paternalLastName: data.paternalLastName || null,
-        maternalLastName: data.maternalLastName || null,
-        nationality: data.nationality,
-        curp: data.curp || null,
-        rfc: data.rfc || null,
-        passport: data.passport || null,
-        relationshipToTenant: data.relationshipToTenant || null, // REQUIRED for Joint Obligor
-
-        // Company Information
-        companyName: data.companyName || null,
-        companyRfc: data.companyRfc || null,
-
-        // Legal Representative Information
-        legalRepFirstName: data.legalRepFirstName || null,
-        legalRepMiddleName: data.legalRepMiddleName || null,
-        legalRepPaternalLastName: data.legalRepPaternalLastName || null,
-        legalRepMaternalLastName: data.legalRepMaternalLastName || null,
-        legalRepPosition: data.legalRepPosition || null,
-        legalRepRfc: data.legalRepRfc || null,
-        legalRepPhone: data.legalRepPhone || null,
-        legalRepEmail: data.legalRepEmail || null,
-
-        // Contact Information
-        email: data.email,
-        phone: data.phone,
-        workPhone: data.workPhone || null,
-        personalEmail: data.personalEmail || null,
-        workEmail: data.workEmail || null,
-
-        // Address (legacy field)
-        address: data.address || null,
-
-        // Employment (for individuals)
-        employmentStatus: data.employmentStatus || null,
-        occupation: data.occupation || null,
-        employerName: data.employerName || null,
-        employerAddress: data.employerAddress || null,
-        position: data.position || null,
-        monthlyIncome: data.monthlyIncome || null,
-        incomeSource: data.incomeSource || null,
-
-        // Guarantee Method (UNIQUE to Joint Obligor)
-        guaranteeMethod: data.guaranteeMethod || null, // 'income' or 'property'
-        hasPropertyGuarantee: data.hasPropertyGuarantee ?? false,
-
-        // Property Guarantee Information
-        propertyAddress: data.propertyAddress || null,
-        propertyValue: data.propertyValue || null,
-        propertyDeedNumber: data.propertyDeedNumber || null,
-        propertyRegistry: data.propertyRegistry || null,
-        propertyTaxAccount: data.propertyTaxAccount || null,
-        propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
-
-        // Financial Information (income guarantee)
-        bankName: data.bankName || null,
-        accountHolder: data.accountHolder || null,
-        hasProperties: data.hasProperties ?? false,
-
-        // Marriage Information (for property guarantee)
-        maritalStatus: data.maritalStatus || null,
-        spouseName: data.spouseName || null,
-        spouseRfc: data.spouseRfc || null,
-        spouseCurp: data.spouseCurp || null,
-
-        // Additional info
-        additionalInfo: data.additionalInfo || null,
-      };
-
-      // Handle addresses using helper method
-      // Current address
-      if (data.addressDetails) {
-        const addressResult = await this.upsertAddress(data.addressDetails, jointObligor.addressId);
-        if (addressResult.ok) {
-          updateData.addressId = addressResult.value;
-        }
-      }
-
-      // Employer address
-      if (data.employerAddressDetails) {
-        const addressResult = await this.upsertAddress(data.employerAddressDetails, jointObligor.employerAddressId);
-        if (addressResult.ok) {
-          updateData.employerAddressId = addressResult.value;
-        }
-      }
-
-      // Guarantee property address (for property-based guarantee)
-      if (data.guaranteePropertyDetails) {
-        const addressResult = await this.upsertAddress(data.guaranteePropertyDetails, jointObligor.guaranteePropertyAddressId);
-        if (addressResult.ok) {
-          updateData.guaranteePropertyAddressId = addressResult.value;
-        }
-      }
-
-      // If final submission, mark as complete
-      if (!isPartialSave) {
-        updateData.informationComplete = true;
-        updateData.completedAt = new Date();
-      }
-
-      // Update joint obligor
-      const updatedJointObligor = await tx.jointObligor.update({
-        where: { id: jointObligor.id },
-        data: updateData
-      });
-
-      // Save references
-      // Delete existing references first
-      await tx.personalReference.deleteMany({
-        where: { jointObligorId: jointObligor.id }
-      });
-
-      await tx.commercialReference.deleteMany({
-        where: { jointObligorId: jointObligor.id }
-      });
-
-      // Create new personal references (for individuals)
-      if (data.references && data.references.length > 0) {
-        await tx.personalReference.createMany({
-          data: data.references.map((ref: any) => ({
-            jointObligorId: jointObligor.id,
-            firstName: ref.firstName,
-            paternalLastName: ref.paternalLastName,
-            maternalLastName: ref.maternalLastName,
-            middleName: ref.middleName,
-            phone: ref.phone,
-            email: ref.email || null,
-            relationship: ref.relationship,
-            occupation: ref.occupation || null,
-            address: ref.address || null,
-          }))
-        });
-      }
-
-      // Create new commercial references (for companies)
-      if (data.commercialReferences && data.commercialReferences.length > 0) {
-        await tx.commercialReference.createMany({
-          data: data.commercialReferences.map((ref: any) => ({
-            jointObligorId: jointObligor.id,
-            companyName: ref.companyName,
-            contactName: ref.contactName,
-            phone: ref.phone,
-            email: ref.email || null,
-            relationship: ref.relationship,
-            yearsOfRelationship: ref.yearsOfRelationship || null,
-          }))
-        });
-      }
-
-      // Log activity if final submission
-      if (!isPartialSave) {
-        const { formatFullName } = await import('@/lib/utils/names');
-        const actorName = data.isCompany
-          ? data.companyName
-          : formatFullName(
-            data.firstName,
-            data.paternalLastName,
-            data.maternalLastName,
-            data.middleName,
-          );
-
-        const { logPolicyActivity } = await import('@/lib/services/policyService');
-        await logPolicyActivity({
-          policyId: jointObligor.policyId,
-          action: 'joint_obligor_info_completed',
-          description: 'Joint obligor information completed',
-          details: {
-            jointObligorId: jointObligor.id,
-            jointObligorName: actorName,
-            guaranteeMethod: data.guaranteeMethod,
-            completedAt: new Date()
-          },
-          performedByType: 'joint_obligor',
-          ipAddress: 'unknown', // Will be passed from route
-        });
-
-        return {
-          jointObligor: updatedJointObligor
-        };
-      }
-
-      return updatedJointObligor;
-    }, 'validateAndSave');
-  }
-
-  /**
    * Public save method for admin use
    * Wraps the internal saveJointObligorInformation method
    */
@@ -799,14 +545,17 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   protected validateCompleteness(jointObligor: JointObligorWithRelations): Result<boolean> {
     const errors: string[] = [];
 
-    if (!jointObligor.isCompany) {
+    if (jointObligor.jointObligorType === 'INDIVIDUAL') {
       // Person validation
       if (!jointObligor.firstName) errors.push('Nombre requerido');
       if (!jointObligor.paternalLastName) errors.push('Apellido paterno requerido');
       if (!jointObligor.maternalLastName) errors.push('Apellido materno requerido');
-      if (!jointObligor.occupation) errors.push('Ocupación requerida');
-      if (!jointObligor.employerName) errors.push('Nombre del empleador requerido');
-      if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido');
+      if (!jointObligor.curp) errors.push('CURP requerido');
+      if (!jointObligor.rfc) errors.push('RFC requerido');
+      // Employment fields: occupation required only when employmentStatus is set, monthlyIncome only for income guarantee
+      if (jointObligor.employmentStatus && !jointObligor.occupation) {
+        errors.push('Ocupación requerida');
+      }
     } else {
       // Company validation
       if (!jointObligor.companyName) errors.push('Razón social requerida');
@@ -820,6 +569,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     if (!jointObligor.email) errors.push('Email requerido');
     if (!jointObligor.phone) errors.push('Teléfono requerido');
     if (!jointObligor.addressDetails) errors.push('Dirección requerida');
+    if (!jointObligor.relationshipToTenant) errors.push('Relación con el inquilino requerida');
 
     // Joint obligor specific - must have guarantee method
     if (!jointObligor.guaranteeMethod) errors.push('Método de garantía requerido');
@@ -833,10 +583,11 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     } else if (jointObligor.guaranteeMethod === 'income') {
       // Income guarantee validation
       if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');
-      const minIncome = 10000; // Example minimum income requirement
-      if (jointObligor.monthlyIncome && jointObligor.monthlyIncome < minIncome) {
-        errors.push(`Ingreso mínimo de $${minIncome} requerido para garantía por ingresos`);
-      }
+      // TODO: Validate minimum income rule with business before enabling
+      // const minIncome = 10000;
+      // if (jointObligor.monthlyIncome && jointObligor.monthlyIncome < minIncome) {
+      //   errors.push(`Ingreso mínimo de $${minIncome} requerido para garantía por ingresos`);
+      // }
     }
 
     // Check references (minimum 3 for joint obligor with addresses)
@@ -867,25 +618,25 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     const obligor = await this.getById(obligorId);
     if (!obligor.ok) return obligor;
 
-    let requiredDocs: any[] = obligor.value.isCompany
-      ? ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS', 'ACTA_CONSTITUTIVA']
-      : ['IDENTIFICACION', 'COMPROBANTE_DOMICILIO', 'COMPROBANTE_INGRESOS'];
+    const isCompany = obligor.value.jointObligorType === 'COMPANY';
+    const guaranteeMethod = obligor.value.guaranteeMethod as 'income' | 'property' | undefined;
+    const nationality = obligor.value.nationality;
 
-    // Add property documents if using property guarantee
-    if (obligor.value.guaranteeMethod === 'property') {
-      requiredDocs = requiredDocs.concat(['ESCRITURA_GARANTIA', 'PREDIAL_GARANTIA']);
-    }
+    const requiredDocs = getRequiredDocuments('jointObligor', isCompany, {
+      nationality: nationality as 'MEXICAN' | 'FOREIGN' | undefined,
+      guaranteeMethod,
+    });
 
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         jointObligorId: obligorId,
-        category: { in: requiredDocs }
+        category: { in: requiredDocs.map(d => d.category) }
       },
       select: { category: true }
     });
 
     const uploadedCategories = new Set(uploadedDocs.map(d => d.category));
-    const missingDocs = requiredDocs.filter((doc: any) => !uploadedCategories.has(doc));
+    const missingDocs = requiredDocs.filter(d => !uploadedCategories.has(d.category as DocumentCategory));
 
     if (missingDocs.length > 0) {
       return Result.error(
@@ -893,7 +644,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           ErrorCode.VALIDATION_ERROR,
           'Faltan documentos requeridos',
           400,
-          { missingDocuments: missingDocs }
+          { missingDocuments: missingDocs.map(d => d.category) }
         )
       );
     }

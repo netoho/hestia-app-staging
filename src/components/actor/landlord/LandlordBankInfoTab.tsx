@@ -19,7 +19,7 @@ export default function LandlordBankInfoTab({
   canEdit = true,
 }: LandlordBankInfoTabProps) {
   // Only show bank info for primary landlord
-  const primaryLandlord = landlords[0];
+  const primaryLandlord = landlords.find((landlord) => landlord.isPrimary);
   if (!primaryLandlord) return null;
 
   return (

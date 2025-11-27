@@ -53,6 +53,9 @@ export abstract class BaseService {
 
     if (level === 'error') {
       console.error(JSON.stringify(logData));
+      if (data && data.message) {
+        console.error(data.message);
+      }
     } else if (level === 'warn') {
       console.warn(JSON.stringify(logData));
     } else {

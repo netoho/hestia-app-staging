@@ -12,26 +12,14 @@ import { t } from '@/lib/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Camera, Trash2 } from 'lucide-react';
-
-interface UserProfile {
-  name?: string;
-  email?: string;
-  role: string;
-  phone?: string;
-  address?: string;
-  image?: string;
-  createdAt: string;
-}
+import { trpc } from '@/lib/trpc/client';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useUtils();
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [fullName, setFullName] = useState('');
@@ -41,46 +29,49 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const fetchProfile = async () => {
-    if (!isAuthenticated || !user) {
-      setLoading(false);
-      return;
-    }
+  // tRPC query for profile
+  const { data: profile, isLoading: loadingProfile, error: profileError } = trpc.user.getProfile.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
 
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'GET',
-        credentials: 'include',
+  // tRPC mutation for profile update
+  const updateMutation = trpc.user.updateProfile.useMutation({
+    onSuccess: (updatedProfile) => {
+      // Clear password fields on success
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setFormError(null);
+
+      toast({
+        title: t.pages.profile.profileUpdated,
+        description: t.pages.profile.profileUpdatedDesc,
       });
 
-      if (!res.ok) {
-        throw new Error(t.pages.profile.failedToFetch);
-      }
+      utils.user.getProfile.invalidate();
+    },
+    onError: (error) => {
+      setFormError(error.message);
+      toast({
+        title: t.misc.error,
+        description: error.message || t.pages.profile.failedToUpdate,
+        variant: 'destructive',
+      });
+    },
+  });
 
-      const data: UserProfile = await res.json();
-      setProfile(data);
-      setFullName(data.name || '');
-      setEmail(data.email || '');
-      setPhone(data.phone || '');
-      setAddress(data.address || '');
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Update form when profile loads
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchProfile();
-    } else if (!isAuthLoading && !isAuthenticated) {
-        setLoading(false); // User is not authenticated, stop loading
+    if (profile) {
+      setFullName(profile.name || '');
+      setEmail(profile.email || '');
+      setPhone(profile.phone || '');
+      setAddress(profile.address || '');
     }
-  }, [isAuthenticated, user, isAuthLoading]);
+  }, [profile]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -102,7 +93,6 @@ export default function ProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-
       toast({
         title: 'Invalid file type',
         description: 'Please select an image file',
@@ -127,15 +117,12 @@ export default function ProfilePage() {
         throw new Error(error.error || 'Failed to upload avatar');
       }
 
-      const data = await response.json();
-
-      // Update local profile state
-      setProfile(prev => prev ? { ...prev, image: data.avatarUrl } : null);
-
       toast({
         title: 'Avatar uploaded',
         description: 'Your profile picture has been updated successfully',
       });
+
+      utils.user.getProfile.invalidate();
     } catch (err) {
       console.error('Error uploading avatar:', err);
       toast({
@@ -145,7 +132,6 @@ export default function ProfilePage() {
       });
     } finally {
       setIsUploadingAvatar(false);
-      // Clear the input value to allow re-uploading the same file
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -168,13 +154,12 @@ export default function ProfilePage() {
         throw new Error(error.error || 'Failed to delete avatar');
       }
 
-      // Update local profile state
-      setProfile(prev => prev ? { ...prev, image: undefined } : null);
-
       toast({
         title: 'Avatar removed',
         description: 'Your profile picture has been removed',
       });
+
+      utils.user.getProfile.invalidate();
     } catch (err) {
       console.error('Error deleting avatar:', err);
       toast({
@@ -189,63 +174,26 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    setError(null);
+    setFormError(null);
 
     if (newPassword && newPassword !== confirmNewPassword) {
-      setError(t.pages.profile.passwordMismatch);
-      setIsSaving(false);
+      setFormError(t.pages.profile.passwordMismatch);
       return;
     }
 
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: fullName,
-          email: email,
-          phone: phone,
-          address: address,
-          currentPassword: currentPassword || undefined,
-          newPassword: newPassword || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || t.pages.profile.failedToUpdate);
-      }
-
-      const updatedProfile: UserProfile = await res.json();
-      setProfile(updatedProfile);
-
-      // Clear password fields on success
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
-
-      toast({
-        title: t.pages.profile.profileUpdated,
-        description: t.pages.profile.profileUpdatedDesc,
-      });
-    } catch (err) {
-      console.error('Error saving profile:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      toast({
-        title: t.misc.error,
-        description: err instanceof Error ? err.message : t.pages.profile.failedToUpdate,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    await updateMutation.mutateAsync({
+      name: fullName,
+      email: email,
+      phone: phone,
+      address: address,
+      currentPassword: currentPassword || undefined,
+      newPassword: newPassword || undefined,
+    });
   };
 
-  if (loading || isAuthLoading) {
+  const loading = loadingProfile || isAuthLoading;
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -256,13 +204,13 @@ export default function ProfilePage() {
     );
   }
 
-  if (error) {
+  if (profileError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-red-600">{t.pages.profile.errorLoading}</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardDescription>{profileError.message}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => window.location.reload()} className="w-full">
@@ -305,8 +253,8 @@ export default function ProfilePage() {
                   className="h-32 w-32 border-4 border-primary mb-4 cursor-pointer transition-opacity group-hover:opacity-80"
                   onClick={handleAvatarClick}
                 >
-                  <AvatarImage asChild src={profile?.image || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'}>
-                     <Image src={profile?.image || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'} width={128} height={128} data-ai-hint="user portrait" />
+                  <AvatarImage asChild src={profile?.avatarUrl || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'}>
+                     <Image src={profile?.avatarUrl || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'} width={128} height={128} data-ai-hint="user portrait" />
                   </AvatarImage>
                   <AvatarFallback className="text-4xl bg-muted">{profile?.name ? profile.name.split(' ').map(n=>n[0]).join('') : 'U'}</AvatarFallback>
                 </Avatar>
@@ -326,7 +274,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Delete button - only show if user has an avatar */}
-                {profile?.image && (
+                {profile?.avatarUrl && (
                   <Button
                     variant="destructive"
                     size="icon"
@@ -417,15 +365,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {error && (
-                  <div className="text-destructive text-sm mt-4">{error}</div>
+                {formError && (
+                  <div className="text-destructive text-sm mt-4">{formError}</div>
                 )}
                 <div className="flex justify-end space-x-3 mt-4">
-                  <Button type="button" variant="outline" onClick={() => fetchProfile()} disabled={isSaving}>
+                  <Button type="button" variant="outline" onClick={() => utils.user.getProfile.invalidate()} disabled={updateMutation.isPending}>
                     {t.actions.cancel}
                   </Button>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={updateMutation.isPending}>
+                    {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {t.actions.saveChanges}
                   </Button>
                 </div>

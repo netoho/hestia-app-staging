@@ -16,14 +16,6 @@ export interface JWTPayload {
   name?: string;
 }
 
-// Demo mode super admin user
-const DEMO_SUPER_USER = {
-  id: 'demo-admin-id',
-  email: 'admin@hestiaplp.com.mx',
-  name: 'Super Admin',
-  role: 'ADMIN' as const // ADMIN role has full privileges
-};
-
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }

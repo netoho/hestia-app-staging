@@ -12,6 +12,7 @@ import { LandlordService } from '@/lib/services/actors/LandlordService';
 import { AvalService } from '@/lib/services/actors/AvalService';
 import { JointObligorService } from '@/lib/services/actors/JointObligorService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
+import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import { TenantType } from '@prisma/client';
 import { getTabFields } from '@/lib/constants/actorTabFields';
 
@@ -45,9 +46,11 @@ import {
 import { personNameSchema } from '@/lib/schemas/shared/person.schema';
 import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
+import { getDocumentsByActor } from '@/lib/services/documentService';
+import { deleteDocument, getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
 
 // Actor types enum
-const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
+const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor' ]);
 
 // Define which tab is the last one for each actor type
 const LAST_TABS = {
@@ -582,10 +585,10 @@ export const actorRouter = createTRPCRouter({
         }
       }
 
-      // STEP 3: Check if this is the last tab and auto-submit
+      // STEP 3: Check if this is the last tab and auto-submit (only for actor self-service, NOT admins)
       const isLastTab = tabName && LAST_TABS[input.type] === tabName;
 
-      if (isLastTab && partial !== false) {
+      if (isLastTab && partial !== false && auth.authType === 'actor') {
         // STEP 4: Call submitActor to validate and mark as complete
         const submitResult = await service.submitActor(auth.actor.id, {
           skipValidation: auth.skipValidation,
@@ -655,6 +658,38 @@ export const actorRouter = createTRPCRouter({
       }
 
       return result.value;
+    }),
+
+  /**
+   * Admin-only: Submit actor after admin review
+   * Validates data and marks as complete
+   */
+  adminSubmitActor: adminProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      id: z.string(),
+      skipValidation: z.boolean().default(false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const service = getActorService(input.type);
+
+      // Validate and submit
+      const result = await service.submitActor(input.id, {
+        skipValidation: input.skipValidation,
+        submittedBy: ctx.userId,
+      });
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error?.message || 'Error al enviar información del actor',
+        });
+      }
+
+      return {
+        ...result.value,
+        submitted: true,
+      };
     }),
 
   /**
@@ -747,6 +782,119 @@ export const actorRouter = createTRPCRouter({
     }),
 
   /**
+   * Landlord-specific: Save property details for a policy
+   * Used by the property-info tab to save PropertyDetails (parking, utilities, dates, addresses, etc.)
+   */
+  savePropertyDetails: dualAuthProcedure
+    .input(z.object({
+      type: z.literal('landlord'),
+      identifier: z.string(), // token or landlord ID
+      propertyDetails: z.any(), // PropertyDetailsInput
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication - get landlord from token/id
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Unauthorized',
+        });
+      }
+
+      // Get the policy ID from the landlord
+      const landlord = await ctx.prisma.landlord.findUnique({
+        where: { id: auth.actor.id },
+        select: { policyId: true },
+      });
+
+      if (!landlord?.policyId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Landlord not associated with a policy',
+        });
+      }
+
+      // Save property details using PropertyDetailsService
+      const propertyDetailsService = new PropertyDetailsService(ctx.prisma);
+      const result = await propertyDetailsService.upsert(landlord.policyId, input.propertyDetails);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error?.message || 'Failed to save property details',
+        });
+      }
+
+      console.log('[Actor Router] Property details saved for policy:', landlord.policyId);
+      return result.value;
+    }),
+
+  /**
+   * Landlord-specific: Save policy financial data
+   * Used by the financial-info tab to save financial fields to the Policy table
+   */
+  savePolicyFinancial: dualAuthProcedure
+    .input(z.object({
+      type: z.literal('landlord'),
+      identifier: z.string(), // token or landlord ID
+      policyFinancial: z.object({
+        securityDeposit: z.number().optional().nullable(),
+        maintenanceFee: z.number().optional().nullable(),
+        maintenanceIncludedInRent: z.boolean().optional(),
+        issuesTaxReceipts: z.boolean().optional(),
+        hasIVA: z.boolean().optional(),
+        rentIncreasePercentage: z.number().optional().nullable(),
+        paymentMethod: z.string().optional().nullable(),
+      }),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication - get landlord from token/id
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Unauthorized',
+        });
+      }
+
+      // Get the policy ID from the landlord
+      const landlord = await ctx.prisma.landlord.findUnique({
+        where: { id: auth.actor.id },
+        select: { policyId: true },
+      });
+
+      if (!landlord?.policyId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Landlord not associated with a policy',
+        });
+      }
+
+      // Update Policy with financial fields
+      const updatedPolicy = await ctx.prisma.policy.update({
+        where: { id: landlord.policyId },
+        data: input.policyFinancial,
+      });
+
+      console.log('[Actor Router] Policy financial data saved for policy:', landlord.policyId);
+      return updatedPolicy;
+    }),
+
+  /**
    * Landlord-specific: Validate landlord data
    * Used for form validation before submission
    */
@@ -800,5 +948,214 @@ export const actorRouter = createTRPCRouter({
       }
 
       return result.value;
+    }),
+
+  /**
+   * Landlord-specific: Delete a co-owner (non-primary landlord)
+   * Used by the landlord form wizard to remove co-owners
+   */
+  deleteCoOwner: dualAuthProcedure
+    .input(z.object({
+      type: z.literal('landlord'),
+      id: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const service = new LandlordService();
+      const result = await service.removeLandlord(input.id);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error?.message || 'Failed to delete landlord',
+        });
+      }
+
+      return { success: true };
+    }),
+
+  // ============================================
+  // DOCUMENT PROCEDURES
+  // ============================================
+
+  /**
+   * List documents for an actor
+   * Supports both admin (session) and actor (token) authentication
+   */
+  listDocuments: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No autorizado',
+        });
+      }
+
+      // Map actorType for the query (joint-obligor uses different format in some places)
+      const queryType = input.type === 'jointObligor' ? 'joint-obligor' : input.type;
+
+      const documents = await getDocumentsByActor(auth.actor.id, queryType);
+
+      return {
+        success: true,
+        documents,
+      };
+    }),
+
+  /**
+   * Delete a document
+   * Verifies ownership before deletion
+   */
+  deleteDocument: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(),
+      documentId: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No autorizado',
+        });
+      }
+
+      // Check if editing is allowed for actors
+      if (!auth.canEdit && auth.authType === 'actor') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'No puede eliminar documentos después de completar la información',
+        });
+      }
+
+      // Verify document ownership for actors
+      if (auth.authType === 'actor') {
+        const document = await ctx.prisma.actorDocument.findUnique({
+          where: { id: input.documentId },
+        });
+
+        if (!document) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Documento no encontrado',
+          });
+        }
+
+        // Check ownership based on actor type
+        const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
+        if ((document as any)[actorField] !== auth.actor.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Este documento no pertenece a este actor',
+          });
+        }
+      }
+
+      // Delete the document
+      const deleted = await deleteDocument(input.documentId, true);
+
+      if (!deleted) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Error al eliminar documento',
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Documento eliminado exitosamente',
+      };
+    }),
+
+  /**
+   * Get presigned download URL for a document
+   */
+  getDocumentDownloadUrl: dualAuthProcedure
+    .input(z.object({
+      type: ActorTypeSchema,
+      identifier: z.string(),
+      documentId: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const authService = new ActorAuthService();
+
+      // Resolve authentication
+      const auth = await authService.resolveActorAuth(
+        input.type,
+        input.identifier,
+        null
+      );
+
+      if (!auth) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No autorizado',
+        });
+      }
+
+      // Fetch document
+      const document = await ctx.prisma.actorDocument.findUnique({
+        where: { id: input.documentId },
+      });
+
+      if (!document) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Documento no encontrado',
+        });
+      }
+
+      // Verify ownership for actors
+      if (auth.authType === 'actor') {
+        const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
+        if ((document as any)[actorField] !== auth.actor.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Este documento no pertenece a este actor',
+          });
+        }
+      }
+
+      if (!document.s3Key) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Documento sin archivo asociado',
+        });
+      }
+
+      // Generate presigned URL (5 min expiry)
+      const downloadUrl = await getDocumentDownloadUrl(
+        document.s3Key,
+        document.originalName || document.fileName,
+        300
+      );
+
+      return {
+        success: true,
+        downloadUrl,
+        fileName: document.originalName || document.fileName,
+        expiresIn: 300,
+      };
     }),
 });
