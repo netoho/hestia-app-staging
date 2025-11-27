@@ -87,6 +87,11 @@ export default function TenantFormWizardSimplified({
       const newTabSaved = { ...wizard.tabSaved, [tabName]: true };
       wizard.markTabSaved(tabName);
       wizard.goToNextTab(newTabSaved);
+
+      // Call onComplete when all tabs are saved (only for public portal, not admin)
+      if (wizard.isLastTabAndAllSaved() && !isAdminEdit) {
+        onComplete?.();
+      }
     } catch (error) {
       console.error('Save error:', error);
       toast({

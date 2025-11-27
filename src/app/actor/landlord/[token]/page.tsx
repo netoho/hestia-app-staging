@@ -41,7 +41,7 @@ export default function LandlordPortalPage() {
   const landlords = data?.data || null;
   const policy = data?.policy || null;
   const canEdit = data?.canEdit || false;
-  const isCompleted = data?.data?.some(l => l.informationComplete) ? true : false;
+  const isCompleted = !!data?.data?.some(l => l.informationComplete);
   const informationComplete = isCompleted
 
   const handleComplete = () => {
@@ -49,9 +49,6 @@ export default function LandlordPortalPage() {
       title: "✅ Completado",
       description: "Toda la información ha sido guardada exitosamente",
     });
-
-    // Refresh data
-    refetch();
   };
 
   if (isLoading) {
