@@ -1,17 +1,10 @@
-
 'use client';
 
-import { useEffect, useState } from 'react';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import type { Package } from '@/lib/types';
-import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/hooks/use-auth';
+import { trpc } from '@/lib/trpc/client';
 
 function PackagesSkeleton() {
     return (
@@ -41,34 +34,7 @@ function PackagesSkeleton() {
 }
 
 export default function PackagesPage() {
-    const [packages, setPackages] = useState<Package[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
-
-    useEffect(() => {
-        async function fetchPackages() {
-            if (!isAuthenticated || !user) {
-                setIsLoading(false);
-                return;
-            }
-            try {
-                const response = await fetch('/api/packages', {
-                    method: 'GET',
-                    credentials: 'include',
-                });
-                if (!response.ok) {
-                }
-                const data = await response.json();
-                setPackages(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchPackages();
-    }, [isAuthenticated, user]);
+    const { data: packages, isLoading, error } = trpc.package.getAll.useQuery();
 
   return (
     <div>
@@ -81,18 +47,18 @@ export default function PackagesPage() {
           <div>
             <CardTitle>Todos los Paquetes</CardTitle>
             <br/ >
-            <CardDescription>{!isLoading && !error && `Actualmente hay ${packages.length} paquetes en el sistema.`}</CardDescription>
+            <CardDescription>{!isLoading && !error && `Actualmente hay ${packages?.length || 0} paquetes en el sistema.`}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-            {(isLoading || isAuthLoading) ? (
+            {isLoading ? (
                 <PackagesSkeleton />
             ) : error ? (
                  <div className="text-center py-10 text-destructive">
                     <p>Error al cargar los paquetes.</p>
-                    <p className="text-sm">{error}</p>
+                    <p className="text-sm">{error.message}</p>
                  </div>
-            ) : packages.length === 0 ? (
+            ) : !packages || packages.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
                     <p>No se encontraron paquetes.</p>
                 </div>
@@ -112,7 +78,7 @@ export default function PackagesPage() {
                     {packages.map((pkg) => (
                         <TableRow key={pkg.id}>
                         <TableCell className="font-medium">{pkg.name}</TableCell>
-                        <TableCell>${pkg.price.toLocaleString('es-MX')}</TableCell>
+                        <TableCell>${pkg.price?.toLocaleString('es-MX') || '-'}</TableCell>
                         <TableCell>{pkg.description}</TableCell>
                         </TableRow>
                     ))}
