@@ -40,13 +40,13 @@ export const documentRouter = createTRPCRouter({
 
       // 2. Check access for brokers (ADMIN/STAFF bypass)
       if (ctx.userRole === 'BROKER') {
-        const actorId = document.landlordId || document.tenantId || document.jointObligorId || document.avalId;
+        const actorId = (document.landlordId || document.tenantId || document.jointObligorId || document.avalId) as string;
 
         const policy = await prisma.policy.findFirst({
           where: {
             OR: [
               { landlords: { some: { id: actorId } } },
-              { tenants: { some: { id: actorId } } },
+              { tenant: { id: actorId } },
               { jointObligors: { some: { id: actorId } } },
               { avals: { some: { id: actorId } } },
             ],
@@ -77,3 +77,4 @@ export const documentRouter = createTRPCRouter({
       };
     }),
 });
+
