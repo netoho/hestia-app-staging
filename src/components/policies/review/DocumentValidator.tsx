@@ -152,11 +152,9 @@ export default function DocumentValidator({
   };
 
   const handlePreview = async () => {
-    // Use the document download hook to fetch the signed URL and download/preview
     if (document.documentId && document.fileName) {
       await downloadDocument({
         documentId: document.documentId,
-        documentType: 'actor',
         fileName: document.fileName
       });
     } else {

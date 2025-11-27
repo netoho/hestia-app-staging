@@ -9,6 +9,8 @@ import ReviewProgress from './ReviewProgress';
 import ReviewNotes from './ReviewNotes';
 import ReviewHeader from './ReviewHeader';
 import ActorListSidebar from './ActorListSidebar';
+import QuickComparisonPanel from './QuickComparisonPanel';
+import { ReviewProvider } from './ReviewContext';
 import { PolicyReviewData, ActorReviewInfo } from '@/lib/services/reviewService';
 import { trpc } from '@/lib/trpc/client';
 
@@ -88,70 +90,82 @@ export default function ReviewLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <ReviewHeader
-        policyNumber={data.policyNumber}
-        propertyAddress={data.propertyAddress}
-        notesCount={data.notes.length}
-        showNotes={showNotes}
-        refreshing={isRefetching}
-        onBack={onBack}
-        onNotesToggle={() => setShowNotes(!showNotes)}
-        onRefresh={handleRefresh}
-      />
+    <ReviewProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <ReviewHeader
+          policyNumber={data.policyNumber}
+          propertyAddress={data.propertyAddress}
+          notesCount={data.notes.length}
+          showNotes={showNotes}
+          refreshing={isRefetching}
+          onBack={onBack}
+          onNotesToggle={() => setShowNotes(!showNotes)}
+          onRefresh={handleRefresh}
+        />
 
-      {/* Progress Overview */}
-      <div className="container mx-auto px-4 py-6">
-        <ReviewProgress progress={data.progress} />
-      </div>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 pb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Actor List Sidebar */}
-          <div className="lg:col-span-3">
-            <ActorListSidebar
-              actors={data.actors}
-              selectedActorId={selectedActor?.actorId || null}
-              onActorSelect={setSelectedActor}
-            />
-          </div>
-
-          {/* Review Panel */}
-          <div className="lg:col-span-9">
-            {selectedActor ? (
-              <ActorReviewCard
-                actor={selectedActor}
-                policyId={policyId}
-                onValidationUpdate={handleValidationUpdate}
-              />
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-gray-600">
-                    Selecciona un actor para revisar su información
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+        {/* Progress Overview */}
+        <div className="container mx-auto px-4 py-6">
+          <ReviewProgress progress={data.progress} />
         </div>
-      </div>
 
-      {/* Notes Panel */}
-      {showNotes && (
-        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 transform transition-transform">
-          <ReviewNotes
-            policyId={policyId}
-            notes={data.notes}
-            selectedActorType={selectedActor?.actorType}
-            selectedActorId={selectedActor?.actorId}
-            onClose={() => setShowNotes(false)}
-            onNoteAdded={handleRefresh}
+        {/* Quick Comparison Panel */}
+        <div className="container mx-auto px-4">
+          <QuickComparisonPanel
+            actors={data.actors}
+            rentAmount={data.rentAmount}
+            selectedActorId={selectedActor?.actorId || null}
+            onSelectActor={setSelectedActor}
           />
         </div>
-      )}
-    </div>
+
+        {/* Main Content */}
+        <div className="container mx-auto px-4 pb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Actor List Sidebar */}
+            <div className="lg:col-span-3">
+              <ActorListSidebar
+                actors={data.actors}
+                selectedActorId={selectedActor?.actorId || null}
+                onActorSelect={setSelectedActor}
+              />
+            </div>
+
+            {/* Review Panel */}
+            <div className="lg:col-span-9">
+              {selectedActor ? (
+                <ActorReviewCard
+                  actor={selectedActor}
+                  policyId={policyId}
+                  onValidationUpdate={handleValidationUpdate}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <p className="text-gray-600">
+                      Selecciona un actor para revisar su información
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Notes Panel */}
+        {showNotes && (
+          <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 transform transition-transform">
+            <ReviewNotes
+              policyId={policyId}
+              notes={data.notes}
+              selectedActorType={selectedActor?.actorType}
+              selectedActorId={selectedActor?.actorId}
+              onClose={() => setShowNotes(false)}
+              onNoteAdded={handleRefresh}
+            />
+          </div>
+        )}
+      </div>
+    </ReviewProvider>
   );
 }

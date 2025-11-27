@@ -83,11 +83,7 @@ export default function ReviewDocumentCard({
   };
 
   const handleDownload = async (documentId: string, fileName: string) => {
-    await downloadDocument({
-      documentId,
-      documentType: 'actor',
-      fileName
-    });
+    await downloadDocument({ documentId, fileName });
   };
 
   const openRejectDialog = (document: DocumentValidationInfo) => {

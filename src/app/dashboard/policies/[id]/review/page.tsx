@@ -7,6 +7,7 @@ import ReviewLayout from '@/components/policies/review/ReviewLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
 
 export default function PolicyReviewPage({
   params
@@ -16,81 +17,54 @@ export default function PolicyReviewPage({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [policyId, setPolicyId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasPermission, setHasPermission] = useState(false);
 
+  // Resolve params
   useEffect(() => {
     params.then(resolvedParams => {
       setPolicyId(resolvedParams.id);
     });
   }, [params]);
 
+  // Redirect if unauthenticated
   useEffect(() => {
-    if (status === 'loading') return;
-
     if (status === 'unauthenticated') {
       router.push('/login');
-      return;
     }
+  }, [status, router]);
 
-    if (session?.user && policyId) {
-      checkPermissions();
-    }
-  }, [session, status, policyId]);
+  // Fetch policy via tRPC
+  const {
+    data: policy,
+    error: policyError,
+    isLoading: policyLoading,
+    refetch
+  } = trpc.policy.getById.useQuery(
+    { id: policyId },
+    { enabled: !!policyId && status === 'authenticated' }
+  );
 
-  const checkPermissions = async () => {
-    try {
-      // Check user role and permissions
-      const response = await fetch(`/api/policies/${policyId}`);
+  // Derive permission from session
+  const userRole = (session?.user as any)?.role;
+  const hasPermission = userRole === 'STAFF' || userRole === 'ADMIN';
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError('Póliza no encontrada');
-        } else if (response.status === 403) {
-          setError('No tienes permisos para revisar esta póliza');
-        } else {
-          setError('Error al cargar la póliza');
-        }
-        return;
-      }
+  // Combine loading states
+  const loading = status === 'loading' || (!!policyId && policyLoading);
 
-      const policyData = await response.json();
-      const policy = policyData.data || policyData;
-
-      // Check if user has review permissions
-      const userResponse = await fetch('/api/auth/session');
-      const userData = await userResponse.json();
-
-      if (!userData?.user) {
-        setError('No se pudo verificar tu sesión');
-        return;
-      }
-
-      const userRole = (userData.user as any).role;
-
-      // Only STAFF and ADMIN can access review page
-      if (userRole === 'STAFF' || userRole === 'ADMIN') {
-        setHasPermission(true);
-      } else {
-        setError('Solo el personal administrativo puede acceder a la página de revisión');
-      }
-    } catch (err) {
-      console.error('Error checking permissions:', err);
-      setError('Error al verificar permisos');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Derive error message
+  const error = policyError?.data?.code === 'NOT_FOUND'
+    ? 'Póliza no encontrada'
+    : policyError?.data?.code === 'FORBIDDEN'
+    ? 'No tienes permisos para revisar esta póliza'
+    : policyError
+    ? 'Error al cargar la póliza'
+    : null;
 
   const handleBack = () => {
     router.push(`/dashboard/policies/${policyId}`);
   };
 
   const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    checkPermissions();
+    refetch();
   };
 
   if (loading) {

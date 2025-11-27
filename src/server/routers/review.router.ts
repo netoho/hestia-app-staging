@@ -11,6 +11,7 @@ import { reviewService } from '@/lib/services/reviewService';
 import { getPolicyById } from '@/lib/services/policyService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { prisma } from '@/lib/prisma';
+import { getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
 
 // Validation schemas
 const ValidateSectionSchema = z.object({
@@ -191,7 +192,7 @@ export const reviewRouter = createTRPCRouter({
 
       try {
         // Get document info for logging
-        const document = await prisma.document.findUnique({
+        const document = await prisma.actorDocument.findUnique({
           where: { id: input.documentId },
         });
 
@@ -383,5 +384,67 @@ export const reviewRouter = createTRPCRouter({
           cause: error,
         });
       }
+    }),
+
+  /**
+   * Get download URL for a document
+   * Used by review UI to download documents for inspection
+   */
+  getDownloadUrl: protectedProcedure
+    .input(z.object({
+      policyId: z.string(),
+      documentId: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      // Check policy exists and user has access
+      const policy = await getPolicyById(input.policyId);
+
+      if (!policy) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Policy not found',
+        });
+      }
+
+      // Check access for brokers
+      if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to this policy',
+        });
+      }
+
+      // Fetch document
+      const document = await prisma.actorDocument.findUnique({
+        where: { id: input.documentId },
+      });
+
+      if (!document) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Document not found',
+        });
+      }
+
+      if (!document.s3Key) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Document has no associated file',
+        });
+      }
+
+      // Generate presigned URL (5 min expiry)
+      const downloadUrl = await getDocumentDownloadUrl(
+        document.s3Key,
+        document.originalName || document.fileName,
+        300
+      );
+
+      return {
+        success: true,
+        downloadUrl,
+        fileName: document.originalName || document.fileName,
+        expiresIn: 300,
+      };
     }),
 });

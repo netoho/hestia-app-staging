@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,24 @@ interface SectionValidatorProps {
   policyId: string;
   icon: ReviewIcon;
   onValidationComplete: () => void;
+  searchQuery?: string;
+  forceExpanded?: boolean;
+}
+
+// Helper function to highlight matching text
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query || !text) return text;
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const index = lowerText.indexOf(lowerQuery);
+  if (index === -1) return text;
+  return (
+    <>
+      {text.slice(0, index)}
+      <mark className="bg-yellow-200 px-0.5 rounded">{text.slice(index, index + query.length)}</mark>
+      {text.slice(index + query.length)}
+    </>
+  );
 }
 
 export default function SectionValidator({
@@ -51,11 +69,20 @@ export default function SectionValidator({
   actorId,
   policyId,
   icon: Icon,
-  onValidationComplete
+  onValidationComplete,
+  searchQuery = '',
+  forceExpanded = false,
 }: SectionValidatorProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(forceExpanded);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+
+  // Auto-expand when forceExpanded changes
+  useEffect(() => {
+    if (forceExpanded) {
+      setIsOpen(true);
+    }
+  }, [forceExpanded]);
 
   // Use tRPC mutation for section validation
   const validateSectionMutation = trpc.review.validateSection.useMutation({
@@ -112,13 +139,17 @@ export default function SectionValidator({
     });
   };
 
-  const renderFieldValue = (value: any): string => {
+  const renderFieldValue = (value: any): React.ReactNode => {
     if (value === null || value === undefined) return 'No especificado';
     if (typeof value === 'boolean') return value ? 'Sí' : 'No';
-    if (typeof value === 'number') return value.toLocaleString('es-MX');
+    if (typeof value === 'number') {
+      const formatted = value.toLocaleString('es-MX');
+      return searchQuery ? highlightText(formatted, searchQuery) : formatted;
+    }
     if (Array.isArray(value)) return value.length > 0 ? `${value.length} items` : 'Sin datos';
     if (typeof value === 'object') return 'Ver detalles';
-    return String(value);
+    const strValue = String(value);
+    return searchQuery ? highlightText(strValue, searchQuery) : strValue;
   };
 
   const renderFields = () => {
@@ -133,12 +164,13 @@ export default function SectionValidator({
           if (value === null || value === undefined) return null;
 
           // Handle special field names
-          const fieldLabel = key
+          const fieldLabelRaw = key
             .replace(/([A-Z])/g, ' $1')
             .replace(/^./, str => str.toUpperCase())
             .replace('Rfc', 'RFC')
             .replace('Curp', 'CURP')
             .replace('Clabe', 'CLABE');
+          const fieldLabel = searchQuery ? highlightText(fieldLabelRaw, searchQuery) : fieldLabelRaw;
 
           // Special handling for references
           if (key === 'personalReferences' || key === 'commercialReferences') {
