@@ -31,14 +31,26 @@ const ValidateSectionSchema = z.object({
   ]),
   status: z.enum(['APPROVED', 'REJECTED', 'IN_REVIEW']),
   rejectionReason: z.string().optional(),
-});
+}).refine(
+  (data) => data.status !== 'REJECTED' || (data.rejectionReason && data.rejectionReason.trim().length >= 10),
+  {
+    message: 'La razón de rechazo debe tener al menos 10 caracteres',
+    path: ['rejectionReason'],
+  }
+);
 
 const ValidateDocumentSchema = z.object({
   policyId: z.string(),
   documentId: z.string(),
   status: z.enum(['APPROVED', 'REJECTED', 'IN_REVIEW']),
   rejectionReason: z.string().optional(),
-});
+}).refine(
+  (data) => data.status !== 'REJECTED' || (data.rejectionReason && data.rejectionReason.trim().length >= 10),
+  {
+    message: 'La razón de rechazo debe tener al menos 10 caracteres',
+    path: ['rejectionReason'],
+  }
+);
 
 const AddNoteSchema = z.object({
   policyId: z.string(),
@@ -353,6 +365,7 @@ export const reviewRouter = createTRPCRouter({
       // Check permissions
       if (ctx.userRole === 'BROKER') {
         // Brokers can only delete their own notes on their own policies
+        // Must own BOTH the policy AND the note
         if (policy.createdById !== ctx.userId || note.createdBy !== ctx.userId) {
           throw new TRPCError({
             code: 'FORBIDDEN',
@@ -430,6 +443,39 @@ export const reviewRouter = createTRPCRouter({
         });
       }
 
+      // Verify document belongs to this policy's actors
+      const policyWithActors = await prisma.policy.findUnique({
+        where: { id: input.policyId },
+        select: {
+          landlords: { select: { id: true } },
+          tenantId: true,
+          jointObligors: { select: { id: true } },
+          avals: { select: { id: true } },
+        },
+      });
+
+      if (policyWithActors) {
+        const validActorIds = [
+          ...policyWithActors.landlords.map(l => l.id),
+          policyWithActors.tenantId,
+          ...policyWithActors.jointObligors.map(jo => jo.id),
+          ...policyWithActors.avals.map(a => a.id),
+        ].filter(Boolean);
+
+        const documentBelongsToPolicy =
+          (document.landlordId && validActorIds.includes(document.landlordId)) ||
+          (document.tenantId && validActorIds.includes(document.tenantId)) ||
+          (document.jointObligorId && validActorIds.includes(document.jointObligorId)) ||
+          (document.avalId && validActorIds.includes(document.avalId));
+
+        if (!documentBelongsToPolicy) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Document does not belong to this policy',
+          });
+        }
+      }
+
       if (!document.s3Key) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -488,42 +534,54 @@ export const reviewRouter = createTRPCRouter({
         });
       }
 
-      // Check investigation exists
-      const investigation = await prisma.investigation.findUnique({
-        where: { policyId },
+      // Use transaction with row-level lock to prevent race conditions
+      const result = await prisma.$transaction(async (tx) => {
+        // Lock the investigation row to prevent concurrent updates
+        const [investigation] = await tx.$queryRaw<{ id: string; verdict: string | null }[]>`
+          SELECT id, verdict FROM "Investigation" WHERE "policyId" = ${policyId} FOR UPDATE
+        `;
+
+        if (!investigation) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Investigation not found for this policy',
+          });
+        }
+
+        // Check if already approved
+        if (investigation.verdict === 'APPROVED') {
+          return { success: true, alreadyApproved: true };
+        }
+
+        // Update investigation verdict
+        await tx.investigation.update({
+          where: { policyId },
+          data: {
+            verdict: 'APPROVED',
+            completedAt: new Date(),
+            completedBy: ctx.userId,
+          },
+        });
+
+        return { success: true, alreadyApproved: false };
       });
 
-      if (!investigation) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Investigation not found for this policy',
+      // Log activity with IP address for audit trail
+      if (!result.alreadyApproved) {
+        const ipAddress = ctx.req?.headers?.get?.('x-forwarded-for') ||
+          ctx.req?.headers?.['x-forwarded-for'] ||
+          'unknown';
+
+        await logPolicyActivity({
+          policyId,
+          action: 'investigation_approved',
+          description: 'Investigation approved - all actors verified',
+          performedById: ctx.userId,
+          performedByType: 'user',
+          ipAddress: typeof ipAddress === 'string' ? ipAddress : ipAddress?.[0] || 'unknown',
         });
       }
 
-      // Check if already approved
-      if (investigation.verdict === 'APPROVED') {
-        return { success: true, alreadyApproved: true };
-      }
-
-      // Update investigation verdict
-      await prisma.investigation.update({
-        where: { policyId },
-        data: {
-          verdict: 'APPROVED',
-          completedAt: new Date(),
-          completedBy: ctx.userId,
-        },
-      });
-
-      // Log activity
-      await logPolicyActivity({
-        policyId,
-        action: 'investigation_approved',
-        description: 'Investigation approved - all actors verified',
-        performedById: ctx.userId,
-        performedByType: 'user',
-      });
-
-      return { success: true };
+      return result;
     }),
 });

@@ -63,6 +63,38 @@ class ValidationService {
 
     // Start transaction
     const result = await prisma.$transaction(async (tx) => {
+      // Check for existing validation to log status changes
+      const existing = await tx.actorSectionValidation.findUnique({
+        where: {
+          actorType_actorId_section: {
+            actorType,
+            actorId,
+            section
+          }
+        }
+      });
+
+      // Log validation change if status is changing
+      if (existing && existing.status !== status) {
+        await logPolicyActivity({
+          policyId,
+          action: 'validation_changed',
+          description: `${section} changed from ${existing.status} to ${status} for ${actorType}`,
+          details: {
+            section,
+            previousStatus: existing.status,
+            newStatus: status,
+            previousReason: existing.rejectionReason,
+            newReason: rejectionReason,
+            actorType,
+            actorId,
+          },
+          performedById: validatedBy,
+          performedByType: 'user',
+          ipAddress
+        });
+      }
+
       // Upsert the section validation record
       const validation = await tx.actorSectionValidation.upsert({
         where: {
@@ -154,6 +186,33 @@ class ValidationService {
     const finalActorId = actorId || this.getActorIdFromDocument(document);
 
     const result = await prisma.$transaction(async (tx) => {
+      // Check for existing validation to log status changes
+      const existingValidation = await tx.documentValidation.findUnique({
+        where: { documentId }
+      });
+
+      // Log validation change if status is changing
+      if (existingValidation && existingValidation.status !== status) {
+        await logPolicyActivity({
+          policyId,
+          action: 'document_validation_changed',
+          description: `Document ${document.fileName} changed from ${existingValidation.status} to ${status}`,
+          details: {
+            documentId,
+            documentName: document.fileName,
+            previousStatus: existingValidation.status,
+            newStatus: status,
+            previousReason: existingValidation.rejectionReason,
+            newReason: rejectionReason,
+            actorType: finalActorType,
+            actorId: finalActorId,
+          },
+          performedById: validatedBy,
+          performedByType: 'user',
+          ipAddress
+        });
+      }
+
       // Upsert document validation
       const validation = await tx.documentValidation.upsert({
         where: {
@@ -597,9 +656,23 @@ class ValidationService {
     // Get all validations for this actor
     const details = await this.getActorValidationDetails(actorType, actorId);
 
-    // Check if all sections and documents are approved
-    const allSectionsApproved = details.sections.every(s => s.status === 'APPROVED');
-    const allDocumentsApproved = details.documents.every(d => d.validationStatus === 'APPROVED');
+    // Check for any items still IN_REVIEW - block approval if so
+    const hasSectionsInReview = details.sections.some(s => s.status === 'IN_REVIEW');
+    const hasDocsInReview = details.documents.some(d => d.validationStatus === 'IN_REVIEW');
+    if (hasSectionsInReview || hasDocsInReview) {
+      return; // Items still being reviewed, don't auto-approve
+    }
+
+    // Check sections: must have all required sections AND all must be APPROVED
+    // Note: details.sections already contains only the required sections for this actor type
+    // Empty array means actor has no required sections (allowed per user decision)
+    const allSectionsApproved = details.sections.length === 0 ||
+      details.sections.every(s => s.status === 'APPROVED');
+
+    // Check documents: if actor has documents, all must be APPROVED
+    // Empty documents array is allowed (actor may not have uploaded any yet, or none required)
+    const allDocumentsApproved = details.documents.length === 0 ||
+      details.documents.every(d => d.validationStatus === 'APPROVED');
 
     if (allSectionsApproved && allDocumentsApproved) {
       // Update actor verification status to APPROVED
@@ -619,7 +692,9 @@ class ValidationService {
         description: `${actorType} automatically approved after all validations completed`,
         details: {
           actorType,
-          actorId
+          actorId,
+          sectionsCount: details.sections.length,
+          documentsCount: details.documents.length
         },
         performedByType: 'system'
       });
