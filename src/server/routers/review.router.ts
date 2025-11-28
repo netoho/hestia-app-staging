@@ -205,6 +205,7 @@ export const reviewRouter = createTRPCRouter({
 
         // Perform validation
         const result = await validationService.validateDocument({
+          policyId: input.policyId,
           documentId: input.documentId,
           status: input.status as ValidationStatus,
           validatedBy: ctx.userId,

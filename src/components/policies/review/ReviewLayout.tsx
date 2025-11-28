@@ -49,23 +49,13 @@ export default function ReviewLayout({
   };
 
   const handleValidationUpdate = async () => {
-    // Store current selected actor ID to restore selection after refresh
     const currentActorId = selectedActor?.actorId;
-
-    // Clear selected actor first to force re-render
-    setSelectedActor(null);
-
-    // Refresh data after validation changes
     const { data: newData } = await refetch();
 
-    // After data is refreshed, update selectedActor to point to the new actor object
     if (currentActorId && newData && 'actors' in newData && newData.actors) {
       const updatedActor = newData.actors.find((actor: any) => actor.actorId === currentActorId);
       if (updatedActor) {
-        // Use setTimeout to ensure state update happens after render cycle
-        setTimeout(() => {
-          setSelectedActor(updatedActor);
-        }, 0);
+        setSelectedActor(updatedActor);
       }
     }
   };

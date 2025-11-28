@@ -17,6 +17,7 @@ import {
 import SectionValidator from './SectionValidator';
 import ReviewDocumentCard from './ReviewDocumentCard';
 import FieldSearchBar, { SearchResults } from './FieldSearchBar';
+import { useReview } from './ReviewContext';
 import { ActorReviewInfo, SectionValidationInfo, DocumentValidationInfo } from '@/lib/services/reviewService';
 import type { ReviewIcon } from '@/types/review';
 
@@ -31,7 +32,8 @@ export default function ActorReviewCard({
   policyId,
   onValidationUpdate
 }: ActorReviewCardProps) {
-  const [activeTab, setActiveTab] = useState('sections');
+  const { getActiveTab, setTab } = useReview();
+  const activeTab = getActiveTab(actor.actorId);
   const [searchResults, setSearchResults] = useState<SearchResults>({
     query: '',
     matchingSections: [],
@@ -143,7 +145,7 @@ export default function ActorReviewCard({
       </CardHeader>
 
       <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(tab) => setTab(actor.actorId, tab as 'sections' | 'documents')}>
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="sections" className="relative">
               Información

@@ -39,16 +39,17 @@ export default function ReviewHeader({
               onClick={onBack}
               className="hover:bg-gray-100"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Volver</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <FileCheck className="h-6 w-6 text-blue-600" />
-                Revisión de Información
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold flex items-center gap-2">
+                <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
+                <span className="hidden sm:inline">Revisión de Información</span>
+                <span className="sm:hidden">Revisión</span>
               </h1>
-              <p className="text-sm text-gray-600">
-                Protección #{policyNumber} - {propertyAddress}
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
+                #{policyNumber} - {propertyAddress}
               </p>
             </div>
           </div>

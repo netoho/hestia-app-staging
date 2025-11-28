@@ -73,6 +73,7 @@ export default function SectionValidator({
   searchQuery = '',
   forceExpanded = false,
 }: SectionValidatorProps) {
+  console.log('Rendering SectionValidator for section:', section, actorType, actorId);
   const [isOpen, setIsOpen] = useState(forceExpanded);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
