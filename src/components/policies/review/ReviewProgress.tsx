@@ -2,13 +2,16 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   CheckCircle2,
   XCircle,
   Clock,
   AlertTriangle,
   FileCheck,
-  TrendingUp
+  TrendingUp,
+  RefreshCw,
+  Shield
 } from 'lucide-react';
 
 interface ReviewProgressProps {
@@ -19,9 +22,17 @@ interface ReviewProgressProps {
     pendingValidations: number;
     rejectedValidations: number;
   };
+  investigationVerdict?: string | null;
+  onApproveInvestigation?: () => void;
+  isApprovingInvestigation?: boolean;
 }
 
-export default function ReviewProgress({ progress }: ReviewProgressProps) {
+export default function ReviewProgress({
+  progress,
+  investigationVerdict,
+  onApproveInvestigation,
+  isApprovingInvestigation
+}: ReviewProgressProps) {
   const getStatusMessage = () => {
     if (progress.overall >= 100 && progress.rejectedValidations === 0) {
       return {
@@ -144,6 +155,38 @@ export default function ReviewProgress({ progress }: ReviewProgressProps) {
                   </p>
                   <p className="text-xs text-red-700 mt-0.5">
                     Se requiere corrección antes de aprobar la póliza.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Investigation Approval */}
+          {progress.overall === 100 && progress.rejectedValidations === 0 && !investigationVerdict && onApproveInvestigation && (
+            <Button
+              onClick={onApproveInvestigation}
+              disabled={isApprovingInvestigation}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              {isApprovingInvestigation ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Shield className="h-4 w-4 mr-2" />
+              )}
+              Aprobar Investigación
+            </Button>
+          )}
+
+          {investigationVerdict === 'APPROVED' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Investigación aprobada
+                  </p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    La póliza puede ser aprobada desde la página de detalles.
                   </p>
                 </div>
               </div>

@@ -2,6 +2,10 @@ import prisma from '@/lib/prisma';
 import { validationService, ActorType, SectionType } from './validationService';
 import { logPolicyActivity } from './policyService';
 import { formatFullName } from '@/lib/utils/names';
+import {
+  getSectionsForActor,
+  getSectionDisplayName,
+} from '@/lib/constants/actorSectionConfig';
 
 export interface PolicyReviewData {
   policyId: string;
@@ -18,6 +22,7 @@ export interface PolicyReviewData {
     rejectedValidations: number;
   };
   notes: any[];
+  investigationVerdict: string | null;
 }
 
 export interface ActorReviewInfo {
@@ -82,6 +87,8 @@ class ReviewService {
           include: {
             documents: true,
             addressDetails: true,
+            employerAddressDetails: true,
+            previousRentalAddressDetails: true,
             personalReferences: true,
             commercialReferences: true
           }
@@ -90,6 +97,8 @@ class ReviewService {
           include: {
             documents: true,
             addressDetails: true,
+            employerAddressDetails: true,
+            guaranteePropertyDetails: true,
             personalReferences: true,
             commercialReferences: true
           }
@@ -98,6 +107,8 @@ class ReviewService {
           include: {
             documents: true,
             addressDetails: true,
+            employerAddressDetails: true,
+            guaranteePropertyDetails: true,
             personalReferences: true,
             commercialReferences: true
           }
@@ -108,6 +119,12 @@ class ReviewService {
     if (!policy) {
       throw new Error('Policy not found');
     }
+
+    // Get investigation verdict
+    const investigation = await prisma.investigation.findUnique({
+      where: { policyId },
+      select: { verdict: true }
+    });
 
     // Get validation progress
     const progress = await validationService.getValidationProgress(policyId);
@@ -153,7 +170,8 @@ class ReviewService {
                           (progress.totalDocuments - progress.approvedDocuments - progress.rejectedDocuments),
         rejectedValidations: progress.rejectedSections + progress.rejectedDocuments
       },
-      notes
+      notes,
+      investigationVerdict: investigation?.verdict || null
     };
   }
 
@@ -165,8 +183,11 @@ class ReviewService {
     actor: any,
     policy: any
   ): Promise<ActorReviewInfo> {
-    // Get validation details
-    const validationDetails = await validationService.getActorValidationDetails(actorType, actor.id);
+    // Determine if actor is a company
+    const isCompany = this.getActorIsCompany(actorType, actor);
+
+    // Get validation details (pass isCompany to get correct sections)
+    const validationDetails = await validationService.getActorValidationDetails(actorType, actor.id, isCompany);
 
     // Get all unique validator IDs
     const validatorIds = new Set<string>();
@@ -190,7 +211,7 @@ class ReviewService {
     }
 
     // Build section info with actual data and validator names
-    const sections = await this.buildSectionInfo(actorType, actor, validationDetails.sections, validatorMap);
+    const sections = await this.buildSectionInfo(actorType, actor, validationDetails.sections, validatorMap, isCompany);
 
     // Build document info with validator names
     const documents = validationDetails.documents.map(doc => ({
@@ -224,7 +245,7 @@ class ReviewService {
           actor.middleName || undefined
         ) : 'Sin nombre'),
       email: actor.email,
-      isCompany: actor.isCompany || false,
+      isCompany,
       monthlyIncome: actor.monthlyIncome || undefined,
       sections,
       documents,
@@ -239,26 +260,47 @@ class ReviewService {
   }
 
   /**
+   * Determine if an actor is a company based on actor data
+   */
+  private getActorIsCompany(actorType: ActorType, actor: any): boolean {
+    if (actorType === 'landlord') {
+      return actor.isCompany === true;
+    }
+    if (actorType === 'tenant') {
+      return actor.tenantType === 'COMPANY';
+    }
+    if (actorType === 'aval') {
+      return actor.avalType === 'COMPANY';
+    }
+    if (actorType === 'jointObligor') {
+      return actor.jointObligorType === 'COMPANY';
+    }
+    return false;
+  }
+
+  /**
    * Build section info with actual actor data
    */
   private async buildSectionInfo(
     actorType: ActorType,
     actor: any,
     validations: any[],
-    validatorMap?: Map<string, string>
+    validatorMap?: Map<string, string>,
+    isCompany?: boolean
   ): Promise<SectionValidationInfo[]> {
     const sections: SectionValidationInfo[] = [];
 
-    // Define sections and their fields based on actor type and isCompany
-    const sectionDefinitions = this.getSectionDefinitions(actor.isCompany);
+    // Get sections from centralized config
+    const actorIsCompany = isCompany ?? this.getActorIsCompany(actorType, actor);
+    const sectionTypes = getSectionsForActor(actorType, actorIsCompany);
 
-    for (const [sectionKey, sectionDef] of Object.entries(sectionDefinitions)) {
-      const validation = validations.find(v => v.section === sectionKey);
-      const sectionData = this.extractSectionData(actor, sectionKey as SectionType);
+    for (const sectionType of sectionTypes) {
+      const validation = validations.find(v => v.section === sectionType);
+      const sectionData = this.extractSectionData(actor, sectionType, actorIsCompany);
 
       sections.push({
-        section: sectionKey as SectionType,
-        displayName: sectionDef.displayName,
+        section: sectionType,
+        displayName: getSectionDisplayName(sectionType, actorIsCompany),
         status: validation?.status || 'PENDING',
         validatedBy: validation?.validatedBy,
         validatorName: validation?.validatedBy && validatorMap ? validatorMap.get(validation.validatedBy) : undefined,
@@ -272,43 +314,14 @@ class ReviewService {
   }
 
   /**
-   * Define sections and their display names
-   */
-  private getSectionDefinitions(isCompany: boolean): Record<string, any> {
-    const baseSections = {
-      personal_info: {
-        displayName: isCompany ? 'Información de la Empresa' : 'Información Personal'
-      },
-      address: {
-        displayName: 'Dirección'
-      },
-      financial_info: {
-        displayName: 'Información Financiera'
-      }
-    };
-
-    if (!isCompany) {
-      (baseSections as any).work_info = {
-        displayName: 'Información Laboral'
-      };
-    }
-
-    if (isCompany) {
-      (baseSections as any).company_info = {
-        displayName: 'Representante Legal'
-      };
-    }
-
-    return baseSections;
-  }
-
-  /**
    * Extract section data from actor
    */
-  private extractSectionData(actor: any, section: SectionType): any {
+  private extractSectionData(actor: any, section: SectionType, isCompany?: boolean): any {
+    const actorIsCompany = isCompany ?? (actor.isCompany || actor.tenantType === 'COMPANY' || actor.avalType === 'COMPANY' || actor.jointObligorType === 'COMPANY');
+
     switch (section) {
       case 'personal_info':
-        if (actor.isCompany) {
+        if (actorIsCompany) {
           return {
             companyName: actor.companyName,
             companyRfc: actor.companyRfc,
@@ -331,17 +344,27 @@ class ReviewService {
             passport: actor.passport,
             email: actor.email,
             phone: actor.phone,
-            personalEmail: actor.personalEmail
+            personalEmail: actor.personalEmail,
+            workPhone: actor.workPhone,
+            workEmail: actor.workEmail
           };
         }
 
       case 'work_info':
         return {
+          employmentStatus: actor.employmentStatus,
           occupation: actor.occupation,
           employerName: actor.employerName,
+          position: actor.position,
           monthlyIncome: actor.monthlyIncome,
+          incomeSource: actor.incomeSource,
+          yearsAtJob: actor.yearsAtJob,
+          hasAdditionalIncome: actor.hasAdditionalIncome,
+          additionalIncomeSource: actor.additionalIncomeSource,
+          additionalIncomeAmount: actor.additionalIncomeAmount,
           workEmail: actor.workEmail,
-          workPhone: actor.workPhone
+          workPhone: actor.workPhone,
+          employerAddress: actor.employerAddressDetails
         };
 
       case 'financial_info':
@@ -353,8 +376,8 @@ class ReviewService {
         };
 
       case 'address':
-        // Get the primary address
-        const address = actor.addresses?.[0];
+        // Use addressDetails (singular relation) not addresses array
+        const address = actor.addressDetails;
         return address ? {
           street: address.street,
           exteriorNumber: address.exteriorNumber,
@@ -376,22 +399,52 @@ class ReviewService {
           ) : '',
           legalRepPosition: actor.legalRepPosition,
           legalRepRfc: actor.legalRepRfc,
+          legalRepCurp: actor.legalRepCurp,
           legalRepPhone: actor.legalRepPhone,
           legalRepEmail: actor.legalRepEmail
         };
 
       case 'references':
+        // Combined view with clear type labels
         return {
           personalReferences: actor.personalReferences?.map((ref: any) => ({
+            type: 'Personal',
             name: ref.name,
             phone: ref.phone,
             relationship: ref.relationship
-          })),
+          })) || [],
           commercialReferences: actor.commercialReferences?.map((ref: any) => ({
+            type: 'Comercial',
             companyName: ref.companyName,
             contactName: ref.contactName,
             phone: ref.phone
-          }))
+          })) || []
+        };
+
+      case 'rental_history':
+        return {
+          previousLandlordName: actor.previousLandlordName,
+          previousLandlordPhone: actor.previousLandlordPhone,
+          previousLandlordEmail: actor.previousLandlordEmail,
+          previousRentAmount: actor.previousRentAmount,
+          rentalHistoryYears: actor.rentalHistoryYears,
+          reasonForMoving: actor.reasonForMoving,
+          numberOfOccupants: actor.numberOfOccupants,
+          hasPets: actor.hasPets,
+          petDescription: actor.petDescription,
+          previousRentalAddress: actor.previousRentalAddressDetails
+        };
+
+      case 'property_guarantee':
+        return {
+          guaranteeMethod: actor.guaranteeMethod,
+          hasPropertyGuarantee: actor.hasPropertyGuarantee,
+          propertyValue: actor.propertyValue,
+          propertyDeedNumber: actor.propertyDeedNumber,
+          propertyRegistryFolio: actor.propertyRegistryFolio,
+          propertyOwnershipStatus: actor.propertyOwnershipStatus,
+          propertyType: actor.propertyType,
+          propertyAddress: actor.guaranteePropertyDetails || actor.propertyAddress
         };
 
       default:

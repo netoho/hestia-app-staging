@@ -12,7 +12,9 @@ import {
   CreditCard,
   MapPin,
   FileText,
-  Users
+  Users,
+  History,
+  Home
 } from 'lucide-react';
 import SectionValidator from './SectionValidator';
 import ReviewDocumentCard from './ReviewDocumentCard';
@@ -52,6 +54,8 @@ export default function ActorReviewCard({
       case 'address': return MapPin;
       case 'company_info': return Building;
       case 'references': return Users;
+      case 'rental_history': return History;
+      case 'property_guarantee': return Home;
       default: return FileText;
     }
   };

@@ -10,6 +10,7 @@ import { validationService } from '@/lib/services/validationService';
 import { reviewService } from '@/lib/services/reviewService';
 import { getPolicyById } from '@/lib/services/policyService';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import { checkAllActorsVerified } from '@/lib/services/policyWorkflowService';
 import { prisma } from '@/lib/prisma';
 import { getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
 
@@ -25,6 +26,8 @@ const ValidateSectionSchema = z.object({
     'references',
     'address',
     'company_info',
+    'rental_history',
+    'property_guarantee',
   ]),
   status: z.enum(['APPROVED', 'REJECTED', 'IN_REVIEW']),
   rejectionReason: z.string().optional(),
@@ -447,5 +450,80 @@ export const reviewRouter = createTRPCRouter({
         fileName: document.originalName || document.fileName,
         expiresIn: 300,
       };
+    }),
+
+  /**
+   * Approve the investigation
+   * Only ADMIN and STAFF can approve investigation
+   * Requires all actors to be verified first
+   */
+  approveInvestigation: adminProcedure
+    .input(z.object({ policyId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const { policyId } = input;
+
+      // Check policy exists
+      const policy = await getPolicyById(policyId);
+      if (!policy) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Policy not found',
+        });
+      }
+
+      // Check policy is in UNDER_INVESTIGATION or PENDING_APPROVAL status
+      if (!['UNDER_INVESTIGATION', 'PENDING_APPROVAL'].includes(policy.status)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot approve investigation for policy in status ${policy.status}`,
+        });
+      }
+
+      // Verify all actors are verified
+      const allVerified = await checkAllActorsVerified(policyId);
+      if (!allVerified) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'All actors must be verified before approving investigation',
+        });
+      }
+
+      // Check investigation exists
+      const investigation = await prisma.investigation.findUnique({
+        where: { policyId },
+      });
+
+      if (!investigation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Investigation not found for this policy',
+        });
+      }
+
+      // Check if already approved
+      if (investigation.verdict === 'APPROVED') {
+        return { success: true, alreadyApproved: true };
+      }
+
+      // Update investigation verdict
+      await prisma.investigation.update({
+        where: { policyId },
+        data: {
+          verdict: 'APPROVED',
+          completedAt: new Date(),
+          completedBy: ctx.userId,
+        },
+      });
+
+      // Log activity
+      await logPolicyActivity({
+        policyId,
+        action: 'investigation_approved',
+        description: 'Investigation approved - all actors verified',
+        performedById: ctx.userId,
+        performedByType: 'user',
+      });
+
+      return { success: true };
     }),
 });

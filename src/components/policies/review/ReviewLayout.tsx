@@ -37,6 +37,13 @@ export default function ReviewLayout({
     }
   );
 
+  // Mutation for approving investigation
+  const approveInvestigationMutation = trpc.review.approveInvestigation.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   // Select first actor when data loads
   useEffect(() => {
     if (!selectedActor && data && 'actors' in data && data.actors && data.actors.length > 0) {
@@ -96,7 +103,12 @@ export default function ReviewLayout({
 
         {/* Progress Overview */}
         <div className="container mx-auto px-4 py-6">
-          <ReviewProgress progress={data.progress} />
+          <ReviewProgress
+            progress={data.progress}
+            investigationVerdict={'investigationVerdict' in data ? data.investigationVerdict : null}
+            onApproveInvestigation={() => approveInvestigationMutation.mutate({ policyId })}
+            isApprovingInvestigation={approveInvestigationMutation.isPending}
+          />
         </div>
 
         {/* Quick Comparison Panel */}
