@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
-import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
+import { passwordWithConfirmSchema } from '@/lib/validation/password';
 import {
   ArrowLeft,
   Loader2,
@@ -19,25 +20,9 @@ import {
   XCircle,
   Eye,
   EyeOff,
-  Check,
-  X
 } from 'lucide-react';
 
-// Password validation schema with complexity requirements
-const resetPasswordSchema = z.object({
-  password: z
-    .string()
-    .min(8, 'La contraseña debe tener al menos 8 caracteres')
-    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-    .regex(/[a-z]/, 'Debe contener al menos una minúscula')
-    .regex(/[0-9]/, 'Debe contener al menos un número'),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: 'Las contraseñas no coinciden',
-  path: ['confirmPassword'],
-});
-
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+type ResetPasswordFormData = z.infer<typeof passwordWithConfirmSchema>;
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -61,18 +46,10 @@ export default function ResetPasswordPage() {
     watch,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(passwordWithConfirmSchema),
   });
 
   const password = watch('password');
-
-  // Password requirements checker
-  const passwordRequirements = [
-    { label: 'Al menos 8 caracteres', met: password?.length >= 8 },
-    { label: 'Una letra mayúscula', met: /[A-Z]/.test(password || '') },
-    { label: 'Una letra minúscula', met: /[a-z]/.test(password || '') },
-    { label: 'Un número', met: /[0-9]/.test(password || '') },
-  ];
 
   // Validate token on mount
   useEffect(() => {
@@ -265,25 +242,10 @@ export default function ResetPasswordPage() {
         </div>
 
         {/* Password requirements */}
-        {(passwordFocused || password) && (
-          <div className="space-y-2 p-3 bg-muted rounded-lg">
-            <p className="text-sm font-medium">Requisitos de la contraseña:</p>
-            <div className="space-y-1">
-              {passwordRequirements.map((req, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  {req.met ? (
-                    <Check className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <X className="h-3 w-3 text-muted-foreground" />
-                  )}
-                  <span className={req.met ? 'text-green-700' : 'text-muted-foreground'}>
-                    {req.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <PasswordRequirements
+          password={password || ''}
+          show={passwordFocused || !!password}
+        />
 
         {/* Confirm password field */}
         <div className="space-y-2">
