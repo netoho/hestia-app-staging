@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,16 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { User } from '@/lib/types';
+import { trpc } from '@/lib/trpc/client';
 
 const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['broker', 'tenant', 'landlord', 'staff']),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
+  role: z.enum(['BROKER', 'ADMIN', 'STAFF']),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -51,106 +50,58 @@ interface UserDialogProps {
 }
 
 export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
-
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
   });
 
   const isEditMode = !!user;
 
+  const createMutation = trpc.staff.create.useMutation({
+    onSuccess: () => {
+      onSuccess();
+      onOpenChange(false);
+    },
+  });
+
+  const updateMutation = trpc.staff.update.useMutation({
+    onSuccess: () => {
+      onSuccess();
+      onOpenChange(false);
+    },
+  });
+
+  const error = createMutation.error?.message || updateMutation.error?.message;
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
   useEffect(() => {
     if (open) {
-      setError(null);
-      setShowPasswordReset(false);
+      createMutation.reset();
+      updateMutation.reset();
       if (user) {
         form.reset({
           name: user.name || '',
           email: user.email || '',
-          role: (user.role as any) || 'tenant',
-          password: '',
+          role: (user.role as 'BROKER' | 'ADMIN' | 'STAFF') || 'BROKER',
         });
       } else {
         form.reset({
           name: '',
           email: '',
-          role: 'tenant',
-          password: '',
+          role: 'BROKER',
         });
       }
     }
   }, [user, open, form]);
 
   const onSubmit = async (data: UserFormData) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const url = isEditMode ? `/api/staff/users/${user?.id}` : '/api/staff/users';
-      const method = isEditMode ? 'PUT' : 'POST';
-      
-      const payload: any = { ...data };
-      if (isEditMode) {
-        if (!payload.password) delete payload.password;
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+    if (isEditMode && user) {
+      await updateMutation.mutateAsync({
+        id: user.id,
+        name: data.name,
+        role: data.role,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save user');
-      }
-
-      onSuccess();
-      onOpenChange(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!user) return;
-    
-    const newPassword = form.getValues('password');
-    if (!newPassword || newPassword.length < 6) {
-      form.setError('password', { message: 'Password must be at least 6 characters' });
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/staff/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password: newPassword }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reset password');
-      }
-
-      setShowPasswordReset(false);
-      form.setValue('password', '');
-      setError('Password reset successfully!');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password');
-    } finally {
-      setIsLoading(false);
+    } else {
+      await createMutation.mutateAsync(data);
     }
   };
 
@@ -160,14 +111,14 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit User' : 'Create New User'}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
+            {isEditMode
               ? 'Update user information.'
               : 'Add a new user to the system.'}
           </DialogDescription>
         </DialogHeader>
 
         {error && (
-          <Alert variant={error.includes('successfully') ? 'default' : 'destructive'}>
+          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -196,10 +147,10 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="john@example.com" 
-                      {...field} 
+                    <Input
+                      type="email"
+                      placeholder="john@example.com"
+                      {...field}
                       disabled={isEditMode}
                     />
                   </FormControl>
@@ -221,10 +172,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="tenant">Tenant</SelectItem>
-                      <SelectItem value="landlord">Landlord</SelectItem>
-                      <SelectItem value="broker">Broker</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="BROKER">Broker</SelectItem>
+                      <SelectItem value="STAFF">Staff</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -233,31 +183,20 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             />
 
             {!isEditMode && (
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Enter password" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  An invitation email will be sent to the user with a link to set their password.
+                </AlertDescription>
+              </Alert>
             )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditMode ? 'Update User' : 'Create User'}
               </Button>
             </DialogFooter>

@@ -16,6 +16,7 @@ export function getStorageConfig(): StorageConfig {
     case 's3':
       config.s3 = {
         bucket: process.env.AWS_S3_BUCKET || '',
+        publicBucket: process.env.AWS_PUBLIC_S3_BUCKET || 'public-hestia-files',
         region: process.env.AWS_S3_REGION || 'us-east-1',
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -27,20 +28,6 @@ export function getStorageConfig(): StorageConfig {
         throw new Error('Missing required S3 configuration. Please set AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY');
       }
       break;
-
-    case 'firebase':
-      config.firebase = {
-        bucketName: process.env.FIREBASE_STORAGE_BUCKET || '',
-        projectId: process.env.FIREBASE_PROJECT_ID || undefined,
-        keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
-      };
-
-      // Validate required Firebase configuration
-      if (!config.firebase.bucketName) {
-        throw new Error('Missing required Firebase configuration. Please set FIREBASE_STORAGE_BUCKET');
-      }
-      break;
-
     case 'local':
       config.local = {
         basePath: process.env.LOCAL_STORAGE_PATH || '/tmp/hestia-storage',

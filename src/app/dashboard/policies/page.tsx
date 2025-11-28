@@ -1,31 +1,50 @@
-
 'use client';
 
-import { useState } from 'react';
-import { PolicyInitiateDialog } from '@/components/dialogs/PolicyInitiateDialog';
-import { PolicyTable } from '@/components/shared/PolicyTable';
-import { t } from '@/lib/i18n';
+import { usePoliciesState } from '@/hooks/usePoliciesState';
+import PoliciesHeader from '@/components/policies/list/PoliciesHeader';
+import PoliciesFilters from '@/components/policies/list/PoliciesFilters';
+import PoliciesList from '@/components/policies/list/PoliciesList';
+import PoliciesPagination from '@/components/policies/list/PoliciesPagination';
+import { trpc } from '@/lib/trpc/client';
 
+/**
+ * Main policies list page
+ * Entry point to the application - displays all policies with search, filtering, and pagination
+ * Now using tRPC for type-safe data fetching
+ */
 export default function PoliciesPage() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { search, status, page, setSearch, setStatus, setPage } = usePoliciesState();
 
-  const handlePolicyCreated = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
+  // Use tRPC query with URL state as input
+  const { data, isLoading } = trpc.policy.list.useQuery({
+    page,
+    limit: 20,
+    status: status !== 'all' ? status : undefined,
+    search: search || undefined,
+  });
+
+  // Extract data with defaults
+  const policies = data?.policies || [];
+  const totalPages = data?.pagination?.totalPages || 1;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t.pages.policies.title}</h1>
-          <p className="text-muted-foreground">
-            {t.pages.policies.subtitle}
-          </p>
-        </div>
-        <PolicyInitiateDialog onPolicyCreated={handlePolicyCreated} />
-      </div>
+    <div className="container mx-auto w-full">
+      <PoliciesHeader />
 
-      <PolicyTable refreshTrigger={refreshTrigger} />
+      <PoliciesFilters
+        searchTerm={search}
+        statusFilter={status}
+        onSearchChange={setSearch}
+        onStatusChange={setStatus}
+      />
+
+      <PoliciesList policies={policies} loading={isLoading} />
+
+      <PoliciesPagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

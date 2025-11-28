@@ -612,7 +612,7 @@ export class PDFService {
         </div>
 
         <div class="footer">
-            Hestia Protección Legal y Patrimonial S.A.S de C.V. | RFC: HPL123456789 | info@hestiaplp.com.mx | +52 55 1234 5678<br>
+            Hestia Protección Legal y Patrimonial S.A.S de C.V. | RFC: HPL123456789 | contacto@hestiaplp.com.mx | +52 55 1234 5678<br>
             Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México | www.hestiaplp.com.mx
         </div>
     </body>
@@ -627,7 +627,7 @@ export class PDFService {
    */
   static async generatePolicyDocumentBlob(policy: PolicyData): Promise<Blob> {
     const html = await this.generatePolicyDocumentHTML(policy);
-    
+
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -643,7 +643,7 @@ export class PDFService {
         try {
           printWindow.print();
           printWindow.close();
-          
+
           // For now, we'll return a simple blob with the HTML content
           // In a real implementation, you'd use a proper PDF library or server-side generation
           const blob = new Blob([html], { type: 'text/html' });

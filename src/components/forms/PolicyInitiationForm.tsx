@@ -30,6 +30,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Send, Loader2, Building2, User, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
+import { trpc } from '@/lib/trpc/client';
 
 // Schema for both individual and company tenants
 const policyInitiateSchema = z.object({
@@ -37,34 +38,34 @@ const policyInitiateSchema = z.object({
   tenantType: z.enum(['individual', 'company'], {
     required_error: "Por favor seleccione el tipo de inquilino",
   }),
-  
+
   // Common fields
   tenantEmail: z.string().email('Correo electrónico inválido'),
   tenantPhone: z.string().optional(),
-  
+
   // Individual tenant fields
   tenantName: z.string().optional(),
-  
+
   // Company tenant fields
   companyName: z.string().optional(),
   companyRfc: z.string().optional(),
   legalRepresentativeName: z.string().optional(),
   legalRepresentativeId: z.string().optional(),
   companyAddress: z.string().optional(),
-  
+
   // Property information
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
-  
+
   // Package and pricing
   packageId: z.string().min(1, 'Por favor seleccione un paquete'),
   price: z.coerce.number().min(0, 'El precio debe ser un número positivo'),
   investigationFee: z.coerce.number().min(0, 'La tarifa de investigación debe ser un número positivo').default(200),
-  
+
   // Payment split
   tenantPaymentPercent: z.coerce.number().min(0).max(100, 'El porcentaje debe estar entre 0 y 100').default(100),
   landlordPaymentPercent: z.coerce.number().min(0).max(100, 'El porcentaje debe estar entre 0 y 100').default(0),
-  
+
   // Contract details
   contractLength: z.coerce.number().min(1).max(60, 'La duración del contrato debe estar entre 1 y 60 meses').default(12),
 }).superRefine((data, ctx) => {
@@ -76,7 +77,7 @@ const policyInitiateSchema = z.object({
       path: ["tenantPaymentPercent"],
     });
   }
-  
+
   // Validate required fields based on tenant type
   if (data.tenantType === 'individual') {
     if (!data.tenantName) {
@@ -118,9 +119,29 @@ interface PolicyInitiationFormProps {
 }
 
 export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(false);
+  // Use tRPC to fetch packages
+  const { data: packages = [], isLoading: loadingPackages } = trpc.package.getAll.useQuery();
+
+  // Use tRPC mutation for creating policy
+  const createPolicyMutation = trpc.policy.create.useMutation({
+    onSuccess: () => {
+      toast({
+        title: '¡Protección iniciada!',
+        description: 'Se han enviado las invitaciones a los actores.',
+      });
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al iniciar la protección',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const { toast } = useToast();
 
   const form = useForm<PolicyInitiateFormValues>({
@@ -148,10 +169,6 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
 
   const tenantType = form.watch('tenantType');
 
-  // Fetch packages on mount
-  useEffect(() => {
-    fetchPackages();
-  }, []);
 
   // Update price when package selection changes
   const selectedPackageId = form.watch('packageId');
@@ -173,63 +190,10 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
     }
   }, [tenantPercent, form]);
 
-  const fetchPackages = async () => {
-    setLoadingPackages(true);
-    try {
-      const response = await fetch('/api/packages');
-      if (response.ok) {
-        const data = await response.json();
-        setPackages(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch packages:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los paquetes',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingPackages(false);
-    }
-  };
 
   const onSubmit = async (values: PolicyInitiateFormValues) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/policies/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al iniciar la póliza');
-      }
-
-      const result = await response.json();
-
-      toast({
-        title: 'Póliza iniciada exitosamente',
-        description: result.emailSent 
-          ? `Se ha enviado un correo de invitación a ${values.tenantEmail}`
-          : 'La póliza ha sido creada pero no se pudo enviar el correo de invitación',
-        variant: result.emailSent ? 'default' : 'destructive',
-      });
-
-      onSuccess?.();
-    } catch (error) {
-      console.error('Policy initiation error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al iniciar la póliza',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Use the tRPC mutation
+    createPolicyMutation.mutate(values);
   };
 
   return (
@@ -259,8 +223,8 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                         <FormControl>
                           <RadioGroupItem value="individual" />
                         </FormControl>
-                        <label 
-                          htmlFor="individual" 
+                        <label
+                          htmlFor="individual"
                           className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -276,8 +240,8 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                         <FormControl>
                           <RadioGroupItem value="company" />
                         </FormControl>
-                        <label 
-                          htmlFor="company" 
+                        <label
+                          htmlFor="company"
                           className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -575,7 +539,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
               name="packageId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Paquete de Póliza *</FormLabel>
+                  <FormLabel>Paquete de Protección *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingPackages}>
                     <FormControl>
                       <SelectTrigger>
@@ -591,7 +555,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Seleccione el tipo de póliza según el perfil del inquilino
+                    Seleccione el tipo de protección según el perfil del inquilino
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -614,7 +578,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
                     />
                   </FormControl>
                   <FormDescription>
-                    Precio total de la póliza (se actualiza automáticamente al seleccionar un paquete)
+                    Precio total de la protección
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -673,7 +637,7 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
 
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Distribución de Pago</h4>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -725,8 +689,8 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  Los porcentajes de pago deben sumar exactamente 100%. 
-                  La configuración predeterminada es que el inquilino pague el 100% de la póliza.
+                  Los porcentajes de pago deben sumar exactamente 100%.
+                  La configuración predeterminada es que el inquilino pague el 100% de la protección.
                 </AlertDescription>
               </Alert>
             </div>
@@ -738,17 +702,17 @@ export function PolicyInitiationForm({ onSuccess }: PolicyInitiationFormProps) {
           <Button
             type="submit"
             size="lg"
-            disabled={isLoading}
+            disabled={createPolicyMutation.isPending}
           >
-            {isLoading ? (
+            {createPolicyMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creando Póliza...
+                Creando Protección...
               </>
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Iniciar Póliza
+                Iniciar Protección
               </>
             )}
           </Button>

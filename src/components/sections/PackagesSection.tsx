@@ -1,35 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { PackageCard } from '@/components/shared/PackageCard';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Section } from '@/components/shared/Section';
 import { t } from '@/lib/i18n';
+import { trpc } from '@/lib/trpc/client';
 import type { Package } from '@/lib/types';
 
 export function PackagesSection() {
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const response = await fetch('/api/packages');
-        if (!response.ok) {
-          throw new Error('Failed to fetch packages');
-        }
-        const data = await response.json();
-        setPackages(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load packages');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPackages();
-  }, []);
+  // Use tRPC to fetch packages
+  const { data: packages = [], isLoading: loading, error } = trpc.package.getAll.useQuery();
 
   if (loading) {
     return (

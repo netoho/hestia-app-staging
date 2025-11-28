@@ -1,8 +1,6 @@
 import { PaymentStatus } from '@prisma/client';
 import { PaymentMethod, PaymentMethodType } from '@/lib/prisma-types';
 import prisma from '@/lib/prisma';
-import { isDemoMode } from '@/lib/env-check';
-import { demoDatabase } from './demoDatabase';
 import Stripe from 'stripe';
 
 // Stripe instance will be created when needed
@@ -12,7 +10,7 @@ let stripe: Stripe | null = null;
 // Helper function to map Stripe payment methods to our enum
 export function mapStripePaymentMethodToEnum(stripeMethod?: string): PaymentMethodType {
   if (!stripeMethod) return 'CARD';
-  
+
   switch (stripeMethod.toLowerCase()) {
     case 'card':
       return 'CARD';
@@ -28,21 +26,21 @@ export function mapStripePaymentMethodToEnum(stripeMethod?: string): PaymentMeth
 }
 
 async function getStripe(): Promise<Stripe> {
-  if (!stripe && !isDemoMode()) {
+  if (!stripe) {
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('STRIPE_SECRET_KEY environment variable is required');
     }
-    
+
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2024-11-20.acacia',
       typescript: true,
     });
   }
-  
-  if (!stripe && !isDemoMode()) {
+
+  if (!stripe) {
     throw new Error('Failed to initialize Stripe');
   }
-  
+
   return stripe!;
 }
 
@@ -85,20 +83,7 @@ export class PaymentService {
     description?: string;
     metadata?: any;
   }) {
-    if (isDemoMode()) {
-      return demoDatabase.createPayment({
-        policyId,
-        amount,
-        currency,
-        status: PaymentStatus.PENDING,
-        stripeIntentId,
-        stripeSessionId,
-        description,
-        metadata,
-      });
-    }
-
-    return await prisma.payment.create({
+    return prisma.payment.create({
       data: {
         policyId,
         amount,
@@ -122,30 +107,8 @@ export class PaymentService {
     description,
     metadata = {},
   }: CreatePaymentIntentParams) {
-    if (isDemoMode()) {
-      // In demo mode, create a mock payment intent
-      const mockIntentId = `pi_demo_${Date.now()}`;
-      const payment = await this.createPaymentRecord({
-        policyId,
-        amount,
-        currency,
-        stripeIntentId: mockIntentId,
-        description,
-        metadata,
-      });
-      
-      return {
-        id: mockIntentId,
-        client_secret: `${mockIntentId}_secret_demo`,
-        amount,
-        currency,
-        status: 'requires_payment_method',
-        payment,
-      };
-    }
-
     const stripeInstance = await getStripe();
-    
+
     // Create payment intent in Stripe
     const paymentIntent = await stripeInstance.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
@@ -188,28 +151,8 @@ export class PaymentService {
     customerEmail,
     metadata = {},
   }: CreateCheckoutSessionParams) {
-    if (isDemoMode()) {
-      // In demo mode, create a mock session
-      const mockSessionId = `cs_demo_${Date.now()}`;
-      const payment = await this.createPaymentRecord({
-        policyId,
-        amount,
-        currency,
-        stripeSessionId: mockSessionId,
-        description: `Policy payment for ${policyId}`,
-        metadata,
-      });
-      
-      return {
-        id: mockSessionId,
-        checkoutUrl: `${successUrl}?session_id=${mockSessionId}&demo=true`,
-        stripeSessionId: mockSessionId,
-        payment,
-      };
-    }
-
     const stripeInstance = await getStripe();
-    
+
     // Get policy details for line item description
     const policy = await prisma.policy.findUnique({
       where: { id: policyId },
@@ -224,8 +167,8 @@ export class PaymentService {
           price_data: {
             currency: currency.toLowerCase(),
             product_data: {
-              name: policy?.packageName || 'Póliza de Garantía',
-              description: `Pago de póliza para ${policy?.tenantEmail || 'inquilino'}`,
+              name: policy?.packageName || 'Protección de Garantía',
+              description: `Pago de protección para ${policy?.tenantEmail || 'inquilino'}`,
             },
             unit_amount: Math.round(amount * 100), // Convert to cents
           },
@@ -280,19 +223,6 @@ export class PaymentService {
       stripeCustomerId?: string;
     }
   ) {
-    if (isDemoMode()) {
-      // Map payment method for demo mode as well
-      const mappedAdditionalData = additionalData ? {
-        ...additionalData,
-        method: additionalData.method ? mapStripePaymentMethodToEnum(additionalData.method as string) : undefined,
-      } : {};
-      
-      return demoDatabase.updatePaymentByStripeId(stripeObjectId, {
-        status,
-        ...mappedAdditionalData,
-      });
-    }
-
     // Find payment by either intent ID or session ID
     const payment = await prisma.payment.findFirst({
       where: {
@@ -351,11 +281,7 @@ export class PaymentService {
    * Get payment status for a policy
    */
   static async getPaymentsByPolicyId(policyId: string) {
-    if (isDemoMode()) {
-      return demoDatabase.getPaymentsByPolicyId(policyId);
-    }
-
-    return await prisma.payment.findMany({
+    return prisma.payment.findMany({
       where: { policyId },
       orderBy: { createdAt: 'desc' },
     });
@@ -365,14 +291,6 @@ export class PaymentService {
    * Process refund for a payment
    */
   static async processRefund(paymentId: string, amount?: number, reason?: string) {
-    if (isDemoMode()) {
-      return demoDatabase.updatePayment(paymentId, {
-        status: PaymentStatus.REFUNDED,
-        refundedAt: new Date(),
-        refundAmount: amount,
-      });
-    }
-
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
     });
@@ -433,11 +351,6 @@ export class PaymentService {
    * Verify webhook signature from Stripe
    */
   static async verifyWebhookSignature(payload: string, signature: string): Promise<any> {
-    if (isDemoMode()) {
-      // In demo mode, parse the payload and return it
-      return JSON.parse(payload);
-    }
-
     const stripeInstance = await getStripe();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 

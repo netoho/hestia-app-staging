@@ -150,4 +150,11 @@ export class FirebaseStorageProvider implements StorageProvider {
       return [];
     }
   }
+
+  getPublicUrl(path: string): string {
+    // Firebase Storage public URL format
+    // Note: This requires the file to be publicly accessible
+    const encodedPath = encodeURIComponent(path);
+    return `https://firebasestorage.googleapis.com/v0/b/${this.bucket.name}/o/${encodedPath}?alt=media`;
+  }
 }

@@ -1,7 +1,6 @@
 import { Resend } from 'resend';
 import Mailgun from 'mailgun.js';
 import nodemailer from 'nodemailer';
-import { isDemoMode } from '../env-check';
 import { generatePolicyUrl } from '../utils/tokenUtils';
 
 // Email provider configuration
@@ -26,14 +25,6 @@ interface EmailData {
 // Email provider abstraction
 class EmailProvider {
   static async sendEmail(data: EmailData): Promise<boolean> {
-    if (isDemoMode()) {
-      console.log('Demo mode: Mock sending email');
-      console.log('Provider:', EMAIL_PROVIDER);
-      console.log('To:', data.to);
-      console.log('Subject:', data.subject);
-      return true;
-    }
-
     try {
       switch (EMAIL_PROVIDER) {
         case 'mailgun':
@@ -69,7 +60,6 @@ class EmailProvider {
       text: data.text
     });
 
-    console.log('Email sent via Resend:', result);
     return true;
   }
 
@@ -96,7 +86,6 @@ class EmailProvider {
       text: data.text
     });
 
-    console.log('Email sent via Mailgun:', result);
     return true;
   }
 
@@ -119,9 +108,9 @@ class EmailProvider {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
-        // Additional HostGator-specific settings
+        // TLS settings - require valid certificates in production
         tls: {
-          rejectUnauthorized: false // May be needed for some shared hosting providers
+          rejectUnauthorized: process.env.NODE_ENV === 'production'
         }
       });
     }
@@ -134,8 +123,9 @@ class EmailProvider {
       text: data.text
     };
 
+    // console.log('Sending email via SMTP to:', mailOptions);
+
     const result = await smtpTransporter.sendMail(mailOptions);
-    console.log('Email sent via SMTP:', result);
     return true;
   }
 }
@@ -423,8 +413,8 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
     const { render } = await import('@react-email/render');
     const { PolicyInvitationEmail } = await import('../../templates/email/react-email/PolicyInvitationEmail');
 
-    const html = await render(PolicyInvitationEmail(data));
-    const subject = 'Acción Requerida: Completa tu Solicitud de Póliza Hestia';
+    const html = await render(await PolicyInvitationEmail(data));
+    const subject = 'Acción Requerida: Completa tu Solicitud de Protección Hestia';
 
     // Generate plain text version
     const policyUrl = generatePolicyUrl(data.accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
@@ -438,7 +428,7 @@ export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<
     const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
-${data.initiatorName} ha iniciado una solicitud de póliza de garantía para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
+${data.initiatorName} ha iniciado una solicitud de protección de arrendamiento para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
 
 Para completar tu solicitud, visita: ${policyUrl}
 
@@ -482,8 +472,8 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const { render } = await import('@react-email/render');
     const { PolicySubmissionEmail } = await import('../../templates/email/react-email/PolicySubmissionEmail');
 
-    const html = await render(PolicySubmissionEmail(data));
-    const subject = `Solicitud Recibida - Póliza Hestia #${data.policyId}`;
+    const html = await render(await PolicySubmissionEmail(data));
+    const subject = `Solicitud Recibida - Protección Hestia #${data.policyId}`;
 
     // Generate plain text version
     const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
@@ -498,7 +488,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const text = `
 ¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!
 
-Hemos recibido exitosamente tu solicitud de póliza de garantía.
+Hemos recibido exitosamente tu solicitud de protección de arrendamiento.
 
 ID de Solicitud: #${data.policyId}
 Enviada el: ${submittedDate}
@@ -536,31 +526,295 @@ Apreciamos tu confianza en Hestia para proteger tu tranquilidad en el arrendamie
   }
 };
 
+// Actor invitation data
+export interface ActorInvitationData {
+  actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval';
+  isCompany: boolean;
+  email: string;
+  name?: string;
+  token: string;
+  url: string;
+  policyNumber: string;
+  propertyAddress: string;
+  expiryDate?: Date;
+  initiatorName?: string;
+}
+
+// Join Us notification data
+export interface JoinUsNotificationData {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  experience: string;
+  currentClients: string;
+  message: string;
+}
+
+export const sendActorInvitation = async (data: ActorInvitationData): Promise<boolean> => {
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { ActorInvitationEmail } = await import('../../templates/email/react-email/ActorInvitationEmail');
+
+    const html = await render(await ActorInvitationEmail(data));
+
+    const actorTypeNames = {
+      'landlord': 'Arrendador',
+      'tenant': 'Inquilino',
+      'jointObligor': 'Obligado Solidario',
+      'aval': 'Aval'
+    };
+
+    const actorTypeName = actorTypeNames[data.actorType];
+    const subject = `Acción Requerida: Completa tu información como ${actorTypeName} - Protección ${data.policyNumber}`;
+
+    // Generate plain text version
+    const text = `
+Hola${data.name ? ` ${data.name}` : ''},
+
+${data.initiatorName || 'El administrador'} te ha designado como ${actorTypeName} en una protección de arrendamiento.
+
+Número de Protección: ${data.policyNumber}
+Propiedad: ${data.propertyAddress}
+
+Para continuar con el proceso, necesitamos que completes tu información y documentación.
+
+Accede aquí: ${data.url}
+
+¿Qué necesitarás?
+- Identificación oficial (INE o pasaporte)
+- Información laboral y comprobantes de ingresos
+- 3 referencias personales con datos de contacto
+${data.actorType === 'aval' ? '- Información de la propiedad en garantía' : ''}
+
+Importante: Este enlace expirará ${data.expiryDate ? `el ${new Date(data.expiryDate).toLocaleDateString('es-MX')}` : 'en 7 días'}.
+
+Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    console.log('Sending actor invitation to:', data.email);
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error sending actor invitation:', error);
+    return false;
+  }
+};
+
+export const sendJoinUsNotification = async (data: JoinUsNotificationData): Promise<boolean> => {
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { JoinUsNotificationEmail } = await import('../../templates/email/react-email/JoinUsNotificationEmail');
+
+    const html = await render(JoinUsNotificationEmail(data));
+    const subject = `Nueva solicitud para unirse al equipo - ${data.name}`;
+
+    // Generate plain text version
+    const text = `
+Nueva Solicitud para Unirse al Equipo de Asesores
+
+Información del Solicitante:
+- Nombre: ${data.name}
+- Email: ${data.email}
+- Teléfono: ${data.phone}
+- Empresa/Inmobiliaria: ${data.company}
+- Años de Experiencia: ${data.experience}
+- Número de Clientes Actuales: ${data.currentClients}
+
+Mensaje del Solicitante:
+${data.message}
+
+---
+Fecha de solicitud: ${new Date().toLocaleDateString('es-MX', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+
+Por favor, revisa esta solicitud y contacta al solicitante para continuar con el proceso de incorporación.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    // Send to unete@hestiaplp.com.mx
+    const joinUsEmail = process.env.JOIN_US_EMAIL || 'unete@hestiaplp.com.mx';
+
+    return await EmailProvider.sendEmail({
+      to: joinUsEmail,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Error sending join us notification:', error);
+    return false;
+  }
+};
+
+export interface ActorRejectionData {
+  to: string;
+  actorName: string;
+  actorType: string;
+  rejectionReason: string;
+  policyNumber: string;
+}
+
+export const sendActorRejectionEmail = async (params: ActorRejectionData): Promise<boolean> => {
+  try {
+    // Use React Email templates
+    const { render } = await import('@react-email/render');
+    const { ActorRejectionEmail } = await import('../../templates/email/react-email/ActorRejectionEmail');
+
+    const html = await render(await ActorRejectionEmail(params));
+
+    const actorTypeLabels: Record<string, string> = {
+      landlord: 'Arrendador',
+      tenant: 'Inquilino',
+      jointObligor: 'Obligado Solidario',
+      aval: 'Aval',
+    };
+
+    const subject = `Información Rechazada - Protección ${params.policyNumber}`;
+
+    // Generate plain text version
+    const text = `
+Hola ${params.actorName},
+
+Tu información como ${actorTypeLabels[params.actorType] || params.actorType} para la protección ${params.policyNumber} ha sido rechazada.
+
+Razón del rechazo:
+${params.rejectionReason}
+
+Por favor, revisa y actualiza tu información según las observaciones proporcionadas.
+Puedes acceder nuevamente usando el enlace que te fue enviado anteriormente.
+
+Si tienes preguntas o necesitas ayuda, no dudes en contactarnos en ${SUPPORT_EMAIL}.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: params.to,
+      subject,
+      text,
+      html,
+    });
+  } catch (error) {
+    console.error('Failed to send actor rejection email:', error);
+    return false;
+  }
+};
+
+// User invitation data
+export interface UserInvitationData {
+  email: string;
+  name?: string;
+  role: 'ADMIN' | 'STAFF' | 'BROKER';
+  invitationUrl: string;
+  expiryDate: Date;
+  inviterName?: string;
+}
+
+export const sendUserInvitation = async (data: UserInvitationData): Promise<boolean> => {
+  try {
+    // Use React Email template
+    const { render } = await import('@react-email/render');
+    const { UserInvitationEmail } = await import('../../templates/email/react-email/UserInvitationEmail');
+
+    const html = await render(await UserInvitationEmail(data));
+
+    const roleDescriptions = {
+      ADMIN: 'Administrador del Sistema',
+      STAFF: 'Personal de Operaciones',
+      BROKER: 'Corredor de Seguros',
+    };
+
+    const roleDescription = roleDescriptions[data.role];
+    const subject = `Bienvenido a Hestia - Configuración de Cuenta`;
+
+    // Generate plain text version
+    const text = `
+Hola${data.name ? ` ${data.name}` : ''},
+
+${data.inviterName ? `${data.inviterName} te` : 'Te'} ha invitado a formar parte del equipo de Hestia como ${roleDescription}.
+
+Para comenzar, necesitas configurar tu contraseña y completar tu perfil.
+
+Accede aquí: ${data.invitationUrl}
+
+Tus credenciales de acceso:
+- Email: ${data.email}
+- Contraseña: La establecerás en tu primer acceso
+
+¿Qué podrás hacer en tu primer acceso?
+- Establecer tu contraseña segura
+- Subir tu foto de perfil
+- Completar tu información de contacto
+- Explorar las herramientas disponibles
+
+Importante: Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+})}. Asegúrate de configurar tu cuenta antes de esa fecha.
+
+Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos a soporte@hestiaplp.com.mx.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    console.log('Sending user invitation to:', data.email);
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send user invitation email:', error);
+    return false;
+  }
+};
+
 export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Promise<boolean> => {
   try {
     // Use React Email templates
     const { render } = await import('@react-email/render');
     const { PolicyStatusUpdateEmail } = await import('../../templates/email/react-email/PolicyStatusUpdateEmail');
 
-    const html = await render(PolicyStatusUpdateEmail(data));
+    const html = await render(await PolicyStatusUpdateEmail(data));
     const isApproved = data.status === 'approved';
     const statusText = isApproved ? 'Aprobada' : 'Rechazada';
-    const subject = `Solicitud de Póliza ${statusText} - Hestia`;
+    const subject = `Solicitud de Protección ${statusText} - Hestia`;
 
     // Generate plain text version
     const text = `
 Hola${data.tenantName ? ` ${data.tenantName}` : ''},
 
-Tu solicitud de póliza de garantía ha sido revisada por ${data.reviewerName}.
+Tu solicitud de protección de arrendamiento ha sido revisada por ${data.reviewerName}.
 
 Estado: ${statusText}
 ${data.reason ? `Motivo: ${data.reason}` : ''}
 
-${isApproved ? 
-  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu póliza.
+${isApproved ?
+  `¡Felicidades! Tu solicitud ha sido aprobada. Nuestro equipo se pondrá en contacto contigo en breve con las instrucciones para la activación de tu protección.
 
 Próximos Pasos:
-- Recibirás los documentos de la póliza por correo electrónico
+- Recibirás los documentos de la protección por correo electrónico
 - Un representante te contactará para finalizar los detalles
 - Tu garantía estará activa una vez completado el proceso` :
   `Si crees que esta decisión fue tomada por error o te gustaría discutir tu solicitud, puedes contactar a nuestro equipo de soporte.
@@ -594,5 +848,272 @@ Agradecemos tu interés en Hestia. Estamos comprometidos en brindarte el mejor s
       html: template.html,
       text: template.text
     });
+  }
+};
+
+// Actor incomplete reminder data
+export interface ActorIncompleteReminderData {
+  actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval';
+  actorName: string;
+  email: string;
+  policyNumber: string;
+  actorLink: string;
+}
+
+// Policy creator summary data
+export interface PolicyCreatorSummaryData {
+  creatorName: string;
+  email: string;
+  policyNumber: string;
+  policyLink: string;
+  incompleteActors: Array<{
+    type: string;
+    name: string;
+    email: string;
+  }>;
+}
+
+export const sendActorIncompleteReminder = async (data: ActorIncompleteReminderData): Promise<boolean> => {
+  try {
+    const actorTypeLabels: Record<string, string> = {
+      landlord: 'Arrendador',
+      tenant: 'Arrendatario',
+      jointObligor: 'Obligado Solidario',
+      aval: 'Aval'
+    };
+
+    const actorTypeLabel = actorTypeLabels[data.actorType] || data.actorType;
+    const subject = 'Recordatorio: Complete su información para la póliza';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #173459; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; color: #FF7F50; }
+    .content { background-color: #ffffff; padding: 40px 30px; border: 1px solid #e9ecef; border-radius: 0 0 8px 8px; }
+    .button { display: inline-block; padding: 14px 30px; background-color: #FF7F50; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center; font-size: 14px; color: #6c757d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${COMPANY_NAME}</h1>
+      <p style="margin: 10px 0 0 0; color: #ffffff;">Portal de Pólizas</p>
+    </div>
+    <div class="content">
+      <h2>Hola ${data.actorName},</h2>
+
+      <p>Este es un recordatorio diario para completar su información como <strong>${actorTypeLabel}</strong> para la póliza <strong>${data.policyNumber}</strong>.</p>
+
+      <p>Su información está incompleta y es necesaria para procesar la póliza. Por favor, tómese unos minutos para completar el formulario.</p>
+
+      <div style="text-align: center;">
+        <a href="${data.actorLink}" class="button">Completar mi información</a>
+      </div>
+
+      <p><small>Este enlace es único para usted. No lo comparta con nadie más.</small></p>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.</p>
+      <p>Si necesita ayuda, contáctenos a ${SUPPORT_EMAIL}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const text = `
+Hola ${data.actorName},
+
+Este es un recordatorio diario para completar su información como ${actorTypeLabel} para la póliza ${data.policyNumber}.
+
+Su información está incompleta y es necesaria para procesar la póliza. Por favor, visite el siguiente enlace para completar el formulario:
+
+${data.actorLink}
+
+Este enlace es único para usted. No lo comparta con nadie más.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send actor incomplete reminder:', error);
+    return false;
+  }
+};
+
+export const sendPolicyCreatorSummary = async (data: PolicyCreatorSummaryData): Promise<boolean> => {
+  try {
+    const subject = `Recordatorio: Actores pendientes en póliza ${data.policyNumber}`;
+
+    // Generate actors list HTML
+    const actorsListHTML = data.incompleteActors.map(actor => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e9ecef;">${actor.type}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e9ecef;">${actor.name}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e9ecef;">${actor.email}</td>
+      </tr>
+    `).join('');
+
+    // Generate actors list text
+    const actorsListText = data.incompleteActors.map(actor =>
+      `- ${actor.type}: ${actor.name} (${actor.email})`
+    ).join('\n');
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #173459; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; color: #FF7F50; }
+    .content { background-color: #ffffff; padding: 40px 30px; border: 1px solid #e9ecef; border-radius: 0 0 8px 8px; }
+    .button { display: inline-block; padding: 14px 30px; background-color: #FF7F50; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center; font-size: 14px; color: #6c757d; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th { background-color: #f8f9fa; padding: 12px 8px; text-align: left; border-bottom: 2px solid #dee2e6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${COMPANY_NAME}</h1>
+      <p style="margin: 10px 0 0 0; color: #ffffff;">Resumen de Póliza</p>
+    </div>
+    <div class="content">
+      <h2>Hola ${data.creatorName},</h2>
+
+      <p>Este es un resumen diario de los actores que aún necesitan completar su información para la póliza <strong>${data.policyNumber}</strong>.</p>
+
+      <h3>Actores Pendientes:</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo de Actor</th>
+            <th>Nombre</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${actorsListHTML}
+        </tbody>
+      </table>
+
+      <p>Se han enviado recordatorios automáticos a cada actor con información de contacto. Los recordatorios continuarán enviándose diariamente hasta que completen su información.</p>
+
+      <div style="text-align: center;">
+        <a href="${data.policyLink}" class="button">Ver póliza</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.</p>
+      <p>Si necesita ayuda, contáctenos a ${SUPPORT_EMAIL}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const text = `
+Hola ${data.creatorName},
+
+Este es un resumen diario de los actores que aún necesitan completar su información para la póliza ${data.policyNumber}.
+
+Actores Pendientes:
+${actorsListText}
+
+Se han enviado recordatorios automáticos a cada actor con información de contacto. Los recordatorios continuarán enviándose diariamente hasta que completen su información.
+
+Ver póliza: ${data.policyLink}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send policy creator summary:', error);
+    return false;
+  }
+};
+
+// ====================================
+// Password Reset Email
+// ====================================
+
+interface PasswordResetData {
+  email: string;
+  name?: string;
+  resetUrl: string;
+  expiryHours?: number;
+}
+
+export const sendPasswordResetEmail = async (data: PasswordResetData): Promise<boolean> => {
+  try {
+    // Use React Email template
+    const { render } = await import('@react-email/render');
+    const { PasswordResetEmail } = await import('../../templates/email/react-email/PasswordResetEmail');
+
+    const expiryHours = data.expiryHours || 1;
+    const expiryTime = expiryHours === 1 ? '1 hora' : `${expiryHours} horas`;
+
+    const html = await render(await PasswordResetEmail({
+      email: data.email,
+      name: data.name,
+      resetUrl: data.resetUrl,
+      expiryTime
+    }));
+
+    const subject = 'Restablecer tu contraseña - Hestia';
+
+    // Generate plain text version
+    const text = `
+Hola ${data.name || 'usuario'},
+
+Recibimos una solicitud para restablecer la contraseña de tu cuenta en Hestia asociada con el correo electrónico ${data.email}.
+
+Si realizaste esta solicitud, visita el siguiente enlace para crear una nueva contraseña:
+${data.resetUrl}
+
+IMPORTANTE:
+• Este enlace expirará en ${expiryTime}
+• Por seguridad, no compartas este enlace con nadie
+• Si no solicitaste restablecer tu contraseña, ignora este correo
+
+Si el enlace no funciona, copia y pega la URL completa en tu navegador.
+
+Nota de seguridad: Si no solicitaste restablecer tu contraseña, es posible que alguien esté intentando acceder a tu cuenta. Por favor, asegúrate de que tu cuenta esté segura y contacta a nuestro equipo de soporte si tienes alguna preocupación.
+
+¿Necesitas ayuda? Contáctanos en ${SUPPORT_EMAIL}
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    return false;
   }
 };

@@ -55,7 +55,6 @@ export function CreatePolicyEmploymentForm({ onNext, onBack, initialData }: Crea
   });
 
   const onSubmit = (values: EmploymentFormValues) => {
-    console.log(values);
     onNext(values);
   };
 

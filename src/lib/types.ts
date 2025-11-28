@@ -1,7 +1,10 @@
 
 
-// Import Package from prisma-types for consistency
-export { Package } from '@/lib/prisma-types';
+// Import Package from prisma client for consistency
+export type { Package } from '@prisma/client';
+
+// Import enums from centralized generated file
+import { UserRole, PolicyStatus } from '@/lib/enums';
 
 export interface Testimonial {
   id: string;
@@ -11,8 +14,6 @@ export interface Testimonial {
   avatarUrl: string;
   dataAiHint: string;
 }
-
-export type UserRole = 'owner' | 'renter' | 'staff' | 'admin' | 'broker' | 'tenant' | 'landlord';
 
 export interface User {
   id: string;
@@ -44,8 +45,6 @@ export interface HowItWorksStep {
   icon: string;
   dataAiHint: string;
 }
-
-export type PolicyStatus = 'draft' | 'sent_to_tenant' | 'in_progress' | 'submitted' | 'under_review' | 'approved' | 'denied';
 
 export interface Policy {
   id: string;

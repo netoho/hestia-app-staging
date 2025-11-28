@@ -1,19 +1,15 @@
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { isDemoMode, DemoORM } from '@/lib/services/demoDatabase';
 import prisma from '@/lib/prisma';
 
-// Conditionally import PrismaAdapter
-let adapter: any;
-if (!isDemoMode() && prisma) {
-  const { PrismaAdapter } = require('@auth/prisma-adapter');
-  adapter = PrismaAdapter(prisma);
-}
+// Import PrismaAdapter
+const { PrismaAdapter } = require('@auth/prisma-adapter');
+const adapter = PrismaAdapter(prisma);
 
 export const authOptions: AuthOptions = {
-  // Only use PrismaAdapter in production mode
-  ...(adapter ? { adapter } : {}),
+  // Use PrismaAdapter
+  adapter,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -25,32 +21,24 @@ export const authOptions: AuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
-        
-        let user;
-        
-        if (isDemoMode()) {
-          // Use demo database
-          user = await DemoORM.findUniqueUser({ email: credentials.email });
-        } else {
-          // Use real database
-          user = await prisma.user.findUnique({
-            where: { email: credentials.email }
-          });
-        }
-        
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
+
         if (!user || !user.password) {
           return null;
         }
-        
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
-        
+
         if (!isPasswordValid) {
           return null;
         }
-        
+
         return {
           id: user.id,
           email: user.email,
@@ -59,40 +47,21 @@ export const authOptions: AuthOptions = {
         };
       }
     }),
-    // GoogleProvider can be added here later
-    // GoogleProvider({
-    //   clientId: process.env.GOOGLE_CLIENT_ID!,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    // })
   ],
   session: {
     strategy: 'jwt', // JWT sessions work perfectly in demo mode
-    maxAge: isDemoMode() ? 24 * 60 * 60 : 30 * 24 * 60 * 60, // 1 day in demo, 30 days in production
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
-      // In demo mode, always use the super admin user
-      if (isDemoMode() && !user && !token.id) {
-        token.id = 'demo-admin-id';
-        token.email = 'admin@hestiaplp.com.mx';
-        token.name = 'Super Admin';
-        token.role = 'staff';
-      } else if (user) {
+      if (user) {
         token.id = user.id;
         token.role = (user as any).role; // Add role to the JWT token
       }
       return token;
     },
     async session({ session, token }) {
-      // In demo mode, always return the super admin session
-      if (isDemoMode()) {
-        session.user = {
-          id: 'demo-admin-id',
-          email: 'admin@hestiaplp.com.mx',
-          name: 'Super Admin',
-          role: 'staff'
-        } as any;
-      } else if (session.user) {
+      if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string; // Add role to the session
       }
@@ -102,6 +71,5 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: '/login',
   },
-  // secret: process.env.NEXTAUTH_SECRET,
-  secret: "generate-strong-secret-here",
+  secret: process.env.NEXTAUTH_SECRET,
 };
