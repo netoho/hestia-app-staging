@@ -1080,20 +1080,20 @@ const es = {
             },
             form: {
                 password: {
-                    label: "Contraseña *",
+                    label: "Contraseña",
                     placeholder: "Ingresa tu contraseña",
                     minLength: "Mínimo 6 caracteres"
                 },
                 confirmPassword: {
-                    label: "Confirmar Contraseña *",
+                    label: "Confirmar Contraseña",
                     placeholder: "Confirma tu contraseña"
                 },
                 phone: {
-                    label: "Teléfono (Opcional)",
+                    label: "Teléfono",
                     placeholder: "Tu número de teléfono"
                 },
                 address: {
-                    label: "Dirección (Opcional)",
+                    label: "Dirección",
                     placeholder: "Tu dirección"
                 }
             },
