@@ -5,7 +5,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, Home, Building2, Factory } from 'lucide-react';
+import { Home, Building2, Factory } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { trpc } from '@/lib/trpc/client';
 import type { Package } from '@/lib/types';
 
@@ -194,7 +201,8 @@ export function PricingCalculator() {
             <p className="text-sm text-muted-foreground mb-2">
               Casa, departamento, etc.
             </p>
-            <div className="flex flex-col lg:flex-row gap-2">
+            {/* Buttons - visible on small screens and 2xl+ */}
+            <div className="flex flex-col xl:flex-row gap-2 lg:hidden 2xl:flex">
               <Button
                 variant={propertyType === 'residential' ? 'default' : 'outline'}
                 onClick={() => setPropertyType('residential')}
@@ -220,6 +228,29 @@ export function PricingCalculator() {
                 <span className="text-sm lg:text-base">Industrial</span>
               </Button>
             </div>
+            {/* Select - visible on lg to xl */}
+            <Select value={propertyType} onValueChange={(v) => setPropertyType(v as 'residential' | 'commercial' | 'industrial')}>
+              <SelectTrigger className="hidden lg:flex 2xl:hidden py-6">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="residential">
+                  <span className="flex items-center gap-2">
+                    <Home className="w-4 h-4" /> Habitacional
+                  </span>
+                </SelectItem>
+                <SelectItem value="commercial">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" /> Comercial
+                  </span>
+                </SelectItem>
+                <SelectItem value="industrial">
+                  <span className="flex items-center gap-2">
+                    <Factory className="w-4 h-4" /> Industrial
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </Card>
         </div>
 

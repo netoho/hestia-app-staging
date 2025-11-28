@@ -1,18 +1,18 @@
 import prisma from '@/lib/prisma';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { formatFullName } from '@/lib/utils/names';
+import {
+  getSectionsForActor,
+  type SectionType as ConfigSectionType,
+  type ActorType as ConfigActorType,
+} from '@/lib/constants/actorSectionConfig';
 
 export type ValidationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW';
 
-export type ActorType = 'landlord' | 'tenant' | 'jointObligor' | 'aval';
-
-export type SectionType =
-  | 'personal_info'
-  | 'work_info'
-  | 'financial_info'
-  | 'references'
-  | 'address'
-  | 'company_info';
+// Re-export types from config for backward compatibility
+export type ActorType = ConfigActorType;
+export type SectionType = ConfigSectionType;
 
 export interface ValidateSectionParams {
   policyId: string;
@@ -385,7 +385,13 @@ class ValidationService {
   /**
    * Get validation details for a specific actor
    */
-  async getActorValidationDetails(actorType: ActorType, actorId: string) {
+  async getActorValidationDetails(actorType: ActorType, actorId: string, isCompany?: boolean) {
+    // If isCompany not provided, fetch the actor to determine it
+    let actorIsCompany = isCompany;
+    if (actorIsCompany === undefined) {
+      actorIsCompany = await this.getActorIsCompany(actorType, actorId);
+    }
+
     const [sectionValidations, documents] = await Promise.all([
       prisma.actorSectionValidation.findMany({
         where: { actorType, actorId }
@@ -401,7 +407,7 @@ class ValidationService {
     const docValidationMap = new Map(documentValidations.map(dv => [dv.documentId, dv]));
 
     return {
-      sections: this.getSectionsForActorType(actorType).map(section => {
+      sections: this.getSectionsForActorType(actorType, actorIsCompany).map(section => {
         const validation = sectionValidations.find(sv => sv.section === section);
         return {
           section,
@@ -450,13 +456,44 @@ class ValidationService {
     });
   }
 
-  private getSectionsForActorType(actorType: ActorType): SectionType[] {
-    // Define which sections apply to each actor type
-    const baseSections: SectionType[] = ['personal_info', 'address', 'financial_info'];
+  /**
+   * Determine if an actor is a company
+   */
+  private async getActorIsCompany(actorType: ActorType, actorId: string): Promise<boolean> {
+    const model = this.getActorModel(actorType);
+    const actor = await (prisma as any)[model].findUnique({
+      where: { id: actorId },
+      select: actorType === 'landlord'
+        ? { isCompany: true }
+        : actorType === 'tenant'
+        ? { tenantType: true }
+        : actorType === 'aval'
+        ? { avalType: true }
+        : { jointObligorType: true }
+    });
 
-    // All actor types can be companies, so company_info is conditional
-    // Work info is for individuals
-    return baseSections;
+    if (!actor) return false;
+
+    if (actorType === 'landlord') {
+      return actor.isCompany === true;
+    }
+    if (actorType === 'tenant') {
+      return actor.tenantType === 'COMPANY';
+    }
+    if (actorType === 'aval') {
+      return actor.avalType === 'COMPANY';
+    }
+    if (actorType === 'jointObligor') {
+      return actor.jointObligorType === 'COMPANY';
+    }
+    return false;
+  }
+
+  /**
+   * Get sections for an actor type from centralized config
+   */
+  private getSectionsForActorType(actorType: ActorType, isCompany: boolean): SectionType[] {
+    return getSectionsForActor(actorType, isCompany);
   }
 
   private calculateActorProgress(
@@ -466,11 +503,29 @@ class ValidationService {
   ) {
     const actorProgress: any[] = [];
 
+    // Helper to determine if actor is company based on actor data
+    const isActorCompany = (actor: any, actorType: ActorType): boolean => {
+      if (actorType === 'landlord') {
+        return actor.isCompany === true;
+      }
+      if (actorType === 'tenant') {
+        return actor.tenantType === 'COMPANY';
+      }
+      if (actorType === 'aval') {
+        return actor.avalType === 'COMPANY';
+      }
+      if (actorType === 'jointObligor') {
+        return actor.jointObligorType === 'COMPANY';
+      }
+      return false;
+    };
+
     // Helper to calculate progress for an actor
     const calculateForActor = (actor: any, actorType: ActorType) => {
       if (!actor) return null;
 
-      const actorSections = this.getSectionsForActorType(actorType);
+      const isCompany = isActorCompany(actor, actorType);
+      const actorSections = this.getSectionsForActorType(actorType, isCompany);
       const actorSectionValidations = sectionValidations.filter(
         sv => sv.actorType === actorType && sv.actorId === actor.id
       );
@@ -490,6 +545,7 @@ class ValidationService {
             actor.maternalLastName || '',
             actor.middleName || undefined
           ) : 'Sin nombre'),
+        isCompany,
         totalSections: actorSections.length,
         approvedSections: actorSectionValidations.filter(sv => sv.status === 'APPROVED').length,
         rejectedSections: actorSectionValidations.filter(sv => sv.status === 'REJECTED').length,
@@ -567,7 +623,31 @@ class ValidationService {
         },
         performedByType: 'system'
       });
+
+      // Check if all actors are now approved and transition policy
+      await this.checkAndTransitionPolicyStatus(policyId);
     }
+  }
+
+  /**
+   * Check if policy should transition to PENDING_APPROVAL
+   * Called after an actor is auto-approved
+   */
+  private async checkAndTransitionPolicyStatus(policyId: string) {
+    const policy = await prisma.policy.findUnique({
+      where: { id: policyId },
+      select: { status: true }
+    });
+
+    if (!policy || policy.status !== 'UNDER_INVESTIGATION') return;
+
+    // Use transitionPolicyStatus for proper validation
+    await transitionPolicyStatus(
+      policyId,
+      'PENDING_APPROVAL',
+      'system',
+      'All actors verification completed'
+    );
   }
 
   private getActorModel(actorType: ActorType): string {

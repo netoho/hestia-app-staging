@@ -133,7 +133,7 @@ export default function SectionValidator({
       policyId,
       actorType: actorType as 'landlord' | 'tenant' | 'jointObligor' | 'aval',
       actorId,
-      section: section.section as 'personal_info' | 'work_info' | 'financial_info' | 'references' | 'address' | 'company_info',
+      section: section.section as 'personal_info' | 'work_info' | 'financial_info' | 'references' | 'address' | 'company_info' | 'rental_history' | 'property_guarantee',
       status,
       rejectionReason: status === 'REJECTED' ? rejectionReason : undefined
     });
@@ -177,17 +177,59 @@ export default function SectionValidator({
             const refs = value as any[];
             if (!refs || refs.length === 0) return null;
 
+            const isPersonal = key === 'personalReferences';
+            const typeLabel = isPersonal ? 'Referencias Personales' : 'Referencias Comerciales';
+            const typeBadgeColor = isPersonal ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+
             return (
               <div key={key} className="col-span-2">
-                <p className="text-sm font-medium text-gray-700 mb-2">{fieldLabel}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm font-medium text-gray-700">{typeLabel}</p>
+                  <Badge variant="outline" className={typeBadgeColor}>
+                    {refs.length}
+                  </Badge>
+                </div>
                 <div className="space-y-2">
                   {refs.map((ref, index) => (
-                    <div key={index} className="bg-gray-50 p-2 rounded text-sm">
-                      {ref.name && <p><span className="font-medium">Nombre:</span> {ref.name}</p>}
-                      {ref.companyName && <p><span className="font-medium">Empresa:</span> {ref.companyName}</p>}
-                      {ref.contactName && <p><span className="font-medium">Contacto:</span> {ref.contactName}</p>}
-                      {ref.phone && <p><span className="font-medium">Teléfono:</span> {ref.phone}</p>}
-                      {ref.relationship && <p><span className="font-medium">Relación:</span> {ref.relationship}</p>}
+                    <div key={index} className="bg-gray-50 p-3 rounded-lg text-sm border border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className={`text-xs ${typeBadgeColor}`}>
+                          {ref.type || (isPersonal ? 'Personal' : 'Comercial')}
+                        </Badge>
+                        <span className="text-gray-400">#{index + 1}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {ref.name && (
+                          <div>
+                            <span className="font-medium text-gray-600">Nombre:</span>
+                            <span className="ml-1">{ref.name}</span>
+                          </div>
+                        )}
+                        {ref.companyName && (
+                          <div>
+                            <span className="font-medium text-gray-600">Empresa:</span>
+                            <span className="ml-1">{ref.companyName}</span>
+                          </div>
+                        )}
+                        {ref.contactName && (
+                          <div>
+                            <span className="font-medium text-gray-600">Contacto:</span>
+                            <span className="ml-1">{ref.contactName}</span>
+                          </div>
+                        )}
+                        {ref.phone && (
+                          <div>
+                            <span className="font-medium text-gray-600">Teléfono:</span>
+                            <span className="ml-1">{ref.phone}</span>
+                          </div>
+                        )}
+                        {ref.relationship && (
+                          <div>
+                            <span className="font-medium text-gray-600">Relación:</span>
+                            <span className="ml-1">{ref.relationship}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

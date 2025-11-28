@@ -175,7 +175,7 @@ export class PropertyDetailsService extends BaseService {
 
       // Handle property address update if provided
       let propertyAddressId = existing.propertyAddressId;
-      if (data.propertyAddressDetails) {
+      if (data.propertyAddressDetails && data.propertyAddressDetails.street) {
         const addressResult = await this.upsertPropertyAddress(
           data.propertyAddressDetails,
           tx,
@@ -193,7 +193,7 @@ export class PropertyDetailsService extends BaseService {
 
       // Handle contract signing address update if provided
       let contractSigningAddressId = existing.contractSigningAddressId;
-      if (data.contractSigningAddressDetails) {
+      if (data.contractSigningAddressDetails && data.contractSigningAddressDetails.street) {
         const addressResult = await this.upsertPropertyAddress(
           data.contractSigningAddressDetails,
           tx,

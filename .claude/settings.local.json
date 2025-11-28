@@ -47,7 +47,8 @@
       "Bash(echo:*)",
       "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/2024-11-17-1345-migration-to-trpc.md)",
       "Bash(bunx tsx:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []

@@ -123,7 +123,7 @@ export default function QuickComparisonPanel({
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">Comparación Rápida</span>
           <Badge variant="secondary" className="text-xs">
-            {actors.length} actores
+            {actors.length} partes
           </Badge>
         </div>
         {isExpanded ? (
@@ -140,7 +140,7 @@ export default function QuickComparisonPanel({
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-2 px-2">
-                    <SortHeader field="name">Actor</SortHeader>
+                    <SortHeader field="name">Parte</SortHeader>
                   </th>
                   <th className="text-left py-2 px-2">
                     <SortHeader field="type">Tipo</SortHeader>
@@ -175,15 +175,16 @@ export default function QuickComparisonPanel({
                           : 'hover:bg-gray-50'
                       )}
                     >
-                      <td className="py-2 px-2">
+                      <td className="py-2 px-2 max-w-[180px]">
                         <div className="flex items-center gap-2">
                           {isSelected && (
-                            <span className="w-1 h-4 bg-blue-500 rounded-full" />
+                            <span className="w-1 h-4 bg-blue-500 rounded-full flex-shrink-0" />
                           )}
-                          <span className={cn('font-medium', isSelected && 'text-blue-700')}>
-                            {actor.name.length > 20
-                              ? actor.name.substring(0, 20) + '...'
-                              : actor.name}
+                          <span
+                            className={cn('font-medium truncate', isSelected && 'text-blue-700')}
+                            title={actor.name}
+                          >
+                            {actor.name}
                           </span>
                         </div>
                       </td>

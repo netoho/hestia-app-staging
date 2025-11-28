@@ -37,6 +37,13 @@ export default function ReviewLayout({
     }
   );
 
+  // Mutation for approving investigation
+  const approveInvestigationMutation = trpc.review.approveInvestigation.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   // Select first actor when data loads
   useEffect(() => {
     if (!selectedActor && data && 'actors' in data && data.actors && data.actors.length > 0) {
@@ -49,23 +56,13 @@ export default function ReviewLayout({
   };
 
   const handleValidationUpdate = async () => {
-    // Store current selected actor ID to restore selection after refresh
     const currentActorId = selectedActor?.actorId;
-
-    // Clear selected actor first to force re-render
-    setSelectedActor(null);
-
-    // Refresh data after validation changes
     const { data: newData } = await refetch();
 
-    // After data is refreshed, update selectedActor to point to the new actor object
     if (currentActorId && newData && 'actors' in newData && newData.actors) {
       const updatedActor = newData.actors.find((actor: any) => actor.actorId === currentActorId);
       if (updatedActor) {
-        // Use setTimeout to ensure state update happens after render cycle
-        setTimeout(() => {
-          setSelectedActor(updatedActor);
-        }, 0);
+        setSelectedActor(updatedActor);
       }
     }
   };
@@ -106,7 +103,12 @@ export default function ReviewLayout({
 
         {/* Progress Overview */}
         <div className="container mx-auto px-4 py-6">
-          <ReviewProgress progress={data.progress} />
+          <ReviewProgress
+            progress={data.progress}
+            investigationVerdict={'investigationVerdict' in data ? data.investigationVerdict : null}
+            onApproveInvestigation={() => approveInvestigationMutation.mutate({ policyId })}
+            isApprovingInvestigation={approveInvestigationMutation.isPending}
+          />
         </div>
 
         {/* Quick Comparison Panel */}

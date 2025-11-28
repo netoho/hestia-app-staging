@@ -357,7 +357,7 @@ export default function PolicyDetailsContent({
 
         <div className="flex flex-wrap gap-2">
           {/* Review Information Button - For Staff/Admin */}
-          {(permissions.canApprove || permissions.canVerifyDocuments) && (
+          {(permissions.canApprove || permissions.canVerifyDocuments) && policy.status === 'UNDER_INVESTIGATION' && (
             <Button
               onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
               className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg"
@@ -377,7 +377,7 @@ export default function PolicyDetailsContent({
           )}
 
           {/* Policy Approval Button - Only for Staff/Admin */}
-          {permissions.canApprove && allActorsApproved && policy.status === 'UNDER_INVESTIGATION' && (
+          {permissions.canApprove && allActorsApproved && policy.status === 'PENDING_APPROVAL' && (
             <Button
               onClick={approvePolicy}
               className="bg-green-600 hover:bg-green-700 transition-all hover:scale-105 hover:shadow-lg"

@@ -2,8 +2,6 @@ import { PolicyStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { logPolicyActivity } from './policyService';
 import { checkPolicyActorsComplete } from './actorTokenService';
-import {req} from "agent-base";
-import {request} from "node:http";
 
 /**
  * Policy workflow state transitions
@@ -36,6 +34,30 @@ export function isTransitionAllowed(fromStatus: PolicyStatus, toStatus: PolicySt
  */
 export function getAllowedNextStatuses(currentStatus: PolicyStatus): PolicyStatus[] {
   return ALLOWED_TRANSITIONS[currentStatus] || [];
+}
+
+/**
+ * Check if all actors in a policy are verified (APPROVED)
+ */
+export async function checkAllActorsVerified(policyId: string): Promise<boolean> {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      landlords: { select: { verificationStatus: true } },
+      tenant: { select: { verificationStatus: true } },
+      jointObligors: { select: { verificationStatus: true } },
+      avals: { select: { verificationStatus: true } },
+    }
+  });
+
+  if (!policy) return false;
+
+  return (
+    policy.landlords.every(l => l.verificationStatus === 'APPROVED') &&
+    (!policy.tenant || policy.tenant.verificationStatus === 'APPROVED') &&
+    policy.jointObligors.every(jo => jo.verificationStatus === 'APPROVED') &&
+    policy.avals.every(a => a.verificationStatus === 'APPROVED')
+  );
 }
 
 /**
@@ -127,6 +149,17 @@ async function validateStatusRequirements(
         return {
           valid: false,
           error: 'All actor information must be complete before investigation'
+        };
+      }
+      break;
+
+    case 'PENDING_APPROVAL':
+      // Check if all actors are verified
+      const allActorsVerified = await checkAllActorsVerified(policy.id);
+      if (!allActorsVerified) {
+        return {
+          valid: false,
+          error: 'All actors must be verified before pending approval'
         };
       }
       break;
