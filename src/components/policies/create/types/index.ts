@@ -7,7 +7,6 @@ export interface PropertyFormData {
   // Basic info
   policyNumber: string;
   internalCode: string;
-  propertyAddress: string;
   propertyAddressDetails: any | null;
   propertyType: PropertyType;
   propertyDescription: string;
