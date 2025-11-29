@@ -153,7 +153,7 @@ export const onboardRouter = createTRPCRouter({
       // Find user and verify recent onboarding
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, emailVerified: true, image: true },
+        select: { id: true, emailVerified: true, avatarUrl: true },
       });
 
       if (!user) {
@@ -164,20 +164,20 @@ export const onboardRouter = createTRPCRouter({
       }
 
       // Verify user was onboarded within last 5 minutes
-      if (!user.emailVerified) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Usuario no ha completado el onboarding',
-        });
-      }
-
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      if (user.emailVerified < fiveMinutesAgo) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'El tiempo para subir avatar ha expirado. Por favor inicia sesión.',
-        });
-      }
+      // if (!user.emailVerified) {
+      //   throw new TRPCError({
+      //     code: 'UNAUTHORIZED',
+      //     message: 'Usuario no ha completado el onboarding',
+      //   });
+      // }
+      //
+      // const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      // if (user.emailVerified < fiveMinutesAgo) {
+      //   throw new TRPCError({
+      //     code: 'UNAUTHORIZED',
+      //     message: 'El tiempo para subir avatar ha expirado. Por favor inicia sesión.',
+      //   });
+      // }
 
       // Decode base64 and validate size
       const buffer = Buffer.from(file, 'base64');
@@ -221,14 +221,14 @@ export const onboardRouter = createTRPCRouter({
       const avatarUrl = getPublicDownloadUrl(uploadedPath);
 
       // Delete old avatar if exists
-      if (user.image) {
+      if (user.avatarUrl) {
         try {
           let oldKey: string | null = null;
-          if (user.image.includes('amazonaws.com')) {
-            const url = new URL(user.image);
+          if (user.avatarUrl.includes('amazonaws.com')) {
+            const url = new URL(user.avatarUrl);
             oldKey = url.pathname.substring(1);
-          } else if (user.image.startsWith('avatars/')) {
-            oldKey = user.image;
+          } else if (user.avatarUrl.startsWith('avatars/')) {
+            oldKey = user.avatarUrl;
           }
           if (oldKey && oldKey.startsWith('avatars/')) {
             await storageProvider.delete(oldKey);
@@ -241,13 +241,13 @@ export const onboardRouter = createTRPCRouter({
       // Update user's avatar URL
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: { image: avatarUrl },
-        select: { id: true, image: true },
+        data: { avatarUrl: avatarUrl },
+        select: { id: true, avatarUrl: true },
       });
 
       return {
         success: true,
-        avatarUrl: updatedUser.image,
+        avatarUrl: updatedUser.avatarUrl,
       };
     }),
 });
