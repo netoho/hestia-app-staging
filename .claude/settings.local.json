@@ -48,7 +48,11 @@
       "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/2024-11-17-1345-migration-to-trpc.md)",
       "Bash(bunx tsx:*)",
       "Bash(sed:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(if [ -s /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session ])",
+      "Bash(then cat /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session)",
+      "Bash(else echo \"EMPTY_OR_NO_SESSION\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

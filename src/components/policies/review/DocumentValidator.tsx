@@ -32,6 +32,7 @@ import { es } from 'date-fns/locale';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 import type { StatusIconComponent } from '@/types/review';
 import { trpc } from '@/lib/trpc/client';
+import { toast } from '@/hooks/use-toast';
 
 interface DocumentValidatorProps {
   document: DocumentValidationInfo;
@@ -58,7 +59,11 @@ export default function DocumentValidator({
     },
     onError: (error) => {
       console.error('Validation error:', error);
-      alert(`Error al validar: ${error.message}`);
+      toast({
+        variant: 'destructive',
+        title: 'Error al validar documento',
+        description: error.message || 'Ocurrió un error. Intente de nuevo.',
+      });
     },
   });
 

@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ReviewDocumentCardProps {
   category: string;
@@ -56,7 +57,11 @@ export default function ReviewDocumentCard({
     },
     onError: (error) => {
       console.error('Validation error:', error);
-      alert(`Error al validar: ${error.message}`);
+      toast({
+        variant: 'destructive',
+        title: 'Error al validar documento',
+        description: error.message || 'Ocurrió un error. Intente de nuevo.',
+      });
     },
   });
 

@@ -35,6 +35,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { ReviewIcon, StatusIconComponent } from '@/types/review';
 import { trpc } from '@/lib/trpc/client';
+import { toast } from '@/hooks/use-toast';
 
 interface SectionValidatorProps {
   section: SectionValidationInfo;
@@ -93,7 +94,11 @@ export default function SectionValidator({
     },
     onError: (error) => {
       console.error('Validation error:', error);
-      alert(`Error al validar: ${error.message}`);
+      toast({
+        variant: 'destructive',
+        title: 'Error al validar',
+        description: error.message || 'Ocurrió un error. Intente de nuevo.',
+      });
     },
   });
 
