@@ -350,14 +350,22 @@ export default function PolicyDetailsContent({
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Protección {policy.policyNumber}</h1>
               {getStatusBadge(policy.status)}
+              {policy.investigation?.verdict === 'APPROVED' && (
+                <Badge className="bg-blue-500 hover:bg-blue-600">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Investigación Aprobada
+                </Badge>
+              )}
             </div>
             <p className="text-sm sm:text-base text-gray-600 mt-1">{policy.propertyAddress}</p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* Review Information Button - For Staff/Admin */}
-          {(permissions.canApprove || permissions.canVerifyDocuments) && policy.status === 'UNDER_INVESTIGATION' && (
+          {/* Review Information Button - For Staff/Admin (only when investigation not yet approved) */}
+          {(permissions.canApprove || permissions.canVerifyDocuments) &&
+           policy.status === 'UNDER_INVESTIGATION' &&
+           policy.investigation?.verdict !== 'APPROVED' && (
             <Button
               onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
               className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg"
@@ -376,8 +384,11 @@ export default function PolicyDetailsContent({
             </Button>
           )}
 
-          {/* Policy Approval Button - Only for Staff/Admin */}
-          {permissions.canApprove && allActorsApproved && policy.status === 'PENDING_APPROVAL' && (
+          {/* Policy Approval Button - Only for Staff/Admin when investigation approved */}
+          {permissions.canApprove &&
+           allActorsApproved &&
+           policy.investigation?.verdict === 'APPROVED' &&
+           (policy.status === 'UNDER_INVESTIGATION' || policy.status === 'PENDING_APPROVAL') && (
             <Button
               onClick={approvePolicy}
               className="bg-green-600 hover:bg-green-700 transition-all hover:scale-105 hover:shadow-lg"

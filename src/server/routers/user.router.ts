@@ -6,16 +6,27 @@ import {
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
+import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
+import { v4 as uuidv4 } from 'uuid';
+
+// Allowed MIME types for avatars
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
+const MAX_AVATAR_SIZE = 20 * 1024 * 1024; // 20MB
 
 // Schema for updating user profile
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'El teléfono es requerido'),
   companyName: z.string().optional(),
   address: z.string().optional(),
   currentPassword: z.string().optional(),
-  newPassword: z.string().min(6).optional(),
+  newPassword: z.string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
+    .regex(/[a-z]/, 'Debe contener al menos una minúscula')
+    .regex(/[0-9]/, 'Debe contener al menos un número')
+    .optional(),
 });
 
 export const userRouter = createTRPCRouter({
@@ -31,7 +42,6 @@ export const userRouter = createTRPCRouter({
           name: true,
           email: true,
           phone: true,
-          companyName: true,
           address: true,
           avatarUrl: true,
           role: true,
@@ -115,7 +125,6 @@ export const userRouter = createTRPCRouter({
           name: true,
           email: true,
           phone: true,
-          companyName: true,
           address: true,
           avatarUrl: true,
           role: true,
@@ -127,7 +136,7 @@ export const userRouter = createTRPCRouter({
     }),
 
   /**
-   * Upload user avatar (placeholder - AWS integration needed)
+   * Upload user avatar
    */
   uploadAvatar: protectedProcedure
     .input(z.object({
@@ -136,11 +145,99 @@ export const userRouter = createTRPCRouter({
       contentType: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
-      // TODO: Implement AWS S3 upload when AWS utilities are available
-      throw new TRPCError({
-        code: 'NOT_IMPLEMENTED',
-        message: 'Avatar upload not yet implemented',
+      const { file, filename, contentType } = input;
+      const userId = ctx.userId;
+
+      // Validate content type
+      if (!ALLOWED_AVATAR_TYPES.includes(contentType)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Tipo de archivo inválido. Solo se permiten JPEG, PNG, HEIC y WebP',
+        });
+      }
+
+      // Decode base64 and validate size
+      const buffer = Buffer.from(file, 'base64');
+      if (buffer.length > MAX_AVATAR_SIZE) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'El archivo es muy grande. El tamaño máximo es 20MB',
+        });
+      }
+
+      // Get current user for old avatar cleanup
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { avatarUrl: true },
       });
+
+      // Generate unique filename and S3 key
+      const fileExtension = filename.split('.').pop()?.toLowerCase() || 'jpg';
+      const uniqueId = uuidv4();
+      const s3Key = `avatars/${userId}/${uniqueId}.${fileExtension}`;
+
+      // Upload to S3
+      const storageProvider = getCurrentStorageProvider();
+      const uploadedPath = await storageProvider.publicUpload({
+        path: s3Key,
+        file: {
+          buffer,
+          originalName: filename,
+          mimeType: contentType,
+          size: buffer.length,
+        },
+        contentType,
+        metadata: {
+          userId,
+          imageType: 'avatar',
+        },
+      });
+
+      if (!uploadedPath) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Error al subir el avatar',
+        });
+      }
+
+      // Get public URL
+      const avatarUrl = getPublicDownloadUrl(uploadedPath);
+
+      // Delete old avatar if exists
+      if (currentUser?.avatarUrl) {
+        try {
+          let oldKey: string | null = null;
+          if (currentUser.avatarUrl.includes('amazonaws.com')) {
+            const url = new URL(currentUser.avatarUrl);
+            oldKey = url.pathname.substring(1);
+          } else if (currentUser.avatarUrl.startsWith('avatars/')) {
+            oldKey = currentUser.avatarUrl;
+          }
+          if (oldKey && oldKey.startsWith('avatars/')) {
+            await storageProvider.delete(oldKey);
+          }
+        } catch (error) {
+          console.error('Failed to delete old avatar:', error);
+        }
+      }
+
+      // Update user's avatar URL
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+        },
+      });
+
+      return {
+        success: true,
+        avatarUrl: updatedUser.avatarUrl,
+        user: updatedUser,
+      };
     }),
 
   /**

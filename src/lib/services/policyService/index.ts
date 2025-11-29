@@ -405,6 +405,11 @@ export async function getPolicyById(id: string) {
         orderBy: {
           createdAt: 'desc'
         }
+      },
+      investigation: {
+        select: {
+          verdict: true,
+        }
       }
     }
   });

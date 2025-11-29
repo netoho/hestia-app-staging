@@ -98,21 +98,45 @@ export async function transitionPolicyStatus(
     return { success: false, error: validation.error };
   }
 
-  // Update policy status
-  const updatedPolicy = await prisma.policy.update({
-    where: { id: policyId },
-    data: {
-      status: newStatus,
-      ...(notes && { reviewNotes: notes }),
-      ...(reason && { rejectionReason: reason }),
-      ...(newStatus === 'APPROVED' && { approvedAt: new Date() }),
-      ...(newStatus === 'INVESTIGATION_REJECTED' && { rejectedAt: new Date() }),
-      ...(newStatus === 'ACTIVE' && { activatedAt: new Date() }),
-      ...(newStatus === 'COLLECTING_INFO' && { currentStep: 'actors' }),
-      ...(newStatus === 'UNDER_INVESTIGATION' && { currentStep: 'investigation' }),
-      ...(newStatus === 'CONTRACT_PENDING' && { currentStep: 'contract' })
-    }
-  });
+  // For UNDER_INVESTIGATION, we need to create the investigation record in the same transaction
+  // to prevent inconsistent state if the investigation creation fails
+  let updatedPolicy;
+  if (newStatus === 'UNDER_INVESTIGATION') {
+    updatedPolicy = await prisma.$transaction(async (tx) => {
+      const updated = await tx.policy.update({
+        where: { id: policyId },
+        data: {
+          status: newStatus,
+          ...(notes && { reviewNotes: notes }),
+          currentStep: 'investigation'
+        }
+      });
+
+      // Create investigation record in the same transaction
+      await tx.investigation.create({
+        data: {
+          policyId: policy.id,
+          createdAt: new Date()
+        }
+      });
+
+      return updated;
+    });
+  } else {
+    updatedPolicy = await prisma.policy.update({
+      where: { id: policyId },
+      data: {
+        status: newStatus,
+        ...(notes && { reviewNotes: notes }),
+        ...(reason && { rejectionReason: reason }),
+        ...(newStatus === 'APPROVED' && { approvedAt: new Date() }),
+        ...(newStatus === 'INVESTIGATION_REJECTED' && { rejectedAt: new Date() }),
+        ...(newStatus === 'ACTIVE' && { activatedAt: new Date() }),
+        ...(newStatus === 'COLLECTING_INFO' && { currentStep: 'actors' }),
+        ...(newStatus === 'CONTRACT_PENDING' && { currentStep: 'contract' })
+      }
+    });
+  }
 
   // Log activity
   await logPolicyActivity({
@@ -128,7 +152,7 @@ export async function transitionPolicyStatus(
     performedById: userId,
   });
 
-  // Trigger side effects based on status
+  // Trigger side effects based on status (except UNDER_INVESTIGATION which is handled above)
   await triggerStatusSideEffects(updatedPolicy, newStatus, userId);
 
   return { success: true, policy: updatedPolicy };
@@ -169,10 +193,22 @@ async function validateStatusRequirements(
       const investigation = await prisma.investigation.findUnique({
         where: { policyId: policy.id }
       });
-      if (!investigation || investigation.verdict !== 'APPROVED') {
+      if (!investigation) {
         return {
           valid: false,
-          error: 'Investigation must be approved before policy approval'
+          error: 'No se encontró investigación para esta póliza. Contacte al administrador.'
+        };
+      }
+      if (investigation.verdict === null) {
+        return {
+          valid: false,
+          error: 'La investigación no tiene veredicto. Debe aprobar o rechazar la investigación primero.'
+        };
+      }
+      if (investigation.verdict !== 'APPROVED') {
+        return {
+          valid: false,
+          error: `La investigación tiene veredicto "${investigation.verdict}". Solo investigaciones aprobadas pueden continuar.`
         };
       }
       break;
@@ -229,13 +265,8 @@ async function triggerStatusSideEffects(
       break;
 
     case 'UNDER_INVESTIGATION':
-      // Create investigation record
-      await prisma.investigation.create({
-        data: {
-          policyId: policy.id,
-          createdAt: new Date()
-        }
-      });
+      // Investigation record is now created in the transaction above
+      // to ensure atomic operation (policy status + investigation creation)
       break;
 
     case 'APPROVED':

@@ -277,7 +277,8 @@ export const pricingRouter = createTRPCRouter({
         changes.newGuarantorType = data.guarantorType;
       }
 
-      await logPolicyActivity(policyId, {
+      await logPolicyActivity({
+        policyId,
         action: 'pricing_updated',
         description: 'Pricing information updated by internal team',
         performedById: ctx.userId,
