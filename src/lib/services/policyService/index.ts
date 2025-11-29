@@ -5,6 +5,13 @@ import { CreatePolicyData, logPolicyActivityParams } from './types';
 import { validatePolicyNumberFormat } from "@/lib/utils/policy";
 
 
+// Helper to sanitize empty objects to null
+function sanitizeAddressDetails(details: any): any | null {
+  if (!details) return null;
+  if (typeof details === 'object' && Object.keys(details).length === 0) return null;
+  return details;
+}
+
 export async function createPolicy(data: CreatePolicyData) {
   // Use provided policy number or generate a new one
   let policyNumber = data.policyNumber;
@@ -17,14 +24,15 @@ export async function createPolicy(data: CreatePolicyData) {
   // Extract property details from data
   const { propertyDetails, ...policyData } = data;
 
+  // Sanitize address details (convert {} to null)
+  const sanitizedPropertyAddressDetails = sanitizeAddressDetails(policyData.propertyAddressDetails);
+  const sanitizedContractSigningAddressDetails = sanitizeAddressDetails(policyData.contractSigningAddressDetails);
+
   // Create the policy with the new schema
   const policy = await prisma.policy.create({
     data: {
       policyNumber,
       internalCode: policyData.internalCode,
-      propertyAddress: policyData.propertyAddress,
-      propertyType: policyData.propertyType || 'APARTMENT',
-      propertyDescription: policyData.propertyDescription,
       rentAmount: parseFloat(policyData.rentAmount.toString()),
       contractLength: policyData.contractLength || 12,
       totalPrice: policyData.totalPrice || parseFloat((policyData.depositAmount || policyData.rentAmount).toString()),
@@ -55,7 +63,7 @@ export async function createPolicy(data: CreatePolicyData) {
           email: policyData.landlord.email,
           phone: policyData.landlord.phone || '',
           rfc: policyData.landlord.rfc || '',
-          address: policyData.propertyAddress, // Use property address as default
+          address: '', // Will be updated when landlord fills their info
         }
       },
       tenant: {
@@ -80,15 +88,38 @@ export async function createPolicy(data: CreatePolicyData) {
     }
   });
 
-  // Create property details if provided
-  if (propertyDetails) {
-    const propertyDetailsService = new PropertyDetailsService();
-    const detailsResult = await propertyDetailsService.create(policy.id, propertyDetails);
-    if (!detailsResult.ok) {
-      console.error('Failed to create property details:', detailsResult.error);
-      // Note: We don't fail the policy creation if property details fail
-      // but; we log the error for investigation
-    }
+  // Always upsert PropertyDetails (1:1 relationship with Policy)
+  const propertyDetailsService = new PropertyDetailsService();
+  const propertyDetailsData = {
+    ...propertyDetails,
+    propertyType: policyData.propertyType || 'APARTMENT',
+    propertyDescription: policyData.propertyDescription,
+    propertyAddressDetails: sanitizedPropertyAddressDetails,
+    contractSigningAddressDetails: sanitizedContractSigningAddressDetails,
+    // Property features
+    parkingSpaces: policyData.parkingSpaces,
+    parkingNumbers: policyData.parkingNumbers,
+    isFurnished: policyData.isFurnished,
+    hasPhone: policyData.hasPhone,
+    hasElectricity: policyData.hasElectricity,
+    hasWater: policyData.hasWater,
+    hasGas: policyData.hasGas,
+    hasCableTV: policyData.hasCableTV,
+    hasInternet: policyData.hasInternet,
+    utilitiesInLandlordName: policyData.utilitiesInLandlordName,
+    hasInventory: policyData.hasInventory,
+    hasRules: policyData.hasRules,
+    rulesType: policyData.rulesType,
+    petsAllowed: policyData.petsAllowed,
+    propertyDeliveryDate: policyData.propertyDeliveryDate,
+    contractSigningDate: policyData.contractSigningDate,
+  };
+
+  const detailsResult = await propertyDetailsService.upsert(policy.id, propertyDetailsData);
+  if (!detailsResult.ok) {
+    console.error('Failed to upsert property details:', detailsResult.error);
+    // Note: We don't fail the policy creation if property details fail
+    // but we log the error for investigation
   }
 
   // Create joint obligors if provided
@@ -164,10 +195,12 @@ export async function getPolicies(params?: {
 
   if (params?.search) {
     where.OR = [
-      // Policy and property
+      // Policy
       { policyNumber: { contains: params.search, mode: 'insensitive' } },
       { internalCode: { contains: params.search, mode: 'insensitive' } },
-      { propertyAddress: { contains: params.search, mode: 'insensitive' } },
+      // Property address (via PropertyDetails → PropertyAddress)
+      { propertyDetails: { propertyAddressDetails: { formattedAddress: { contains: params.search, mode: 'insensitive' } } } },
+      { propertyDetails: { propertyAddressDetails: { street: { contains: params.search, mode: 'insensitive' } } } },
 
       // Tenant - search across name fields
       { tenant: { firstName: { contains: params.search, mode: 'insensitive' } } },
