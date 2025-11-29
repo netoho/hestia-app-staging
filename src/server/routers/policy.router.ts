@@ -26,8 +26,7 @@ const CreatePolicySchema = z.object({
   internalCode: z.string().optional(),
 
   // Property information
-  propertyAddress: z.string().min(1),
-  propertyAddressDetails: z.any().optional(),
+  propertyAddressDetails: z.any().optional().nullable(),
   propertyType: z.nativeEnum(PropertyType),
   propertyDescription: z.string().optional(),
   rentAmount: z.number().positive(),
