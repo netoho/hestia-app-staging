@@ -168,7 +168,7 @@ export const userRouter = createTRPCRouter({
       // Get current user for old avatar cleanup
       const currentUser = await prisma.user.findUnique({
         where: { id: userId },
-        select: { image: true },
+        select: { avatarUrl: true },
       });
 
       // Generate unique filename and S3 key
@@ -204,14 +204,14 @@ export const userRouter = createTRPCRouter({
       const avatarUrl = getPublicDownloadUrl(uploadedPath);
 
       // Delete old avatar if exists
-      if (currentUser?.image) {
+      if (currentUser?.avatarUrl) {
         try {
           let oldKey: string | null = null;
-          if (currentUser.image.includes('amazonaws.com')) {
-            const url = new URL(currentUser.image);
+          if (currentUser.avatarUrl.includes('amazonaws.com')) {
+            const url = new URL(currentUser.avatarUrl);
             oldKey = url.pathname.substring(1);
-          } else if (currentUser.image.startsWith('avatars/')) {
-            oldKey = currentUser.image;
+          } else if (currentUser.avatarUrl.startsWith('avatars/')) {
+            oldKey = currentUser.avatarUrl;
           }
           if (oldKey && oldKey.startsWith('avatars/')) {
             await storageProvider.delete(oldKey);
@@ -224,7 +224,7 @@ export const userRouter = createTRPCRouter({
       // Update user's avatar URL
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: { image: avatarUrl },
+        data: { avatarUrl },
         select: {
           id: true,
           name: true,
