@@ -48,7 +48,10 @@
       "Bash(/Users/neto/Development/hestia/hestia-app/.claude/sessions/2024-11-17-1345-migration-to-trpc.md)",
       "Bash(bunx tsx:*)",
       "Bash(sed:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(bun:*)",
+      "Bash(bunx playwright install:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": [],
     "ask": []
