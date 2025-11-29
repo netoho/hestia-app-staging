@@ -19,6 +19,7 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { trpc } from '@/lib/trpc/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ReviewNote {
   id: string;
@@ -64,7 +65,11 @@ export default function ReviewNotes({
       onNoteAdded();
     },
     onError: (error) => {
-      alert(`Error al agregar nota: ${error.message}`);
+      toast({
+        variant: 'destructive',
+        title: 'Error al agregar nota',
+        description: error.message || 'Ocurrió un error. Intente de nuevo.',
+      });
     },
   });
 
@@ -73,7 +78,11 @@ export default function ReviewNotes({
       onNoteAdded(); // Refresh notes
     },
     onError: (error) => {
-      alert(`Error al eliminar nota: ${error.message}`);
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar nota',
+        description: error.message || 'Ocurrió un error. Intente de nuevo.',
+      });
     },
   });
 

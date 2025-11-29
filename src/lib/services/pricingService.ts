@@ -1,6 +1,27 @@
 import prisma from '../prisma';
 import { Package } from '@prisma/client';
 
+// Premium package tiered percentages for high-value rents
+const PREMIUM_TIERS = [
+  { minRent: 100000, percentage: 42 },
+  { minRent: 90000, percentage: 43 },
+  { minRent: 80000, percentage: 44 },
+  { minRent: 70000, percentage: 45 },
+  { minRent: 60000, percentage: 46 },
+] as const;
+
+/**
+ * Get the effective percentage for premium package based on rent amount
+ */
+function getPremiumPercentage(rentAmount: number, basePercentage: number): number {
+  for (const tier of PREMIUM_TIERS) {
+    if (rentAmount >= tier.minRent) {
+      return tier.percentage;
+    }
+  }
+  return basePercentage;
+}
+
 export interface CalculationSummary {
   packageName: string;
   calculationMethod: 'percentage' | 'flat' | 'none';
@@ -69,7 +90,12 @@ export async function getPackageDetails(packageId: string): Promise<Package | nu
 export function calculatePackagePrice(rentAmount: number, packageData: Package): number {
   // If package has a percentage, calculate based on rent
   if (packageData.percentage && packageData.percentage > 0) {
-    const calculatedPrice = (rentAmount * packageData.percentage) / 100;
+    // For premium package, apply tiered percentages for high rents
+    const effectivePercentage = packageData.id === 'premium'
+      ? getPremiumPercentage(rentAmount, packageData.percentage)
+      : packageData.percentage;
+
+    const calculatedPrice = (rentAmount * effectivePercentage) / 100;
 
     // Apply minimum amount if configured
     if (packageData.minAmount && calculatedPrice < packageData.minAmount) {
@@ -122,16 +148,22 @@ export async function calculatePolicyPricing(input: PricingInput): Promise<Prici
 
       // Determine calculation method and details
       const isPercentageBased = packageData.percentage && packageData.percentage > 0;
+
+      // Get effective percentage (may differ for premium tiered pricing)
+      const effectivePercentage = isPercentageBased && packageData.id === 'premium'
+        ? getPremiumPercentage(input.rentAmount, packageData.percentage)
+        : packageData.percentage;
+
       const minimumApplied = isPercentageBased &&
         packageData.minAmount &&
-        (input.rentAmount * packageData.percentage / 100) < packageData.minAmount;
+        (input.rentAmount * effectivePercentage! / 100) < packageData.minAmount;
 
       // Build calculation summary
       calculationSummary = {
         packageName: packageData.name,
         calculationMethod: isPercentageBased ? 'percentage' : 'flat',
         rentAmount: input.rentAmount,
-        percentage: isPercentageBased ? packageData.percentage : undefined,
+        percentage: isPercentageBased ? effectivePercentage : undefined,
         flatFee: !isPercentageBased ? packageData.price : undefined,
         minimumAmount: packageData.minAmount || undefined,
         minimumApplied,
@@ -142,7 +174,8 @@ export async function calculatePolicyPricing(input: PricingInput): Promise<Prici
           packagePrice,
           investigationFee,
           includeInvestigationFee,
-          minimumApplied
+          minimumApplied,
+          effectivePercentage
         ),
         breakdown: {
           base: packagePrice,
@@ -223,7 +256,8 @@ function generateFormulaString(
   packagePrice: number,
   investigationFee: number,
   includeInvestigationFee: boolean,
-  minimumApplied: boolean
+  minimumApplied: boolean,
+  effectivePercentage?: number | null
 ): string {
   const formatMoney = (amount: number) => `$${amount.toLocaleString('es-MX')}`;
 
@@ -234,13 +268,14 @@ function generateFormulaString(
   }
 
   let formula = '';
+  const percentageToShow = effectivePercentage ?? packageData.percentage;
 
   // Package calculation part
   if (packageData.percentage && packageData.percentage > 0) {
     if (minimumApplied) {
       formula = `Mínimo de ${formatMoney(packageData.minAmount || 0)}`;
     } else {
-      formula = `(${formatMoney(rentAmount)} × ${packageData.percentage}%) = ${formatMoney(packagePrice)}`;
+      formula = `(${formatMoney(rentAmount)} × ${percentageToShow}%) = ${formatMoney(packagePrice)}`;
     }
   } else {
     formula = `${formatMoney(packagePrice)}`;

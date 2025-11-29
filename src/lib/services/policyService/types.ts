@@ -3,7 +3,8 @@ import {GuarantorType, PropertyType, TenantType} from "@/lib/enums";
 export interface CreatePolicyData {
   policyNumber?: string; // Now custom policy number can be provided
   internalCode?: string; // Internal team code for classification
-  propertyAddress: string;
+  propertyAddressDetails?: any; // Structured address data
+  contractSigningAddressDetails?: any; // Structured address data
   propertyType?: PropertyType;
   propertyDescription?: string;
   rentAmount: string | number;
@@ -11,6 +12,23 @@ export interface CreatePolicyData {
   contractLength?: number;
   startDate?: string;
   endDate?: string;
+  // Property features (now passed directly)
+  parkingSpaces?: number;
+  parkingNumbers?: string;
+  isFurnished?: boolean;
+  hasPhone?: boolean;
+  hasElectricity?: boolean;
+  hasWater?: boolean;
+  hasGas?: boolean;
+  hasCableTV?: boolean;
+  hasInternet?: boolean;
+  utilitiesInLandlordName?: boolean;
+  hasInventory?: boolean;
+  hasRules?: boolean;
+  rulesType?: string;
+  petsAllowed?: boolean;
+  propertyDeliveryDate?: string;
+  contractSigningDate?: string;
   guarantorType?: GuarantorType;
   packageId?: string;
   tenantPercentage?: number;
