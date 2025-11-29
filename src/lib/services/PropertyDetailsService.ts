@@ -12,6 +12,10 @@ import { validatePropertyDetails } from '@/lib/schemas/shared/property.schema';
 import { AddressDetails } from '@/lib/types/actor';
 
 export interface PropertyDetailsInput {
+  // Property Type and Description
+  propertyType?: string | null;
+  propertyDescription?: string | null;
+
   // Property Features
   parkingSpaces?: number | null;
   parkingNumbers?: string | null;
@@ -114,6 +118,8 @@ export class PropertyDetailsService extends BaseService {
           policyId,
           propertyAddressId,
           contractSigningAddressId,
+          propertyType: data.propertyType as any,
+          propertyDescription: data.propertyDescription,
           parkingSpaces: data.parkingSpaces,
           parkingNumbers: data.parkingNumbers,
           isFurnished: data.isFurnished ?? false,
@@ -219,6 +225,8 @@ export class PropertyDetailsService extends BaseService {
       }
 
       // Add all other fields if provided
+      if (data.propertyType !== undefined) updateData.propertyType = data.propertyType;
+      if (data.propertyDescription !== undefined) updateData.propertyDescription = data.propertyDescription;
       if (data.parkingSpaces !== undefined) updateData.parkingSpaces = data.parkingSpaces;
       if (data.parkingNumbers !== undefined) updateData.parkingNumbers = data.parkingNumbers;
       if (data.isFurnished !== undefined) updateData.isFurnished = data.isFurnished;
