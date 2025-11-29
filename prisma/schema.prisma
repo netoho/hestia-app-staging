@@ -124,9 +124,6 @@ model Policy {
   internalCode      String?     // Internal team code for classification (e.g., INV1, CONT 1, INC1)
 
   // Core Policy Information
-  propertyAddress   String      // Basic address string for quick reference
-  propertyType      PropertyType
-  propertyDescription String?
   rentAmount        Float
   contractLength    Int         @default(12) // months
 
@@ -210,6 +207,9 @@ model PropertyDetails {
   // Enhanced Property Address
   propertyAddressId String?     @unique
   propertyAddressDetails PropertyAddress? @relation(fields: [propertyAddressId], references: [id])
+
+  propertyType      PropertyType?
+  propertyDescription String?
 
   // Property Features
   parkingSpaces     Int?

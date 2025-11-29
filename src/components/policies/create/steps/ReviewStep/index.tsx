@@ -56,7 +56,12 @@ export default function ReviewStep({
             )}
             <div className="flex justify-between">
               <dt className="text-gray-500">Dirección:</dt>
-              <dd>{formData.property.propertyAddress}</dd>
+              <dd>
+                {formData.property.propertyAddressDetails?.formattedAddress ||
+                 (formData.property.propertyAddressDetails?.street
+                   ? `${formData.property.propertyAddressDetails.street} ${formData.property.propertyAddressDetails.exteriorNumber || ''}, ${formData.property.propertyAddressDetails.neighborhood || ''}, ${formData.property.propertyAddressDetails.city || ''}`
+                   : 'No especificada')}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Tipo:</dt>

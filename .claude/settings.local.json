@@ -51,7 +51,11 @@
       "Bash(git show:*)",
       "Bash(bun:*)",
       "Bash(bunx playwright install:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(if [ -s /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session ])",
+      "Bash(then cat /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session)",
+      "Bash(else echo \"EMPTY_OR_NO_SESSION\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

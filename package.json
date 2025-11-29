@@ -15,7 +15,13 @@
     "db:reset": "bun run --bun prisma db push --force-reset",
     "postinstall": "bun run --bun prisma generate --no-engine && bun run scripts/generate-enums.ts",
     "postinstall:postgres": "bun run --bun prisma generate && bun run scripts/generate-enums.ts",
-    "generate-enums": "bun run scripts/generate-enums.ts"
+    "generate-enums": "bun run scripts/generate-enums.ts",
+    "test:db:up": "docker compose -f docker-compose.test.yml up -d && sleep 2 && TEST_DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' bunx prisma db push",
+    "test:db:down": "docker compose -f docker-compose.test.yml down",
+    "test:db:reset": "docker compose -f docker-compose.test.yml down -v && bun run test:db:up",
+    "test:e2e": "TEST_DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' playwright test --config=tests/playwright.config.ts",
+    "test:e2e:ui": "TEST_DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' playwright test --config=tests/playwright.config.ts --ui",
+    "test:e2e:headed": "TEST_DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' playwright test --config=tests/playwright.config.ts --headed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -92,6 +98,7 @@
   "devDependencies": {
     "@google-cloud/storage": "^7.17.0",
     "@next/bundle-analyzer": "^15.5.4",
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.16",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@types/bcryptjs": "^2.4.6",
