@@ -189,7 +189,7 @@ export default function TenantReferencesTabRHF({
                     name={`personalReferences.${index}.maternalLastName`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Apellido Materno</FormLabel>
+                        <FormLabel optional>Apellido Materno</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={disabled} />
                         </FormControl>
