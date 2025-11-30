@@ -3,7 +3,7 @@
  * Provides common functionality for all actor types (Landlord, Tenant, Aval, Obligor)
  */
 
-import { PrismaClient } from "@/prisma/generated/prisma-client/enums";
+import { PrismaClient } from "@/prisma/generated/prisma-client/client";
 import { BaseService } from '../base/BaseService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';

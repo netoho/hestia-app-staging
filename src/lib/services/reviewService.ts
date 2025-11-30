@@ -116,7 +116,7 @@ class ReviewService {
       policyId: policy.id,
       policyNumber: policy.policyNumber,
       status: policy.status,
-      propertyAddress: policy.propertyAddress,
+      propertyAddress: policy.propertyDetails?.propertyAddressDetails,
       rentAmount: policy.rentAmount,
       actors,
       progress: {

@@ -3,7 +3,8 @@
  * Handles all aval-related business logic and data operations
  */
 
-import {AvalType, DocumentCategory, Prisma, PrismaClient} from "@/prisma/generated/prisma-client/enums";
+import {AvalType, DocumentCategory } from "@/prisma/generated/prisma-client/enums";
+import { Prisma, PrismaClient} from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
 import { DocumentCategory as DocumentCategoryEnum } from "@/prisma/generated/prisma-client/enums";
 import {BaseActorService} from './BaseActorService';
@@ -243,7 +244,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     guaranteePropertyAddressId?: string
   ): any {
     // Start with base actor update data
-    const updateData = this.buildUpdateData(data, addressId);
+    const updateData = this.buildUpdateData(data);
 
     // Handle avalType (should be set by prepareAvalForDB)
     if (data.avalType !== undefined) {
@@ -254,6 +255,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     if (data.relationshipToTenant !== undefined) {
       updateData.relationshipToTenant = data.relationshipToTenant || null;
     }
+    if (addressId) updateData.addressId = addressId;
 
     // Employment fields (for individuals)
     if (data.employmentStatus !== undefined) updateData.employmentStatus = data.employmentStatus || null;
@@ -527,10 +529,10 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
 
       // Save references
       if (data.references) {
-        await this.savePersonalReferences(aval.id, data.references, 'aval');
+        await this.savePersonalReferences(aval.id, data.references);
       }
       if (data.commercialReferences) {
-        await this.saveCommercialReferences(aval.id, data.commercialReferences, 'aval');
+        await this.saveCommercialReferences(aval.id, data.commercialReferences);
       }
 
       return {

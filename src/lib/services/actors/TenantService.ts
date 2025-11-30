@@ -3,7 +3,7 @@
  * Uses single source of truth for validation and data transformation
  */
 
-import { PrismaClient, Prisma } from "@/prisma/generated/prisma-client/enums";
+import { PrismaClient, Prisma } from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
 import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { BaseActorService } from './BaseActorService';

@@ -3,7 +3,7 @@
  * Handles all package-related operations with proper error handling
  */
 
-import { Package } from "@/prisma/generated/prisma-client/enums";
+import { Package } from "@/prisma/generated/prisma-client/client";
 import { BaseService } from './base/BaseService';
 import { AsyncResult, Result } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';
@@ -63,7 +63,7 @@ export class PackageService extends BaseService implements IPackageService {
     this.log('info', 'Fetching package by ID', { id });
 
     // Validate input
-    const validation = this.validate(id, (id) => 
+    const validation = this.validate(id, (id) =>
       !id ? 'Package ID is required' : null
     );
     if (!validation.ok) {
@@ -89,7 +89,7 @@ export class PackageService extends BaseService implements IPackageService {
     this.log('info', 'Fetching package by name', { name });
 
     // Validate input
-    const validation = this.validate(name, (name) => 
+    const validation = this.validate(name, (name) =>
       !name ? 'Package name is required' : null
     );
     if (!validation.ok) {
