@@ -26,7 +26,7 @@ import {
   Calendar,
   ExternalLink
 } from 'lucide-react';
-import { DocumentValidationInfo } from '@/lib/services/reviewService';
+import type { DocumentValidationInfo } from '@/lib/services/reviewService.types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';

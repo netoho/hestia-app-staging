@@ -2,32 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { createPolicy, updatePolicyStatus, addPolicyActivity } from '@/lib/services/policyApplicationService';
 import { sendPolicyInvitation } from '@/lib/services/emailService';
-import { PolicyStatus } from '@/lib/enums';
+// import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { z } from 'zod';
 
 // Request validation schema
 const initiatePolicySchema = z.object({
   // Tenant type
   tenantType: z.enum(['individual', 'company']).default('individual'),
-  
+
   // Common fields
   tenantEmail: z.string().email('Invalid email address'),
   tenantPhone: z.string().optional(),
-  
+
   // Individual tenant fields
   tenantName: z.string().optional(),
-  
+
   // Company tenant fields
   companyName: z.string().optional(),
   companyRfc: z.string().optional(),
   legalRepresentativeName: z.string().optional(),
   legalRepresentativeId: z.string().optional(),
   companyAddress: z.string().optional(),
-  
+
   // Property info
   propertyId: z.string().optional(),
   propertyAddress: z.string().optional(),
-  
+
   // Package and pricing
   packageId: z.string().min(1, 'Package is required'),
   price: z.number().min(0, 'Price must be positive'),
@@ -101,19 +102,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { 
+    const {
       tenantType,
-      tenantEmail, 
-      tenantPhone, 
+      tenantEmail,
+      tenantPhone,
       tenantName,
       companyName,
       companyRfc,
       legalRepresentativeName,
       legalRepresentativeId,
       companyAddress,
-      propertyId, 
-      propertyAddress, 
-      packageId, 
+      propertyId,
+      propertyAddress,
+      packageId,
       price,
       investigationFee,
       tenantPaymentPercent,
@@ -199,8 +200,8 @@ export async function POST(request: NextRequest) {
         tokenExpiry: policy.tokenExpiry
       },
       emailSent,
-      message: emailSent 
-        ? 'Policy created and invitation sent successfully' 
+      message: emailSent
+        ? 'Policy created and invitation sent successfully'
         : 'Policy created but email sending failed. Please resend the invitation.'
     });
 

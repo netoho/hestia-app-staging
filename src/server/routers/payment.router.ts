@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc';
-import type { Payment } from '@prisma/client';
+import type { Payment } from "@/prisma/generated/prisma-client/enums";
 
 /**
  * Payment Router

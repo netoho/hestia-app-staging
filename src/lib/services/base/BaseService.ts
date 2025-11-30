@@ -3,7 +3,7 @@
  * Provides common functionality for all services
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@/prisma/generated/prisma-client/enums";
 import prisma from '@/lib/prisma';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode, Errors } from '../types/errors';

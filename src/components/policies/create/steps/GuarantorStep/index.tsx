@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
-import { GuarantorType } from '@/lib/enums';
+import { GuarantorType } from "@/prisma/generated/prisma-client/enums";
 import { ActorFormData } from '../../types';
 import { Plus, Trash2 } from 'lucide-react';
 

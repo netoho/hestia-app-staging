@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DocumentValidationItem } from './DocumentValidationItem';
-import { DocumentValidationInfo } from '@/lib/services/reviewService';
+import type { DocumentValidationInfo } from '@/lib/services/reviewService.types';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 import {
   CheckCircle2,

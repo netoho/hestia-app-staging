@@ -1,4 +1,4 @@
-import { Tenant, Landlord, JointObligor, Aval } from '@prisma/client';
+import { Tenant, Landlord, JointObligor, Aval } from "@/prisma/generated/prisma-client/enums";
 
 interface ActorWithDocuments {
   id: string;

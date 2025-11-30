@@ -1,4 +1,4 @@
-import { Aval } from '@prisma/client';
+import { Aval } from "@/prisma/generated/prisma-client/enums";
 import { AvalTypeEnum, AvalTab } from '../schemas/aval';
 
 // ============================================

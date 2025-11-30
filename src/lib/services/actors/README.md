@@ -521,7 +521,7 @@ const allComplete =
 ```typescript
 // src/lib/services/actors/NewActorService.ts
 import { BaseActorService } from './BaseActorService';
-import { NewActor } from '@prisma/client';
+import { NewActor } from "@/prisma/generated/prisma-client/enums";
 import { PersonActorData, CompanyActorData } from '@/lib/types/actor';
 import { Result } from '../types/result';
 

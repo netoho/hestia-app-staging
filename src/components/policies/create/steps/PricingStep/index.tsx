@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calculator, RefreshCw, Info } from 'lucide-react';
-import { formatCurrency } from '@/lib/services/pricingService';
+import { formatCurrency } from '@/lib/utils/currency';
 import { PricingFormData } from '../../types';
 
 interface PricingStepProps {

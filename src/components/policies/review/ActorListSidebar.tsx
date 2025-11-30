@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
-import { ActorReviewInfo } from '@/lib/services/reviewService';
+import type { ActorReviewInfo } from '@/lib/services/reviewService.types';
 
 interface ActorListSidebarProps {
   actors: ActorReviewInfo[];

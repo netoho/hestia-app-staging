@@ -11,7 +11,7 @@ import ReviewHeader from './ReviewHeader';
 import ActorListSidebar from './ActorListSidebar';
 import QuickComparisonPanel from './QuickComparisonPanel';
 import { ReviewProvider } from './ReviewContext';
-import { PolicyReviewData, ActorReviewInfo } from '@/lib/services/reviewService';
+import type { PolicyReviewData, ActorReviewInfo } from '@/lib/services/reviewService.types';
 import { trpc } from '@/lib/trpc/client';
 
 interface ReviewLayoutProps {

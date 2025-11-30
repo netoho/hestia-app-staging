@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth, requireRole } from '@/lib/auth';
 import { getPolicies, createPolicy, logPolicyActivity } from '@/lib/services/policyService';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 
 export async function GET(request: NextRequest) {
   try {

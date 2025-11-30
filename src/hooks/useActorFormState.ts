@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ActorType } from '@/lib/enums';
+import { ActorType } from "@/prisma/generated/prisma-client/enums";
 import type {
   Tenant,
   Aval,
   JointObligor,
   Landlord,
   Policy
-} from '@prisma/client';
+} from "@/prisma/generated/prisma-client/enums";
 
 // Type definitions for different actor data structures
 type SingleActorData = Tenant | Aval | JointObligor;

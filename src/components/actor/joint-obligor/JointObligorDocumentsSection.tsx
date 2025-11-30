@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Info, AlertCircle } from 'lucide-react';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
 import { documentCategoryLabels } from '@/lib/constants/documentCategories';
 

@@ -1,10 +1,10 @@
 
 
 // Import Package from prisma client for consistency
-export type { Package } from '@prisma/client';
+export type { Package } from "@/prisma/generated/prisma-client/enums";
 
 // Import enums from centralized generated file
-import { UserRole, PolicyStatus } from '@/lib/enums';
+import { UserRole, PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 
 export interface Testimonial {
   id: string;

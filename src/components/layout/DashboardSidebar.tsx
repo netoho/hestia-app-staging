@@ -1,7 +1,7 @@
 'use client';
 
 import type { NavItem } from '@/lib/types';
-import type { UserRole } from '@/lib/enums';
+import type { UserRole } from "@/prisma/generated/prisma-client/enums";
 import {
   Sidebar,
   SidebarContent,

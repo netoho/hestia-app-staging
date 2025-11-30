@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { Document } from '@/types/documents';
 import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
 import { documentCategoryLabels } from '@/lib/constants/documentCategories';

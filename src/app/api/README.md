@@ -126,7 +126,7 @@ npx prisma generate
 
 ### Import Enum from Prisma
 ```typescript
-import { PolicyStatus, UserRole } from '@prisma/client';
+import { PolicyStatus, UserRole } from "@/prisma/generated/prisma-client/enums";
 ```
 
 ### Handle Nullable Fields

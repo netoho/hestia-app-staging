@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Calculator, RefreshCw } from 'lucide-react';
-import { formatCurrency } from '@/lib/services/pricingService';
+import { formatCurrency } from '@/lib/utils/currency';
 import { pricingStepSchema, type PricingStepData } from '@/lib/schemas/policy/wizard';
 
 interface PricingStepRHFProps {

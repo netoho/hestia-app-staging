@@ -22,7 +22,7 @@ import {
   commercialReferenceSchema,
 } from '../shared/references.schema';
 import { optional } from '../helpers';
-import { JointObligorType } from '@prisma/client';
+import { JointObligorType } from "@/prisma/generated/prisma-client/enums";
 
 // ============================================
 // ENUMS & CONSTANTS

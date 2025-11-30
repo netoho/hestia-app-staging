@@ -3,9 +3,9 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import {Prisma, PrismaClient} from '@prisma/client';
+import {Prisma, PrismaClient} from "@/prisma/generated/prisma-client/enums";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';

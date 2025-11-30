@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { PolicyStatus } from '@prisma/client';
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { PropertyDetailsService } from '../PropertyDetailsService';
 import { CreatePolicyData, logPolicyActivityParams } from './types';
 import { validatePolicyNumberFormat } from "@/lib/utils/policy";

@@ -3,7 +3,7 @@
  * Handles all package-related operations with proper error handling
  */
 
-import { Package } from '@prisma/client';
+import { Package } from "@/prisma/generated/prisma-client/enums";
 import { BaseService } from './base/BaseService';
 import { AsyncResult, Result } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';
