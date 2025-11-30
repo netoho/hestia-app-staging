@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { useMemo } from 'react';
 import { formatFullName } from '@/lib/utils/names';
 

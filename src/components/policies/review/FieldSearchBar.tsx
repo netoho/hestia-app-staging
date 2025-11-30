@@ -5,7 +5,7 @@ import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { SectionValidationInfo } from '@/lib/services/reviewService';
+import type { SectionValidationInfo } from '@/lib/services/reviewService.types';
 
 interface FieldSearchBarProps {
   sections: SectionValidationInfo[];

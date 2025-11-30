@@ -5,7 +5,7 @@
  * Similar pattern to actorTabFields.ts - single source of truth.
  */
 
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 
 export type ActorType = 'landlord' | 'tenant' | 'aval' | 'jointObligor';
 export type NationalityType = 'MEXICAN' | 'FOREIGN';

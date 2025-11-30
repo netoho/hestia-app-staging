@@ -7,7 +7,7 @@ import {
 import prisma from "@/lib/prisma";
 import {sendActorInvitation} from "@/lib/services/emailService";
 import {formatFullName} from "@/lib/utils/names";
-import {TenantType} from "@prisma/client";
+import {TenantType} from "@/prisma/generated/prisma-client/enums";
 import {logPolicyActivity} from "@/lib/services/policyService";
 
 

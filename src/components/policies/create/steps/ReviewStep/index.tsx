@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Mail } from 'lucide-react';
-import { formatCurrency } from '@/lib/services/pricingService';
+import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
-import { GuarantorType, TenantType } from '@/lib/enums';
+import { GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
 import { PolicyCreationFormData } from '../../types';
 
 interface ReviewStepProps {

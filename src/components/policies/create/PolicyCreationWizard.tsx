@@ -9,7 +9,7 @@ import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
 import { trpc } from '@/lib/trpc/client';
-import { PropertyType, GuarantorType, TenantType } from '@/lib/enums';
+import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
 import { generatePolicyNumber } from '@/lib/utils/policy';
 
 // Import RHF step components

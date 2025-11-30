@@ -22,7 +22,7 @@ import {
   commercialReferenceSchema,
 } from '../shared/references.schema';
 import { optional } from '../helpers';
-import { AvalType } from '@prisma/client';
+import { AvalType } from "@/prisma/generated/prisma-client/enums";
 
 // ============================================
 // ENUMS & CONSTANTS

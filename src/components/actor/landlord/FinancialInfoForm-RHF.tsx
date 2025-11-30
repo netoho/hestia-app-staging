@@ -23,7 +23,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { getLandlordTabSchema } from '@/lib/schemas/landlord';

@@ -4,7 +4,7 @@
  */
 
 import { AVAL_TAB_FIELDS } from '@/lib/constants/avalTabFields';
-import { AvalType } from '@prisma/client';
+import { AvalType } from "@/prisma/generated/prisma-client/enums";
 
 /**
  * Transform empty strings to null

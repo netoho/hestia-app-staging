@@ -12,7 +12,7 @@ import {
   CommercialReference,
   Policy,
   Prisma
-} from '@prisma/client';
+} from "@/prisma/generated/prisma-client/enums";
 
 // Prisma model types with relations
 export type LandlordWithRelations = Landlord & {

@@ -3,7 +3,7 @@
  * Used across Landlord, Tenant, Aval, and Obligor entities
  */
 
-import { NationalityType } from '@prisma/client';
+import { NationalityType } from "@/prisma/generated/prisma-client/enums";
 
 // Address details type
 export interface AddressDetails {

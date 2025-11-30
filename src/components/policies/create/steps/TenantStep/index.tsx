@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PersonNameFields } from '@/components/forms/shared/PersonNameFields';
-import { TenantType } from '@/lib/enums';
+import { TenantType } from "@/prisma/generated/prisma-client/enums";
 import { TenantFormData } from '../../types';
 
 interface TenantStepProps {

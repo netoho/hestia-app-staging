@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
-import { UserRole } from '@/lib/enums';
+import { UserRole } from "@/prisma/generated/prisma-client/enums";
 import prisma from '@/lib/prisma';
 import { ServiceError, ErrorCode } from './types/errors';
 import { isValidToken } from '@/lib/utils/tokenUtils';

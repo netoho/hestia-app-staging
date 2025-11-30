@@ -689,7 +689,7 @@ describe('MyService', () => {
 
 ```typescript
 import { MyService } from '@/lib/services/myService';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@/prisma/generated/prisma-client/enums";
 
 describe('MyService Integration', () => {
   const testPrisma = new PrismaClient({

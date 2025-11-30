@@ -1,4 +1,4 @@
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 
 // Complete document category mappings with Spanish labels
 export const documentCategoryLabels: Record<DocumentCategory, { title: string; description: string }> = {

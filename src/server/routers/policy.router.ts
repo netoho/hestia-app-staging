@@ -13,7 +13,7 @@ import {
   validatePolicyNumber,
 } from '@/lib/services/policyService';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
-import { PolicyStatus, GuarantorType, PropertyType, TenantType } from '@prisma/client';
+import { PolicyStatus, GuarantorType, PropertyType, TenantType } from "@/prisma/generated/prisma-client/enums";
 import { TRPCError } from '@trpc/server';
 import { generateLandlordToken, generatePolicyActorTokens } from '@/lib/services/actorTokenService';
 import { sendActorInvitation } from '@/lib/services/emailService';

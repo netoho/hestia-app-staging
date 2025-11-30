@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PropertyType } from '@/lib/enums';
+import { PropertyType } from "@/prisma/generated/prisma-client/enums";
 import { PropertyFormData } from '../../types';
 import { RefreshCw } from 'lucide-react';
 import { generatePolicyNumber } from '@/lib/utils/policy';

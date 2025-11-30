@@ -1,5 +1,6 @@
-import prisma from '../prisma';
-import { Policy, PolicyDocument, PolicyActivity, PolicyStatus, Prisma } from '@prisma/client';
+import prisma from "@/lib/prisma";
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import { Policy, PolicyDocument, PolicyActivity } from "@/prisma/generated/prisma-client/client";
 
 // Type definitions
 export interface CreatePolicyData {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRole } from '@/lib/auth/middleware';
-import { UserRole } from '@prisma/client';
+import { UserRole } from "@/prisma/generated/prisma-client/enums";
 import { actorAuthService } from '@/lib/services/ActorAuthService';
 import { getServiceForType } from '@/lib/services/actors';
 import { formatFullName } from '@/lib/utils/names';

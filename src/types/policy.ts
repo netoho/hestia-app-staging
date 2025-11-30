@@ -12,7 +12,7 @@ export {
   PolicyStatus,
   DocumentCategory,
   NationalityType
-} from '@/lib/enums';
+} from "@/prisma/generated/prisma-client/enums";
 
 // Custom enums not in Prisma schema
 export enum ActorType {

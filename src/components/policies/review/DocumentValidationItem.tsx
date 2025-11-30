@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { DocumentValidationInfo } from '@/lib/services/reviewService';
+import type { DocumentValidationInfo } from '@/lib/services/reviewService.types';
 import {
   CheckCircle2,
   XCircle,

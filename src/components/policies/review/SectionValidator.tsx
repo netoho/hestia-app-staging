@@ -30,7 +30,7 @@ import {
   User,
   Calendar
 } from 'lucide-react';
-import { SectionValidationInfo } from '@/lib/services/reviewService';
+import type { SectionValidationInfo } from '@/lib/services/reviewService.types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { ReviewIcon, StatusIconComponent } from '@/types/review';

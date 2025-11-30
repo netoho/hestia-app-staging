@@ -13,7 +13,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
-import { TenantType } from '@/lib/enums';
+import { TenantType } from "@/prisma/generated/prisma-client/enums";
 import { tenantStepSchema, type TenantStepData } from '@/lib/schemas/policy/wizard';
 
 interface TenantStepRHFProps {

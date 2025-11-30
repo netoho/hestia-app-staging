@@ -18,11 +18,11 @@ import {
 } from '@/components/ui/form';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { Document } from '@/types/documents';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
-import type { AvalType } from '@prisma/client';
+import type { AvalType } from "@/prisma/generated/prisma-client/enums";
 
 interface AvalPropertyGuaranteeTabProps {
   avalType: AvalType;

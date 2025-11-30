@@ -1,4 +1,4 @@
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus } from "@/prisma/generated/prisma-client/enums";
 import { PaymentMethod, PaymentMethodType } from '@/lib/prisma-types';
 import prisma from '@/lib/prisma';
 import Stripe from 'stripe';

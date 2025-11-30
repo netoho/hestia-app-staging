@@ -1,4 +1,4 @@
-import type { Landlord, Tenant, Aval, JointObligor } from '@prisma/client';
+import type { Landlord, Tenant, Aval, JointObligor } from "@/prisma/generated/prisma-client/enums";
 
 /**
  * Supported actor types in the form wizard

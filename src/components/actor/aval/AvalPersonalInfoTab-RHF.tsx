@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/form';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
-import type { AvalType } from '@prisma/client';
+import type { AvalType } from "@/prisma/generated/prisma-client/enums";
 
 interface AvalPersonalInfoTabProps {
   avalType: AvalType;

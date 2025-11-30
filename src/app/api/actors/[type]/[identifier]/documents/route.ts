@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DocumentCategory } from '@prisma/client';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { actorAuthService } from '@/lib/services/ActorAuthService';
 import { uploadActorDocument } from '@/lib/services/fileUploadService';
 import type { UploadedFile } from '@/lib/services/fileUploadService';

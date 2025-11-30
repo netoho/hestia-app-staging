@@ -3,9 +3,9 @@
  * Handles all aval-related business logic and data operations
  */
 
-import {AvalType, DocumentCategory, Prisma, PrismaClient} from '@prisma/client';
+import {AvalType, DocumentCategory, Prisma, PrismaClient} from "@/prisma/generated/prisma-client/enums";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory as DocumentCategoryEnum } from '@/lib/enums';
+import { DocumentCategory as DocumentCategoryEnum } from "@/prisma/generated/prisma-client/enums";
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';

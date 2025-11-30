@@ -13,7 +13,7 @@ import {
   FormMessage
 } from '@/components/ui/form';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
-import type { AvalType } from '@prisma/client';
+import type { AvalType } from "@/prisma/generated/prisma-client/enums";
 
 interface AvalReferencesTabProps {
   avalType: AvalType;
