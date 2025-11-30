@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: t.layout.root.metaTitle,
   description: t.layout.root.metaDescription,
   keywords: t.layout.root.metaKeywords,
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({
