@@ -20,7 +20,7 @@ import SectionValidator from './SectionValidator';
 import ReviewDocumentCard from './ReviewDocumentCard';
 import FieldSearchBar, { SearchResults } from './FieldSearchBar';
 import { useReview } from './ReviewContext';
-import { ActorReviewInfo, SectionValidationInfo, DocumentValidationInfo } from '@/lib/services/reviewService';
+import type { ActorReviewInfo, SectionValidationInfo, DocumentValidationInfo } from '@/lib/services/reviewService.types';
 import type { ReviewIcon } from '@/types/review';
 
 interface ActorReviewCardProps {

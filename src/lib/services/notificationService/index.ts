@@ -7,7 +7,7 @@ import {
 import prisma from "@/lib/prisma";
 import {sendActorInvitation} from "@/lib/services/emailService";
 import {formatFullName} from "@/lib/utils/names";
-import {TenantType} from "@prisma/client";
+import {TenantType} from "@/prisma/generated/prisma-client/enums";
 import {logPolicyActivity} from "@/lib/services/policyService";
 
 
@@ -37,6 +37,11 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   const policy = await prisma.policy.findUnique({
     where: {id: policyId},
     include: {
+      propertyDetails: {
+        include: {
+          propertyAddressDetails: true,
+        }
+      },
       landlords: {
         where: {isPrimary: true},
         take: 1,
@@ -73,7 +78,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
       token: tokenData.token,
       url: tokenData.url,
       policyNumber: policy.policyNumber,
-      propertyAddress: policy.propertyAddress,
+      propertyAddress: policy.propertyDetails?.propertyAddressDetails,
       expiryDate: tokenData.expiresAt,
       initiatorName,
     });
@@ -106,7 +111,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
       token: tokenData.token,
       url: tokenData.url,
       policyNumber: policy.policyNumber,
-      propertyAddress: policy.propertyAddress,
+      propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
       expiryDate: tokenData.expiresAt,
       initiatorName,
     });

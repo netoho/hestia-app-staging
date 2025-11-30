@@ -15,7 +15,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
-import { GuarantorType } from '@/lib/enums';
+import { GuarantorType } from "@/prisma/generated/prisma-client/enums";
 import { guarantorStepSchema, type GuarantorStepData } from '@/lib/schemas/policy/wizard';
 import { Plus, Trash2 } from 'lucide-react';
 

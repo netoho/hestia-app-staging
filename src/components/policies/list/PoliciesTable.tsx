@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { PolicyStatus } from '@/lib/enums';
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { calculatePolicyProgress } from '@/lib/utils/policyUtils';
 import ActorsList from './ActorsList';
 

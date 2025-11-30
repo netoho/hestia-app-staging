@@ -104,7 +104,7 @@ export const tenantEmploymentTabSchema = z.object({
   yearsAtJob: z.number().min(0).optional().nullable(),
   hasAdditionalIncome: z.boolean().default(false),
   additionalIncomeSource: z.string().optional().nullable(),
-  additionalIncomeAmount: z.number().positive().optional().nullable(),
+  additionalIncomeAmount: z.number().optional().nullable(),
 });
 
 /**
@@ -380,7 +380,7 @@ export const TENANT_TAB_FIELDS = {
   COMPANY: {
     personal: [
       'companyName', 'companyRfc',
-      'firstName', 'middleName', 'paternalLastName', 'maternalLastName', // Legal rep
+      'legalRepFirstName', 'legalRepMiddleName', 'legalRepPaternalLastName', 'legalRepMaternalLastName', // Legal rep
       'legalRepId', 'legalRepPosition', 'legalRepRfc', 'legalRepPhone', 'legalRepEmail',
       'email', 'phone', 'personalEmail', 'workEmail', 'workPhone',
       // 'currentAddress',

@@ -615,7 +615,7 @@ export const sendJoinUsNotification = async (data: JoinUsNotificationData): Prom
     const { render } = await import('@react-email/render');
     const { JoinUsNotificationEmail } = await import('../../templates/email/react-email/JoinUsNotificationEmail');
 
-    const html = await render(JoinUsNotificationEmail(data));
+    const html = await render(await JoinUsNotificationEmail(data));
     const subject = `Nueva solicitud para unirse al equipo - ${data.name}`;
 
     // Generate plain text version

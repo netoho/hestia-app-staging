@@ -10,6 +10,7 @@ import {
   Button,
 } from '@react-email/components';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+import { formatAddress } from "@/lib/schemas/shared/address.schema";
 
 export interface ActorInvitationEmailProps {
   actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval';
@@ -147,6 +148,15 @@ const PolicyDocumentation: React.FC<PolicyDocumentationProps> = ({ actorType, is
     ));
 }
 
+const formatAddressObject = (address: string | object): string => {
+  if (typeof address === 'string') {
+    return address;
+  }
+  // Assuming address is an object with street, city, state, zip properties
+
+  return formatAddress(address);
+}
+
 export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
   actorType,
   isCompany,
@@ -165,6 +175,8 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
     'jointObligor': 'Obligado Solidario',
     'aval': 'Aval'
   };
+
+  const formattedAddress = formatAddressObject(propertyAddress);
 
   const actorTypeName = actorTypeNames[actorType];
 
@@ -260,7 +272,7 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
                 <strong>No. Protección:</strong> {policyNumber}
               </Text>
               <Text style={{ margin: 0, color: brandColors.textPrimary }}>
-                <strong>Propiedad:</strong> {propertyAddress}
+                <strong>Propiedad:</strong> {formattedAddress}
               </Text>
             </Section>
 

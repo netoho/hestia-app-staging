@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { RefreshCw } from 'lucide-react';
-import { PropertyType } from '@/lib/enums';
+import { PropertyType } from "@/prisma/generated/prisma-client/enums";
 import { propertyStepSchema, type PropertyStepData } from '@/lib/schemas/policy/wizard';
 import { generatePolicyNumber } from '@/lib/utils/policy';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';

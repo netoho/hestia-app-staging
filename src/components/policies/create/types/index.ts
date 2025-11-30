@@ -1,4 +1,4 @@
-import { PropertyType, GuarantorType, TenantType } from '@/lib/enums';
+import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
 
 /**
  * Property form data

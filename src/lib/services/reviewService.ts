@@ -1,72 +1,29 @@
 import prisma from '@/lib/prisma';
-import { validationService, ActorType, SectionType } from './validationService';
+import { validationService } from './validationService';
 import { logPolicyActivity } from './policyService';
 import { formatFullName } from '@/lib/utils/names';
 import {
   getSectionsForActor,
   getSectionDisplayName,
 } from '@/lib/constants/actorSectionConfig';
+import type {
+  ActorType,
+  SectionType,
+  PolicyReviewData,
+  ActorReviewInfo,
+  SectionValidationInfo,
+  DocumentValidationInfo,
+} from './reviewService.types';
 
-export interface PolicyReviewData {
-  policyId: string;
-  policyNumber: string;
-  status: string;
-  propertyAddress: string;
-  rentAmount: number;
-  actors: ActorReviewInfo[];
-  progress: {
-    overall: number;
-    totalValidations: number;
-    completedValidations: number;
-    pendingValidations: number;
-    rejectedValidations: number;
-  };
-  notes: any[];
-  investigationVerdict: string | null;
-}
-
-export interface ActorReviewInfo {
-  actorType: ActorType;
-  actorId: string;
-  name: string;
-  email?: string;
-  isCompany: boolean;
-  monthlyIncome?: number;
-  sections: SectionValidationInfo[];
-  documents: DocumentValidationInfo[];
-  progress: {
-    overall: number;
-    sectionsApproved: number;
-    sectionsTotal: number;
-    documentsApproved: number;
-    documentsTotal: number;
-  };
-}
-
-export interface SectionValidationInfo {
-  section: SectionType;
-  displayName: string;
-  status: string;
-  validatedBy?: string;
-  validatorName?: string; // Added validator name
-  validatedAt?: Date;
-  rejectionReason?: string;
-  fields: any; // The actual data fields for this section
-}
-
-export interface DocumentValidationInfo {
-  documentId: string;
-  fileName: string;
-  documentType: string;
-  category: string;
-  createdAt: Date;
-  status: string;
-  validatedBy?: string;
-  validatorName?: string; // Added validator name
-  validatedAt?: Date;
-  rejectionReason?: string;
-  s3Key?: string;
-}
+// Re-export types for backwards compatibility
+export type {
+  ActorType,
+  SectionType,
+  PolicyReviewData,
+  ActorReviewInfo,
+  SectionValidationInfo,
+  DocumentValidationInfo,
+} from './reviewService.types';
 
 class ReviewService {
   /**
@@ -159,7 +116,7 @@ class ReviewService {
       policyId: policy.id,
       policyNumber: policy.policyNumber,
       status: policy.status,
-      propertyAddress: policy.propertyAddress,
+      propertyAddress: policy.propertyDetails?.propertyAddressDetails,
       rentAmount: policy.rentAmount,
       actors,
       progress: {

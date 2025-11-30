@@ -13,7 +13,7 @@ import JointObligorEmploymentTabRHF from './JointObligorEmploymentTab-RHF';
 import JointObligorGuaranteeTabRHF from './JointObligorGuaranteeTab-RHF';
 import JointObligorReferencesTabRHF from './JointObligorReferencesTab-RHF';
 import JointObligorDocumentsSection from './JointObligorDocumentsSection';
-import type { JointObligorType } from '@prisma/client';
+import type { JointObligorType } from "@/prisma/generated/prisma-client/enums";
 
 interface JointObligorFormWizardProps {
   token: string;

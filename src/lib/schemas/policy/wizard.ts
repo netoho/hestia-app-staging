@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import { emailSchema } from '../shared/contact.schema';
-import { PropertyType, GuarantorType, TenantType } from '@/lib/enums';
+import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
 
 /**
  * Step 1: Property Information

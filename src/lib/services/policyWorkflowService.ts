@@ -1,5 +1,5 @@
-import { PolicyStatus } from '@prisma/client';
-import prisma from '../prisma';
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import prisma from "@/lib/prisma";
 import { logPolicyActivity } from './policyService';
 import { checkPolicyActorsComplete } from './actorTokenService';
 
@@ -8,7 +8,7 @@ import { checkPolicyActorsComplete } from './actorTokenService';
  * Defines which status transitions are allowed
  */
 const ALLOWED_TRANSITIONS: Record<PolicyStatus, PolicyStatus[]> = {
-  DRAFT: ['COLLECTING_INFO', 'CANCELLED'],
+  DRAFT: ['COLLECTING_INFO', 'CANCELLED', 'UNDER_INVESTIGATION'],
   COLLECTING_INFO: ['UNDER_INVESTIGATION', 'CANCELLED'],
   UNDER_INVESTIGATION: ['INVESTIGATION_REJECTED', 'PENDING_APPROVAL', 'CANCELLED'],
   INVESTIGATION_REJECTED: ['UNDER_INVESTIGATION', 'CANCELLED'],
@@ -86,6 +86,7 @@ export async function transitionPolicyStatus(
 
   // Check if transition is allowed
   if (!isTransitionAllowed(policy.status, newStatus)) {
+    console.warn(`Invalid status transition from ${policy.status} to ${newStatus} for policy ${policyId}`);
     return {
       success: false,
       error: `Cannot transition from ${policy.status} to ${newStatus}`

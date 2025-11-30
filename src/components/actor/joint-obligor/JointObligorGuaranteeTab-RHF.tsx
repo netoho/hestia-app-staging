@@ -21,11 +21,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
-import { DocumentCategory } from '@/lib/enums';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { Document } from '@/types/documents';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { jointObligorGuaranteeTabSchema } from '@/lib/schemas/joint-obligor';
-import type { JointObligorType } from '@prisma/client';
+import type { JointObligorType } from "@/prisma/generated/prisma-client/enums";
 
 interface JointObligorGuaranteeTabProps {
   jointObligorType: JointObligorType;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TenantType } from '@prisma/client';
+import { TenantType } from "@/prisma/generated/prisma-client/enums";
 import prisma from '@/lib/prisma';
 import { withRole } from '@/lib/auth/middleware';
 import { UserRole } from '@/types/policy';

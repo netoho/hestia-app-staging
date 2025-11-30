@@ -16,6 +16,14 @@ export const personNameSchema = z.object({
   maternalLastName: z.string().optional().nullable(),
 });
 
+export const legalRepPersonNameSchema = z.object({
+  legalRepFirstName: z.string().min(1, 'Nombre requerido').nullable(),
+  legalRepMiddleName: z.string().optional().nullable(),
+  legalRepPaternalLastName: z.string().min(1, 'Apellido paterno requerido'),
+  legalRepMaternalLastName: z.string().optional().nullable(),
+});
+
+
 /**
  * Partial person name for optional fields or admin updates
  */

@@ -5,7 +5,7 @@ import {
   adminProcedure,
 } from '@/server/trpc';
 import { TRPCError } from '@trpc/server';
-import { ValidationStatus } from '@prisma/client';
+import { ValidationStatus } from "@/prisma/generated/prisma-client/enums";
 import { validationService } from '@/lib/services/validationService';
 import { reviewService } from '@/lib/services/reviewService';
 import { getPolicyById } from '@/lib/services/policyService';

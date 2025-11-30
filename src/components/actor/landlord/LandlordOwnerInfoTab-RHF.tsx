@@ -461,7 +461,7 @@ function LandlordIndividualFields({
           name={`landlords.${index}.phone`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Teléfono</FormLabel>
+              <FormLabel required>Teléfono Celular</FormLabel>
               <FormControl>
                 <Input {...field} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
               </FormControl>
@@ -510,7 +510,7 @@ function LandlordIndividualFields({
         name={`landlords.${index}.addressDetails`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel required>Dirección</FormLabel>
+            <FormLabel required>Dirección Actual</FormLabel>
             <FormControl>
               <AddressAutocomplete
                 label=""
@@ -737,7 +737,7 @@ function LandlordCompanyFields({
             name={`landlords.${index}.legalRepPhone`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Teléfono del Representante</FormLabel>
+                <FormLabel required>Teléfono Celular del Representante</FormLabel>
                 <FormControl>
                   <Input {...field} disabled={disabled} maxLength={10} />
                 </FormControl>

@@ -3,7 +3,8 @@
  * Manages all property-related details for policies
  */
 
-import { PrismaClient, PropertyDetails as PrismaPropertyDetails, RulesType } from '@prisma/client';
+import { RulesType } from "@/prisma/generated/prisma-client/enums";
+import { PrismaClient, PropertyDetails as PrismaPropertyDetails } from "@/prisma/generated/prisma-client/client";
 import { BaseService } from './base/BaseService';
 import { Result, AsyncResult } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';

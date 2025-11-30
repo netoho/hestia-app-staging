@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from "@/prisma/generated/prisma-client/enums";
 import {
   JointObligorComplete,
   JointObligorPartial

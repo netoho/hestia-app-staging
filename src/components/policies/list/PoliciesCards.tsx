@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import PolicyCard from './PolicyCard';
-import { PolicyStatus } from '@/lib/enums';
+import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 
 interface Policy {
   id: string;

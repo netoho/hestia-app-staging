@@ -3,12 +3,12 @@
  * Handles all landlord-related business logic and data operations
  */
 
-import {Prisma, PrismaClient} from '@prisma/client';
+import { Prisma, PrismaClient } from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory } from '@/lib/enums';
-import {BaseActorService} from './BaseActorService';
-import {AsyncResult, Result} from '../types/result';
-import {ErrorCode, ServiceError} from '../types/errors';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
+import { BaseActorService } from './BaseActorService';
+import { AsyncResult, Result } from '../types/result';
+import { ErrorCode, ServiceError } from '../types/errors';
 import {
   ActorData,
   CompanyActorData,
@@ -26,10 +26,10 @@ import {
   type LandlordIndividual,
   type LandlordCompany,
 } from '@/lib/schemas/landlord';
-import {validateLandlordToken} from '@/lib/services/actorTokenService';
-import {logPolicyActivity} from '@/lib/services/policyService';
-import {PropertyDetailsService} from '@/lib/services/PropertyDetailsService';
-import type {LandlordWithRelations} from './types';
+import { validateLandlordToken } from '@/lib/services/actorTokenService';
+import { logPolicyActivity } from '@/lib/services/policyService';
+import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
+import type { LandlordWithRelations } from './types';
 
 export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
@@ -67,8 +67,10 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    * Overrides base method to include landlord-specific fields
    */
   protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
-    const updateData = super.buildUpdateData(data, addressId);
+    const updateData = super.buildUpdateData(data);
     const landlordData = data as any;
+
+    if (addressId !== undefined) updateData.addressId = addressId || null;
 
     // Property fields
     if (landlordData.propertyDeedNumber !== undefined) updateData.propertyDeedNumber = landlordData.propertyDeedNumber || null;
@@ -387,7 +389,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    * Get landlord by ID
    */
   async getLandlordById(landlordId: string): AsyncResult<LandlordData> {
-    return this.getActorById('landlord', landlordId);
+    return this.getActorById(landlordId);
   }
 
   /**
