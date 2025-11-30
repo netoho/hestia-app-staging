@@ -8,7 +8,7 @@ import { calculatePolicyPricing } from '@/lib/services/pricingService';
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { logPolicyActivity } from '@/lib/services/policyService';
-import { GuarantorType } from '@prisma/client';
+import { GuarantorType } from "@/prisma/generated/prisma-client/enums";
 
 // Schema for price calculation
 const CalculatePriceSchema = z.object({
@@ -180,7 +180,12 @@ export const pricingRouter = createTRPCRouter({
         select: {
           id: true,
           policyNumber: true,
-          propertyAddress: true,
+          propertyDetails: {
+            select: {
+              propertyAddressId: true,
+              propertyAddressDetails: true,
+            }
+          },
           rentAmount: true,
           packageId: true,
           totalPrice: true,
@@ -206,7 +211,7 @@ export const pricingRouter = createTRPCRouter({
           guarantorType: policy.guarantorType,
         },
         policyNumber: policy.policyNumber,
-        propertyAddress: policy.propertyAddress,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails,
         rentAmount: policy.rentAmount,
       };
     }),

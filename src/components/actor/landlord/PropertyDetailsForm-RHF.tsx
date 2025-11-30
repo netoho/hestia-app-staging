@@ -441,29 +441,30 @@ export default function PropertyDetailsFormRHF({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="contractSigningAddressDetails"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel optional>Lugar de Firma del Contrato</FormLabel>
-                  <FormControl>
-                    <AddressAutocomplete
-                      label=""
-                      value={field.value || {}}
-                      onChange={(addressData) => {
-                        field.onChange(addressData);
-                      }}
-                      disabled={disabled}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Dirección donde se firmará el contrato
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Contract Signing Location Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-sm font-medium">Lugar de Firma</h3>
+              <FormField
+                control={form.control}
+                name="contractSigningAddressDetails"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Dirección de Firma del Contrato</FormLabel>
+                    <FormControl>
+                      <AddressAutocomplete
+                        label=""
+                        value={field.value || {}}
+                        onChange={(addressData) => {
+                          field.onChange(addressData);
+                        }}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </CardContent>
         </Card>
 

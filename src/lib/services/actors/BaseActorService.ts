@@ -3,7 +3,7 @@
  * Provides common functionality for all actor types (Landlord, Tenant, Aval, Obligor)
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@/prisma/generated/prisma-client/enums";
 import { BaseService } from '../base/BaseService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
@@ -516,7 +516,7 @@ export abstract class BaseActorService<
       }
 
       // Only transition if currently in COLLECTING_INFO status
-      if (policy.status !== 'COLLECTING_INFO') {
+      if (policy.status !== 'COLLECTING_INFO' && policy.status !== 'DRAFT') {
         return Result.ok({ transitioned: false });
       }
 
@@ -654,9 +654,11 @@ export abstract class BaseActorService<
     options?: {
       skipValidation?: boolean;
       submittedBy?: string;
+      skipPolicyTransition?: boolean;
     }
   ): AsyncResult<TModel> {
-    return this.executeTransaction(async (tx) => {
+    // Execute transaction for actor update
+    const result = await this.executeTransaction(async (tx) => {
       // 1. Get the current actor data
       const delegate = this.getPrismaDelegate(tx);
       const actor = await delegate.findUnique({
@@ -697,18 +699,11 @@ export abstract class BaseActorService<
         data: {
           informationComplete: true,
           completedAt: new Date(),
-          // submittedBy: options?.submittedBy ?? 'self',
         },
         include: this.getIncludes()
       });
 
-      // 5. Check if all actors complete → transition policy status
-      await this.checkAndTransitionPolicyStatus(
-        actor.policyId,
-        options?.submittedBy ?? 'system'
-      );
-
-      // 6. Log the submission
+      // 5. Log the submission
       await this.logActivity(
         actor.policyId,
         'ACTOR_SUBMITTED',
@@ -721,6 +716,22 @@ export abstract class BaseActorService<
 
       return updatedActor as TModel;
     });
+
+    // Return early if transaction failed
+    if (!result.ok) {
+      return result;
+    }
+
+    // 6. Check if all actors complete → transition policy status
+    // This runs OUTSIDE the transaction so it can see the committed data
+    if (!options?.skipPolicyTransition) {
+      await this.checkAndTransitionPolicyStatus(
+        result.value.policyId,
+        options?.submittedBy ?? 'system'
+      );
+    }
+
+    return result;
   }
 
   /**

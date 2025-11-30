@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { personNameSchema } from './person.schema';
+import { legalRepPersonNameSchema } from './person.schema';
 import { rfcCompanySchema, rfcPersonSchema } from './person.schema';
 import { emailSchema, phoneSchema } from './contact.schema';
 
@@ -19,7 +19,7 @@ export const companyBaseSchema = z.object({
 /**
  * Legal representative schema
  */
-export const legalRepresentativeSchema = personNameSchema.extend({
+export const legalRepresentativeSchema = legalRepPersonNameSchema.extend({
   legalRepId: z.string().optional().nullable(), // Can be CURP, passport, etc.
   legalRepPosition: z.string().min(1, 'Cargo del representante requerido'),
   legalRepRfc: rfcPersonSchema,
