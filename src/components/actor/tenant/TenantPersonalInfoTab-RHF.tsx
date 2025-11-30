@@ -51,8 +51,6 @@ export default function TenantPersonalInfoTabRHF({
   const isCompany = currentTenantType === 'COMPANY';
   const isForeign = currentNationality === 'FOREIGN';
 
-  console.log('Form Errors:', form.formState.errors);
-
   // Handle form submission
   const handleSubmit = async (data: any) => {
     await onSave(data);
