@@ -1,5 +1,5 @@
-import prisma from '../prisma';
-import { Package } from '@prisma/client';
+import prisma from "@/lib/prisma";
+import { Package } from "@/prisma/generated/prisma-client/client";
 
 // Premium package tiered percentages for high-value rents
 const PREMIUM_TIERS = [
@@ -298,15 +298,8 @@ function generateFormulaString(
   return formula;
 }
 
-/**
- * Format currency for display
- */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  }).format(amount);
-}
+// Re-export formatCurrency from shared utility for backwards compatibility
+export { formatCurrency } from '@/lib/utils/currency';
 
 /**
  * Get all active packages for selection
