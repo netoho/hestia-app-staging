@@ -51,6 +51,8 @@ export default function TenantPersonalInfoTabRHF({
   const isCompany = currentTenantType === 'COMPANY';
   const isForeign = currentNationality === 'FOREIGN';
 
+  console.log('Form Errors:', form.formState.errors);
+
   // Handle form submission
   const handleSubmit = async (data: any) => {
     await onSave(data);
@@ -136,6 +138,34 @@ export default function TenantPersonalInfoTabRHF({
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Email de la Empresa</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} disabled={disabled} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Teléfono de la Empresa</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Legal Representative */}
                 <div className="pt-4 border-t">
                   <h3 className="text-sm font-medium mb-4">Representante Legal</h3>
@@ -143,7 +173,7 @@ export default function TenantPersonalInfoTabRHF({
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="firstName"
+                      name="legalRepFirstName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel required>Nombre</FormLabel>
@@ -157,7 +187,7 @@ export default function TenantPersonalInfoTabRHF({
 
                     <FormField
                       control={form.control}
-                      name="middleName"
+                      name="legalRepMiddleName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel optional>Segundo Nombre</FormLabel>
@@ -173,7 +203,7 @@ export default function TenantPersonalInfoTabRHF({
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <FormField
                       control={form.control}
-                      name="paternalLastName"
+                      name="legalRepPaternalLastName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel required>Apellido Paterno</FormLabel>
@@ -187,7 +217,7 @@ export default function TenantPersonalInfoTabRHF({
 
                     <FormField
                       control={form.control}
-                      name="maternalLastName"
+                      name="legalRepMaternalLastName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel required>Apellido Materno</FormLabel>
@@ -228,6 +258,35 @@ export default function TenantPersonalInfoTabRHF({
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="legalRepEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Email del Representante</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="legalRepPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Teléfono Celular del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                   </div>
                 </div>
               </>
@@ -372,36 +431,40 @@ export default function TenantPersonalInfoTabRHF({
               </>
             )}
 
-            {/* Contact Information (Both types) */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} disabled={disabled} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Contact Information (just individual) */}
+            {!isCompany && (
+              <>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" {...field} disabled={disabled} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Teléfono</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>Teléfono Celular</FormLabel>
+                        <FormControl>
+                          <Input {...field} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

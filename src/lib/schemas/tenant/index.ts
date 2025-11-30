@@ -380,7 +380,7 @@ export const TENANT_TAB_FIELDS = {
   COMPANY: {
     personal: [
       'companyName', 'companyRfc',
-      'firstName', 'middleName', 'paternalLastName', 'maternalLastName', // Legal rep
+      'legalRepFirstName', 'legalRepMiddleName', 'legalRepPaternalLastName', 'legalRepMaternalLastName', // Legal rep
       'legalRepId', 'legalRepPosition', 'legalRepRfc', 'legalRepPhone', 'legalRepEmail',
       'email', 'phone', 'personalEmail', 'workEmail', 'workPhone',
       // 'currentAddress',

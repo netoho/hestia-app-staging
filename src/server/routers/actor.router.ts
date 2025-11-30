@@ -13,7 +13,7 @@ import { AvalService } from '@/lib/services/actors/AvalService';
 import { JointObligorService } from '@/lib/services/actors/JointObligorService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
 import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
-import { TenantType } from '@prisma/client';
+import { TenantType } from "@/prisma/generated/prisma-client/enums";
 import { getTabFields } from '@/lib/constants/actorTabFields';
 
 // Import master schemas
@@ -101,8 +101,16 @@ const ActorAdminUpdateSchema = z.object({
 
   // Company fields
   isCompany: z.boolean().optional().nullable(),
+  legalRepPosition: z.string().optional(),
+  legalRepFirstName: z.string().optional(),
+  legalRepMaternalLastName: z.string().optional(),
+  legalRepMiddleName: z.string().optional(),
+  legalRepPaternalLastName: z.string().optional(),
+  legalRepRfc: z.string().optional(),
   companyName: z.string().optional().nullable(),
   companyRfc: z.string().optional().nullable(),
+  legalRepEmail: z.string().email().optional(),
+  legalRepPhone: z.string().optional(),
 
   // Contact
   email: z.string().email().optional(),
@@ -671,10 +679,11 @@ export const actorRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const service = getActorService(input.type);
 
-      // Validate and submit
+      // Validate and submit (skip policy transition - admin controls this manually)
       const result = await service.submitActor(input.id, {
         skipValidation: input.skipValidation,
         submittedBy: ctx.userId,
+        skipPolicyTransition: true,
       });
 
       if (!result.ok) {
