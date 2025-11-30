@@ -261,7 +261,7 @@ export default function JointObligorPersonalInfoTabRHF({
                       name="legalRepPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>Teléfono del Representante</FormLabel>
+                          <FormLabel optional>Teléfono Celular del Representante</FormLabel>
                           <FormControl>
                             <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
                           </FormControl>
@@ -494,7 +494,7 @@ export default function JointObligorPersonalInfoTabRHF({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Teléfono</FormLabel>
+                    <FormLabel required>Teléfono Celular</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
                     </FormControl>
