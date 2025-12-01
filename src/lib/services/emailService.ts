@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { Resend } from 'resend';
 import Mailgun from 'mailgun.js';
 import nodemailer from 'nodemailer';

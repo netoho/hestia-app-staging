@@ -112,7 +112,7 @@ export function calculatePackagePrice(rentAmount: number, packageData: Package):
 /**
  * Validate that percentages sum to 100
  */
-export function validatePercentageSplit(tenantPercentage?: number, landlordPercentage?: number): boolean {
+function validatePercentageSplit(tenantPercentage?: number, landlordPercentage?: number): boolean {
   if (tenantPercentage === undefined && landlordPercentage === undefined) {
     return true; // Default split is valid
   }
