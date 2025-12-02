@@ -1,16 +1,17 @@
 import prisma from "@/lib/prisma";
 import { generateSecureToken } from '@/lib/utils/tokenUtils';
 import type { PrismaClient } from "@/prisma/generated/prisma-client";
+import { TOKEN_CONFIG } from "@/lib/constants/businessConfig";
 
 // Transaction client type
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 /**
- * Generate expires at date 1000 days from now
+ * Generate expires at date based on TOKEN_CONFIG.EXPIRATION_DAYS
  */
 export function generateExpiresAt(): Date {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 1000); // 1000 days expiration
+  expiresAt.setDate(expiresAt.getDate() + TOKEN_CONFIG.EXPIRATION_DAYS);
 
   return expiresAt;
 }

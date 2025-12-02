@@ -1,14 +1,6 @@
 import prisma from "@/lib/prisma";
 import { Package } from "@/prisma/generated/prisma-client/client";
-
-// Premium package tiered percentages for high-value rents
-const PREMIUM_TIERS = [
-  { minRent: 100000, percentage: 42 },
-  { minRent: 90000, percentage: 43 },
-  { minRent: 80000, percentage: 44 },
-  { minRent: 70000, percentage: 45 },
-  { minRent: 60000, percentage: 46 },
-] as const;
+import { PREMIUM_TIERS, TAX_CONFIG, LOCALE_CONFIG } from "@/lib/constants/businessConfig";
 
 /**
  * Get the effective percentage for premium package based on rent amount
@@ -204,8 +196,8 @@ export async function calculatePolicyPricing(input: PricingInput): Promise<Prici
   // Calculate subtotal
   const subtotal = packagePrice + investigationFee;
 
-  // Calculate IVA (16% of subtotal)
-  const ivaRate = 0.16;
+  // Calculate IVA
+  const ivaRate = TAX_CONFIG.IVA_RATE;
   const iva = Math.round((subtotal * ivaRate) * 100) / 100;
 
   // Calculate total with IVA
@@ -259,7 +251,7 @@ function generateFormulaString(
   minimumApplied: boolean,
   effectivePercentage?: number | null
 ): string {
-  const formatMoney = (amount: number) => `$${amount.toLocaleString('es-MX')}`;
+  const formatMoney = (amount: number) => `$${amount.toLocaleString(LOCALE_CONFIG.DEFAULT)}`;
 
   if (!packageData) {
     return includeInvestigationFee ?
@@ -291,71 +283,12 @@ function generateFormulaString(
   formula += ` = ${formatMoney(subtotal)}`;
 
   // Add IVA calculation
-  const iva = subtotal * 0.16;
+  const iva = subtotal * TAX_CONFIG.IVA_RATE;
   const totalWithIva = subtotal + iva;
-  formula += ` + IVA (16%) ${formatMoney(iva)} = ${formatMoney(totalWithIva)}`;
+  formula += ` + IVA (${TAX_CONFIG.IVA_RATE * 100}%) ${formatMoney(iva)} = ${formatMoney(totalWithIva)}`;
 
   return formula;
 }
 
 // Re-export formatCurrency from shared utility for backwards compatibility
 export { formatCurrency } from '@/lib/utils/currency';
-
-/**
- * Get all active packages for selection
- */
-export async function getActivePackages() {
-  return prisma.package.findMany({
-    where: { isActive: true },
-    orderBy: { price: 'asc' }
-  });
-}
-
-/**
- * Calculate monthly payment if policy offers payment plans
- */
-export function calculateMonthlyPayment(
-  totalAmount: number,
-  months: number = 12,
-  interestRate: number = 0
-): number {
-  if (months <= 0) return totalAmount;
-
-  if (interestRate === 0) {
-    return Math.round((totalAmount / months) * 100) / 100;
-  }
-
-  // Calculate with interest (simple interest for now)
-  const interest = totalAmount * (interestRate / 100);
-  const totalWithInterest = totalAmount + interest;
-  return Math.round((totalWithInterest / months) * 100) / 100;
-}
-
-/**
- * Estimate total policy cost including potential incidents
- * This is for display purposes to show value proposition
- */
-export function estimatePotentialSavings(
-  rentAmount: number,
-  contractMonths: number = 12
-): {
-  potentialLoss: number;
-  policyCost: number;
-  savings: number;
-} {
-  // Potential loss scenarios
-  const missedRentMonths = 3; // Average months of missed rent in disputes
-  const legalFees = 15000; // Average legal fees
-  const propertyDamage = rentAmount * 2; // Typical damage claim
-
-  const potentialLoss = (rentAmount * missedRentMonths) + legalFees + propertyDamage;
-
-  // Rough estimate of policy cost (will be replaced with actual calculation)
-  const policyCost = rentAmount * 0.5; // 50% of one month's rent as estimate
-
-  return {
-    potentialLoss,
-    policyCost,
-    savings: potentialLoss - policyCost
-  };
-}
