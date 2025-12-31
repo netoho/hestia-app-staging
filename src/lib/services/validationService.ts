@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { Prisma } from '@/prisma/generated/prisma-client';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { formatFullName } from '@/lib/utils/names';
@@ -318,7 +319,7 @@ class ValidationService {
     actorId?: string;
     documentId?: string;
   }) {
-    const where: any = { policyId };
+    const where: Prisma.ReviewNoteWhereInput = { policyId };
 
     if (filters?.actorType) where.actorType = filters.actorType;
     if (filters?.actorId) where.actorId = filters.actorId;
@@ -490,7 +491,7 @@ class ValidationService {
   }
 
   // Helper methods
-  private getActorTypeFromDocument(document: any): ActorType | undefined {
+  private getActorTypeFromDocument(document: { landlordId?: string; tenantId?: string; jointObligorId?: string; avalId?: string }): ActorType | undefined {
     if (document.landlordId) return 'landlord';
     if (document.tenantId) return 'tenant';
     if (document.jointObligorId) return 'jointObligor';
@@ -498,7 +499,7 @@ class ValidationService {
     return undefined;
   }
 
-  private getActorIdFromDocument(document: any): string | undefined {
+  private getActorIdFromDocument(document: { landlordId?: string; tenantId?: string; jointObligorId?: string; avalId?: string }): string | undefined {
     return document.landlordId ||
            document.tenantId ||
            document.jointObligorId ||
@@ -506,12 +507,12 @@ class ValidationService {
   }
 
   private async getActorDocuments(actorType: ActorType, actorId: string) {
-    const whereClause = {
+    const whereClause: Prisma.ActorDocumentWhereInput = {
       [`${actorType}Id`]: actorId
-    };
+    } as Prisma.ActorDocumentWhereInput;
 
     return prisma.actorDocument.findMany({
-      where: whereClause as any
+      where: whereClause
     });
   }
 
