@@ -4,52 +4,44 @@
  */
 
 import { TENANT_TAB_FIELDS } from '@/lib/schemas/tenant';
+import {
+  emptyStringsToNull,
+  removeUndefined,
+  normalizeBooleans,
+  normalizeNumbers as normalizeNumbersBase,
+} from '@/lib/utils/dataTransform';
+
+// Re-export shared utilities for backwards compatibility
+export { emptyStringsToNull, removeUndefined, normalizeBooleans };
+
+/** Tenant-specific number fields */
+const TENANT_NUMBER_FIELDS = [
+  'monthlyIncome',
+  'additionalIncomeAmount',
+  'previousRentAmount',
+  'rentalHistoryYears',
+  'numberOfOccupants',
+  'yearsAtJob',
+  'employeeCount',
+  'yearsInBusiness',
+];
 
 /**
- * Transform empty strings to null
- * React forms often produce empty strings, but DB expects null for empty fields
+ * Convert string numbers to actual numbers for tenant fields
  */
-export function emptyStringsToNull<T extends Record<string, any>>(data: T): T {
-  const result = {} as T;
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value === '') {
-      result[key as keyof T] = null as any;
-    } else if (value !== undefined) {
-      result[key as keyof T] = value;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Remove undefined fields from object
- * Prisma doesn't like undefined values
- */
-export function removeUndefined<T extends Record<string, any>>(data: T): T {
-  const result = {} as T;
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      result[key as keyof T] = value;
-    }
-  }
-
-  return result;
+export function normalizeNumbers<T extends Record<string, unknown>>(data: T): T {
+  return normalizeNumbersBase(data, TENANT_NUMBER_FIELDS);
 }
 
 /**
  * Process address fields
  * Handles nested address objects and prepares them for DB relations
  */
-export function processAddressFields(data: any) {
+export function processAddressFields(data: Record<string, unknown>) {
   const result = { ...data };
 
   // Handle addressDetails
   if (data.addressDetails && typeof data.addressDetails === 'object') {
-    // If we have address details, we'll need to create/update the address record
-    // For now, just ensure it's properly structured
     result.addressDetails = {
       ...emptyStringsToNull(data.addressDetails),
     };
@@ -67,53 +59,6 @@ export function processAddressFields(data: any) {
     result.previousRentalAddressDetails = {
       ...emptyStringsToNull(data.previousRentalAddressDetails),
     };
-  }
-
-  return result;
-}
-
-/**
- * Convert string booleans to actual booleans
- */
-export function normalizeBooleans<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-
-  for (const [key, value] of Object.entries(result)) {
-    if (value === 'true') {
-      result[key as keyof T] = true as any;
-    } else if (value === 'false') {
-      result[key as keyof T] = false as any;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Convert string numbers to actual numbers
- */
-export function normalizeNumbers<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-
-  // Fields that should be numbers
-  const numberFields = [
-    'monthlyIncome',
-    'additionalIncomeAmount',
-    'previousRentAmount',
-    'rentalHistoryYears',
-    'numberOfOccupants',
-    'yearsAtJob',
-    'employeeCount',
-    'yearsInBusiness',
-  ];
-
-  for (const field of numberFields) {
-    if (field in result && typeof result[field as keyof T] === 'string') {
-      const value = parseFloat(result[field as keyof T] as string);
-      if (!isNaN(value)) {
-        result[field as keyof T] = value as any;
-      }
-    }
   }
 
   return result;
