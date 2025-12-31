@@ -1,6 +1,64 @@
 /**
  * Data transformation utilities for form submissions
+ * Shared utilities used across actor prepareForDB functions
  */
+
+/**
+ * Remove undefined fields from object
+ * Prisma doesn't like undefined values
+ */
+export function removeUndefined<T extends Record<string, unknown>>(data: T): T {
+  const result = {} as T;
+
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      result[key as keyof T] = value as T[keyof T];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Convert string booleans to actual booleans
+ * Forms often submit "true"/"false" strings instead of booleans
+ */
+export function normalizeBooleans<T extends Record<string, unknown>>(data: T): T {
+  const result = { ...data };
+
+  for (const [key, value] of Object.entries(result)) {
+    if (value === 'true') {
+      result[key as keyof T] = true as T[keyof T];
+    } else if (value === 'false') {
+      result[key as keyof T] = false as T[keyof T];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Convert string numbers to actual numbers for specified fields
+ * @param data - Object with potential string numbers
+ * @param numberFields - Array of field names that should be numbers
+ */
+export function normalizeNumbers<T extends Record<string, unknown>>(
+  data: T,
+  numberFields: string[]
+): T {
+  const result = { ...data };
+
+  for (const field of numberFields) {
+    if (field in result && typeof result[field as keyof T] === 'string') {
+      const value = parseFloat(result[field as keyof T] as string);
+      if (!isNaN(value)) {
+        result[field as keyof T] = value as T[keyof T];
+      }
+    }
+  }
+
+  return result;
+}
 
 /**
  * Recursively transform empty strings to null in an object
