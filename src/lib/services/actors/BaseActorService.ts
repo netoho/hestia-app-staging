@@ -57,6 +57,31 @@ export abstract class BaseActorService<
   }
 
   /**
+   * Wrap a Zod safeParse result into a Result<T>
+   * Eliminates repetitive error handling in validatePersonData/validateCompanyData
+   *
+   * @param parseResult - The result from zod.safeParse()
+   * @param errorMessage - Custom error message for the ServiceError
+   * @returns Result<T> with the parsed data or a validation error
+   */
+  protected wrapZodValidation<T>(
+    parseResult: { success: true; data: T } | { success: false; error: ZodError },
+    errorMessage: string = 'Validation failed'
+  ): Result<T> {
+    if (!parseResult.success) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          errorMessage,
+          400,
+          { errors: this.formatZodErrors(parseResult.error) }
+        )
+      );
+    }
+    return Result.ok(parseResult.data);
+  }
+
+  /**
    * Validate actor data based on type
    */
   protected validateActorData(data: Partial<ActorData>, isPartial: boolean = false): Result<ActorData> {
@@ -605,7 +630,7 @@ export abstract class BaseActorService<
       if (!actor) {
         throw new ServiceError(
           ErrorCode.NOT_FOUND,
-          'Actor no encontrado con el token proporcionado'
+          'Actor not found with the provided token'
         );
       }
 

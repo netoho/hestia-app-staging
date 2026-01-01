@@ -104,19 +104,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       isCompany: false,
       mode: isPartial ? 'partial' : 'strict',
     });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person landlord data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person landlord data') as Result<PersonActorData>;
   }
 
   /**
@@ -127,19 +115,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       isCompany: true,
       mode: isPartial ? 'partial' : 'strict',
     });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company landlord data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company landlord data') as Result<CompanyActorData>;
   }
 
   /**
@@ -632,7 +608,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       if (!landlord) {
         throw new ServiceError(
           ErrorCode.NOT_FOUND,
-          'Actor no encontrado con el token proporcionado'
+          'Actor not found with the provided token'
         );
       }
 
