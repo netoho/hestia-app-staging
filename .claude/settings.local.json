@@ -56,9 +56,11 @@
       "Bash(then cat /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session)",
       "Bash(else echo \"EMPTY_OR_NO_SESSION\")",
       "Bash(fi)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "default"
 }
