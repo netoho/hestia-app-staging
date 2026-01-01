@@ -27,6 +27,24 @@ export const BRAND_COLORS = {
   lightBg: '#f8f9fa',
   /** White */
   white: '#ffffff',
+  /** Border color */
+  border: '#e9ecef',
+  /** Dark border for tables */
+  borderDark: '#dee2e6',
+  /** Muted text color */
+  mutedText: '#6c757d',
+  /** Warning background */
+  warningBg: '#fff3cd',
+  /** Warning border */
+  warningBorder: '#ffeaa7',
+  /** Success background */
+  successBg: '#d4edda',
+  /** Success border */
+  successBorder: '#c3e6cb',
+  /** Error background */
+  errorBg: '#f8d7da',
+  /** Error border */
+  errorBorder: '#f5c6cb',
 } as const;
 
 /** Email styling configuration */
