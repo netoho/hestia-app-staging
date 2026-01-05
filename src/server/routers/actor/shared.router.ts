@@ -12,32 +12,23 @@ import { LandlordService } from '@/lib/services/actors/LandlordService';
 import { AvalService } from '@/lib/services/actors/AvalService';
 import { JointObligorService } from '@/lib/services/actors/JointObligorService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
-import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import { TenantType } from "@/prisma/generated/prisma-client/enums";
 import { getTabFields } from '@/lib/constants/actorTabFields';
 
 // Import master schemas
 import {
-  getTenantSchema,
   tenantIndividualCompleteSchema,
   tenantCompanyCompleteSchema,
 } from '@/lib/schemas/tenant';
 import {
-  getLandlordSchema,
-  validateLandlordData,
   landlordIndividualCompleteSchema,
   landlordCompanyCompleteSchema,
-  type Landlord,
 } from '@/lib/schemas/landlord';
 import {
-  getAvalSchema,
-  validateAvalData,
   avalIndividualCompleteSchema,
   avalCompanyCompleteSchema,
-  type AvalFormData,
 } from '@/lib/schemas/aval';
 import {
-  jointObligorStrictSchema,
   jointObligorIndividualIncomeCompleteSchema,
   jointObligorIndividualPropertyCompleteSchema,
   jointObligorCompanyIncomeCompleteSchema,
@@ -45,46 +36,48 @@ import {
 } from '@/lib/schemas/joint-obligor';
 import { personNameSchema } from '@/lib/schemas/shared/person.schema';
 import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
-import { prepareLandlordForDB, prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 import { getDocumentsByActor } from '@/lib/services/documentService';
 import { deleteDocument, getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 
+// Import ActorData for type casting
+import { ActorData } from '@/lib/types/actor';
+
+// ============================================
+// SHARED SCHEMAS & UTILITIES
+// ============================================
+
 // Actor types enum
-const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor' ]);
+export const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
 
 // Define which tab is the last one for each actor type
-const LAST_TABS = {
+export const LAST_TABS = {
   tenant: 'documents',
   landlord: 'documents',
   aval: 'documents',
   jointObligor: 'documents',
 } as const;
 
-// Base person schema (Mexican 4-field naming) - will be replaced for other actors
+// Base person schema (Mexican 4-field naming)
 const PersonSchema = personNameSchema;
 
-// For backward compatibility, create TenantStrictSchema dynamically
-// This will be removed once all references are updated
-const TenantStrictSchema = z.union([
+// Strict schemas for self-service validation
+export const TenantStrictSchema = z.union([
   tenantIndividualCompleteSchema,
   tenantCompanyCompleteSchema,
 ]);
 
-// Use the new schema for backward compatibility
-const LandlordStrictSchema = z.union([
+export const LandlordStrictSchema = z.union([
   landlordIndividualCompleteSchema,
   landlordCompanyCompleteSchema,
 ]);
 
-// Create Aval strict schema as union
-const AvalStrictSchema = z.union([
+export const AvalStrictSchema = z.union([
   avalIndividualCompleteSchema,
   avalCompanyCompleteSchema,
 ]);
 
-// Create Joint Obligor strict schema with flexible guarantee
-const JointObligorStrictSchema = z.union([
+export const JointObligorStrictSchema = z.union([
   jointObligorIndividualIncomeCompleteSchema,
   jointObligorIndividualPropertyCompleteSchema,
   jointObligorCompanyIncomeCompleteSchema,
@@ -92,7 +85,7 @@ const JointObligorStrictSchema = z.union([
 ]);
 
 // Admin schemas - flexible updates with proper typing
-const ActorAdminUpdateSchema = z.object({
+export const ActorAdminUpdateSchema = z.object({
   // Person fields
   firstName: z.string().optional(),
   middleName: z.string().optional().nullable(),
@@ -132,20 +125,13 @@ const ActorAdminUpdateSchema = z.object({
   additionalInfo: z.string().optional().nullable(),
 
   // Metadata flags
-  partial: z.boolean().optional(), // Indicates tab save vs full submission
-  informationComplete: z.boolean().optional(), // Marks final submission
-  tabName: z.string().optional(), // Which tab is being saved
-}).passthrough(); // Allow additional fields for flexibility
+  partial: z.boolean().optional(),
+  informationComplete: z.boolean().optional(),
+  tabName: z.string().optional(),
+}).passthrough();
 
-// Import ActorData for type casting
-import { ActorData } from '@/lib/types/actor';
-
-// Type-safe service factory with overloads
-// function getActorService(type: 'tenant'): TenantService;
-// function getActorService(type: 'landlord'): LandlordService;
-// function getActorService(type: 'aval'): AvalService;
-// function getActorService(type: 'jointObligor'): JointObligorService;
-function getActorService(type: z.infer<typeof ActorTypeSchema>): TenantService | LandlordService | AvalService | JointObligorService {
+// Service factory
+export function getActorService(type: z.infer<typeof ActorTypeSchema>): TenantService | LandlordService | AvalService | JointObligorService {
   switch (type) {
     case 'tenant':
       return new TenantService();
@@ -161,7 +147,11 @@ function getActorService(type: z.infer<typeof ActorTypeSchema>): TenantService |
   }
 }
 
-export const actorRouter = createTRPCRouter({
+// ============================================
+// SHARED ACTOR ROUTER
+// ============================================
+
+export const sharedActorRouter = createTRPCRouter({
   /**
    * Get actor by token (self-service portal)
    */
@@ -181,7 +171,6 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Return actor data with policy
       return {
         data: result.value,
         policy: result.value.policy,
@@ -217,7 +206,6 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Return actor data with policy
       return {
         data: result.value,
         policy: result.value.length > 0 ? result.value[0].policy : null,
@@ -255,7 +243,6 @@ export const actorRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       const service = getActorService(input.type);
 
-      // Validate token and get actor
       const actor = await service.getByToken(input.token);
       if (!actor.ok) {
         throw new TRPCError({
@@ -264,10 +251,8 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Update with strict validation
-      // We use Partial<ActorData> to allow flexibility while maintaining some type safety
       const result = await service.update(actor.value.id, input.data as Partial<ActorData>, {
-        skipValidation: false, // Always validate for self-service
+        skipValidation: false,
       });
 
       if (!result.ok) {
@@ -293,7 +278,6 @@ export const actorRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const service = getActorService(input.type);
 
-      // Update with optional validation skip
       const result = await service.update(input.id, input.data as unknown as Partial<ActorData>, {
         skipValidation: input.skipValidation,
         updatedById: ctx.userId,
@@ -328,10 +312,8 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Check permissions for brokers
       if (ctx.userRole === 'BROKER') {
         // Brokers can only see actors from their policies
-        // This would need additional logic to check policy ownership
       }
 
       return result.value;
@@ -505,20 +487,18 @@ export const actorRouter = createTRPCRouter({
   update: dualAuthProcedure
     .input(z.object({
       type: ActorTypeSchema,
-      identifier: z.string(), // Can be ID (for session) or token
+      identifier: z.string(),
       data: ActorAdminUpdateSchema,
     }))
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
       const service = getActorService(input.type);
 
-      // Resolve authentication
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        null // Pass null for request as it's not available in tRPC context
+        null
       );
-
 
       if (!auth) {
         throw new TRPCError({
@@ -527,7 +507,6 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Extract metadata flags and special fields from input
       const {
         partial,
         informationComplete,
@@ -537,7 +516,6 @@ export const actorRouter = createTRPCRouter({
         ...actualData
       } = input.data;
 
-      // Validate tab name if provided
       if (tabName) {
         const validTabFields = getTabFields(input.type, tabName);
 
@@ -549,12 +527,11 @@ export const actorRouter = createTRPCRouter({
         }
       }
 
-      // STEP 1: Always save the tab data first
       const saveResult = await service.update(auth.actor.id, actualData as Partial<ActorData>, {
         skipValidation: auth.skipValidation,
         updatedById: auth.userId,
-        isPartial: partial ?? false, // Pass partial flag to service
-        tabName: tabName, // Pass tab name for better logging and validation
+        isPartial: partial ?? false,
+        tabName: tabName,
       });
 
       if (!saveResult.ok) {
@@ -564,25 +541,23 @@ export const actorRouter = createTRPCRouter({
         });
       }
 
-      // Log activity for admin edits
       if (auth.authType === 'admin' && tabName && auth.actor.policyId) {
         const actorTypeLabels: Record<string, string> = {
-          tenant: 'inquilino',
-          landlord: 'arrendador',
+          tenant: 'tenant',
+          landlord: 'landlord',
           aval: 'aval',
-          jointObligor: 'obligado solidario',
+          jointObligor: 'joint obligor',
         };
         await logPolicyActivity({
           policyId: auth.actor.policyId,
           action: 'ACTOR_EDITED_BY_ADMIN',
-          description: `Admin editó la pestaña "${tabName}" del ${actorTypeLabels[input.type] || input.type}`,
+          description: `Admin edited tab "${tabName}" for ${actorTypeLabels[input.type] || input.type}`,
           performedById: auth.userId,
           performedByType: 'user',
           details: { tabName, actorType: input.type, actorId: auth.actor.id },
         });
       }
 
-      // STEP 2: Save references if provided (typically for references tab)
       if (personalReferences && Array.isArray(personalReferences)) {
         await service.savePersonalReferences(auth.actor.id, personalReferences);
       }
@@ -591,18 +566,15 @@ export const actorRouter = createTRPCRouter({
         await service.saveCommercialReferences(auth.actor.id, commercialReferences);
       }
 
-      // STEP 3: Check if this is the last tab and auto-submit (only for actor self-service, NOT admins)
       const isLastTab = tabName && LAST_TABS[input.type] === tabName;
 
       if (isLastTab && partial !== false && auth.authType === 'actor') {
-        // STEP 4: Call submitActor to validate and mark as complete
         const submitResult = await service.submitActor(auth.actor.id, {
           skipValidation: auth.skipValidation,
           submittedBy: auth.userId ?? 'self',
         });
 
         if (!submitResult.ok) {
-          // Save succeeded but submission failed
           return {
             ...saveResult.value,
             submitted: false,
@@ -610,14 +582,12 @@ export const actorRouter = createTRPCRouter({
           };
         }
 
-        // Both save and submit succeeded
         return {
           ...submitResult.value,
           submitted: true,
         };
       }
 
-      // Not last tab or explicit non-partial save
       return {
         ...saveResult.value,
         submitted: false,
@@ -630,27 +600,25 @@ export const actorRouter = createTRPCRouter({
   submitActor: dualAuthProcedure
     .input(z.object({
       type: ActorTypeSchema,
-      identifier: z.string(), // Can be ID (for session) or token
+      identifier: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
       const service = getActorService(input.type);
 
-      // Resolve authentication
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        null // Pass null for request as it's not available in tRPC context
+        null
       );
 
       if (!auth) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: auth.error || 'Unauthorized',
+          message: 'Unauthorized',
         });
       }
 
-      // Submit the actor (validate and mark as complete)
       const result = await service.submitActor(auth.actor.id, {
         skipValidation: auth.skipValidation,
         submittedBy: auth.userId ?? 'self',
@@ -668,7 +636,6 @@ export const actorRouter = createTRPCRouter({
 
   /**
    * Admin-only: Submit actor after admin review
-   * Validates data and marks as complete
    */
   adminSubmitActor: adminProcedure
     .input(z.object({
@@ -679,7 +646,6 @@ export const actorRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const service = getActorService(input.type);
 
-      // Validate and submit (skip policy transition - admin controls this manually)
       const result = await service.submitActor(input.id, {
         skipValidation: input.skipValidation,
         submittedBy: ctx.userId,
@@ -689,7 +655,7 @@ export const actorRouter = createTRPCRouter({
       if (!result.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: result.error?.message || 'Error al enviar información del actor',
+          message: result.error?.message || 'Failed to submit actor information',
         });
       }
 
@@ -727,264 +693,12 @@ export const actorRouter = createTRPCRouter({
       return result.value;
     }),
 
-  /**
-   * Landlord-specific: Save multiple landlords for a policy
-   * Handles co-ownership scenarios
-   */
-  saveMultipleLandlords: dualAuthProcedure
-    .input(z.object({
-      policyId: z.string(),
-      landlords: z.array(LandlordStrictSchema),
-      propertyDetails: z.any().optional(),
-      isPartial: z.boolean().default(false),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const service = new LandlordService();
-
-      // Prepare landlords for database
-      const { landlords, policyData, error } = prepareMultiLandlordsForDB(
-        input.landlords,
-        { isPartial: input.isPartial }
-      );
-
-      if (error) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: error,
-        });
-      }
-
-      // Save all landlords
-      const results = [];
-      for (const landlordData of landlords) {
-        const result = await service.save(
-          landlordData.id || '',
-          landlordData,
-          input.isPartial,
-          false
-        );
-
-        if (!result.ok) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: result.error?.message || 'Failed to save landlord',
-          });
-        }
-
-        results.push(result.value);
-      }
-
-      // Update policy with financial data if present
-      if (policyData && Object.keys(policyData).length > 0) {
-        await ctx.prisma.policy.update({
-          where: { id: input.policyId },
-          data: policyData,
-        });
-      }
-
-      return {
-        landlords: results,
-        policyData,
-      };
-    }),
-
-  /**
-   * Landlord-specific: Save property details for a policy
-   * Used by the property-info tab to save PropertyDetails (parking, utilities, dates, addresses, etc.)
-   */
-  savePropertyDetails: dualAuthProcedure
-    .input(z.object({
-      type: z.literal('landlord'),
-      identifier: z.string(), // token or landlord ID
-      propertyDetails: z.any(), // PropertyDetailsInput
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const authService = new ActorAuthService();
-
-      // Resolve authentication - get landlord from token/id
-      const auth = await authService.resolveActorAuth(
-        input.type,
-        input.identifier,
-        null
-      );
-
-      if (!auth) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Unauthorized',
-        });
-      }
-
-      // Get the policy ID from the landlord
-      const landlord = await ctx.prisma.landlord.findUnique({
-        where: { id: auth.actor.id },
-        select: { policyId: true },
-      });
-
-      if (!landlord?.policyId) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Landlord not associated with a policy',
-        });
-      }
-
-      // Save property details using PropertyDetailsService
-      const propertyDetailsService = new PropertyDetailsService(ctx.prisma);
-      const result = await propertyDetailsService.upsert(landlord.policyId, input.propertyDetails);
-
-      if (!result.ok) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: result.error?.message || 'Failed to save property details',
-        });
-      }
-
-      return result.value;
-    }),
-
-  /**
-   * Landlord-specific: Save policy financial data
-   * Used by the financial-info tab to save financial fields to the Policy table
-   */
-  savePolicyFinancial: dualAuthProcedure
-    .input(z.object({
-      type: z.literal('landlord'),
-      identifier: z.string(), // token or landlord ID
-      policyFinancial: z.object({
-        securityDeposit: z.number().optional().nullable(),
-        maintenanceFee: z.number().optional().nullable(),
-        maintenanceIncludedInRent: z.boolean().optional(),
-        issuesTaxReceipts: z.boolean().optional(),
-        hasIVA: z.boolean().optional(),
-        rentIncreasePercentage: z.number().optional().nullable(),
-        paymentMethod: z.string().optional().nullable(),
-      }),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const authService = new ActorAuthService();
-
-      // Resolve authentication - get landlord from token/id
-      const auth = await authService.resolveActorAuth(
-        input.type,
-        input.identifier,
-        null
-      );
-
-      if (!auth) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Unauthorized',
-        });
-      }
-
-      // Get the policy ID from the landlord
-      const landlord = await ctx.prisma.landlord.findUnique({
-        where: { id: auth.actor.id },
-        select: { policyId: true },
-      });
-
-      if (!landlord?.policyId) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Landlord not associated with a policy',
-        });
-      }
-
-      // Update Policy with financial fields
-      const updatedPolicy = await ctx.prisma.policy.update({
-        where: { id: landlord.policyId },
-        data: input.policyFinancial,
-      });
-
-      return updatedPolicy;
-    }),
-
-  /**
-   * Landlord-specific: Validate landlord data
-   * Used for form validation before submission
-   */
-  validateLandlord: publicProcedure
-    .input(z.object({
-      data: z.any(),
-      isCompany: z.boolean(),
-      mode: z.enum(['strict', 'partial', 'admin']).default('strict'),
-      tabName: z.string().optional(),
-    }))
-    .query(({ input }) => {
-      const result = validateLandlordData(input.data, {
-        isCompany: input.isCompany,
-        mode: input.mode as any,
-        tabName: input.tabName,
-      });
-
-      if (!result.success) {
-        return {
-          valid: false,
-          errors: result.error.issues.map(issue => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-          })),
-        };
-      }
-
-      return {
-        valid: true,
-        data: result.data,
-      };
-    }),
-
-  /**
-   * Landlord-specific: Get all landlords for a policy
-   * Returns array since multiple landlords are supported
-   */
-  getLandlordsByPolicy: protectedProcedure
-    .input(z.object({
-      policyId: z.string(),
-    }))
-    .query(async ({ input }) => {
-      const service = new LandlordService();
-      const result = await service.getAllByPolicyId(input.policyId);
-
-      if (!result.ok) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: result.error?.message || 'Landlords not found',
-        });
-      }
-
-      return result.value;
-    }),
-
-  /**
-   * Landlord-specific: Delete a co-owner (non-primary landlord)
-   * Used by the landlord form wizard to remove co-owners
-   */
-  deleteCoOwner: dualAuthProcedure
-    .input(z.object({
-      type: z.literal('landlord'),
-      id: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      const service = new LandlordService();
-      const result = await service.removeLandlord(input.id);
-
-      if (!result.ok) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: result.error?.message || 'Failed to delete landlord',
-        });
-      }
-
-      return { success: true };
-    }),
-
   // ============================================
   // DOCUMENT PROCEDURES
   // ============================================
 
   /**
    * List documents for an actor
-   * Supports both admin (session) and actor (token) authentication
    */
   listDocuments: dualAuthProcedure
     .input(z.object({
@@ -994,7 +708,6 @@ export const actorRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
-      // Resolve authentication
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
@@ -1004,13 +717,11 @@ export const actorRouter = createTRPCRouter({
       if (!auth) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'No autorizado',
+          message: 'Unauthorized',
         });
       }
 
-      // Map actorType for the query (joint-obligor uses different format in some places)
       const queryType = input.type === 'jointObligor' ? 'joint-obligor' : input.type;
-
       const documents = await getDocumentsByActor(auth.actor.id, queryType);
 
       return {
@@ -1021,7 +732,6 @@ export const actorRouter = createTRPCRouter({
 
   /**
    * Delete a document
-   * Verifies ownership before deletion
    */
   deleteDocument: dualAuthProcedure
     .input(z.object({
@@ -1032,7 +742,6 @@ export const actorRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
-      // Resolve authentication
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
@@ -1042,19 +751,17 @@ export const actorRouter = createTRPCRouter({
       if (!auth) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'No autorizado',
+          message: 'Unauthorized',
         });
       }
 
-      // Check if editing is allowed for actors
       if (!auth.canEdit && auth.authType === 'actor') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'No puede eliminar documentos después de completar la información',
+          message: 'Cannot delete documents after completing information',
         });
       }
 
-      // Verify document ownership for actors
       if (auth.authType === 'actor') {
         const document = await ctx.prisma.actorDocument.findUnique({
           where: { id: input.documentId },
@@ -1063,33 +770,31 @@ export const actorRouter = createTRPCRouter({
         if (!document) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Documento no encontrado',
+            message: 'Document not found',
           });
         }
 
-        // Check ownership based on actor type
         const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
         if ((document as any)[actorField] !== auth.actor.id) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Este documento no pertenece a este actor',
+            message: 'This document does not belong to this actor',
           });
         }
       }
 
-      // Delete the document
       const deleted = await deleteDocument(input.documentId, true);
 
       if (!deleted) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Error al eliminar documento',
+          message: 'Failed to delete document',
         });
       }
 
       return {
         success: true,
-        message: 'Documento eliminado exitosamente',
+        message: 'Document deleted successfully',
       };
     }),
 
@@ -1105,7 +810,6 @@ export const actorRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
-      // Resolve authentication
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
@@ -1115,11 +819,10 @@ export const actorRouter = createTRPCRouter({
       if (!auth) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'No autorizado',
+          message: 'Unauthorized',
         });
       }
 
-      // Fetch document
       const document = await ctx.prisma.actorDocument.findUnique({
         where: { id: input.documentId },
       });
@@ -1127,17 +830,16 @@ export const actorRouter = createTRPCRouter({
       if (!document) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Documento no encontrado',
+          message: 'Document not found',
         });
       }
 
-      // Verify ownership for actors
       if (auth.authType === 'actor') {
         const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
         if ((document as any)[actorField] !== auth.actor.id) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Este documento no pertenece a este actor',
+            message: 'This document does not belong to this actor',
           });
         }
       }
@@ -1145,11 +847,10 @@ export const actorRouter = createTRPCRouter({
       if (!document.s3Key) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Documento sin archivo asociado',
+          message: 'Document has no associated file',
         });
       }
 
-      // Generate presigned URL (5 min expiry)
       const downloadUrl = await getDocumentDownloadUrl(
         document.s3Key,
         document.originalName || document.fileName,

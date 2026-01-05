@@ -9,7 +9,6 @@ import type { Payment } from "@/prisma/generated/prisma-client/enums";
  * - createCheckoutSession: Create Stripe checkout session
  * - createPaymentIntent: Create Stripe payment intent
  * - getPaymentStatus: Get payment status by ID
- * - processRefund: Process refund for a payment
  * - webhookHandler: Handle Stripe webhooks (in API route)
  */
 export const paymentRouter = createTRPCRouter({
