@@ -110,21 +110,26 @@ export type ActorTableName = 'landlord' | 'tenant' | 'aval' | 'jointObligor';
 
 // Type guard functions
 export function isLandlord(actor: unknown): actor is Landlord {
-  return (actor as any)?.__typename === 'Landlord' ||
-         (actor as any)?.id && !('tenantType' in (actor as any));
+  if (!actor || typeof actor !== 'object') return false;
+  const obj = actor as Record<string, unknown>;
+  return obj.__typename === 'Landlord' ||
+         (obj.id !== undefined && !('tenantType' in obj));
 }
 
 export function isTenant(actor: unknown): actor is Tenant {
-  return (actor as any)?.__typename === 'Tenant' ||
-         (actor as any)?.tenantType !== undefined;
+  if (!actor || typeof actor !== 'object') return false;
+  const obj = actor as Record<string, unknown>;
+  return obj.__typename === 'Tenant' || obj.tenantType !== undefined;
 }
 
 export function isAval(actor: unknown): actor is Aval {
-  return (actor as any)?.__typename === 'Aval' ||
-         (actor as any)?.guaranteePropertyId !== undefined;
+  if (!actor || typeof actor !== 'object') return false;
+  const obj = actor as Record<string, unknown>;
+  return obj.__typename === 'Aval' || obj.guaranteePropertyId !== undefined;
 }
 
 export function isJointObligor(actor: unknown): actor is JointObligor {
-  return (actor as any)?.__typename === 'JointObligor' ||
-         (actor as any)?.relationshipToTenant !== undefined;
+  if (!actor || typeof actor !== 'object') return false;
+  const obj = actor as Record<string, unknown>;
+  return obj.__typename === 'JointObligor' || obj.relationshipToTenant !== undefined;
 }
