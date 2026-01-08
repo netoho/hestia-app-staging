@@ -86,7 +86,7 @@ export interface StorageProvider {
   getPublicUrl(path: string): string;
 }
 
-export type StorageProviderType = 's3' | 'firebase' | 'local';
+export type StorageProviderType = 's3' | 'local';
 
 export interface StorageConfig {
   provider: StorageProviderType;
@@ -97,11 +97,6 @@ export interface StorageConfig {
     accessKeyId: string;
     secretAccessKey: string;
     endpoint?: string; // For S3-compatible services
-  };
-  firebase?: {
-    bucketName: string;
-    projectId: string;
-    keyFilename?: string;
   };
   local?: {
     basePath: string;

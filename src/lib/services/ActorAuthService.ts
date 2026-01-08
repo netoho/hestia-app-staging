@@ -70,7 +70,7 @@ export class ActorAuthService {
         if (!actor) {
           throw new ServiceError(
             ErrorCode.NOT_FOUND,
-            'Actor no encontrado',
+            'Actor not found',
             404
           );
         }
@@ -86,7 +86,7 @@ export class ActorAuthService {
 
       throw new ServiceError(
         ErrorCode.UNAUTHORIZED,
-        'No autorizado',
+        'Unauthorized',
         401
       );
     }
@@ -105,7 +105,7 @@ export class ActorAuthService {
     if (!user) {
       throw new ServiceError(
         ErrorCode.UNAUTHORIZED,
-        'Usuario no encontrado',
+        'User not found',
         401
       );
     }
@@ -115,7 +115,7 @@ export class ActorAuthService {
     if (!allowedRoles.includes(user.role)) {
       throw new ServiceError(
         ErrorCode.FORBIDDEN,
-        'Rol insuficiente para esta operación',
+        'Insufficient role for this operation',
         403
       );
     }
@@ -126,7 +126,7 @@ export class ActorAuthService {
     if (!actor) {
       throw new ServiceError(
         ErrorCode.NOT_FOUND,
-        `${this.getActorTypeName(type)} no encontrado`,
+        `${this.getActorTypeName(type)} not found`,
         404
       );
     }
@@ -157,7 +157,7 @@ export class ActorAuthService {
     if (!actor) {
       throw new ServiceError(
         ErrorCode.INVALID_TOKEN,
-        'Token inválido',
+        'Invalid token',
         400
       );
     }
@@ -166,7 +166,7 @@ export class ActorAuthService {
     if (actor.tokenExpiry && actor.tokenExpiry < new Date()) {
       throw new ServiceError(
         ErrorCode.TOKEN_EXPIRED,
-        'Token expirado',
+        'Token expired',
         400
       );
     }

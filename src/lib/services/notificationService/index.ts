@@ -9,6 +9,7 @@ import {sendActorInvitation} from "@/lib/services/emailService";
 import {formatFullName} from "@/lib/utils/names";
 import {TenantType} from "@/prisma/generated/prisma-client/enums";
 import {logPolicyActivity} from "@/lib/services/policyService";
+import { ServiceError, ErrorCode } from '../types/errors';
 
 
 const shouldProcessActor = (actorType: string, actors: string[]) => {
@@ -53,7 +54,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   });
 
   if (!policy) {
-    throw new Error('Policy not found');
+    throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
   }
 
   const invitations = [];

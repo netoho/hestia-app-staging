@@ -1,5 +1,5 @@
-import prisma from '@/lib/prisma';
 import { validationService } from './validationService';
+import { BaseService } from './base/BaseService';
 import { logPolicyActivity } from './policyService';
 import { formatFullName } from '@/lib/utils/names';
 import {
@@ -13,7 +13,9 @@ import type {
   ActorReviewInfo,
   SectionValidationInfo,
   DocumentValidationInfo,
+  SectionFields,
 } from './reviewService.types';
+import { ServiceError, ErrorCode } from './types/errors';
 
 // Re-export types for backwards compatibility
 export type {
@@ -23,15 +25,21 @@ export type {
   ActorReviewInfo,
   SectionValidationInfo,
   DocumentValidationInfo,
+  SectionFields,
+  ReviewNote,
 } from './reviewService.types';
 
-class ReviewService {
+class ReviewService extends BaseService {
+  constructor() {
+    super();
+  }
+
   /**
    * Get complete review data for a policy
    */
   async getPolicyReviewData(policyId: string): Promise<PolicyReviewData> {
     // Get policy with all actors and documents
-    const policy = await prisma.policy.findUnique({
+    const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       include: {
         landlords: {
@@ -74,11 +82,11 @@ class ReviewService {
     });
 
     if (!policy) {
-      throw new Error('Policy not found');
+      throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
     // Get investigation verdict
-    const investigation = await prisma.investigation.findUnique({
+    const investigation = await this.prisma.investigation.findUnique({
       where: { policyId },
       select: { verdict: true }
     });
@@ -158,7 +166,7 @@ class ReviewService {
     // Fetch user names for validators
     const validatorMap = new Map<string, string>();
     if (validatorIds.size > 0) {
-      const validators = await prisma.user.findMany({
+      const validators = await this.prisma.user.findMany({
         where: { id: { in: Array.from(validatorIds) } },
         select: { id: true, name: true, email: true }
       });
@@ -273,7 +281,7 @@ class ReviewService {
   /**
    * Extract section data from actor
    */
-  private extractSectionData(actor: any, section: SectionType, isCompany?: boolean): any {
+  private extractSectionData(actor: any, section: SectionType, isCompany?: boolean): SectionFields {
     const actorIsCompany = isCompany ?? (actor.isCompany || actor.tenantType === 'COMPANY' || actor.avalType === 'COMPANY' || actor.jointObligorType === 'COMPANY');
 
     switch (section) {
@@ -514,19 +522,19 @@ class ReviewService {
 
     const [sectionStats, documentStats, recentActivity] = await Promise.all([
       // Section validation stats
-      prisma.actorSectionValidation.groupBy({
+      this.prisma.actorSectionValidation.groupBy({
         by: ['status'],
         where,
         _count: true
       }),
       // Document validation stats
-      prisma.documentValidation.groupBy({
+      this.prisma.documentValidation.groupBy({
         by: ['status'],
         where,
         _count: true
       }),
       // Recent validation activity
-      prisma.policyActivity.findMany({
+      this.prisma.policyActivity.findMany({
         where: {
           action: {
             in: ['section_approved', 'section_rejected', 'document_approved', 'document_rejected']
@@ -552,4 +560,12 @@ class ReviewService {
   }
 }
 
+// Singleton instance
 export const reviewService = new ReviewService();
+
+// Bound legacy function exports for backwards compatibility
+export const getPolicyReviewData = reviewService.getPolicyReviewData.bind(reviewService);
+export const batchValidateSections = reviewService.batchValidateSections.bind(reviewService);
+export const batchValidateDocuments = reviewService.batchValidateDocuments.bind(reviewService);
+export const checkPolicyValidationComplete = reviewService.checkPolicyValidationComplete.bind(reviewService);
+export const getReviewStatistics = reviewService.getReviewStatistics.bind(reviewService);

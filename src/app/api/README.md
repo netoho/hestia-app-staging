@@ -1,10 +1,10 @@
 # API Routes Module
 
-## Status: 🔴 CRITICAL - 150+ TypeScript Errors
+## Status: 🟢 Build Passing
 
 ## Overview
 
-This directory contains all Next.js 14 API routes using the App Router pattern. The API is organized by domain and follows RESTful conventions where possible.
+This directory contains all Next.js 15 API routes using the App Router pattern. The API is organized by domain and follows RESTful conventions where possible.
 
 ## Architecture
 
@@ -24,22 +24,15 @@ This directory contains all Next.js 14 API routes using the App Router pattern. 
 └── documents/     # Document management
 ```
 
-## Current Issues
+## Known Issues
 
-### Critical Problems
-1. **Type Mismatches** (40+ errors)
-   - Prisma types not synced
-   - Enum imports from wrong sources
-   - Nullable fields not handled
+### Security (TODO)
+- [ ] BROKER role can access other brokers' policies
+- [ ] No rate limiting implemented
 
-2. **Missing Authorization** (SECURITY)
-   - BROKER role can access other brokers' policies
-   - No rate limiting implemented
-   - Token validation incomplete
-
-3. **Duplicate APIs**
-   - `/tenant/` (legacy) vs `/actor/tenant/` (new)
-   - Inconsistent patterns between endpoints
+### Cleanup (TODO)
+- [ ] Migrate `/tenant/` (legacy) to `/actor/tenant/` (new)
+- [ ] Delete `_deprecated/` folder
 
 ## Design Patterns
 
@@ -91,13 +84,11 @@ return NextResponse.json({
 
 ## TODO - Priority Order
 
-1. [ ] Fix TypeScript compilation errors
-2. [ ] Add BROKER authorization checks
-3. [ ] Implement rate limiting
-4. [ ] Migrate legacy tenant API
-5. [ ] Add comprehensive error handling
-6. [ ] Create API documentation
-7. [ ] Add integration tests
+1. [ ] Add BROKER authorization checks
+2. [ ] Implement rate limiting
+3. [ ] Migrate legacy tenant API
+4. [ ] Delete `_deprecated/` folder
+5. [ ] Add integration tests
 
 ## Testing
 
@@ -161,5 +152,4 @@ When migrating from Pages to App Router:
 
 ---
 
-**Status Updated:** 2025-10-09
-**Next Review:** After TypeScript fixes
+**Last Updated:** 2025-12-31

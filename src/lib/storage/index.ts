@@ -5,7 +5,6 @@
 
 import { StorageProvider, StorageConfig } from './types';
 import { S3StorageProvider } from './providers/s3';
-import { FirebaseStorageProvider } from './providers/firebase';
 import { LocalStorageProvider } from './providers/local';
 import { getStorageConfig } from './config';
 
@@ -35,12 +34,6 @@ export function createStorageProvider(config: StorageConfig): StorageProvider {
       }
       return new S3StorageProvider(config.s3);
 
-    case 'firebase':
-      if (!config.firebase) {
-        throw new Error('Firebase configuration is required for Firebase provider');
-      }
-      return new FirebaseStorageProvider(config.firebase);
-
     case 'local':
       return new LocalStorageProvider(config.local || {});
 
@@ -58,4 +51,4 @@ export function resetStorageInstance(): void {
 
 // Re-export types for convenience
 export * from './types';
-export { getStorageConfig, isUsingS3, isUsingFirebase, isUsingLocalStorage } from './config';
+export { getStorageConfig, isUsingS3, isUsingLocalStorage } from './config';

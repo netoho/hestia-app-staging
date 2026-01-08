@@ -14,6 +14,8 @@ import {
   isPersonActor,
   isCompanyActor,
   AddressDetails,
+  AddressWithMetadata,
+  cleanAddressData,
   ValidationError,
 } from '@/lib/types/actor';
 import { ZodError } from 'zod';
@@ -57,6 +59,31 @@ export abstract class BaseActorService<
   }
 
   /**
+   * Wrap a Zod safeParse result into a Result<T>
+   * Eliminates repetitive error handling in validatePersonData/validateCompanyData
+   *
+   * @param parseResult - The result from zod.safeParse()
+   * @param errorMessage - Custom error message for the ServiceError
+   * @returns Result<T> with the parsed data or a validation error
+   */
+  protected wrapZodValidation<T>(
+    parseResult: { success: true; data: T } | { success: false; error: ZodError },
+    errorMessage: string = 'Validation failed'
+  ): Result<T> {
+    if (!parseResult.success) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          errorMessage,
+          400,
+          { errors: this.formatZodErrors(parseResult.error) }
+        )
+      );
+    }
+    return Result.ok(parseResult.data);
+  }
+
+  /**
    * Validate actor data based on type
    */
   protected validateActorData(data: Partial<ActorData>, isPartial: boolean = false): Result<ActorData> {
@@ -85,17 +112,17 @@ export abstract class BaseActorService<
    * Create or update address
    */
   protected async upsertAddress(
-    addressData: AddressDetails,
+    addressData: AddressWithMetadata,
     existingAddressId?: string | null
   ): AsyncResult<string> {
     return this.executeDbOperation(async () => {
       // Remove id and timestamp fields from addressData to prevent conflicts
-      const { id, createdAt, updatedAt, ...cleanAddressData } = addressData as any;
+      const cleanData = cleanAddressData(addressData);
 
       const address = await this.prisma.propertyAddress.upsert({
         where: { id: existingAddressId || '' },
-        create: cleanAddressData,
-        update: cleanAddressData,
+        create: cleanData,
+        update: cleanData,
       });
       return address.id;
     }, 'upsertAddress');
@@ -106,10 +133,10 @@ export abstract class BaseActorService<
    * Handles address, employer address, and guarantee property address
    */
   protected async upsertMultipleAddresses(data: {
-    addressDetails?: any;
-    employerAddressDetails?: any;
-    guaranteePropertyDetails?: any;
-    previousRentalAddressDetails?: any;
+    addressDetails?: AddressWithMetadata;
+    employerAddressDetails?: AddressWithMetadata;
+    guaranteePropertyDetails?: AddressWithMetadata;
+    previousRentalAddressDetails?: AddressWithMetadata;
   }): AsyncResult<{
     addressId?: string;
     employerAddressId?: string;
@@ -117,48 +144,53 @@ export abstract class BaseActorService<
     previousRentalAddressId?: string;
   }> {
     return this.executeDbOperation(async () => {
-      const updates: any = {};
+      const updates: {
+        addressId?: string;
+        employerAddressId?: string;
+        guaranteePropertyAddressId?: string;
+        previousRentalAddressId?: string;
+      } = {};
 
       // Upsert current address
       if (data.addressDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddressData } = data.addressDetails as any;
+        const cleanData = cleanAddressData(data.addressDetails);
         const currentAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.addressDetails?.id || '' },
-          create: cleanAddressData,
-          update: cleanAddressData,
+          where: { id: data.addressDetails.id || '' },
+          create: cleanData,
+          update: cleanData,
         });
         updates.addressId = currentAddress.id;
       }
 
       // Upsert employer address
       if (data.employerAddressDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddressData } = data.employerAddressDetails as any;
+        const cleanData = cleanAddressData(data.employerAddressDetails);
         const employerAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.employerAddressDetails?.id || '' },
-          create: cleanAddressData,
-          update: cleanAddressData,
+          where: { id: data.employerAddressDetails.id || '' },
+          create: cleanData,
+          update: cleanData,
         });
         updates.employerAddressId = employerAddress.id;
       }
 
       // Upsert guarantee property address
       if (data.guaranteePropertyDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddressData } = data.guaranteePropertyDetails as any;
+        const cleanData = cleanAddressData(data.guaranteePropertyDetails);
         const guaranteePropertyAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.guaranteePropertyDetails?.id || '' },
-          create: cleanAddressData,
-          update: cleanAddressData,
+          where: { id: data.guaranteePropertyDetails.id || '' },
+          create: cleanData,
+          update: cleanData,
         });
         updates.guaranteePropertyAddressId = guaranteePropertyAddress.id;
       }
 
       // Upsert previous rental address
       if (data.previousRentalAddressDetails) {
-        const { id, createdAt, updatedAt, ...cleanAddressData } = data.previousRentalAddressDetails as any;
+        const cleanData = cleanAddressData(data.previousRentalAddressDetails);
         const previousRentalAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.previousRentalAddressDetails?.id || '' },
-          create: cleanAddressData,
-          update: cleanAddressData,
+          where: { id: data.previousRentalAddressDetails.id || '' },
+          create: cleanData,
+          update: cleanData,
         });
         updates.previousRentalAddressId = previousRentalAddress.id;
       }
@@ -346,7 +378,13 @@ export abstract class BaseActorService<
     }
 
     return this.executeTransaction(async (tx) => {
-      // Handle address if provided
+      // Handle address if provided - cast to record type that includes potential address fields
+      type DataWithAddresses = Partial<TData> & {
+        addressDetails?: AddressWithMetadata;
+        employerAddressDetails?: AddressWithMetadata;
+        guaranteePropertyDetails?: AddressWithMetadata;
+        previousRentalAddressDetails?: AddressWithMetadata;
+      };
 
       const {
         addressDetails,
@@ -354,7 +392,7 @@ export abstract class BaseActorService<
         guaranteePropertyDetails,
         previousRentalAddressDetails,
         ...restData
-      } = data as any;
+      } = data as DataWithAddresses;
 
       const upsertAddressesResult = await this.upsertMultipleAddresses({
         addressDetails,
@@ -605,7 +643,7 @@ export abstract class BaseActorService<
       if (!actor) {
         throw new ServiceError(
           ErrorCode.NOT_FOUND,
-          'Actor no encontrado con el token proporcionado'
+          'Actor not found with the provided token'
         );
       }
 

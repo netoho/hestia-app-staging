@@ -31,6 +31,24 @@ import { logPolicyActivity } from '@/lib/services/policyService';
 import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import type { LandlordWithRelations } from './types';
 
+/**
+ * Type assertion: Prisma model to domain type.
+ * The Prisma model and domain type have compatible shapes but different type origins.
+ * TODO: Phase 4 - Replace with proper transform function when refactoring actor services.
+ */
+function asLandlordData(model: LandlordWithRelations): LandlordData {
+  return model as unknown as LandlordData;
+}
+
+/**
+ * Type assertion: Domain type to Prisma model.
+ * Used when BaseActorService expects TModel but we have TData.
+ * TODO: Phase 4 - Resolve TModel/TData generic mismatch in BaseActorService.
+ */
+function asLandlordModel(data: LandlordData): LandlordWithRelations {
+  return data as unknown as LandlordWithRelations;
+}
+
 export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
     super('landlord', prisma);
@@ -68,7 +86,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    */
   protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
     const updateData = super.buildUpdateData(data);
-    const landlordData = data as any;
+    const landlordData = data as Partial<LandlordData>;
 
     if (addressId !== undefined) updateData.addressId = addressId || null;
 
@@ -104,19 +122,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       isCompany: false,
       mode: isPartial ? 'partial' : 'strict',
     });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person landlord data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person landlord data') as Result<PersonActorData>;
   }
 
   /**
@@ -127,19 +133,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       isCompany: true,
       mode: isPartial ? 'partial' : 'strict',
     });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company landlord data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company landlord data') as Result<CompanyActorData>;
   }
 
   /**
@@ -427,7 +421,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         return Result.error(landlordResult.error);
       }
 
-      return landlordResult.value as unknown as LandlordData;
+      return asLandlordData(landlordResult.value);
     }, 'getPrimaryLandlord');
   }
 
@@ -475,12 +469,12 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     isPrimary: boolean = false
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
-      const landlordData = data as any;
+      // data already has addressDetails in Partial<LandlordData>
 
       // Handle address if provided
       let addressId: string | undefined;
-      if (landlordData.addressDetails) {
-        const addressResult = await this.upsertAddress(landlordData.addressDetails);
+      if (data.addressDetails) {
+        const addressResult = await this.upsertAddress(data.addressDetails);
         if (addressResult.ok) {
           addressId = addressResult.value;
         }
@@ -544,7 +538,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       });
 
       this.log('info', 'Landlord created', { landlordId: landlord.id, policyId, isPrimary });
-      return landlord as unknown as LandlordData;
+      return asLandlordData(landlord);
     });
   }
 
@@ -595,7 +589,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       const document = await this.prisma.actorDocument.create({
         data: {
           landlordId,
-          category: documentType as any,
+          category: documentType as DocumentCategory,
           fileName,
           filePath: fileUrl,
           fileSize: 0, // Default or pass as arg
@@ -632,7 +626,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       if (!landlord) {
         throw new ServiceError(
           ErrorCode.NOT_FOUND,
-          'Actor no encontrado con el token proporcionado'
+          'Actor not found with the provided token'
         );
       }
 
@@ -808,7 +802,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
           }
         });
 
-        return updatedLandlord as unknown as LandlordData;
+        return asLandlordData(updatedLandlord);
       });
     } catch (error) {
       this.log('error', 'Multi-landlord save error', error);
@@ -845,7 +839,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       );
       // Return the specific landlord that was updated
       if (result.ok) {
-        return Result.ok(result.value as unknown as LandlordWithRelations);
+        return Result.ok(asLandlordModel(result.value));
       }
       return Result.error(result.error);
     } else {
@@ -951,7 +945,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         return Result.error(
           new ServiceError(
             ErrorCode.VALIDATION_ERROR,
-            `Error submitting landlord ${(landlord as any).firstName || (landlord as any).companyName}: ${result.error?.message}`,
+            `Error submitting landlord ${('firstName' in landlord ? landlord.firstName : landlord.companyName)}: ${result.error?.message}`,
             400
           )
         );

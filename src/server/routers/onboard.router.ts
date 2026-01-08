@@ -65,11 +65,11 @@ export const onboardRouter = createTRPCRouter({
     .input(z.object({
       token: z.string(),
       password: z.string()
-        .min(8, 'La contraseña debe tener al menos 8 caracteres')
-        .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-        .regex(/[a-z]/, 'Debe contener al menos una minúscula')
-        .regex(/[0-9]/, 'Debe contener al menos un número'),
-      phone: z.string().min(1, 'El teléfono es requerido'),
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+        .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+        .regex(/[0-9]/, 'Must contain at least one number'),
+      phone: z.string().min(1, 'Phone is required'),
       address: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
@@ -146,7 +146,7 @@ export const onboardRouter = createTRPCRouter({
       if (!ALLOWED_AVATAR_TYPES.includes(contentType)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Tipo de archivo inválido. Solo se permiten JPEG, PNG, HEIC y WebP',
+          message: 'Invalid file type. Only JPEG, PNG, HEIC, and WebP are allowed',
         });
       }
 
@@ -159,7 +159,7 @@ export const onboardRouter = createTRPCRouter({
       if (!user) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Usuario no encontrado',
+          message: 'User not found',
         });
       }
 
@@ -184,7 +184,7 @@ export const onboardRouter = createTRPCRouter({
       if (buffer.length > MAX_AVATAR_SIZE) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'El archivo es muy grande. El tamaño máximo es 20MB',
+          message: 'File is too large. Maximum size is 20MB',
         });
       }
 
@@ -213,7 +213,7 @@ export const onboardRouter = createTRPCRouter({
       if (!uploadedPath) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Error al subir el avatar',
+          message: 'Failed to upload avatar',
         });
       }
 

@@ -52,46 +52,20 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
    * Validate person aval data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    // Add avalType to data for validation
     const dataWithType = { ...data, avalType: 'INDIVIDUAL' as const };
     const mode = isPartial ? 'partial' : 'strict';
     const result = validateAvalData(dataWithType, mode);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person aval data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person aval data') as Result<PersonActorData>;
   }
 
   /**
    * Validate company aval data
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    // Add avalType to data for validation
     const dataWithType = { ...data, avalType: 'COMPANY' as const };
     const mode = isPartial ? 'partial' : 'strict';
     const result = validateAvalData(dataWithType, mode);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company aval data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company aval data') as Result<CompanyActorData>;
   }
 
   /**
@@ -102,19 +76,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     mode: 'strict' | 'partial' | 'admin' = 'strict'
   ): Result<AvalFormData> {
     const result = validateAvalData(data, mode);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid aval data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data);
+    return this.wrapZodValidation(result, 'Invalid aval data');
   }
 
   /**
@@ -140,7 +102,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       });
 
       if (!existingAval) {
-        throw new Error('Aval not found');
+        throw new ServiceError(ErrorCode.NOT_FOUND, 'Aval not found', 404, { avalId: id });
       }
 
       // Prepare data for database using the new utility
@@ -157,7 +119,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           isPartial ? 'partial' : 'strict'
         );
         if (!validationResult.ok) {
-          throw new Error(validationResult.error.message);
+          throw validationResult.error;
         }
       }
 
@@ -173,7 +135,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           existingAval?.addressId
         );
         if (!addressResult.ok) {
-          throw new Error('Failed to save current address');
+          throw new ServiceError(ErrorCode.DATABASE_ERROR, 'Failed to save current address', 500, { error: addressResult.error });
         }
         addressId = addressResult.value;
       }
@@ -185,7 +147,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           existingAval?.employerAddressId
         );
         if (!employerAddressResult.ok) {
-          throw new Error('Failed to save employer address');
+          throw new ServiceError(ErrorCode.DATABASE_ERROR, 'Failed to save employer address', 500, { error: employerAddressResult.error });
         }
         employerAddressId = employerAddressResult.value;
       }
@@ -197,7 +159,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           existingAval?.guaranteePropertyAddressId
         );
         if (!propertyAddressResult.ok) {
-          throw new Error('Failed to save guarantee property address');
+          throw new ServiceError(ErrorCode.DATABASE_ERROR, 'Failed to save guarantee property address', 500, { error: propertyAddressResult.error });
         }
         guaranteePropertyAddressId = propertyAddressResult.value;
       }

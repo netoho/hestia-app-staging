@@ -79,23 +79,8 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
    */
   validatePersonData(data: Partial<PersonActorData>, isPartial: boolean = false): Result<PersonActorData> {
     const mode: ValidationMode = isPartial ? 'partial' : 'strict';
-    const result = validateTenantData(data, {
-      tenantType: 'INDIVIDUAL',
-      mode,
-    });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person tenant data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    const result = validateTenantData(data, { tenantType: 'INDIVIDUAL', mode });
+    return this.wrapZodValidation(result, 'Invalid person tenant data') as Result<PersonActorData>;
   }
 
   /**
@@ -103,23 +88,8 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
    */
   validateCompanyData(data: Partial<CompanyActorData>, isPartial: boolean = false): Result<CompanyActorData> {
     const mode: ValidationMode = isPartial ? 'partial' : 'strict';
-    const result = validateTenantData(data, {
-      tenantType: 'COMPANY',
-      mode,
-    });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company tenant data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    const result = validateTenantData(data, { tenantType: 'COMPANY', mode });
+    return this.wrapZodValidation(result, 'Invalid company tenant data') as Result<CompanyActorData>;
   }
 
   /**
