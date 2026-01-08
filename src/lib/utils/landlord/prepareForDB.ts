@@ -5,29 +5,36 @@
  */
 
 import { LANDLORD_TAB_FIELDS } from '@/lib/constants/landlordTabFields';
-import { emptyStringsToNull } from '@/lib/utils/dataTransform';
+import {
+  emptyStringsToNull,
+  removeUndefined,
+  normalizeBooleans,
+  normalizeNumbers as normalizeNumbersBase,
+} from '@/lib/utils/dataTransform';
+
+// Re-export shared utilities for backwards compatibility
+export { emptyStringsToNull, removeUndefined, normalizeBooleans };
+
+/** Landlord-specific number fields */
+const LANDLORD_NUMBER_FIELDS = [
+  'propertyValue',
+  'monthlyIncome',
+  'additionalIncomeAmount',
+  'parkingSpaces',
+];
 
 /**
- * Remove undefined fields from object
- * Prisma doesn't like undefined values
+ * Convert string numbers to actual numbers for landlord fields
  */
-export function removeUndefined<T extends Record<string, any>>(data: T): T {
-  const result = {} as T;
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      result[key as keyof T] = value;
-    }
-  }
-
-  return result;
+export function normalizeNumbers<T extends Record<string, unknown>>(data: T): T {
+  return normalizeNumbersBase(data, LANDLORD_NUMBER_FIELDS);
 }
 
 /**
  * Process address fields for landlord
  * Handles nested address objects and prepares them for DB relations
  */
-export function processAddressFields(data: any) {
+export function processAddressFields(data: Record<string, unknown>) {
   const result = { ...data };
 
   // Handle addressDetails
@@ -42,49 +49,6 @@ export function processAddressFields(data: any) {
     result.propertyAddressDetails = {
       ...emptyStringsToNull(data.propertyAddressDetails),
     };
-  }
-
-  return result;
-}
-
-/**
- * Convert string booleans to actual booleans
- */
-export function normalizeBooleans<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-
-  for (const [key, value] of Object.entries(result)) {
-    if (value === 'true') {
-      result[key as keyof T] = true as any;
-    } else if (value === 'false') {
-      result[key as keyof T] = false as any;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Convert string numbers to actual numbers
- */
-export function normalizeNumbers<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-
-  // Fields that should be numbers
-  const numberFields = [
-    'propertyValue',
-    'monthlyIncome',
-    'additionalIncomeAmount',
-    'parkingSpaces',
-  ];
-
-  for (const field of numberFields) {
-    if (field in result && typeof result[field as keyof T] === 'string') {
-      const value = parseFloat(result[field as keyof T] as string);
-      if (!isNaN(value)) {
-        result[field as keyof T] = value as any;
-      }
-    }
   }
 
   return result;

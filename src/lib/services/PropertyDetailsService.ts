@@ -8,9 +8,9 @@ import { PrismaClient, PropertyDetails as PrismaPropertyDetails } from "@/prisma
 import { BaseService } from './base/BaseService';
 import { Result, AsyncResult } from './types/result';
 import { ServiceError, ErrorCode } from './types/errors';
-import { PropertyDetails } from '@/lib/types/actor';
+import { PropertyDetails, AddressDetails, AddressWithMetadata, cleanAddressData } from '@/lib/types/actor';
 import { validatePropertyDetails } from '@/lib/schemas/shared/property.schema';
-import { AddressDetails } from '@/lib/types/actor';
+import { PropertyType } from '@/prisma/generated/prisma-client/enums';
 
 export interface PropertyDetailsInput {
   // Property Type and Description
@@ -119,7 +119,7 @@ export class PropertyDetailsService extends BaseService {
           policyId,
           propertyAddressId,
           contractSigningAddressId,
-          propertyType: data.propertyType as any,
+          propertyType: data.propertyType as PropertyType | null,
           propertyDescription: data.propertyDescription,
           parkingSpaces: data.parkingSpaces,
           parkingNumbers: data.parkingNumbers,
@@ -330,18 +330,18 @@ export class PropertyDetailsService extends BaseService {
    * Upsert property address
    */
   private async upsertPropertyAddress(
-    addressData: AddressDetails,
+    addressData: AddressWithMetadata,
     tx: any,
     existingAddressId?: string | null
   ): AsyncResult<string> {
     try {
       // Remove id and timestamp fields from addressData to prevent conflicts
-      const { id, createdAt, updatedAt, ...cleanAddressData } = addressData as any;
+      const cleanData = cleanAddressData(addressData);
 
       const address = await tx.propertyAddress.upsert({
         where: { id: existingAddressId || 'new' },
-        create: cleanAddressData,
-        update: cleanAddressData,
+        create: cleanData,
+        update: cleanData,
       });
 
       return Result.ok(address.id);

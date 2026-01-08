@@ -54,19 +54,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
     const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person joint obligor data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person joint obligor data') as Result<PersonActorData>;
   }
 
   /**
@@ -75,19 +63,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
     const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company joint obligor data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company joint obligor data') as Result<CompanyActorData>;
   }
 
   /**

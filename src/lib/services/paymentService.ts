@@ -1,7 +1,10 @@
+import 'server-only';
+
 import { PaymentStatus } from "@/prisma/generated/prisma-client/enums";
-import { PaymentMethod, PaymentMethodType } from '@/lib/prisma-types';
-import prisma from '@/lib/prisma';
+import { PaymentMethodType } from '@/lib/prisma-types';
 import Stripe from 'stripe';
+import { ServiceError, ErrorCode } from './types/errors';
+import { BaseService } from './base/BaseService';
 
 // Stripe instance will be created when needed
 let stripe: Stripe | null = null;
@@ -28,7 +31,7 @@ export function mapStripePaymentMethodToEnum(stripeMethod?: string): PaymentMeth
 async function getStripe(): Promise<Stripe> {
   if (!stripe) {
     if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY environment variable is required');
+      throw new ServiceError(ErrorCode.STRIPE_API_ERROR, 'STRIPE_SECRET_KEY environment variable is required', 500);
     }
 
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -38,7 +41,7 @@ async function getStripe(): Promise<Stripe> {
   }
 
   if (!stripe) {
-    throw new Error('Failed to initialize Stripe');
+    throw new ServiceError(ErrorCode.STRIPE_API_ERROR, 'Failed to initialize Stripe', 500);
   }
 
   return stripe!;
@@ -62,11 +65,15 @@ export interface CreateCheckoutSessionParams {
   metadata?: Record<string, string>;
 }
 
-export class PaymentService {
+class PaymentService extends BaseService {
+  constructor() {
+    super();
+  }
+
   /**
    * Create a payment record in the database
    */
-  static async createPaymentRecord({
+  async createPaymentRecord({
     policyId,
     amount,
     currency = 'MXN',
@@ -83,7 +90,7 @@ export class PaymentService {
     description?: string;
     metadata?: any;
   }) {
-    return prisma.payment.create({
+    return this.prisma.payment.create({
       data: {
         policyId,
         amount,
@@ -100,7 +107,7 @@ export class PaymentService {
   /**
    * Create a Stripe Payment Intent for direct card payments
    */
-  static async createPaymentIntent({
+  async createPaymentIntent({
     policyId,
     amount,
     currency = 'MXN',
@@ -142,7 +149,7 @@ export class PaymentService {
   /**
    * Create a Stripe Checkout Session for hosted payment page
    */
-  static async createCheckoutSession({
+  async createCheckoutSession({
     policyId,
     amount,
     currency = 'MXN',
@@ -154,7 +161,7 @@ export class PaymentService {
     const stripeInstance = await getStripe();
 
     // Get policy details for line item description
-    const policy = await prisma.policy.findUnique({
+    const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       select: { packageName: true, tenantEmail: true },
     });
@@ -213,7 +220,7 @@ export class PaymentService {
   /**
    * Update payment status based on Stripe webhook events
    */
-  static async updatePaymentStatus(
+  async updatePaymentStatus(
     stripeObjectId: string,
     status: PaymentStatus,
     additionalData?: {
@@ -224,7 +231,7 @@ export class PaymentService {
     }
   ) {
     // Find payment by either intent ID or session ID
-    const payment = await prisma.payment.findFirst({
+    const payment = await this.prisma.payment.findFirst({
       where: {
         OR: [
           { stripeIntentId: stripeObjectId },
@@ -234,7 +241,7 @@ export class PaymentService {
     });
 
     if (!payment) {
-      throw new Error(`Payment not found for Stripe ID: ${stripeObjectId}`);
+      throw new ServiceError(ErrorCode.NOT_FOUND, `Payment not found for Stripe ID: ${stripeObjectId}`, 404, { stripeObjectId });
     }
 
     // Map payment method if provided
@@ -244,7 +251,7 @@ export class PaymentService {
     } : {};
 
     // Update payment record
-    const updatedPayment = await prisma.payment.update({
+    const updatedPayment = await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
         status,
@@ -254,13 +261,13 @@ export class PaymentService {
 
     // Update policy payment status if payment is completed
     if (status === PaymentStatus.COMPLETED) {
-      await prisma.policy.update({
+      await this.prisma.policy.update({
         where: { id: payment.policyId },
         data: { paymentStatus: PaymentStatus.COMPLETED },
       });
 
       // Log activity
-      await prisma.policyActivity.create({
+      await this.prisma.policyActivity.create({
         data: {
           policyId: payment.policyId,
           action: 'payment_completed',
@@ -280,84 +287,38 @@ export class PaymentService {
   /**
    * Get payment status for a policy
    */
-  static async getPaymentsByPolicyId(policyId: string) {
-    return prisma.payment.findMany({
+  async getPaymentsByPolicyId(policyId: string) {
+    return this.prisma.payment.findMany({
       where: { policyId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   /**
-   * Process refund for a payment
-   */
-  static async processRefund(paymentId: string, amount?: number, reason?: string) {
-    const payment = await prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!payment) {
-      throw new Error('Payment not found');
-    }
-
-    if (payment.status !== PaymentStatus.COMPLETED) {
-      throw new Error('Can only refund completed payments');
-    }
-
-    const stripeInstance = await getStripe();
-    const refundAmount = amount || payment.amount;
-
-    // Create refund in Stripe
-    const refund = await stripeInstance.refunds.create({
-      payment_intent: payment.stripeIntentId,
-      amount: Math.round(refundAmount * 100), // Convert to cents
-      reason: reason || 'requested_by_customer',
-    });
-
-    // Update payment record
-    const updatedPayment = await prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        status: PaymentStatus.REFUNDED,
-        refundedAt: new Date(),
-        refundAmount: refundAmount,
-      },
-    });
-
-    // Update policy payment status
-    await prisma.policy.update({
-      where: { id: payment.policyId },
-      data: { paymentStatus: PaymentStatus.REFUNDED },
-    });
-
-    // Log activity
-    await prisma.policyActivity.create({
-      data: {
-        policyId: payment.policyId,
-        action: 'payment_refunded',
-        details: {
-          amount: refundAmount,
-          currency: payment.currency,
-          reason,
-          refundId: refund.id,
-        },
-        performedBy: 'system',
-      },
-    });
-
-    return updatedPayment;
-  }
-
-  /**
    * Verify webhook signature from Stripe
    */
-  static async verifyWebhookSignature(payload: string, signature: string): Promise<any> {
+  async verifyWebhookSignature(payload: string, signature: string): Promise<any> {
     const stripeInstance = await getStripe();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
-      throw new Error('Stripe webhook secret not configured');
+      throw new ServiceError(ErrorCode.STRIPE_API_ERROR, 'Stripe webhook secret not configured', 500);
     }
 
     return stripeInstance.webhooks.constructEvent(payload, signature, webhookSecret);
   }
 }
+
+// Singleton instance
+export const paymentService = new PaymentService();
+
+// Bound legacy function exports for backwards compatibility
+export const createPaymentRecord = paymentService.createPaymentRecord.bind(paymentService);
+export const createPaymentIntent = paymentService.createPaymentIntent.bind(paymentService);
+export const createCheckoutSession = paymentService.createCheckoutSession.bind(paymentService);
+export const updatePaymentStatus = paymentService.updatePaymentStatus.bind(paymentService);
+export const getPaymentsByPolicyId = paymentService.getPaymentsByPolicyId.bind(paymentService);
+export const verifyWebhookSignature = paymentService.verifyWebhookSignature.bind(paymentService);
+
+// Re-export class for type usage
+export { PaymentService };

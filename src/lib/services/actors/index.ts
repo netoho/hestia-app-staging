@@ -13,6 +13,7 @@ import { LandlordService } from './LandlordService';
 import { TenantService } from './TenantService';
 import { AvalService } from './AvalService';
 import { JointObligorService } from './JointObligorService';
+import { ServiceError, ErrorCode } from '../types/errors';
 
 // Service instances (singleton pattern)
 const landlordService = new LandlordService();
@@ -37,6 +38,6 @@ export function getServiceForType(type: string) {
     case 'aval':
       return avalService;
     default:
-      throw new Error(`Invalid actor type: ${type}`);
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, `Invalid actor type: ${type}`, 400, { type });
   }
 }

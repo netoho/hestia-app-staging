@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService, mapStripePaymentMethodToEnum } from '@/lib/services/paymentService';
-import { addPolicyActivity } from '@/lib/services/policyApplicationService';
+import { logPolicyActivity } from '@/lib/services/policyService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,17 +35,18 @@ export async function POST(request: NextRequest) {
 
         if (payment && session.metadata?.policyId) {
           // Log activity
-          await addPolicyActivity(
-            session.metadata.policyId,
-            'payment_completed',
-            'system',
-            {
+          await logPolicyActivity({
+            policyId: session.metadata.policyId,
+            action: 'payment_completed',
+            description: 'Payment completed via Stripe',
+            performedById: 'system',
+            details: {
               amount: session.amount_total / 100, // Convert from cents
               currency: session.currency?.toUpperCase(),
               paymentMethod: session.payment_method_types?.[0] || 'card',
               stripeSessionId: session.id
             }
-          );
+          });
         }
         break;
       }
@@ -64,15 +65,16 @@ export async function POST(request: NextRequest) {
 
         if (session.metadata?.policyId) {
           // Log activity
-          await addPolicyActivity(
-            session.metadata.policyId,
-            'payment_failed',
-            'system',
-            {
+          await logPolicyActivity({
+            policyId: session.metadata.policyId,
+            action: 'payment_failed',
+            description: 'Checkout session expired',
+            performedById: 'system',
+            details: {
               reason: 'Checkout session expired',
               stripeSessionId: session.id
             }
-          );
+          });
         }
         break;
       }

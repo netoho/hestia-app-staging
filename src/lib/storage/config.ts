@@ -45,10 +45,6 @@ export function isUsingS3(): boolean {
   return process.env.STORAGE_PROVIDER === 's3';
 }
 
-export function isUsingFirebase(): boolean {
-  return process.env.STORAGE_PROVIDER === 'firebase';
-}
-
 export function isUsingLocalStorage(): boolean {
   return !process.env.STORAGE_PROVIDER || process.env.STORAGE_PROVIDER === 'local';
 }

@@ -41,7 +41,7 @@ export abstract class BaseService {
   /**
    * Log service operations
    */
-  protected log(level: 'info' | 'warn' | 'error', message: string, data?: any): void {
+  protected log(level: 'info' | 'warn' | 'error', message: string, data?: unknown): void {
     const logData = {
       service: this.constructor.name,
       level,
@@ -72,11 +72,12 @@ export abstract class BaseService {
     try {
       const result = await operation();
       return Result.ok(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log('error', `Database operation failed: ${operationName}`, error);
 
       // Handle specific Prisma errors
-      if (error.code === 'P2002') {
+      const prismaError = error as { code?: string; meta?: { target?: unknown; field_name?: unknown }; message?: string };
+      if (prismaError.code === 'P2002') {
         return Result.error(
           new ServiceError(
             ErrorCode.ALREADY_EXISTS,
@@ -87,7 +88,7 @@ export abstract class BaseService {
         );
       }
 
-      if (error.code === 'P2025') {
+      if (prismaError.code === 'P2025') {
         return Result.error(
           new ServiceError(
             ErrorCode.NOT_FOUND,
@@ -98,18 +99,18 @@ export abstract class BaseService {
         );
       }
 
-      if (error.code === 'P2003') {
+      if (prismaError.code === 'P2003') {
         return Result.error(
           new ServiceError(
             ErrorCode.DATABASE_CONSTRAINT_ERROR,
             'Foreign key constraint failed',
             400,
-            { operation: operationName, field: error.meta?.field_name }
+            { operation: operationName, field: prismaError.meta?.field_name }
           )
         );
       }
 
-      return Result.error(Errors.database(operationName, error));
+      return Result.error(Errors.database(operationName, prismaError));
     }
   }
 
@@ -158,14 +159,15 @@ export abstract class BaseService {
         return await operations(tx as PrismaClient);
       });
       return Result.ok(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log('error', 'Transaction failed', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return Result.error(
         new ServiceError(
           ErrorCode.DATABASE_ERROR,
           'Transaction failed',
           500,
-          { error: error.message }
+          { error: errorMessage }
         )
       );
     }
@@ -174,7 +176,7 @@ export abstract class BaseService {
   /**
    * Cache key generator
    */
-  protected getCacheKey(prefix: string, params: any): string {
+  protected getCacheKey(prefix: string, params: Record<string, unknown>): string {
     const paramStr = JSON.stringify(params, Object.keys(params).sort());
     return `${this.constructor.name}:${prefix}:${paramStr}`;
   }
@@ -190,9 +192,9 @@ export interface IService {
 /**
  * CRUD Service Interface
  */
-export interface ICrudService<T, CreateDTO, UpdateDTO> extends IService {
+export interface ICrudService<T, CreateDTO, UpdateDTO, FilterDTO = Record<string, unknown>> extends IService {
   findById(id: string): AsyncResult<T | null>;
-  findAll(filter?: any): AsyncResult<T[]>;
+  findAll(filter?: FilterDTO): AsyncResult<T[]>;
   create(data: CreateDTO): AsyncResult<T>;
   update(id: string, data: UpdateDTO): AsyncResult<T>;
   delete(id: string): AsyncResult<boolean>;

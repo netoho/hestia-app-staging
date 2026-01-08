@@ -4,47 +4,37 @@
  */
 
 import { AVAL_TAB_FIELDS } from '@/lib/constants/avalTabFields';
+import { VALIDATION_CONFIG } from '@/lib/constants/businessConfig';
 import { AvalType } from "@/prisma/generated/prisma-client/enums";
+import {
+  emptyStringsToNull,
+  removeUndefined,
+  normalizeBooleans,
+  normalizeNumbers as normalizeNumbersBase,
+} from '@/lib/utils/dataTransform';
+
+// Re-export shared utilities for backwards compatibility
+export { emptyStringsToNull, removeUndefined, normalizeBooleans };
+
+/** Aval-specific number fields */
+const AVAL_NUMBER_FIELDS = [
+  'monthlyIncome',
+  'propertyValue', // IMPORTANT: Property value for guarantee
+  'yearsOfRelationship', // For commercial references
+];
 
 /**
- * Transform empty strings to null
- * React forms often produce empty strings, but DB expects null for empty fields
+ * Convert string numbers to actual numbers for aval fields
  */
-export function emptyStringsToNull<T extends Record<string, any>>(data: T): T {
-  const result = {} as T;
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value === '') {
-      result[key as keyof T] = null as any;
-    } else if (value !== undefined) {
-      result[key as keyof T] = value;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Remove undefined fields from object
- * Prisma doesn't like undefined values
- */
-export function removeUndefined<T extends Record<string, any>>(data: T): T {
-  const result = {} as T;
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      result[key as keyof T] = value;
-    }
-  }
-
-  return result;
+export function normalizeNumbers<T extends Record<string, unknown>>(data: T): T {
+  return normalizeNumbersBase(data, AVAL_NUMBER_FIELDS);
 }
 
 /**
  * Process address fields for Aval
  * Handles nested address objects and prepares them for DB relations
  */
-export function processAddressFields(data: any) {
+export function processAddressFields(data: Record<string, unknown>) {
   const result = { ...data };
 
   // Handle addressDetails (personal address)
@@ -66,48 +56,6 @@ export function processAddressFields(data: any) {
     result.guaranteePropertyDetails = {
       ...emptyStringsToNull(data.guaranteePropertyDetails),
     };
-  }
-
-  return result;
-}
-
-/**
- * Convert string booleans to actual booleans
- */
-export function normalizeBooleans<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-
-  for (const [key, value] of Object.entries(result)) {
-    if (value === 'true') {
-      result[key as keyof T] = true as any;
-    } else if (value === 'false') {
-      result[key as keyof T] = false as any;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Convert string numbers to actual numbers
- */
-export function normalizeNumbers<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-
-  // Fields that should be numbers for Aval
-  const numberFields = [
-    'monthlyIncome',
-    'propertyValue', // IMPORTANT: Property value for guarantee
-    'yearsOfRelationship', // For commercial references
-  ];
-
-  for (const field of numberFields) {
-    if (field in result && typeof result[field as keyof T] === 'string') {
-      const value = parseFloat(result[field as keyof T] as string);
-      if (!isNaN(value)) {
-        result[field as keyof T] = value as any;
-      }
-    }
   }
 
   return result;
@@ -221,9 +169,9 @@ export function prepareReferencesForDB(
     return undefined;
   }
 
-  // CRITICAL: Aval requires exactly 3 references
-  if (references.length !== 3) {
-    console.warn(`Aval requires exactly 3 references, but got ${references.length}`);
+  // CRITICAL: Aval requires exactly N references (configurable)
+  if (references.length !== VALIDATION_CONFIG.AVAL_REQUIRED_REFERENCES) {
+    console.warn(`Aval requires exactly ${VALIDATION_CONFIG.AVAL_REQUIRED_REFERENCES} references, but got ${references.length}`);
     // Don't throw here, let validation handle it
   }
 
@@ -350,12 +298,12 @@ export function isAvalComplete(data: any): boolean {
     return false;
   }
 
-  // Check for exactly 3 references
+  // Check for required number of references
   const references = data.avalType === 'COMPANY'
     ? data.commercialReferences
     : data.personalReferences;
 
-  if (!references || references.length !== 3) {
+  if (!references || references.length !== VALIDATION_CONFIG.AVAL_REQUIRED_REFERENCES) {
     return false;
   }
 
