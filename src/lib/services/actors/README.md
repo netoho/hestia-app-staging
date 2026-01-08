@@ -116,11 +116,10 @@ protected abstract validateCompanyData(
 
 ```typescript
 async create(data: Partial<T>): AsyncResult<T>;
-async update(id: string, data: Partial<T>): AsyncResult<T>;
+async update(id: string, data: Partial<T>, options?: UpdateOptions): AsyncResult<T>;
 async findById(id: string): AsyncResult<T | null>;
-async findByToken(token: string): AsyncResult<T | null>;
+async getByToken(token: string): AsyncResult<T | null>;
 async findByPolicyId(policyId: string): AsyncResult<T[]>;
-async validateAndSave(data: ActorData, skipValidation?: boolean): AsyncResult<T>;
 async delete(id: string): AsyncResult<void>;
 ```
 
@@ -176,23 +175,19 @@ export class LandlordService extends BaseActorService<Landlord> {
 ### Usage Example
 
 ```typescript
-// File: src/app/api/actors/landlord/[identifier]/route.ts:25-40
 import { LandlordService } from '@/lib/services/actors';
 
 const landlordService = new LandlordService();
 
-const result = await landlordService.validateAndSave({
-  id: landlordId,
+// Update landlord data
+const result = await landlordService.update(landlordId, {
   firstName: 'Juan',
   middleName: 'Carlos',
   paternalLastName: 'García',
   maternalLastName: 'López',
   email: 'juan@example.com',
   phone: '5551234567',
-  bankName: 'BBVA',
-  accountNumber: '0123456789',
-  informationComplete: true
-}, false); // Don't skip validation
+}, { isPartial: false });
 
 if (!result.ok) {
   return NextResponse.json(
@@ -240,13 +235,12 @@ export class TenantService extends BaseActorService<Tenant> {
 ### Usage Example
 
 ```typescript
-// File: src/app/api/actors/tenant/[identifier]/route.ts:30-55
 import { TenantService } from '@/lib/services/actors';
 
 const tenantService = new TenantService();
 
-const result = await tenantService.validateAndSave({
-  id: tenantId,
+// Update tenant data
+const result = await tenantService.update(tenantId, {
   tenantType: TenantType.INDIVIDUAL,
   firstName: 'María',
   paternalLastName: 'González',
@@ -257,13 +251,7 @@ const result = await tenantService.validateAndSave({
   occupation: 'Software Engineer',
   employerName: 'Tech Corp',
   monthlyIncome: 50000,
-  references: [
-    { name: 'Pedro López', phone: '5551111111', relationship: 'Friend' },
-    { name: 'Ana Martínez', phone: '5552222222', relationship: 'Colleague' },
-    { name: 'Carlos Ruiz', phone: '5553333333', relationship: 'Former Landlord' }
-  ],
-  informationComplete: true
-});
+}, { isPartial: false });
 
 if (!result.ok) {
   return NextResponse.json(
@@ -309,13 +297,12 @@ export class AvalService extends BaseActorService<Aval> {
 ### Usage Example
 
 ```typescript
-// File: src/app/api/actors/aval/[identifier]/route.ts:35-60
 import { AvalService } from '@/lib/services/actors';
 
 const avalService = new AvalService();
 
-const result = await avalService.validateAndSave({
-  id: avalId,
+// Update aval data
+const result = await avalService.update(avalId, {
   firstName: 'Roberto',
   paternalLastName: 'Sánchez',
   maternalLastName: 'Torres',
@@ -328,9 +315,7 @@ const result = await avalService.validateAndSave({
   propertyValue: 3000000,
   propertyDeedNumber: 'DEED-12345',
   propertyRegistry: 'REG-67890',
-  references: [/* 3 references */],
-  informationComplete: true
-});
+}, { isPartial: false });
 ```
 
 ---
@@ -371,13 +356,12 @@ export class JointObligorService extends BaseActorService<JointObligor> {
 ### Usage Example
 
 ```typescript
-// File: src/app/api/actors/joint-obligor/[identifier]/route.ts:40-65
 import { JointObligorService } from '@/lib/services/actors';
 
 const obligorService = new JointObligorService();
 
-const result = await obligorService.validateAndSave({
-  id: obligorId,
+// Update joint obligor data
+const result = await obligorService.update(obligorId, {
   firstName: 'Luis',
   paternalLastName: 'Ramírez',
   maternalLastName: 'Flores',
@@ -386,11 +370,9 @@ const result = await obligorService.validateAndSave({
   employmentStatus: 'EMPLOYED',
   occupation: 'Manager',
   employerName: 'Corp Inc',
-  monthlyIncome: 60000, // Must be >= 3x rent typically
+  monthlyIncome: 60000,
   incomeSource: 'Salary',
-  references: [/* 3 references */],
-  informationComplete: true
-});
+}, { isPartial: false });
 ```
 
 ---
@@ -400,7 +382,6 @@ const result = await obligorService.validateAndSave({
 ### Basic Usage
 
 ```typescript
-// File: src/app/api/actors/[type]/[identifier]/route.ts:45-50
 import { getServiceForType } from '@/lib/services/actors';
 
 export async function PUT(
@@ -413,10 +394,9 @@ export async function PUT(
   // Get appropriate service based on type
   const service = getServiceForType(type);
 
-  const result = await service.validateAndSave(
-    { ...body, id: identifier },
-    false
-  );
+  const result = await service.update(identifier, body, {
+    isPartial: false,
+  });
 
   if (!result.ok) {
     return NextResponse.json(
@@ -438,7 +418,7 @@ import type { ActorType } from '@/types/policy';
 function handleActor(type: ActorType) {
   const service = getServiceForType(type);
   // service is BaseActorService<any>
-  // All methods available: findById, validateAndSave, etc.
+  // All methods available: findById, update, getByToken, etc.
 }
 ```
 
@@ -455,32 +435,23 @@ const result = await landlordService.findPrimaryLandlord(policyId);
 
 ## Common Patterns
 
-### Pattern 1: Save Draft (Partial Validation)
+### Pattern 1: Save Draft (Partial Save)
 
 ```typescript
 // User saving progress - allow incomplete data
-const result = await service.validateAndSave(
-  {
-    id: actorId,
-    firstName: 'Juan', // Only filled this field
-    informationComplete: false
-  },
-  false // Don't skip validation, but use partial schema
-);
+const result = await service.update(actorId, {
+  firstName: 'Juan', // Only filled this field
+}, { isPartial: true });
 ```
 
 ### Pattern 2: Final Submission (Full Validation)
 
 ```typescript
 // User submitting complete information
-const result = await service.validateAndSave(
-  {
-    id: actorId,
-    ...allRequiredFields,
-    informationComplete: true // Triggers full validation
-  },
-  false
-);
+const result = await service.update(actorId, {
+  ...allRequiredFields,
+  informationComplete: true,
+}, { isPartial: false });
 ```
 
 ### Pattern 3: Admin Override (Skip Validation)
@@ -489,10 +460,10 @@ const result = await service.validateAndSave(
 // Admin can bypass validation
 const isAdmin = user.role === UserRole.ADMIN;
 
-const result = await service.validateAndSave(
-  data,
-  isAdmin && skipValidation // Only admins can skip
-);
+const result = await service.update(actorId, data, {
+  skipValidation: isAdmin && userRequestedSkip,
+  updatedById: userId,
+});
 ```
 
 ### Pattern 4: Find with Policy Context
@@ -654,7 +625,7 @@ import { prismaMock } from '@/tests/mocks/prisma';
 describe('LandlordService', () => {
   const service = new LandlordService({ prisma: prismaMock });
 
-  it('should validate and save landlord', async () => {
+  it('should update landlord', async () => {
     const mockLandlord = {
       id: '123',
       firstName: 'Juan',
@@ -666,7 +637,7 @@ describe('LandlordService', () => {
 
     prismaMock.landlord.update.mockResolvedValue(mockLandlord);
 
-    const result = await service.validateAndSave(mockLandlord);
+    const result = await service.update('123', mockLandlord);
 
     expect(result.ok).toBe(true);
     expect(result.value).toEqual(mockLandlord);
@@ -674,12 +645,11 @@ describe('LandlordService', () => {
 
   it('should reject invalid email', async () => {
     const invalidData = {
-      id: '123',
       firstName: 'Juan',
       email: 'not-an-email' // Invalid!
     };
 
-    const result = await service.validateAndSave(invalidData);
+    const result = await service.update('123', invalidData);
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe(ErrorCode.VALIDATION_ERROR);
@@ -705,12 +675,12 @@ describe('LandlordService', () => {
 
 - **Allow partial saves** for draft state
   ```typescript
-  await service.validateAndSave({ ...data, informationComplete: false });
+  await service.update(id, data, { isPartial: true });
   ```
 
 - **Set informationComplete = true** only when all required fields filled
   ```typescript
-  await service.validateAndSave({ ...completeData, informationComplete: true });
+  await service.update(id, { ...completeData, informationComplete: true });
   ```
 
 - **Check primary landlord** when multiple landlords
@@ -723,10 +693,10 @@ describe('LandlordService', () => {
 - **Don't skip validation** except for admin overrides
   ```typescript
   // ❌ WRONG
-  await service.validateAndSave(data, true); // Always skips!
+  await service.update(id, data, { skipValidation: true }); // Always skips!
 
   // ✅ RIGHT
-  await service.validateAndSave(data, isAdmin && userRequestedSkip);
+  await service.update(id, data, { skipValidation: isAdmin && userRequestedSkip });
   ```
 
 - **Don't access prisma directly** - use service methods
@@ -735,7 +705,7 @@ describe('LandlordService', () => {
   await prisma.landlord.update({ where: { id }, data });
 
   // ✅ RIGHT
-  await landlordService.validateAndSave({ id, ...data });
+  await landlordService.update(id, data);
   ```
 
 - **Don't forget Result error handling**
