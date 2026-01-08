@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PageTitle } from '@/components/shared/PageTitle';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,25 +8,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, UserPlus, Pencil, Trash2 } from 'lucide-react';
-import type { User, UserRole } from '@/lib/types';
+import type { User } from '@/lib/types';
 import { t } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserDialog } from '@/components/dialogs/UserDialog';
 import { DeleteUserDialog } from '@/components/dialogs/DeleteUserDialog';
 import { TableFilters, FilterOption } from '@/components/shared/TableFilters';
 import { TablePagination } from '@/components/shared/TablePagination';
-import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useTableState } from '@/hooks/use-table-state';
+import { trpc } from '@/lib/trpc/client';
 
 const roleVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  admin: 'destructive',
-  staff: 'secondary',
-  owner: 'default',
-  renter: 'outline',
-  broker: 'default',
-  tenant: 'outline',
-  landlord: 'secondary',
+    admin: 'destructive',
+    staff: 'secondary',
+    owner: 'default',
+    renter: 'outline',
+    broker: 'default',
+    tenant: 'outline',
+    landlord: 'secondary',
 };
 
 function UsersSkeleton() {
@@ -57,62 +57,37 @@ function UsersSkeleton() {
 }
 
 export default function UsersPage() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [userDialogOpen, setUserDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    
-    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
     const { toast } = useToast();
+    const utils = trpc.useUtils();
 
     // Table state management
     const tableState = useTableState({
         initialState: { limit: 10 },
-        onStateChange: () => {
-            // This will be handled by the effect below
-        }
     });
 
     // Role filter options
     const roleOptions: FilterOption[] = [
-        { value: 'staff', label: 'Staff' },
-        { value: 'broker', label: 'Broker' },
-        { value: 'tenant', label: 'Tenant' },
-        { value: 'landlord', label: 'Landlord' },
+        { value: 'STAFF', label: 'Staff' },
+        { value: 'BROKER', label: 'Broker' },
+        { value: 'ADMIN', label: 'Admin' },
     ];
 
-    const fetchUsers = async (queryString?: string) => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const url = queryString 
-                ? `/api/staff/users?${queryString}` 
-                : '/api/staff/users';
-            
-            const response = await fetch(url);
+    // tRPC query
+    const { data, isLoading, error } = trpc.staff.list.useQuery({
+        page: tableState.state.page,
+        limit: tableState.state.limit,
+        search: tableState.state.search || undefined,
+        role: (tableState.state.filters.role && tableState.state.filters.role !== 'all')
+            ? tableState.state.filters.role as 'ADMIN' | 'STAFF' | 'BROKER'
+            : undefined,
+    });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to fetch users');
-            }
-            const data = await response.json();
-            setUsers(data.users || []);
-            setPagination(data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchUsers(tableState.queryString);
-        }
-    }, [isAuthenticated, tableState.queryString]);
+    const users = data?.users || [];
+    const pagination = data?.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
 
     const handleCreateUser = () => {
         setSelectedUser(null);
@@ -130,7 +105,7 @@ export default function UsersPage() {
     };
 
     const handleSuccess = () => {
-        fetchUsers(tableState.queryString);
+        utils.staff.list.invalidate();
         toast({
             title: 'Success',
             description: 'User operation completed successfully.',
@@ -140,7 +115,7 @@ export default function UsersPage() {
     return (
         <div>
             <PageTitle title={t.pages.users.title} subtitle={t.pages.users.subtitle} />
-            
+
             <TableFilters
                 searchPlaceholder="Search by name or email..."
                 searchValue={tableState.state.search}
@@ -157,7 +132,7 @@ export default function UsersPage() {
                 ]}
                 onClear={tableState.clearFilters}
             />
-            
+
             <Card className="shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -174,12 +149,12 @@ export default function UsersPage() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    {(isLoading || isAuthLoading) ? (
+                    {isLoading ? (
                         <UsersSkeleton />
                     ) : error ? (
                         <div className="text-center py-10 text-destructive">
                             <p>{t.pages.users.errorLoading}</p>
-                            <p className="text-sm">{error}</p>
+                            <p className="text-sm">{error.message}</p>
                         </div>
                     ) : users.length === 0 ? (
                         <div className="text-center py-10 text-muted-foreground">
@@ -202,11 +177,11 @@ export default function UsersPage() {
                                         <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant={roleVariantMap[user.role] || 'default'} className="capitalize">
-                                                {user.role}
+                                            <Badge variant={roleVariantMap[user.role.toLowerCase()] || 'default'} className="capitalize">
+                                                {user.role.toLowerCase()}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{new Date(user.createdAt!).toLocaleDateString('es-MX')}</TableCell>
+                                        <TableCell>{new Date(user.createdAt).toLocaleDateString('es-MX')}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -216,13 +191,13 @@ export default function UsersPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                                    <DropdownMenuItem onClick={() => handleEditUser(user as User)}>
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         {t.pages.users.actions.edit}
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem 
+                                                    <DropdownMenuItem
                                                         className="text-destructive"
-                                                        onClick={() => handleDeleteUser(user)}
+                                                        onClick={() => handleDeleteUser(user as User)}
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         {t.pages.users.actions.delete}
@@ -235,8 +210,8 @@ export default function UsersPage() {
                             </TableBody>
                         </Table>
                     )}
-                    
-                    {!(isLoading || isAuthLoading) && !error && users.length > 0 && (
+
+                    {!isLoading && !error && users.length > 0 && (
                         <TablePagination
                             pagination={pagination}
                             onPageChange={tableState.setPage}

@@ -7,8 +7,8 @@ const es = {
     // Global & Reusable
     siteName: "Hestia",
     companyLegalName: "Hestia Protección Legal y Patrimonial S.A.S de C.V.",
-    contactEmail: "info@hestiaplp.com.mx",
-    contactPhone: "+52 55 1234 5678",
+    contactEmail: "contacto@hestiaplp.com.mx",
+    contactPhone: "55 1277 0883 | 55 2111 7610",
 
     actions: {
         start: "Comenzar",
@@ -63,7 +63,7 @@ const es = {
     layout: {
         root: {
             metaTitle: "Hestia - Protecciones de Arrendamiento",
-            metaDescription: "Asegura tus contratos de arrendamiento con Hestia. Pólizas de garantía integrales para propietarios e inquilinos.",
+            metaDescription: "Asegura tus contratos de arrendamiento con Hestia. Protecciones de garantía integrales para propietarios e inquilinos.",
             metaKeywords: ['protección de arrendamiento', 'garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
         },
         publicHeader: {
@@ -81,8 +81,8 @@ const es = {
             closeMenu: "Cerrar menú",
         },
         publicFooter: {
-            description: "Hestia ofrece protecciones de arrendamiento integrales, proporcionando tranquilidad tanto a propietarios como a inquilinos.",
-            address: "Calle Segura 123, Ciudad de México, MX",
+            description: "Protecciones de arrendamiento integrales, tranquilidad tanto a propietarios como a inquilinos.",
+            address: "Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México",
             quickLinks: "Enlaces Rápidos",
             legal: "Legal",
             sitemap: "Mapa del Sitio",
@@ -109,33 +109,36 @@ const es = {
         dashboardSidebar: {
             ownerLinks: [
                 { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, matchExact: true },
-                { href: '/dashboard/policies', label: 'Mis Pólizas', icon: FileText },
+                { href: '/dashboard/policies', label: 'Mis Protecciones', icon: FileText },
                 { href: '/dashboard/profile', label: 'Perfil', icon: UserCircle },
-                { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
+                // { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
             ] as NavItem[],
             renterLinks: [
                 { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, matchExact: true },
-                { href: '/dashboard/my-policy', label: 'Mi Póliza', icon: FileText },
+                { href: '/dashboard/my-policy', label: 'Mi Protección', icon: FileText },
                 { href: '/dashboard/profile', label: 'Perfil', icon: UserCircle },
-                { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
+                // { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
             ] as NavItem[],
           brokerLinks: [
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
-            { href: '/dashboard/policies', label: 'Gestionar Pólizas', icon: FileText },
+            { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
+            { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
           ] as NavItem[],
           staffLinks: [
-                { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
-                { href: '/dashboard/policies', label: 'Gestionar Pólizas', icon: FileText },
-                { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
-            ] as NavItem[],
+            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
+            { href: '/dashboard/users', label: 'Gestionar Usuarios', icon: Users },
+            { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
+            { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
+            { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
+          ] as NavItem[],
           adminLinks: [
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
             { href: '/dashboard/users', label: 'Gestionar Usuarios', icon: Users },
-            { href: '/dashboard/policies', label: 'Gestionar Pólizas', icon: FileText },
+            { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
             { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
             { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
             // { href: '/dashboard/system-settings', label: 'Config. del Sistema', icon: Settings },
-            { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
+            // { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
           ] as NavItem[],
           userMenu: {
                 profile: "Perfil",
@@ -170,10 +173,10 @@ const es = {
             loadingApplication: "Cargando tu solicitud...",
             accessError: "Error de Acceso",
             accessErrorDescription: "Si continúas experimentando problemas, contacta a tu agente para asistencia.",
-            policyNotFound: "Póliza No Encontrada",
-            policyNotFoundDescription: "La solicitud de póliza solicitada no se pudo encontrar.",
+            policyNotFound: "Protección No Encontrada",
+            policyNotFoundDescription: "La solicitud de protección solicitada no se pudo encontrar.",
             invalidLink: "Enlace inválido o expirado. Contacta a tu agente para una nueva invitación.",
-            failedToLoad: "Error al cargar la solicitud de póliza",
+            failedToLoad: "Error al cargar la solicitud de protección",
             unexpectedError: "Ocurrió un error inesperado",
             failedToSave: "Error al guardar el progreso",
             failedToSubmit: "Error al enviar la solicitud"
@@ -187,7 +190,7 @@ const es = {
             denied: "Tu solicitud ha sido revisada. Contactanos para más información.",
             unknown: "Estado de solicitud desconocido.",
             submittedTitle: "¡Solicitud Enviada Exitosamente!",
-            submittedDescription: "Tu solicitud de póliza ha sido enviada y está siendo procesada por nuestro equipo.",
+            submittedDescription: "Tu solicitud de protección ha sido enviada y está siendo procesada por nuestro equipo.",
             notifications: [
                 "📧 Te notificaremos por email sobre el estado de tu solicitud",
                 "⏱️ El tiempo de procesamiento es típicamente de 1-2 días hábiles",
@@ -242,9 +245,9 @@ const es = {
         },
         payment: {
             title: "Pago Requerido",
-            description: "Completa el pago para continuar con tu solicitud de póliza.",
+            description: "Completa el pago para continuar con tu solicitud de protección.",
             package: "Paquete de Garantía",
-            packageDescription: "Paquete seleccionado para esta póliza",
+            packageDescription: "Paquete seleccionado para esta protección",
             oneTimePayment: "Pago único",
             currentStatus: "Estado actual",
             paymentHistory: "Historial de Pagos",
@@ -267,14 +270,14 @@ const es = {
                 paymentCompleted: "¡Pago completado exitosamente! Puedes continuar con la revisión final de tu solicitud.",
                 paymentFailed: "El pago anterior falló. Por favor intenta nuevamente o contacta soporte si el problema persiste.",
                 paymentPending: "Tu pago está siendo procesado. Por favor espera un momento.",
-                noPriceSet: "No se ha establecido un precio para esta póliza. Contacta a tu agente.",
+                noPriceSet: "No se ha establecido un precio para esta protección. Contacta a tu agente.",
                 paymentCreationFailed: "Error al crear el pago. Por favor intenta nuevamente.",
                 paymentCreated: "Pago Creado",
                 paymentCreatedDescription: "Serás redirigido a la página de pago segura."
             }
         },
         header: {
-            title: "Solicitud de Póliza Hestia",
+            title: "Solicitud de Protección Hestia",
             description: "Completa tu solicitud de arrendamiento a continuación",
             applicationProgress: "Progreso de Solicitud"
         },
@@ -373,7 +376,7 @@ const es = {
             callUsDesc: "Habla directamente con un miembro de nuestro equipo en horario de oficina.",
             visitUs: "Visítanos",
             visitUsDesc: "Nuestra oficina se encuentra en:",
-            address: "Calle Segura 123, Oficina 4B, Ciudad de México, MX 01234",
+            address: "Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México",
             sendMessage: "Envíanos un Mensaje",
             form: {
                 name: "Nombre Completo",
@@ -408,19 +411,19 @@ const es = {
             welcomeAdmin: "¡Bienvenido, Administrador!",
             loading: "Cargando contenido del panel...",
             ownerCards: {
-                activePolicies: "Pólizas Activas",
+                activePolicies: "Protecciones Activas",
                 managedBy: "Gestionadas por Hestia",
-                viewPolicies: "Ver Pólizas",
+                viewPolicies: "Ver Protecciones",
                 totalRentInsured: "Renta Total Asegurada",
-                acrossAll: "En todas las pólizas activas",
+                acrossAll: "En todas las protecciones activas",
                 viewPayments: "Ver Pagos",
                 newRenterRequest: "Nueva Solicitud de Inquilino",
-                newRenterRequestDesc: "Inicia una nueva póliza para un inquilino potencial.",
-                createNewPolicy: "Crear Nueva Póliza",
+                newRenterRequestDesc: "Inicia una nueva protección para un inquilino potencial.",
+                createNewPolicy: "Crear Nueva Protección",
             },
             renterCards: {
-                myActivePolicy: "Mi Póliza Activa",
-                policyNumber: "Póliza #HG-12345",
+                myActivePolicy: "Mi Protección Activa",
+                policyNumber: "Protección #HG-12345",
                 statusActive: "Estado: Activo",
                 viewDetails: "Ver Detalles",
                 myProfile: "Mi Perfil",
@@ -431,24 +434,24 @@ const es = {
                 totalUsers: "Usuarios Totales",
                 thisMonth: "+50 este mes",
                 manageUsers: "Gestionar Usuarios",
-                pendingPolicies: "Pólizas Pendientes",
+                pendingPolicies: "Protecciones Pendientes",
                 requireReview: "Requieren revisión",
-                reviewPolicies: "Revisar Pólizas",
+                reviewPolicies: "Revisar Protecciones",
                 systemPackages: "Paquetes del Sistema",
                 systemPackagesDesc: "Ver y editar los paquetes de servicio actuales.",
                 managePackages: "Gestionar Paquetes",
             }
         },
         policies: {
-            title: "Solicitudes de Póliza",
-            subtitle: "Gestiona las solicitudes de póliza de los inquilinos y sigue su progreso.",
-            errorFetching: "Error al obtener las pólizas",
-            errorLoading: "No se pudieron cargar las pólizas",
+            title: "Solicitudes de Protección",
+            subtitle: "Gestiona las solicitudes de protección de los inquilinos y sigue su progreso.",
+            errorFetching: "Error al obtener las protecciones",
+            errorLoading: "No se pudieron cargar las protecciones",
             progressComplete: "Completo",
             progressStep: (step: number) => `Paso ${step}/4`,
             viewProgress: "Ver Progreso",
             sendInvitations: "Enviar Invitaciones",
-            approvePolicy: "Aprobar Póliza",
+            approvePolicy: "Aprobar Protección",
             actorVerification: {
                 title: "Verificación de Actores",
                 subtitle: "Revisa y aprueba la información de cada actor",
@@ -473,9 +476,9 @@ const es = {
                 pendingActorApprovals: "Algunos actores aún requieren aprobación",
             },
             initiateDialog: {
-                trigger: "Iniciar Póliza",
-                title: "Iniciar Nueva Solicitud de Póliza",
-                description: "Crea una nueva solicitud de póliza y envía un correo de invitación al inquilino.",
+                trigger: "Iniciar Protección",
+                title: "Iniciar Nueva Solicitud de Protección",
+                description: "Crea una nueva solicitud de protección y envía un correo de invitación al inquilino.",
                 form: {
                     tenantEmailLabel: "Email del Inquilino",
                     tenantEmailPlaceholder: "inquilino@ejemplo.com",
@@ -492,7 +495,7 @@ const es = {
                     packageLabel: "Paquete",
                     loadingPackages: "Cargando paquetes...",
                     selectPackagePlaceholder: "Selecciona un paquete",
-                    packageDescription: "Selecciona el paquete de garantía para esta póliza",
+                    packageDescription: "Selecciona el paquete de garantía para esta protección",
                     priceLabel: "Precio (MXN)",
                     pricePlaceholder: "0.00",
                     priceDescription: "Puedes ajustar el precio si fue negociado",
@@ -500,25 +503,25 @@ const es = {
                     creatingButton: "Creando...",
                 },
                 success: {
-                    title: "Póliza Iniciada Exitosamente",
+                    title: "Protección Iniciada Exitosamente",
                     descriptionSent: (email: string) => `Invitación enviada a ${email}`,
-                    descriptionFailed: "Póliza creada pero el envío de correo falló. Por favor, reenvía manualmente.",
+                    descriptionFailed: "Protección creada pero el envío de correo falló. Por favor, reenvía manualmente.",
                 },
                 errors: {
-                    failedToInitiate: "No se pudo iniciar la póliza",
+                    failedToInitiate: "No se pudo iniciar la protección",
                     failedToLoadPackages: "Error al cargar los paquetes",
                 }
             },
             table: {
-                title: "Solicitudes de Póliza",
-                description: "Gestiona y da seguimiento a las solicitudes de póliza de los inquilinos",
+                title: "Solicitudes de Protección",
+                description: "Gestiona y da seguimiento a las solicitudes de protección de los inquilinos",
                 searchPlaceholder: "Buscar por email del inquilino...",
                 filterPlaceholder: "Filtrar por estado",
                 paymentFilterPlaceholder: "Filtrar por pago",
                 allStatuses: "Todos los Estados",
                 allPaymentStatuses: "Todos los Pagos",
-                loading: "Cargando pólizas...",
-                noPoliciesFound: "No se encontraron pólizas",
+                loading: "Cargando protecciones...",
+                noPoliciesFound: "No se encontraron protecciones",
                 paymentStatus: {
                     pending: "Pendiente",
                     processing: "Procesando",
@@ -540,19 +543,19 @@ const es = {
                     resend: "Reenviar Invitación",
                 },
                 pagination: {
-                    showing: (start: number, end: number, total: number) => `Mostrando ${start} a ${end} de ${total} pólizas`,
+                    showing: (start: number, end: number, total: number) => `Mostrando ${start} a ${end} de ${total} protecciones`,
                     previous: "Anterior",
                     next: "Siguiente",
                 }
             },
             details: {
-                title: "Detalles de Póliza",
-                subtitle: "Gestiona y revisa los detalles de la solicitud de póliza",
-                backToPolicies: "Volver a Pólizas",
-                loading: "Cargando detalles de la póliza...",
-                errorLoading: "Error Cargando Póliza",
-                policyNotFound: "Póliza No Encontrada",
-                policyNotFoundDesc: "La póliza solicitada no se pudo encontrar.",
+                title: "Detalles de Protección",
+                subtitle: "Gestiona y revisa los detalles de la solicitud de protección",
+                backToPolicies: "Volver a Protecciones",
+                loading: "Cargando detalles de la protección...",
+                errorLoading: "Error Cargando Protección",
+                policyNotFound: "Protección No Encontrada",
+                policyNotFoundDesc: "La protección solicitada no se pudo encontrar.",
                 quickInfo: {
                     tenantEmail: "Email del Inquilino",
                     created: "Creada",
@@ -561,7 +564,7 @@ const es = {
                 },
                 reviewActions: {
                     title: "Acciones de Revisión",
-                    description: "Cambia el estado de esta solicitud de póliza",
+                    description: "Cambia el estado de esta solicitud de protección",
                     approve: "Aprobar",
                     deny: "Denegar",
                     markUnderReview: "Marcar En Revisión"
@@ -609,7 +612,7 @@ const es = {
                 },
                 activity: {
                     title: "Línea de Tiempo de Actividad",
-                    description: "Historial completo de acciones tomadas en esta solicitud de póliza",
+                    description: "Historial completo de acciones tomadas en esta solicitud de protección",
                     performedBy: {
                         tenant: "Realizado por inquilino",
                         staff: "Realizado por staff",
@@ -634,7 +637,7 @@ const es = {
                 },
                 toast: {
                     statusUpdated: "Estado Actualizado",
-                    statusChangedTo: (status: string) => `Estado de póliza cambiado a ${status}`,
+                    statusChangedTo: (status: string) => `Estado de protección cambiado a ${status}`,
                     error: "Error",
                     failedToUpdate: "Error al actualizar el estado",
                     downloadStarted: "Descarga Iniciada",
@@ -646,7 +649,7 @@ const es = {
                     failedToGenerate: "Error al generar enlace de descarga",
                     failedToDownload: "Error al descargar archivo",
                     pdfGenerated: "Documento Generado",
-                    pdfGeneratedDesc: "El documento de póliza se ha descargado exitosamente. Puede imprimirlo o convertirlo a PDF."
+                    pdfGeneratedDesc: "El documento de protección se ha descargado exitosamente. Puede imprimirlo o convertirlo a PDF."
                 }
             },
         },
@@ -666,7 +669,7 @@ const es = {
             actions: {
                 label: "Acciones",
                 edit: "Editar Usuario",
-                delete: "Eliminar Usuario",
+                delete: "Desactivar Usuario",
             },
             noUsersFound: "No se encontraron usuarios.",
             errorLoading: "Error al cargar los usuarios.",
@@ -678,8 +681,8 @@ const es = {
             } as Record<UserRole, string>,
         },
         newPolicy: {
-            title: "Crear Nueva Póliza",
-            subtitle: "Sigue los pasos para registrar una nueva póliza de garantía.",
+            title: "Crear Nueva Protección",
+            subtitle: "Sigue los pasos para registrar una nueva protección de arrendamiento.",
             steps: {
                 profile: "Perfil",
                 employment: "Situación Laboral",
@@ -855,7 +858,7 @@ const es = {
             notifications: "Configuración de Notificaciones",
             notificationsDesc: "Controla cómo recibes notificaciones de Hestia.",
             emailNotifications: "Notificaciones por Correo",
-            emailNotificationsDesc: "Recibe actualizaciones sobre tus pólizas, pagos y anuncios importantes por correo.",
+            emailNotificationsDesc: "Recibe actualizaciones sobre tus protecciones, pagos y anuncios importantes por correo.",
             smsAlerts: "Alertas por SMS",
             smsAlertsDesc: "Recibe alertas críticas y recordatorios por mensaje de texto (pueden aplicarse tarifas del operador).",
             promoUpdates: "Actualizaciones Promocionales",
@@ -882,11 +885,11 @@ const es = {
             stillHaveQuestions: "¿Todavía tienes preguntas?",
             stillHaveQuestionsDesc: "Si no encuentras la respuesta que buscas, no dudes en contactar a nuestro equipo de soporte.",
             faqs: [
-              { question: "¿Qué es Hestia?", answer: "Hestia ofrece servicios de pólizas de garantía para arrendamientos de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios." },
+              { question: "¿Qué es Hestia?", answer: "Hestia ofrece servicios de protecciones de arrendamiento para arrendamientos de propiedades, proporcionando seguridad y tranquilidad a propietarios, inquilinos y asesores inmobiliarios." },
               { question: "¿Cómo me registro en un paquete?", answer: "Puedes registrarte visitando nuestra sección de 'Paquetes' en el sitio web, eligiendo el que mejor se adapte a tus necesidades y haciendo clic en el botón 'Comenzar' o similar. Esto te guiará a través del proceso de registro." },
-              { question: "¿Qué información se necesita para una póliza?", answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales." },
+              { question: "¿Qué información se necesita para una protección?", answer: "Para los inquilinos, generalmente se requiere identificación personal, comprobante de ingresos e información crediticia. Los propietarios deben proporcionar detalles sobre la propiedad. Los requisitos específicos pueden variar según el paquete y las regulaciones locales." },
               { question: "¿Puedo cambiar mi paquete a uno superior?", answer: "Sí, generalmente puedes mejorar tu paquete. Por favor, contacta a nuestro equipo de soporte o revisa tu panel de control para ver las opciones de actualización." },
-              { question: "¿Quién paga por la póliza?", answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, и a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento." }
+              { question: "¿Quién paga por la protección?", answer: "La responsabilidad del pago puede variar. A veces, el propietario cubre el costo, a veces el inquilino, и a menudo se comparte. Esto generalmente se acuerda durante la negociación del contrato de arrendamiento." }
             ] as FAQ[],
         },
         login: {
@@ -1005,10 +1008,10 @@ const es = {
             forOwnersTitle: "Para Propietarios",
             forOwnersText1: "Ayude a los propietarios a minimizar los períodos de vacancia atrayendo a un grupo más amplio de inquilinos calificados.",
             forOwnersText2: "Proporcione seguridad en el pago de la renta y protección de la propiedad, reduciendo el estrés del propietario.",
-            forOwnersText3: "Simplifique el proceso de arrendamiento con nuestro marco de pólizas estandarizado y seguro.",
+            forOwnersText3: "Simplifique el proceso de arrendamiento con nuestro marco de protecciones estandarizado y seguro.",
             forRentersTitle: "Para Inquilinos",
             forRentersText1: "Aumente las posibilidades de los inquilinos de asegurar la propiedad deseada.",
-            forRentersText2: "Ofrezca una póliza de garantía clara y comprensible que proteja sus intereses.",
+            forRentersText2: "Ofrezca una protección de arrendamiento clara y comprensible que proteja sus intereses.",
             forRentersText3: "Proporcione una experiencia de mudanza más fluida con menos carga financiera inicial en algunos casos.",
             ctaTitle: "¿Listo para Elevar sus Servicios?",
             ctaText: "Únase a la creciente red de asesores inmobiliarios que se asocian con Hestia. Trabajemos juntos para crear un mercado de arrendamiento más seguro y eficiente.",
@@ -1053,6 +1056,78 @@ const es = {
                 experienceMin: "La experiencia debe tener al menos 2 caracteres.",
                 messageMin: "El mensaje debe tener al menos 20 caracteres.",
             },
+        },
+        onboard: {
+            loading: "Validando invitación...",
+            invalidInvitation: {
+                title: "Invitación Inválida",
+                description: "Este enlace de invitación puede haber expirado o ya ha sido usado.",
+                contact: "Por favor contacta a tu administrador para obtener una nueva invitación.",
+                goToLogin: "Ir al Login"
+            },
+            welcome: {
+                title: "¡Bienvenido a Hestia!",
+                subtitle: "Completa tu información para comenzar"
+            },
+            accountInfo: {
+                title: "Datos de cuenta:",
+                permissions: "Permisos:",
+                userFallback: "Usuario"
+            },
+            avatar: {
+                label: "Avatar (Opcional)",
+                maxSize: "Tamaño máx: 15MB. Formatos: JPG, PNG, WebP"
+            },
+            form: {
+                password: {
+                    label: "Contraseña",
+                    placeholder: "Ingresa tu contraseña",
+                    minLength: "Mínimo 6 caracteres"
+                },
+                confirmPassword: {
+                    label: "Confirmar Contraseña",
+                    placeholder: "Confirma tu contraseña"
+                },
+                phone: {
+                    label: "Teléfono",
+                    placeholder: "Tu número de teléfono"
+                },
+                address: {
+                    label: "Dirección",
+                    placeholder: "Tu dirección"
+                }
+            },
+            submit: {
+                submitting: "Configurando tu cuenta...",
+                complete: "Completar Configuración"
+            },
+            toast: {
+                fileTooLarge: {
+                    title: "Archivo muy grande",
+                    description: "Por favor selecciona una imagen menor a 15MB"
+                },
+                invalidFileType: {
+                    title: "Tipo de archivo inválido",
+                    description: "Por favor selecciona un archivo de imagen"
+                },
+                success: {
+                    title: "¡Bienvenido a Hestia!",
+                    description: "Tu cuenta ha sido configurada exitosamente."
+                }
+            },
+            validation: {
+                passwordMismatch: "Las contraseñas no coinciden",
+                passwordMinLength: "La contraseña debe tener al menos 6 caracteres"
+            },
+            errors: {
+                tokenRequired: "El token es requerido",
+                invalidToken: "Token de invitación inválido o expirado",
+                alreadyUsed: "Esta invitación ya ha sido usada",
+                validationFailed: "Error al validar la invitación",
+                setupFailed: "Error al completar la configuración de cuenta",
+                invalidInput: "Entrada inválida",
+                generic: "Ocurrió un error"
+            }
         },
     },
 };

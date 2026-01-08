@@ -7,9 +7,10 @@ interface PolicyQuickInfoProps {
   tenantEmail: string;
   createdAt: string;
   documentsCount: number;
+  internalCode?: string;
 }
 
-export function PolicyQuickInfo({ tenantEmail, createdAt, documentsCount }: PolicyQuickInfoProps) {
+export function PolicyQuickInfo({ tenantEmail, createdAt, documentsCount, internalCode }: PolicyQuickInfoProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-MX', {
       year: 'numeric',
@@ -24,6 +25,12 @@ export function PolicyQuickInfo({ tenantEmail, createdAt, documentsCount }: Poli
     <Card className="mb-6">
       <CardContent className="pt-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {internalCode && (
+            <div>
+              <p className="text-sm text-muted-foreground">Código Interno</p>
+              <p className="font-medium">{internalCode}</p>
+            </div>
+          )}
           <div>
             <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.tenantEmail}</p>
             <p className="font-medium">{tenantEmail}</p>

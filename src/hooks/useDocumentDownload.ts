@@ -1,34 +1,30 @@
+'use client';
+
 import { useState } from 'react';
+import { trpc } from '@/lib/trpc/client';
 
 interface DownloadOptions {
   documentId: string;
-  documentType?: 'actor' | 'policy';
   fileName: string;
 }
 
 export function useDocumentDownload() {
   const [downloading, setDownloading] = useState<string | null>(null);
+  const trpcUtils = trpc.useUtils();
 
-  const downloadDocument = async ({ documentId, documentType = 'actor', fileName }: DownloadOptions) => {
+  const downloadDocument = async ({ documentId, fileName }: DownloadOptions) => {
     try {
       setDownloading(documentId);
 
-      // Get signed URL from API
-      const response = await fetch(`/api/documents/${documentId}/download?type=${documentType}`);
+      const result = await trpcUtils.document.getDownloadUrl.fetch({ documentId });
 
-      if (!response.ok) {
+      if (!result.success || !result.downloadUrl) {
         throw new Error('Failed to get download URL');
-      }
-
-      const data = await response.json();
-
-      if (!data.success || !data.url) {
-        throw new Error('Invalid response from server');
       }
 
       // Create a temporary anchor element and trigger download
       const link = document.createElement('a');
-      link.href = data.url;
+      link.href = result.downloadUrl;
       link.download = fileName;
       link.style.display = 'none';
 

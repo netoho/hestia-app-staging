@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText, Users, Shield, DollarSign, Edit, PackageSearch, UserPlus, ListChecks } from 'lucide-react';
-import type { UserRole } from '@/lib/types';
+import type { UserRole } from "@/prisma/generated/prisma-client/enums";
 import { t } from '@/lib/i18n'; // Assuming t is for translations and is correctly imported
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -42,7 +42,6 @@ export default function DashboardPage() {
   let welcomeMessage = t.pages.dashboard.welcomeBack;
   let roleSpecificContent = null;
 
-  console.log('User role:', user?.role);
 
   if (user?.role === 'owner') {
     welcomeMessage = t.pages.dashboard.welcomeOwner;

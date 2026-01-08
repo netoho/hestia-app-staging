@@ -37,7 +37,6 @@ export async function submitContactForm(
     };
   }
 
-  console.log('Formulario de contacto enviado:', parsed.data);
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   return {

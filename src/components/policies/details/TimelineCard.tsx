@@ -30,7 +30,7 @@ export default function TimelineCard({
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-green-500" />
             <div>
-              <p className="font-medium">Póliza Creada</p>
+              <p className="font-medium">Protección Creada</p>
               <p className="text-sm text-gray-600">{formatDateTime(createdAt)}</p>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function TimelineCard({
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
-                <p className="font-medium">Póliza Aprobada</p>
+                <p className="font-medium">Protección Aprobada</p>
                 <p className="text-sm text-gray-600">{formatDateTime(approvedAt)}</p>
               </div>
             </div>
@@ -56,7 +56,7 @@ export default function TimelineCard({
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
-                <p className="font-medium">Póliza Activada</p>
+                <p className="font-medium">Protección Activada</p>
                 <p className="text-sm text-gray-600">{formatDateTime(activatedAt)}</p>
               </div>
             </div>

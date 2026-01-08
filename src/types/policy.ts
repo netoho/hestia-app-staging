@@ -2,63 +2,19 @@
 // POLICY TYPES & INTERFACES
 // ============================================
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  STAFF = 'STAFF',
-  BROKER = 'BROKER'
-}
+// Import and re-export enums from centralized generated file
+// These enums are generated from Prisma schema
+export {
+  UserRole,
+  TenantType,
+  GuarantorType,
+  PropertyType,
+  PolicyStatus,
+  DocumentCategory,
+  NationalityType
+} from "@/prisma/generated/prisma-client/enums";
 
-export enum TenantType {
-  INDIVIDUAL = 'INDIVIDUAL',
-  COMPANY = 'COMPANY'
-}
-
-export enum GuarantorType {
-  NONE = 'NONE',
-  JOINT_OBLIGOR = 'JOINT_OBLIGOR',
-  AVAL = 'AVAL',
-  BOTH = 'BOTH'
-}
-
-export enum PropertyType {
-  HOUSE = 'HOUSE',
-  APARTMENT = 'APARTMENT',
-  COMMERCIAL = 'COMMERCIAL',
-  OFFICE = 'OFFICE',
-  WAREHOUSE = 'WAREHOUSE',
-  OTHER = 'OTHER'
-}
-
-export enum PolicyStatus {
-  DRAFT = 'DRAFT',
-  COLLECTING_INFO = 'COLLECTING_INFO',
-  UNDER_INVESTIGATION = 'UNDER_INVESTIGATION',
-  INVESTIGATION_REJECTED = 'INVESTIGATION_REJECTED',
-  PENDING_APPROVAL = 'PENDING_APPROVAL',
-  APPROVED = 'APPROVED',
-  CONTRACT_PENDING = 'CONTRACT_PENDING',
-  CONTRACT_SIGNED = 'CONTRACT_SIGNED',
-  ACTIVE = 'ACTIVE',
-  EXPIRED = 'EXPIRED',
-  CANCELLED = 'CANCELLED'
-}
-
-export enum DocumentCategory {
-  IDENTIFICATION = 'IDENTIFICATION',
-  INCOME_PROOF = 'INCOME_PROOF',
-  ADDRESS_PROOF = 'ADDRESS_PROOF',
-  BANK_STATEMENT = 'BANK_STATEMENT',
-  PROPERTY_DEED = 'PROPERTY_DEED',
-  TAX_RETURN = 'TAX_RETURN',
-  EMPLOYMENT_LETTER = 'EMPLOYMENT_LETTER',
-  OTHER = 'OTHER'
-}
-
-export enum NationalityType {
-  MEXICAN = 'MEXICAN',
-  FOREIGN = 'FOREIGN'
-}
-
+// Custom enums not in Prisma schema
 export enum ActorType {
   LANDLORD = 'LANDLORD',
   TENANT = 'TENANT',
@@ -87,11 +43,30 @@ export enum ContractStatus {
 export interface LandlordData {
   id?: string;
   isCompany: boolean;
-  fullName: string;
-  rfc: string;
+
+  // Personal Information (for individuals)
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
+  rfc?: string;
   email: string;
   phone: string;
   address: string;
+
+  // Company Information (for companies)
+  companyName?: string;
+  companyRfc?: string;
+
+  // Legal Representative Information (for companies)
+  legalRepFirstName?: string;
+  legalRepMiddleName?: string;
+  legalRepPaternalLastName?: string;
+  legalRepMaternalLastName?: string;
+  legalRepPosition?: string;
+  legalRepRfc?: string;
+  legalRepPhone?: string;
+  legalRepEmail?: string;
 
   // Bank Information
   bankName?: string;
@@ -100,7 +75,7 @@ export interface LandlordData {
 
   // Work Information (if individual)
   occupation?: string;
-  companyName?: string;
+  employerName?: string;
   monthlyIncome?: number;
 
   documents?: ActorDocument[];
@@ -113,17 +88,30 @@ export interface TenantData {
   tenantType: TenantType;
 
   // Individual Information
-  fullName?: string;
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
   nationality?: NationalityType;
   curp?: string;
   passport?: string;
+  rfc?: string;
 
   // Company Information
   companyName?: string;
   companyRfc?: string;
-  legalRepName?: string;
-  legalRepId?: string;
   companyAddress?: string;
+
+  // Legal Representative Information (for companies)
+  legalRepFirstName?: string;
+  legalRepMiddleName?: string;
+  legalRepPaternalLastName?: string;
+  legalRepMaternalLastName?: string;
+  legalRepId?: string;
+  legalRepPosition?: string;
+  legalRepRfc?: string;
+  legalRepPhone?: string;
+  legalRepEmail?: string;
 
   // Common
   email: string;
@@ -145,19 +133,42 @@ export interface TenantData {
 
 export interface JointObligorData {
   id?: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  nationality: NationalityType;
+  isCompany?: boolean;
+
+  // Personal Information (for individuals)
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
+  nationality?: NationalityType;
   curp?: string;
   passport?: string;
+  rfc?: string;
+
+  // Company Information (for companies)
+  companyName?: string;
+  companyRfc?: string;
+
+  // Legal Representative Information (for companies)
+  legalRepFirstName?: string;
+  legalRepMiddleName?: string;
+  legalRepPaternalLastName?: string;
+  legalRepMaternalLastName?: string;
+  legalRepPosition?: string;
+  legalRepRfc?: string;
+  legalRepPhone?: string;
+  legalRepEmail?: string;
+
+  // Common
+  email: string;
+  phone: string;
   address?: string;
 
-  // Employment
-  employmentStatus: string;
-  occupation: string;
-  companyName: string;
-  position: string;
+  // Employment (for individuals)
+  employmentStatus?: string;
+  occupation?: string;
+  employerName?: string;
+  position?: string;
   monthlyIncome: number;
   incomeSource: string;
 
@@ -169,21 +180,44 @@ export interface JointObligorData {
 
 export interface AvalData {
   id?: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  nationality: NationalityType;
+  isCompany?: boolean;
+
+  // Personal Information (for individuals)
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
+  nationality?: NationalityType;
   curp?: string;
   passport?: string;
+  rfc?: string;
+
+  // Company Information (for companies)
+  companyName?: string;
+  companyRfc?: string;
+
+  // Legal Representative Information (for companies)
+  legalRepFirstName?: string;
+  legalRepMiddleName?: string;
+  legalRepPaternalLastName?: string;
+  legalRepMaternalLastName?: string;
+  legalRepPosition?: string;
+  legalRepRfc?: string;
+  legalRepPhone?: string;
+  legalRepEmail?: string;
+
+  // Common
+  email: string;
+  phone: string;
   address?: string;
 
-  // Employment
-  employmentStatus: string;
-  occupation: string;
-  companyName: string;
-  position: string;
-  monthlyIncome: number;
-  incomeSource: string;
+  // Employment (for individuals)
+  employmentStatus?: string;
+  occupation?: string;
+  employerName?: string;
+  position?: string;
+  monthlyIncome?: number;
+  incomeSource?: string;
 
   // Property Guarantee
   propertyAddress: string;
@@ -235,6 +269,9 @@ export interface ActorDocument {
 // ============================================
 
 export interface PolicyCreateData {
+  // Internal Code
+  internalCode?: string;
+
   // Property Information
   propertyAddress: string;
   propertyType: PropertyType;
@@ -275,6 +312,7 @@ export interface PolicyCreateData {
 export interface PolicyData {
   id: string;
   policyNumber: string;
+  internalCode?: string;
 
   // Property Information
   propertyAddress: string;
@@ -340,7 +378,10 @@ export interface ActorFormData {
 
   // Common Fields
   personalInfo: {
-    fullName: string;
+    firstName: string;
+    middleName?: string;
+    paternalLastName: string;
+    maternalLastName: string;
     email: string;
     phone: string;
     nationality: NationalityType;
@@ -376,7 +417,10 @@ export interface ActorFormData {
   companyInfo?: {
     companyName: string;
     companyRfc: string;
-    legalRepName: string;
+    legalRepFirstName: string;
+    legalRepMiddleName?: string;
+    legalRepPaternalLastName: string;
+    legalRepMaternalLastName: string;
     legalRepId: string;
     companyAddress: string;
   };
@@ -417,7 +461,7 @@ export interface PolicyActivity {
   details?: any;
   performedById?: string;
   performedBy?: any;
-  performedByActor?: string;
+  performedByType?: string;
   ipAddress?: string;
   userAgent?: string;
   createdAt: Date;

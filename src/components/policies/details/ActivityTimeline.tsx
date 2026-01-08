@@ -11,7 +11,7 @@ interface ActivityItem {
     name?: string;
     email: string;
   };
-  performedByActor?: string;
+  performedByType?: string;
 }
 
 interface ActivityTimelineProps {
@@ -28,7 +28,7 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
       <CardHeader>
         <CardTitle>Historial de Actividad</CardTitle>
         <CardDescription>
-          Registro de todas las acciones realizadas en esta póliza
+          Registro de todas las acciones realizadas en esta protección
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -47,7 +47,7 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
                   <p className="text-sm text-gray-600 mt-1">
                     {activity.performedBy?.name ||
                       activity.performedBy?.email ||
-                      activity.performedByActor ||
+                      activity.performedByType ||
                       'Sistema'}{' '}
                     • {formatDateTime(activity.createdAt)}
                   </p>

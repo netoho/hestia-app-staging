@@ -49,7 +49,7 @@ export function PolicyInvestigationInfo({
   onLandlordOverride
 }: PolicyInvestigationInfoProps) {
   // Don't show investigation info for certain statuses
-  if (['DRAFT', 'INVESTIGATION_PENDING'].includes(policyStatus)) {
+  if (['DRAFT', 'COLLECTING_INFO'].includes(policyStatus)) {
     return null;
   }
 
@@ -115,7 +115,7 @@ export function PolicyInvestigationInfo({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!investigation && policyStatus === 'INVESTIGATION_PENDING' && (
+        {!investigation && policyStatus === 'COLLECTING_INFO' && (
           <div className="text-center py-6">
             <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">
@@ -203,7 +203,7 @@ export function PolicyInvestigationInfo({
             )}
 
             {/* Actions */}
-            {policyStatus === 'INVESTIGATION_IN_PROGRESS' && !investigation.completedAt && (
+            {policyStatus === 'UNDER_INVESTIGATION' && !investigation.completedAt && (
               <div className="flex gap-2 pt-4 border-t">
                 {onCompleteInvestigation && (
                   <>

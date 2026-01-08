@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "RulesType" ADD VALUE 'CONDOMINOS';

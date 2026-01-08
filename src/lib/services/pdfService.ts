@@ -1,4 +1,6 @@
 import { t } from '@/lib/i18n';
+import { ServiceError, ErrorCode } from './types/errors';
+import { BaseService } from './base/BaseService';
 
 interface PolicyData {
   id: string;
@@ -34,12 +36,16 @@ interface PolicyData {
   }>;
 }
 
-export class PDFService {
+class PDFService extends BaseService {
+  constructor() {
+    super();
+  }
+
   /**
    * Generate a policy document PDF using HTML-to-PDF approach
    * This creates a professional document with fillable fields for printing
    */
-  static async generatePolicyDocumentHTML(policy: PolicyData): Promise<string> {
+  async generatePolicyDocumentHTML(policy: PolicyData): Promise<string> {
     const createdDate = new Date(policy.createdAt).toLocaleDateString('es-MX', {
       year: 'numeric',
       month: 'long',
@@ -612,8 +618,8 @@ export class PDFService {
         </div>
 
         <div class="footer">
-            Hestia Protección Legal y Patrimonial S.A.S de C.V. | RFC: HPL123456789 | info@hestiaplp.com.mx | +52 55 1234 5678<br>
-            Calle Segura 123, Ciudad de México, México | www.hestiaplp.com.mx
+            Hestia Protección Legal y Patrimonial S.A.S de C.V. | RFC: HPL123456789 | contacto@hestiaplp.com.mx | +52 55 1234 5678<br>
+            Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México | www.hestiaplp.com.mx
         </div>
     </body>
     </html>
@@ -625,13 +631,13 @@ export class PDFService {
   /**
    * Generate a downloadable PDF blob (browser-based)
    */
-  static async generatePolicyDocumentBlob(policy: PolicyData): Promise<Blob> {
+  async generatePolicyDocumentBlob(policy: PolicyData): Promise<Blob> {
     const html = await this.generatePolicyDocumentHTML(policy);
-    
+
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      throw new Error('Could not open print window. Please allow popups.');
+      throw new ServiceError(ErrorCode.PDF_GENERATION_FAILED, 'Could not open print window. Please allow popups.', 400);
     }
 
     printWindow.document.write(html);
@@ -643,7 +649,7 @@ export class PDFService {
         try {
           printWindow.print();
           printWindow.close();
-          
+
           // For now, we'll return a simple blob with the HTML content
           // In a real implementation, you'd use a proper PDF library or server-side generation
           const blob = new Blob([html], { type: 'text/html' });
@@ -656,4 +662,12 @@ export class PDFService {
   }
 }
 
-export default PDFService;
+// Singleton instance
+export const pdfService = new PDFService();
+
+// Bound legacy function exports for backwards compatibility
+export const generatePolicyDocumentHTML = pdfService.generatePolicyDocumentHTML.bind(pdfService);
+export const generatePolicyDocumentBlob = pdfService.generatePolicyDocumentBlob.bind(pdfService);
+
+// Re-export class for type usage
+export { PDFService };

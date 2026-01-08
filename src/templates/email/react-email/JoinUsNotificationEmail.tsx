@@ -51,15 +51,14 @@ export const JoinUsNotificationEmail: React.FC<JoinUsNotificationEmailProps> = (
             textAlign: 'center',
             borderRadius: '12px 12px 0 0',
           }}>
-            <Img
-              src={`${brandUrls.production}/images/logo.png`}
+            <img
+              src={`${brandUrls.production}/images/logo-hestia-azul-top.png`}
               alt={brandInfo.name}
-              width="150"
-              height="50"
+              width="200"
               style={{ margin: '0 auto' }}
             />
             <Heading style={{
-              color: '#ffffff',
+              color: brandColors.textPrimary,
               fontSize: '28px',
               fontWeight: '600',
               margin: '20px 0 10px'
@@ -67,7 +66,7 @@ export const JoinUsNotificationEmail: React.FC<JoinUsNotificationEmailProps> = (
               Nueva Solicitud para Unirse al Equipo
             </Heading>
             <Text style={{
-              color: '#ffffff',
+              color: brandColors.textSecondary,
               fontSize: '16px',
               margin: '0'
             }}>

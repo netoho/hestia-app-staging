@@ -5,8 +5,16 @@ import { randomBytes } from 'crypto';
  * @returns A URL-safe token string
  */
 export const generateSecureToken = (): string => {
-  return randomBytes(32).toString('base64url');
+  return randomBytes(32).toString('hex');
 };
+
+/**
+ * Check if a given string is a token (simple validation)
+ * @returns True if the string is a valid token format
+ */
+export const isValidToken = (token: string): boolean => {
+  return /^[0-9a-f]{64}$/.test(token)
+}
 
 /**
  * Generates the public URL for a tenant to access their policy

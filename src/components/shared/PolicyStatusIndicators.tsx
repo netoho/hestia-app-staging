@@ -22,10 +22,10 @@ import { PolicyStatusType } from '@/lib/prisma-types';
 // Icon mapping for each status
 const STATUS_ICONS: Record<PolicyStatusType, React.ElementType> = {
   DRAFT: FileText,
-  INVESTIGATION_PENDING: Clock,
-  INVESTIGATION_IN_PROGRESS: FileSearch,
+  COLLECTING_INFO: Clock,
+  UNDER_INVESTIGATION: FileSearch,
   INVESTIGATION_REJECTED: FileX,
-  INVESTIGATION_APPROVED: FileCheck,
+  PENDING_APPROVAL: FileCheck,
   CONTRACT_PENDING: FileSignature,
   CONTRACT_UPLOADED: FileBadge,
   CONTRACT_SIGNED: FileCheck,
@@ -47,13 +47,13 @@ const STATUS_COLORS: Record<PolicyStatusType, {
     border: 'border-gray-200',
     icon: 'text-gray-500'
   },
-  INVESTIGATION_PENDING: {
+  COLLECTING_INFO: {
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     border: 'border-blue-200',
     icon: 'text-blue-500'
   },
-  INVESTIGATION_IN_PROGRESS: {
+  UNDER_INVESTIGATION: {
     bg: 'bg-yellow-50',
     text: 'text-yellow-700',
     border: 'border-yellow-200',
@@ -65,7 +65,7 @@ const STATUS_COLORS: Record<PolicyStatusType, {
     border: 'border-red-200',
     icon: 'text-red-500'
   },
-  INVESTIGATION_APPROVED: {
+  PENDING_APPROVAL: {
     bg: 'bg-emerald-50',
     text: 'text-emerald-700',
     border: 'border-emerald-200',
@@ -193,7 +193,7 @@ export function PolicyProgressIndicator({
         className="h-2"
         indicatorClassName={cn(
           isInProgress && 'animate-pulse',
-          status === 'INVESTIGATION_APPROVED' && 'bg-emerald-500',
+          status === 'PENDING_APPROVAL' && 'bg-emerald-500',
           status === 'CONTRACT_SIGNED' && 'bg-indigo-500'
         )}
       />
@@ -278,10 +278,10 @@ export function PaymentStatusBadge({
 function getStatusDisplayText(status: PolicyStatusType): string {
   const displayMap: Record<PolicyStatusType, string> = {
     DRAFT: 'Borrador',
-    INVESTIGATION_PENDING: 'Investigación Pendiente',
-    INVESTIGATION_IN_PROGRESS: 'En Investigación',
+    COLLECTING_INFO: 'Recolectando Información',
+    UNDER_INVESTIGATION: 'En Investigación',
     INVESTIGATION_REJECTED: 'Rechazado',
-    INVESTIGATION_APPROVED: 'Aprobado',
+    PENDING_APPROVAL: 'Pendiente de Aprobación',
     CONTRACT_PENDING: 'Contrato Pendiente',
     CONTRACT_UPLOADED: 'Contrato Cargado',
     CONTRACT_SIGNED: 'Contrato Firmado',

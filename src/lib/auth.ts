@@ -2,7 +2,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from './auth/auth-config';
+import { authOptions as authOptionsImported } from './auth/auth-config';
+
+export const authOptions = authOptionsImported;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = '7d';
@@ -13,14 +15,6 @@ export interface JWTPayload {
   role: 'ADMIN' | 'STAFF' | 'BROKER';
   name?: string;
 }
-
-// Demo mode super admin user
-const DEMO_SUPER_USER = {
-  id: 'demo-admin-id',
-  email: 'admin@hestiaplp.com.mx',
-  name: 'Super Admin',
-  role: 'ADMIN' as const // ADMIN role has full privileges
-};
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);

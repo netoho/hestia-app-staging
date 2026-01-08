@@ -65,10 +65,11 @@ export const POLICY_STEP_NAMES = {
 // Status display helpers
 export const POLICY_STATUS_DISPLAY: Record<string, string> = {
   DRAFT: 'Draft',
-  INVESTIGATION_PENDING: 'Investigation Pending',
-  INVESTIGATION_IN_PROGRESS: 'Investigation in Progress',
+  COLLECTING_INFO: 'Collecting Information',
+  UNDER_INVESTIGATION: 'Under Investigation',
   INVESTIGATION_REJECTED: 'Investigation Rejected',
-  INVESTIGATION_APPROVED: 'Investigation Approved',
+  PENDING_APPROVAL: 'Pending Approval',
+  APPROVED: 'Approved',
   CONTRACT_PENDING: 'Contract Pending',
   CONTRACT_UPLOADED: 'Contract Uploaded',
   CONTRACT_SIGNED: 'Contract Signed',
@@ -79,10 +80,11 @@ export const POLICY_STATUS_DISPLAY: Record<string, string> = {
 
 export const POLICY_STATUS_COLORS: Record<string, string> = {
   DRAFT: 'gray',
-  INVESTIGATION_PENDING: 'blue',
-  INVESTIGATION_IN_PROGRESS: 'yellow',
+  COLLECTING_INFO: 'blue',
+  UNDER_INVESTIGATION: 'yellow',
   INVESTIGATION_REJECTED: 'red',
-  INVESTIGATION_APPROVED: 'green',
+  PENDING_APPROVAL: 'green',
+  APPROVED: 'green',
   CONTRACT_PENDING: 'orange',
   CONTRACT_UPLOADED: 'purple',
   CONTRACT_SIGNED: 'blue',

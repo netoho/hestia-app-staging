@@ -6,31 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Image from 'next/image';
 import { t } from '@/lib/i18n';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
-
-interface UserProfile {
-  name?: string;
-  email?: string;
-  role: string;
-  phone?: string;
-  address?: string;
-  image?: string;
-  createdAt: string;
-}
+import { Loader2, Eye, EyeOff, Lock } from 'lucide-react';
+import { trpc } from '@/lib/trpc/client';
+import { AvatarUploader } from '@/components/user/AvatarUploader';
+import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
+import { isPasswordValid } from '@/lib/validation/password';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
-
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const utils = trpc.useUtils();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,106 +27,93 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [newPasswordFocused, setNewPasswordFocused] = useState(false);
 
-  const fetchProfile = async () => {
-    if (!isAuthenticated || !user) {
-      setLoading(false);
-      return;
-    }
+  // tRPC query for profile
+  const { data: profile, isLoading: loadingProfile, error: profileError } = trpc.user.getProfile.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
 
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        throw new Error(t.pages.profile.failedToFetch);
-      }
-
-      const data: UserProfile = await res.json();
-      setProfile(data);
-      setFullName(data.name || '');
-      setEmail(data.email || '');
-      setPhone(data.phone || '');
-      setAddress(data.address || '');
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchProfile();
-    } else if (!isAuthLoading && !isAuthenticated) {
-        setLoading(false); // User is not authenticated, stop loading
-    }
-  }, [isAuthenticated, user, isAuthLoading]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setError(null);
-
-    if (newPassword && newPassword !== confirmNewPassword) {
-      setError(t.pages.profile.passwordMismatch);
-      setIsSaving(false);
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: fullName,
-          email: email,
-          phone: phone,
-          address: address,
-          currentPassword: currentPassword || undefined,
-          newPassword: newPassword || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || t.pages.profile.failedToUpdate);
-      }
-
-      const updatedProfile: UserProfile = await res.json();
-      setProfile(updatedProfile);
-      
+  // tRPC mutation for profile update
+  const updateMutation = trpc.user.updateProfile.useMutation({
+    onSuccess: () => {
       // Clear password fields on success
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+      setFormError(null);
 
       toast({
         title: t.pages.profile.profileUpdated,
         description: t.pages.profile.profileUpdatedDesc,
       });
-    } catch (err) {
-      console.error('Error saving profile:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+
+      utils.user.getProfile.invalidate();
+    },
+    onError: (error) => {
+      setFormError(error.message);
       toast({
         title: t.misc.error,
-        description: err instanceof Error ? err.message : t.pages.profile.failedToUpdate,
+        description: error.message || t.pages.profile.failedToUpdate,
         variant: 'destructive',
       });
-    } finally {
-      setIsSaving(false);
+    },
+  });
+
+  // Update form when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.name || '');
+      setEmail(profile.email || '');
+      setPhone(profile.phone || '');
+      setAddress(profile.address || '');
     }
+  }, [profile]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    // Validate phone (required)
+    if (!phone.trim()) {
+      setFormError('El teléfono es requerido');
+      return;
+    }
+
+    // Validate new password if provided
+    if (newPassword) {
+      if (!isPasswordValid(newPassword)) {
+        setFormError('La nueva contraseña no cumple con los requisitos de seguridad');
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        setFormError(t.pages.profile.passwordMismatch);
+        return;
+      }
+      if (!currentPassword) {
+        setFormError('Debes ingresar tu contraseña actual para cambiarla');
+        return;
+      }
+    }
+
+    await updateMutation.mutateAsync({
+      name: fullName,
+      email: email,
+      phone: phone.trim(),
+      address: address.trim() || undefined,
+      currentPassword: currentPassword || undefined,
+      newPassword: newPassword || undefined,
+    });
   };
 
-  if (loading || isAuthLoading) {
+  const loading = loadingProfile || isAuthLoading;
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -149,13 +124,13 @@ export default function ProfilePage() {
     );
   }
 
-  if (error) {
+  if (profileError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-red-600">{t.pages.profile.errorLoading}</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardDescription>{profileError.message}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => window.location.reload()} className="w-full">
@@ -169,19 +144,19 @@ export default function ProfilePage() {
 
   if (!isAuthenticated) {
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <CardTitle>{t.pages.profile.accessDenied}</CardTitle>
-                    <CardDescription>{t.pages.profile.accessDeniedDesc}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button onClick={() => window.location.href = '/login'} className="w-full">
-                        {t.pages.profile.goToLogin}
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle>{t.pages.profile.accessDenied}</CardTitle>
+            <CardDescription>{t.pages.profile.accessDeniedDesc}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.href = '/login'} className="w-full">
+              {t.pages.profile.goToLogin}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -193,15 +168,19 @@ export default function ProfilePage() {
         <div className="md:col-span-1">
           <Card className="shadow-lg rounded-lg">
             <CardHeader className="items-center text-center">
-                <Avatar className="h-32 w-32 border-4 border-primary mb-4">
-                  <AvatarImage asChild src={profile?.image || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'}>
-                     <Image src={profile?.image || 'https://placehold.co/150x150.png'} alt={profile?.name || 'User'} width={128} height={128} data-ai-hint="user portrait" />
-                  </AvatarImage>
-                  <AvatarFallback className="text-4xl bg-muted">{profile?.name ? profile.name.split(' ').map(n=>n[0]).join('') : 'U'}</AvatarFallback>
-                </Avatar>
-              <CardTitle className="text-2xl font-headline">{profile?.name || 'N/A'}</CardTitle>
+              <AvatarUploader
+                currentAvatarUrl={profile?.avatarUrl}
+                userName={profile?.name}
+                onUploadComplete={() => utils.user.getProfile.invalidate()}
+                onDeleteComplete={() => utils.user.getProfile.invalidate()}
+                size="lg"
+                showDelete={!!profile?.avatarUrl}
+              />
+              <CardTitle className="text-2xl font-headline mt-4">{profile?.name || 'N/A'}</CardTitle>
               <CardDescription>{profile?.role}</CardDescription>
-              {/* <Button variant="outline" size="sm" className="mt-2">{t.pages.profile.changePhoto}</Button> */}{/* Photo change not implemented yet */}
+              <p className="text-xs text-muted-foreground mt-2">
+                Haz clic en el avatar para cambiar la foto
+              </p>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p><strong>{t.pages.profile.email}</strong> {profile?.email}</p>
@@ -232,10 +211,16 @@ export default function ProfilePage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">{t.pages.profile.phoneLabel}</Label>
-                    <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    <Label htmlFor="phone">{t.pages.profile.phoneLabel} *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                    />
                   </div>
-                   <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="role">{t.pages.profile.roleLabel}</Label>
                     <Input id="role" value={profile?.role || 'N/A'} readOnly className="bg-muted/50" />
                   </div>
@@ -243,35 +228,113 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="address">{t.pages.profile.addressLabel}</Label>
                   <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
-                </div>
-                
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{t.pages.profile.changePassword}</h3>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                          <Label htmlFor="currentPassword">{t.pages.profile.currentPassword}</Label>
-                          <Input id="currentPassword" type="password" placeholder={t.pages.profile.passwordPlaceholder} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                      </div>
-                       <div className="space-y-2">
-                          <Label htmlFor="newPassword">{t.pages.profile.newPassword}</Label>
-                          <Input id="newPassword" type="password" placeholder={t.pages.profile.passwordPlaceholder} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="confirmNewPassword">{t.pages.profile.confirmNewPassword}</Label>
-                          <Input id="confirmNewPassword" type="password" placeholder={t.pages.profile.passwordPlaceholder} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
-                      </div>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Opcional</p>
                 </div>
 
-                {error && (
-                  <div className="text-destructive text-sm mt-4">{error}</div>
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-foreground mb-4">{t.pages.profile.changePassword}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Current Password */}
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword">{t.pages.profile.currentPassword}</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="currentPassword"
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          placeholder={t.pages.profile.passwordPlaceholder}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="pl-10 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          tabIndex={-1}
+                        >
+                          {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">{t.pages.profile.newPassword}</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="newPassword"
+                          type={showNewPassword ? 'text' : 'password'}
+                          placeholder={t.pages.profile.passwordPlaceholder}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          onFocus={() => setNewPasswordFocused(true)}
+                          onBlur={() => setNewPasswordFocused(false)}
+                          className="pl-10 pr-10"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          tabIndex={-1}
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmNewPassword">{t.pages.profile.confirmNewPassword}</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="confirmNewPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder={t.pages.profile.passwordPlaceholder}
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                          className="pl-10 pr-10"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          tabIndex={-1}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {confirmNewPassword && newPassword !== confirmNewPassword && (
+                        <p className="text-sm text-destructive">Las contraseñas no coinciden</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Password Requirements */}
+                  <PasswordRequirements
+                    password={newPassword}
+                    show={newPasswordFocused || newPassword.length > 0}
+                    className="mt-4"
+                  />
+                </div>
+
+                {formError && (
+                  <div className="text-destructive text-sm mt-4">{formError}</div>
                 )}
                 <div className="flex justify-end space-x-3 mt-4">
-                  <Button type="button" variant="outline" onClick={() => fetchProfile()} disabled={isSaving}>
+                  <Button type="button" variant="outline" onClick={() => utils.user.getProfile.invalidate()} disabled={updateMutation.isPending}>
                     {t.actions.cancel}
                   </Button>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  <Button
+                    type="submit"
+                    className="bg-primary hover:bg-primary/90"
+                    disabled={updateMutation.isPending || !phone.trim() || (newPassword && (!isPasswordValid(newPassword) || newPassword !== confirmNewPassword))}
+                  >
+                    {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {t.actions.saveChanges}
                   </Button>
                 </div>

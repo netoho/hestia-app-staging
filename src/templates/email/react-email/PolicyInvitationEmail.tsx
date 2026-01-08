@@ -15,6 +15,15 @@ import { PolicyInvitationData } from '@/lib/services/emailService';
 import { generatePolicyUrl } from '@/lib/utils/tokenUtils';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
 
+interface PolicyInvitationEmailProps {
+  tenantEmail: string;
+  tenantName?: string;
+  propertyAddress?: string;
+  accessToken: string;
+  expiryDate: Date;
+  initiatorName: string;
+}
+
 export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
   tenantEmail,
   tenantName,
@@ -35,10 +44,10 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
     <Html>
       <Head />
       <Body style={{ backgroundColor: brandColors.background, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-        <Container style={{ 
-          maxWidth: '600px', 
-          margin: '0 auto', 
-          padding: '20px' 
+        <Container style={{
+          maxWidth: '600px',
+          margin: '0 auto',
+          padding: '20px'
         }}>
           {/* Header */}
           <Section style={{
@@ -47,28 +56,25 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
             textAlign: 'center',
             borderRadius: '12px 12px 0 0',
           }}>
-            <Img
-              src={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/images/logo-hestia-blanco.png`}
-              alt="Hestia Logo"
-              width="180"
-              height="51"
-              style={{
-                margin: '0 auto 20px',
-                display: 'block'
-              }}
-            />
+              <img
+                  src={`${brandUrls.production}/images/logo-hestia-azul-top.png`}
+                  alt={brandInfo.name}
+                  width="150"
+                  height="50"
+                  style={{ margin: '0 auto' }}
+              />
             <Heading style={{
               margin: 0,
-              color: brandColors.white,
+              color: brandColors.textPrimary,
               fontSize: '28px',
               fontWeight: '700',
               letterSpacing: '-0.025em'
             }}>
-              Solicitud de Póliza de Garantía
+              Solicitud de Protección de Arrendamiento
             </Heading>
             <Text style={{
               margin: '8px 0 0 0',
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: brandColors.textSecondary,
               fontSize: '16px',
               fontWeight: '400'
             }}>
@@ -100,7 +106,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              <strong>{initiatorName}</strong> ha iniciado una solicitud de póliza de garantía para ti
+              <strong>{initiatorName}</strong> ha iniciado una solicitud de protección de arrendamiento para ti
               {propertyAddress && (
                 <> para la propiedad ubicada en <strong>{propertyAddress}</strong></>
               )}.
@@ -153,7 +159,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
                 ⚠️ Importante
               </Heading>
               <Text style={{ margin: 0, color: brandColors.textPrimary }}>
-                Este enlace expirará el <strong>{expiryDateFormatted}</strong>. 
+                Este enlace expirará el <strong>{expiryDateFormatted}</strong>.
                 Por favor completa tu solicitud antes de esta fecha.
               </Text>
             </Section>
@@ -222,70 +228,72 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
             borderTop: `2px solid ${brandColors.border}`,
           }}>
             <table style={{ width: '100%' }}>
-              <tr>
-                <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
-                  <Img
-                    src={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/images/logo-hestia-azul-top.png`}
-                    alt="Hestia Logo"
-                    width="140"
-                    height="40"
-                    style={{ margin: '0 auto', display: 'block' }}
-                  />
-                </td>
-              </tr>
-              <tr>
-                <td style={{ textAlign: 'center', paddingBottom: '15px' }}>
-                  <Text style={{
-                    margin: '0',
-                    fontSize: '14px',
-                    color: brandColors.textMuted,
-                    fontStyle: 'italic'
-                  }}>
-                    {brandInfo.tagline}
-                  </Text>
-                </td>
-              </tr>
-              <tr>
-                <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
-                  <table style={{ margin: '0 auto' }}>
-                    <tr>
-                      <td style={{ padding: '0 15px' }}>
-                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
-                          📧 {brandInfo.supportEmail}
-                        </Text>
-                      </td>
-                      <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
-                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
-                          📱 {brandInfo.supportPhone}
-                        </Text>
-                      </td>
-                      <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
-                        <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
-                          📍 {brandInfo.location}
-                        </Text>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style={{ textAlign: 'center', paddingTop: '15px', borderTop: `1px solid ${brandColors.border}` }}>
-                  <Text style={{
-                    margin: '10px 0 0 0',
-                    fontSize: '12px',
-                    color: brandColors.textMuted
-                  }}>
-                    © {new Date().getFullYear()} {brandInfo.companyLegalName}
-                  </Text>
-                  <Text style={{
-                    margin: '5px 0 0 0',
-                    fontSize: '11px',
-                    color: brandColors.textMuted
-                  }}>
-                    Todos los derechos reservados | <a href="${process.env.NEXT_PUBLIC_APP_URL}/privacy" style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href="${process.env.NEXT_PUBLIC_APP_URL}/terms" style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
-                  </Text>
-                </td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                    <Img
+                      src={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/images/logo-hestia-azul-top.png`}
+                      alt="Hestia Logo"
+                      width="140"
+                      height="40"
+                      style={{ margin: '0 auto', display: 'block' }}
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingBottom: '15px' }}>
+                    <Text style={{
+                      margin: '0',
+                      fontSize: '14px',
+                      color: brandColors.textMuted,
+                      fontStyle: 'italic'
+                    }}>
+                      {brandInfo.tagline}
+                    </Text>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                    <table style={{ margin: '0 auto' }}>
+                      <tr>
+                        <td style={{ padding: '0 15px' }}>
+                          <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                            📧 {brandInfo.supportEmail}
+                          </Text>
+                        </td>
+                        <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
+                          <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                            📱 {brandInfo.supportPhone}
+                          </Text>
+                        </td>
+                        <td style={{ padding: '0 15px', borderLeft: `1px solid ${brandColors.border}` }}>
+                          <Text style={{ margin: 0, fontSize: '13px', color: brandColors.textMuted }}>
+                            📍 {brandInfo.location}
+                          </Text>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'center', paddingTop: '15px', borderTop: `1px solid ${brandColors.border}` }}>
+                    <Text style={{
+                      margin: '10px 0 0 0',
+                      fontSize: '12px',
+                      color: brandColors.textMuted
+                    }}>
+                      © {new Date().getFullYear()} {brandInfo.companyLegalName}
+                    </Text>
+                    <Text style={{
+                      margin: '5px 0 0 0',
+                      fontSize: '11px',
+                      color: brandColors.textMuted
+                    }}>
+                      Todos los derechos reservados | <a href="${process.env.NEXT_PUBLIC_APP_URL}/privacy" style={{ color: brandColors.secondary, textDecoration: 'none' }}>Aviso de Privacidad</a> | <a href="${process.env.NEXT_PUBLIC_APP_URL}/terms" style={{ color: brandColors.secondary, textDecoration: 'none' }}>Términos y Condiciones</a>
+                    </Text>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </Section>
         </Container>

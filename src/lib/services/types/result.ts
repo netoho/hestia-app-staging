@@ -3,7 +3,7 @@
  * Type-safe error handling inspired by Rust's Result<T, E>
  */
 
-import { ServiceError } from './errors';
+import { ServiceError, ErrorCode } from './errors';
 
 export type Result<T, E = ServiceError> = 
   | { ok: true; value: T }
@@ -31,9 +31,9 @@ export const Result = {
       return Result.ok(fn());
     } catch (error) {
       return Result.error(
-        error instanceof ServiceError 
-          ? error 
-          : new ServiceError('UNKNOWN_ERROR', (error as Error).message)
+        error instanceof ServiceError
+          ? error
+          : new ServiceError(ErrorCode.UNKNOWN_ERROR, (error as Error).message)
       );
     }
   },
@@ -47,9 +47,9 @@ export const Result = {
       return Result.ok(value);
     } catch (error) {
       return Result.error(
-        error instanceof ServiceError 
-          ? error 
-          : new ServiceError('UNKNOWN_ERROR', (error as Error).message)
+        error instanceof ServiceError
+          ? error
+          : new ServiceError(ErrorCode.UNKNOWN_ERROR, (error as Error).message)
       );
     }
   },

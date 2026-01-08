@@ -5,33 +5,39 @@
 
 export enum ErrorCode {
   // General errors (1000-1999)
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   NOT_FOUND = 'NOT_FOUND',
   ALREADY_EXISTS = 'ALREADY_EXISTS',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
   RATE_LIMITED = 'RATE_LIMITED',
-  
+  INVALID_REQUEST = 'INVALID_REQUEST',
+
   // Database errors (2000-2999)
   DATABASE_ERROR = 'DATABASE_ERROR',
   DATABASE_CONNECTION_ERROR = 'DATABASE_CONNECTION_ERROR',
   DATABASE_QUERY_ERROR = 'DATABASE_QUERY_ERROR',
   DATABASE_CONSTRAINT_ERROR = 'DATABASE_CONSTRAINT_ERROR',
-  
+
   // Auth errors (3000-3999)
   AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
   INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
   SESSION_EXPIRED = 'SESSION_EXPIRED',
   INVALID_TOKEN = 'INVALID_TOKEN',
-  
+  TOKEN_EXPIRED = 'TOKEN_EXPIRED',
+
   // Business logic errors (4000-4999)
   POLICY_NOT_FOUND = 'POLICY_NOT_FOUND',
   POLICY_ALREADY_EXISTS = 'POLICY_ALREADY_EXISTS',
   POLICY_INVALID_STATE = 'POLICY_INVALID_STATE',
+  ALREADY_COMPLETE = 'ALREADY_COMPLETE',
   PAYMENT_FAILED = 'PAYMENT_FAILED',
   PAYMENT_ALREADY_PROCESSED = 'PAYMENT_ALREADY_PROCESSED',
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
-  
+
   // External service errors (5000-5999)
   EMAIL_SEND_FAILED = 'EMAIL_SEND_FAILED',
   STORAGE_UPLOAD_FAILED = 'STORAGE_UPLOAD_FAILED',
@@ -91,48 +97,54 @@ export class ServiceError extends Error {
 
 // User-friendly error messages
 const userFriendlyMessages: Record<ErrorCode, string> = {
-  [ErrorCode.UNKNOWN_ERROR]: 'Ha ocurrido un error inesperado. Por favor intenta de nuevo.',
-  [ErrorCode.VALIDATION_ERROR]: 'Los datos proporcionados no son válidos.',
-  [ErrorCode.NOT_FOUND]: 'El recurso solicitado no fue encontrado.',
-  [ErrorCode.ALREADY_EXISTS]: 'Este recurso ya existe.',
-  [ErrorCode.PERMISSION_DENIED]: 'No tienes permisos para realizar esta acción.',
-  [ErrorCode.RATE_LIMITED]: 'Has excedido el límite de solicitudes. Por favor intenta más tarde.',
-  
-  [ErrorCode.DATABASE_ERROR]: 'Error al acceder a la base de datos.',
-  [ErrorCode.DATABASE_CONNECTION_ERROR]: 'No se pudo conectar a la base de datos.',
-  [ErrorCode.DATABASE_QUERY_ERROR]: 'Error al ejecutar la consulta.',
-  [ErrorCode.DATABASE_CONSTRAINT_ERROR]: 'Los datos violan las restricciones de la base de datos.',
-  
-  [ErrorCode.AUTHENTICATION_ERROR]: 'Error de autenticación.',
-  [ErrorCode.INVALID_CREDENTIALS]: 'Credenciales inválidas.',
-  [ErrorCode.SESSION_EXPIRED]: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-  [ErrorCode.INVALID_TOKEN]: 'Token de acceso inválido.',
-  
-  [ErrorCode.POLICY_NOT_FOUND]: 'La póliza no fue encontrada.',
-  [ErrorCode.POLICY_ALREADY_EXISTS]: 'Ya existe una póliza con estos datos.',
-  [ErrorCode.POLICY_INVALID_STATE]: 'La póliza no está en el estado correcto para esta operación.',
-  [ErrorCode.PAYMENT_FAILED]: 'El pago no pudo ser procesado.',
-  [ErrorCode.PAYMENT_ALREADY_PROCESSED]: 'Este pago ya ha sido procesado.',
-  [ErrorCode.INSUFFICIENT_FUNDS]: 'Fondos insuficientes para completar la transacción.',
-  
-  [ErrorCode.EMAIL_SEND_FAILED]: 'No se pudo enviar el correo electrónico.',
-  [ErrorCode.STORAGE_UPLOAD_FAILED]: 'Error al subir el archivo.',
-  [ErrorCode.STRIPE_API_ERROR]: 'Error al procesar el pago.',
-  [ErrorCode.PDF_GENERATION_FAILED]: 'Error al generar el documento PDF.',
+  [ErrorCode.INTERNAL_ERROR]: 'An internal error occurred. Please try again.',
+  [ErrorCode.UNKNOWN_ERROR]: 'An unexpected error occurred. Please try again.',
+  [ErrorCode.VALIDATION_ERROR]: 'The provided data is invalid.',
+  [ErrorCode.NOT_FOUND]: 'The requested resource was not found.',
+  [ErrorCode.ALREADY_EXISTS]: 'This resource already exists.',
+  [ErrorCode.PERMISSION_DENIED]: 'You do not have permission to perform this action.',
+  [ErrorCode.RATE_LIMITED]: 'Rate limit exceeded. Please try again later.',
+  [ErrorCode.INVALID_REQUEST]: 'Invalid request.',
+
+  [ErrorCode.DATABASE_ERROR]: 'Database access error.',
+  [ErrorCode.DATABASE_CONNECTION_ERROR]: 'Could not connect to the database.',
+  [ErrorCode.DATABASE_QUERY_ERROR]: 'Error executing database query.',
+  [ErrorCode.DATABASE_CONSTRAINT_ERROR]: 'Data violates database constraints.',
+
+  [ErrorCode.AUTHENTICATION_ERROR]: 'Authentication error.',
+  [ErrorCode.UNAUTHORIZED]: 'Unauthorized access.',
+  [ErrorCode.FORBIDDEN]: 'Access forbidden.',
+  [ErrorCode.INVALID_CREDENTIALS]: 'Invalid credentials.',
+  [ErrorCode.SESSION_EXPIRED]: 'Your session has expired. Please log in again.',
+  [ErrorCode.INVALID_TOKEN]: 'Invalid access token.',
+  [ErrorCode.TOKEN_EXPIRED]: 'Access token has expired.',
+
+  [ErrorCode.POLICY_NOT_FOUND]: 'Policy not found.',
+  [ErrorCode.POLICY_ALREADY_EXISTS]: 'A policy with this data already exists.',
+  [ErrorCode.POLICY_INVALID_STATE]: 'Policy is not in the correct state for this operation.',
+  [ErrorCode.ALREADY_COMPLETE]: 'This operation has already been completed.',
+  [ErrorCode.PAYMENT_FAILED]: 'Payment could not be processed.',
+  [ErrorCode.PAYMENT_ALREADY_PROCESSED]: 'This payment has already been processed.',
+  [ErrorCode.INSUFFICIENT_FUNDS]: 'Insufficient funds to complete the transaction.',
+
+  [ErrorCode.EMAIL_SEND_FAILED]: 'Failed to send email.',
+  [ErrorCode.STORAGE_UPLOAD_FAILED]: 'Failed to upload file.',
+  [ErrorCode.STRIPE_API_ERROR]: 'Payment processing error.',
+  [ErrorCode.PDF_GENERATION_FAILED]: 'Failed to generate PDF document.',
 };
 
 /**
  * Error factory functions for common scenarios
  */
 export const Errors = {
-  notFound: (resource: string, id?: string) => 
+  notFound: (resource: string, id?: string) =>
     new ServiceError(
       ErrorCode.NOT_FOUND,
       `${resource} not found${id ? `: ${id}` : ''}`,
       404,
       { resource, id }
     ),
-    
+
   validation: (field: string, message: string) =>
     new ServiceError(
       ErrorCode.VALIDATION_ERROR,
@@ -140,7 +152,7 @@ export const Errors = {
       400,
       { field, validationMessage: message }
     ),
-    
+
   database: (operation: string, error: any) =>
     new ServiceError(
       ErrorCode.DATABASE_ERROR,
@@ -148,7 +160,7 @@ export const Errors = {
       500,
       { operation, originalError: error?.message || error }
     ),
-    
+
   unauthorized: (reason?: string) =>
     new ServiceError(
       ErrorCode.PERMISSION_DENIED,
@@ -156,7 +168,7 @@ export const Errors = {
       403,
       { reason }
     ),
-    
+
   authentication: (reason?: string) =>
     new ServiceError(
       ErrorCode.AUTHENTICATION_ERROR,
@@ -164,7 +176,7 @@ export const Errors = {
       401,
       { reason }
     ),
-    
+
   external: (service: string, error: any) =>
     new ServiceError(
       ErrorCode.UNKNOWN_ERROR,

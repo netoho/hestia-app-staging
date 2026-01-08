@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -32,6 +33,7 @@ import { t } from '@/lib/i18n';
 interface Actor {
   id: string;
   fullName?: string;
+  isPrimary: boolean;
   companyName?: string;
   informationComplete: boolean;
   verificationStatus?: string;
@@ -41,7 +43,7 @@ interface Actor {
 interface ActorVerificationCardProps {
   policy: {
     id: string;
-    landlord?: Actor;
+    landlords?: Actor[];
     tenant?: Actor;
     jointObligors?: Actor[];
     avals?: Actor[];
@@ -127,7 +129,7 @@ export default function ActorVerificationCard({
   const renderActorVerification = (
     actor: Actor | undefined,
     actorType: string,
-    icon: React.ReactNode,
+    icon: ReactNode,
     label: string
   ) => {
     if (!actor) return null;
@@ -200,11 +202,13 @@ export default function ActorVerificationCard({
           <CardDescription>{t.pages.policies.actorVerification.subtitle}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {renderActorVerification(
-            policy.landlord,
-            'landlord',
-            <Building className="h-5 w-5" />,
-            'Arrendador'
+          {policy.landlords?.map((landlord, index) =>
+            renderActorVerification(
+              landlord,
+              'landlord',
+              <Building className="h-5 w-5" />,
+              landlord.isPrimary ? 'Arrendador Principal' : `Co-propietario ${index}`
+            )
           )}
 
           {renderActorVerification(
