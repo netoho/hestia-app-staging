@@ -256,9 +256,10 @@ it('saves complete actor', async () => {
 ```typescript
 // Handle multiple actor types generically
 const service = getActorService(input.type);
-const result = await service.validateAndSave(
-  input.token,
-  input.data
+const result = await service.update(
+  actor.id,
+  input.data,
+  { isPartial: input.partial }
 );
 ```
 

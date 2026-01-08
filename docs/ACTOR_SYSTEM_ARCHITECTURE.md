@@ -78,11 +78,14 @@ schemas/
 **Purpose**: Business logic and data operations
 
 ```typescript
-class TenantService extends BaseActorService {
-  validateAndSave(token, data, isPartial)
-  getByToken(token)
-  adminUpdate(id, data)
+class BaseActorService<T> {
+  getByToken(token)           // Load actor by access token
+  update(id, data, options)   // Update actor data with validation
+  findById(id)                // Load actor by ID
+  findByPolicyId(policyId)    // Get all actors for a policy
 }
+
+// Landlord uses getManyByToken() for multi-owner support
 ```
 
 **Responsibilities**:
@@ -91,17 +94,25 @@ class TenantService extends BaseActorService {
 - Database operations
 - Business rule enforcement
 
-### 3. Router Layer (`/src/server/routers`)
+### 3. Router Layer (`/src/server/routers/actor`)
 
 **Purpose**: API endpoint definitions with tRPC
 
 ```typescript
-actorRouter = {
+// shared.router.ts - Generic actor operations
+sharedRouter = {
   getByToken: publicProcedure,
-  save: publicProcedure,
-  saveTab: publicProcedure,
-  adminUpdate: adminProcedure,
-  getAllByPolicy: protectedProcedure,
+  update: dualAuthProcedure,        // Accepts token OR session
+  updateByAdmin: adminProcedure,
+  listByPolicy: protectedProcedure,
+  submitActor: dualAuthProcedure,
+}
+
+// landlord.router.ts - Landlord-specific operations
+landlordRouter = {
+  saveMultipleLandlords: dualAuthProcedure,
+  savePropertyDetails: dualAuthProcedure,
+  savePolicyFinancial: dualAuthProcedure,
 }
 ```
 
@@ -109,20 +120,28 @@ actorRouter = {
 - Type-safe API contracts
 - Automatic client generation
 - Input validation at edge
-- Multiple auth strategies
+- Dual auth (token + session support)
 
 ### 4. UI Layer (`/src/components/actor`)
 
 **Purpose**: Progressive data collection interface
 
 ```typescript
-<FormWizard>
-  <PersonalTab />
+// Each actor type has its own FormWizard with specific tabs
+<TenantFormWizard>
+  <PersonalInfoTab />
   <EmploymentTab />
-  <FinancialTab />
+  <RentalHistoryTab />
   <ReferencesTab />
-  <DocumentsTab />
-</FormWizard>
+  <DocumentsSection />
+</TenantFormWizard>
+
+<LandlordFormWizard>
+  <OwnerInfoTab />
+  <PropertyDetailsForm />
+  <FinancialInfoForm />
+  <DocumentsSection />
+</LandlordFormWizard>
 ```
 
 **Capabilities**:
@@ -200,20 +219,24 @@ Actor
 
 ## Authentication Mechanisms
 
-### 1. Session-Based (Staff)
+### 1. Dual Authentication (Primary)
+Most mutations use `dualAuthProcedure` which accepts either:
+- Access token (for self-service actors)
+- Session (for staff users)
+
+This enables seamless experience where actors can fill their own data, and staff can assist when needed.
+
+### 2. Session-Based (Staff Only)
 - Next-Auth session
 - Role-based permissions
 - Admin capabilities
+- Used for: `listByPolicy`, `markComplete`
 
-### 2. Token-Based (Self-Service)
+### 3. Token-Based (Self-Service Only)
 - UUID tokens via email
-- Time-limited access
+- Configurable expiry (default: 1000 days)
 - Actor-specific scope
-
-### 3. Dual Authentication
-- Supports both methods
-- Seamless experience
-- Flexible access control
+- Used for: `getByToken`
 
 ## Validation Strategy
 
@@ -262,7 +285,7 @@ const formState = useActorFormState({
 ```typescript
 const wizard = useFormWizardTabs({
   tabs: ['personal', 'employment', ...],
-  onTabChange: validateAndSave,
+  onTabChange: saveCurrentTab,
 });
 ```
 
@@ -305,7 +328,7 @@ type Guarantee =
 ## Security Considerations
 
 1. **Token Security**
-   - Time-limited (48 hours)
+   - Configurable expiry (see `TOKEN_CONFIG.EXPIRATION_DAYS`)
    - Single-use for submission
    - Encrypted in transit
 
@@ -340,7 +363,7 @@ Auth: 'Token validated', { token, actorType, valid }
 ```env
 DATABASE_URL=postgresql://...
 NEXTAUTH_SECRET=...
-TOKEN_EXPIRY_HOURS=48
+# Token expiry configured in src/lib/constants/businessConfig.ts
 ```
 
 ### Database Migrations
@@ -352,21 +375,6 @@ npx prisma migrate deploy
 - ~10 second build time
 - Tree-shaking enabled
 - Code splitting by route
-
-## Future Enhancements
-
-### Planned Features
-- [ ] Real-time collaboration
-- [ ] Bulk actor import
-- [ ] Advanced reporting
-- [ ] Mobile app support
-- [ ] Webhook notifications
-
-### Technical Improvements
-- [ ] GraphQL migration
-- [ ] Redis caching
-- [ ] Event sourcing
-- [ ] Microservices split
 
 ## Migration Guide
 
