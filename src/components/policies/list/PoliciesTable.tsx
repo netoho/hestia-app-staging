@@ -10,46 +10,36 @@ import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { calculatePolicyProgress } from '@/lib/utils/policy';
 import ActorsList from './ActorsList';
 
+interface Actor {
+  firstName?: string | null;
+  middleName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+  companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  informationComplete: boolean;
+  isPrimary?: boolean;
+  [key: string]: unknown;
+}
+
 interface Policy {
   id: string;
   policyNumber: string;
   status: PolicyStatus;
-  propertyAddress: string;
-  propertyType?: string;
+  propertyAddress?: { formattedAddress?: string | null } | null;
+  propertyDetails?: { propertyAddressDetails?: { formattedAddress?: string | null } | null } | null;
+  propertyType?: string | null;
   rentAmount: number;
-  totalPrice?: number;
-  createdAt: string;
-  package?: {
-    name: string;
-  };
-  tenant?: {
-    fullName?: string;
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    informationComplete: boolean;
-  } | null;
-  landlords?: Array<{
-    fullName?: string;
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    isPrimary?: boolean;
-    informationComplete: boolean;
-  }>;
-  jointObligors?: Array<{
-    fullName?: string;
-    email?: string;
-    phone?: string;
-    informationComplete: boolean;
-  }>;
-  avals?: Array<{
-    fullName?: string;
-    email?: string;
-    phone?: string;
-    informationComplete: boolean;
-  }>;
-  guarantorType?: string;
+  totalPrice?: number | null;
+  createdAt: Date | string;
+  package?: { name: string } | null;
+  tenant?: Actor | null;
+  landlords?: Actor[];
+  jointObligors?: Actor[];
+  avals?: Actor[];
+  guarantorType?: string | null;
+  [key: string]: unknown;
 }
 
 interface PoliciesTableProps {
@@ -123,7 +113,7 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                     {/* Property */}
                     <TableCell>
                       <div>
-                        <div className="text-sm font-medium">{policy.propertyAddress}</div>
+                        <div className="text-sm font-medium">{policy.propertyDetails?.propertyAddressDetails?.formattedAddress || 'N/A'}</div>
                         {policy.propertyType && (
                           <div className="text-xs text-gray-500">{policy.propertyType}</div>
                         )}
