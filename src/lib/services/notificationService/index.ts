@@ -5,10 +5,10 @@ import {
   generateTenantToken
 } from '@/lib/services/actorTokenService';
 import prisma from "@/lib/prisma";
-import {sendActorInvitation} from "@/lib/services/emailService";
-import {formatFullName} from "@/lib/utils/names";
-import {TenantType} from "@/prisma/generated/prisma-client/enums";
-import {logPolicyActivity} from "@/lib/services/policyService";
+import { sendActorInvitation } from "@/lib/services/emailService";
+import { formatFullName } from "@/lib/utils/names";
+import { TenantType } from "@/prisma/generated/prisma-client/enums";
+import { logPolicyActivity } from "@/lib/services/policyService";
 import { ServiceError, ErrorCode } from '../types/errors';
 
 

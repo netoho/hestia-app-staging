@@ -161,57 +161,6 @@ export interface PolicyStatusUpdateData {
 }
 
 // Email service functions
-export const sendPolicyInvitation = async (data: PolicyInvitationData): Promise<boolean> => {
-  try {
-    // Use React Email templates
-    const { render } = await import('@react-email/render');
-    const { PolicyInvitationEmail } = await import('../../templates/email/react-email/PolicyInvitationEmail');
-
-    const html = await render(await PolicyInvitationEmail(data));
-    const subject = 'Acción Requerida: Completa tu Solicitud de Protección Hestia';
-
-    // Generate plain text version
-    const policyUrl = generatePolicyUrl(data.accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-    const expiryDate = new Date(data.expiryDate).toLocaleDateString('es-MX', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    const text = `
-Hola${data.tenantName ? ` ${data.tenantName}` : ''},
-
-${data.initiatorName} ha iniciado una solicitud de protección de arrendamiento para ti${data.propertyAddress ? ` para la propiedad ubicada en ${data.propertyAddress}` : ''}.
-
-Para completar tu solicitud, visita: ${policyUrl}
-
-Importante: Este enlace expirará el ${expiryDate}.
-
-Lo que necesitarás:
-- Identificación válida (CURP mexicana o pasaporte)
-- Información laboral y comprobantes de ingresos  
-- Información de contacto de referencias personales
-- Documentos adicionales (opcional)
-
-El proceso de solicitud toma típicamente 15-20 minutos en completarse.
-
-Si tienes alguna pregunta, contáctanos en soporte@hestiaplp.com.mx
-
-© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
-    `.trim();
-
-    return await EmailProvider.sendEmail({
-      to: data.tenantEmail,
-      subject,
-      html,
-      text
-    });
-  } catch (error) {
-    console.error('Failed to send policy invitation:', error);
-    return false;
-  }
-};
 
 export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionData): Promise<boolean> => {
   try {
@@ -747,6 +696,135 @@ Nota de seguridad: Si no solicitaste restablecer tu contraseña, es posible que 
     });
   } catch (error) {
     console.error('Failed to send password reset email:', error);
+    return false;
+  }
+};
+
+// Payment completion email data
+export interface PaymentCompletedData {
+  email: string;
+  payerName?: string;
+  policyNumber: string;
+  paymentType: string;
+  amount: number;
+  paidAt: Date;
+}
+
+export const sendPaymentCompletedEmail = async (data: PaymentCompletedData): Promise<boolean> => {
+  try {
+    const subject = `Pago Confirmado - Póliza ${data.policyNumber}`;
+
+    const formatCurrency = (amount: number) =>
+      new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
+
+    const formatDate = (date: Date) =>
+      new Date(date).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">¡Pago Confirmado!</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+          <p>Hola${data.payerName ? ` ${data.payerName}` : ''},</p>
+          <p>Tu pago ha sido procesado exitosamente.</p>
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <p style="margin: 5px 0;"><strong>Póliza:</strong> ${data.policyNumber}</p>
+            <p style="margin: 5px 0;"><strong>Concepto:</strong> ${data.paymentType}</p>
+            <p style="margin: 5px 0;"><strong>Monto:</strong> ${formatCurrency(data.amount)}</p>
+            <p style="margin: 5px 0;"><strong>Fecha:</strong> ${formatDate(data.paidAt)}</p>
+          </div>
+          <p>Gracias por tu pago. Si tienes alguna pregunta, contáctanos en ${SUPPORT_EMAIL}.</p>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
+        </div>
+      </body>
+      </html>
+    `.trim();
+
+    const text = `
+Hola${data.payerName ? ` ${data.payerName}` : ''},
+
+Tu pago ha sido procesado exitosamente.
+
+Póliza: ${data.policyNumber}
+Concepto: ${data.paymentType}
+Monto: ${formatCurrency(data.amount)}
+Fecha: ${formatDate(data.paidAt)}
+
+Gracias por tu pago. Si tienes alguna pregunta, contáctanos en ${SUPPORT_EMAIL}.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send payment completed email:', error);
+    return false;
+  }
+};
+
+// All payments completed email data (for admin notification)
+export interface AllPaymentsCompletedData {
+  adminEmail: string;
+  policyNumber: string;
+  totalPayments: number;
+  totalAmount: number;
+}
+
+export const sendAllPaymentsCompletedEmail = async (data: AllPaymentsCompletedData): Promise<boolean> => {
+  try {
+    const subject = `Todos los pagos completados - Póliza ${data.policyNumber}`;
+
+    const formatCurrency = (amount: number) =>
+      new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">Pagos Completados</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+          <p>Todos los pagos de la póliza han sido completados.</p>
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+            <p style="margin: 5px 0;"><strong>Póliza:</strong> ${data.policyNumber}</p>
+            <p style="margin: 5px 0;"><strong>Total de pagos:</strong> ${data.totalPayments}</p>
+            <p style="margin: 5px 0;"><strong>Monto total:</strong> ${formatCurrency(data.totalAmount)}</p>
+          </div>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
+        </div>
+      </body>
+      </html>
+    `.trim();
+
+    const text = `
+Todos los pagos de la póliza han sido completados.
+
+Póliza: ${data.policyNumber}
+Total de pagos: ${data.totalPayments}
+Monto total: ${formatCurrency(data.totalAmount)}
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.adminEmail,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send all payments completed email:', error);
     return false;
   }
 };
