@@ -55,9 +55,35 @@
       "Bash(if [ -s /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session ])",
       "Bash(then cat /Users/neto/Development/hestia/new-policy-pricing-calc/.claude/sessions/.current-session)",
       "Bash(else echo \"EMPTY_OR_NO_SESSION\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(gh:*)",
+      "Bash(while read:*)",
+      "Bash(if [ -s /Users/neto/Development/hestia-app/.claude/sessions/.current-session ])",
+      "Bash(then cat /Users/neto/Development/hestia-app/.claude/sessions/.current-session)",
+      "Skill(session-end)",
+      "Bash(git -C /Users/neto/Development/hestia-app status --porcelain)",
+      "Bash(git -C /Users/neto/Development/hestia-app log --oneline -10)",
+      "Bash(git -C /Users/neto/Development/hestia-app log --oneline -10 --name-status)",
+      "Bash(for file in googleMapsService documentService userTokenService pricingService fileUploadService actorTokenService policyWorkflowService)",
+      "Bash(do echo \"=== $file ===\" grep -E \"^\\(class|export.*=\\)\" /Users/neto/Development/hestia-app/src/lib/services/$file.ts)",
+      "Bash(xargs cat:*)",
+      "Bash(git -C /Users/neto/Development/hestia-app status --short)",
+      "Bash(git -C /Users/neto/Development/hestia-app log --all --full-history -- \"src/lib/utils/policyUtils.ts\")",
+      "Bash(git -C /Users/neto/Development/hestia-app log --oneline src/lib/services/policyApplicationService.ts)",
+      "Bash(git commit:*)",
+      "Bash(do if ! grep -l '$\\(basename $f .ts\\)' /Users/neto/Development/hestia-app/src/**/*.{ts,tsx} /Users/neto/Development/hestia-app/src/app/**/*.{ts,tsx})",
+      "Bash(then echo $f)",
+      "Bash(for file in policyAuth jointObligorTabFields formMessages pdfService userService packageService PolicyStatusService)",
+      "Bash(do echo '=== $file ===')",
+      "Skill(session-start)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(bunx next lint:*)",
+      "Skill(session-update)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "default"
 }

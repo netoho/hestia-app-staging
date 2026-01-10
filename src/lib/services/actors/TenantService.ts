@@ -79,23 +79,8 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
    */
   validatePersonData(data: Partial<PersonActorData>, isPartial: boolean = false): Result<PersonActorData> {
     const mode: ValidationMode = isPartial ? 'partial' : 'strict';
-    const result = validateTenantData(data, {
-      tenantType: 'INDIVIDUAL',
-      mode,
-    });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person tenant data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    const result = validateTenantData(data, { tenantType: 'INDIVIDUAL', mode });
+    return this.wrapZodValidation(result, 'Invalid person tenant data') as Result<PersonActorData>;
   }
 
   /**
@@ -103,23 +88,8 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
    */
   validateCompanyData(data: Partial<CompanyActorData>, isPartial: boolean = false): Result<CompanyActorData> {
     const mode: ValidationMode = isPartial ? 'partial' : 'strict';
-    const result = validateTenantData(data, {
-      tenantType: 'COMPANY',
-      mode,
-    });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company tenant data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    const result = validateTenantData(data, { tenantType: 'COMPANY', mode });
+    return this.wrapZodValidation(result, 'Invalid company tenant data') as Result<CompanyActorData>;
   }
 
   /**
@@ -215,131 +185,6 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
         new ServiceError(
           ErrorCode.INTERNAL_ERROR,
           'Error saving tenant data',
-          500,
-          { error: (error as Error).message }
-        )
-      );
-    }
-  }
-
-  /**
-   * Validate token and save tenant submission
-   * Simplified to use master schema and transformation utilities
-   */
-  async validateAndSave(
-    token: string,
-    data: any,
-    isPartial: boolean = false
-  ): AsyncResult<any> {
-    try {
-      // Validate token
-      const validation = await validateTenantToken(token);
-
-      if (!validation.valid) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.INVALID_TOKEN,
-            validation.message || 'Invalid token',
-            401
-          )
-        );
-      }
-
-      const { tenant } = validation;
-
-      // Check token expiry
-      if (tenant.tokenExpiry && tenant.tokenExpiry < new Date()) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.TOKEN_EXPIRED,
-            'Token expired',
-            401
-          )
-        );
-      }
-
-      // For final submission, check if already complete
-      if (!isPartial && tenant.informationComplete) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.ALREADY_COMPLETE,
-            'Information already submitted',
-            400
-          )
-        );
-      }
-
-      // Determine tenant type
-      const tenantType = data.tenantType || tenant.tenantType || 'INDIVIDUAL';
-
-      // Validate data using master schema
-      const mode: ValidationMode = isPartial ? 'partial' : 'strict';
-      const validationResult = validateTenantData(data, {
-        tenantType,
-        mode,
-      });
-
-      if (!validationResult.success) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.VALIDATION_ERROR,
-            'Validation failed',
-            400,
-            { errors: this.formatZodErrors(validationResult.error) }
-          )
-        );
-      }
-
-      // Prepare data for database
-      const updateData = prepareTenantForDB(data, {
-        tenantType,
-        isPartial,
-      });
-
-      // Update tenant in database
-      const updatedTenant = await this.prisma.tenant.update({
-        where: { id: tenant.id },
-        data: updateData,
-        include: this.getIncludes()
-      });
-
-      // Handle references if provided
-      if (data.personalReferences && Array.isArray(data.personalReferences)) {
-        await this.savePersonalReferences(tenant.id, data.personalReferences);
-      }
-
-      if (data.commercialReferences && Array.isArray(data.commercialReferences)) {
-        await this.saveCommercialReferences(tenant.id, data.commercialReferences);
-      }
-
-      // Log activity
-      await logPolicyActivity({
-        policyId: updatedTenant.policyId,
-        action: isPartial ? 'tenant_info_partial_save' : 'tenant_info_completed',
-        description: isPartial
-          ? 'El inquilino guardó información parcial'
-          : 'El inquilino completó su información',
-        performedById: tenant.id,
-        performedByType: 'tenant',
-        details: {
-          tenantId: tenant.id,
-          tenantType: updateData.tenantType || updatedTenant.tenantType,
-        },
-      });
-
-      return Result.ok({
-        success: true,
-        message: isPartial
-          ? 'Información guardada correctamente'
-          : 'Información enviada correctamente',
-        tenant: updatedTenant,
-      });
-    } catch (error) {
-      this.log('error', 'Tenant submission error', error);
-      return Result.error(
-        new ServiceError(
-          ErrorCode.INTERNAL_ERROR,
-          'Error processing tenant submission',
           500,
           { error: (error as Error).message }
         )

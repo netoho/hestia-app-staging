@@ -31,6 +31,24 @@ import { logPolicyActivity } from '@/lib/services/policyService';
 import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import type { LandlordWithRelations } from './types';
 
+/**
+ * Type assertion: Prisma model to domain type.
+ * The Prisma model and domain type have compatible shapes but different type origins.
+ * TODO: Phase 4 - Replace with proper transform function when refactoring actor services.
+ */
+function asLandlordData(model: LandlordWithRelations): LandlordData {
+  return model as unknown as LandlordData;
+}
+
+/**
+ * Type assertion: Domain type to Prisma model.
+ * Used when BaseActorService expects TModel but we have TData.
+ * TODO: Phase 4 - Resolve TModel/TData generic mismatch in BaseActorService.
+ */
+function asLandlordModel(data: LandlordData): LandlordWithRelations {
+  return data as unknown as LandlordWithRelations;
+}
+
 export class LandlordService extends BaseActorService<LandlordWithRelations, LandlordData> {
   constructor(prisma?: PrismaClient) {
     super('landlord', prisma);
@@ -68,7 +86,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    */
   protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
     const updateData = super.buildUpdateData(data);
-    const landlordData = data as any;
+    const landlordData = data as Partial<LandlordData>;
 
     if (addressId !== undefined) updateData.addressId = addressId || null;
 
@@ -104,19 +122,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       isCompany: false,
       mode: isPartial ? 'partial' : 'strict',
     });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person landlord data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person landlord data') as Result<PersonActorData>;
   }
 
   /**
@@ -127,19 +133,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       isCompany: true,
       mode: isPartial ? 'partial' : 'strict',
     });
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company landlord data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company landlord data') as Result<CompanyActorData>;
   }
 
   /**
@@ -247,145 +241,6 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   }
 
   /**
-   * Validate token and save landlord submission
-   */
-  async validateAndSave(
-    token: string,
-    data: LandlordSubmissionData,
-    isPartial?: boolean
-  ): AsyncResult<LandlordResponse> {
-    try {
-      // Validate token
-      const tokenValidation = await validateLandlordToken(token);
-      if (!tokenValidation.valid || !tokenValidation.landlord) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.INVALID_TOKEN,
-            tokenValidation.message || 'Invalid token',
-            401
-          )
-        );
-      }
-
-      // Set partial flag
-      const partial = isPartial ?? data.partial ?? false;
-
-      // Validate submission data using new schema
-      const validationResult = validateMultiLandlordSubmission(data);
-      if (!validationResult.success && 'error' in validationResult) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid submission data',
-            400,
-            { errors: this.formatZodErrors(validationResult.error) }
-          )
-        );
-      }
-
-      // Validate that landlords array exists
-      if (!data.landlords || !Array.isArray(data.landlords) || data.landlords.length === 0) {
-        return Result.error(
-          new ServiceError(
-            ErrorCode.VALIDATION_ERROR,
-            'At least one landlord is required',
-            400
-          )
-        );
-      }
-
-      // Start transaction
-      return await this.executeTransaction(async (tx) => {
-        const {landlord} = tokenValidation;
-
-        // Save all landlords in the array
-        for (const landlordData of data.landlords) {
-          if (landlordData.id) {
-            const landlordResult = await this.saveLandlordInformation(
-              landlordData.id,
-              landlordData as LandlordData,
-              partial
-            );
-
-            if (!landlordResult.ok) {
-              throw landlordResult.error;
-            }
-          }
-        }
-
-        // Save property details if provided
-        if (data.propertyDetails) {
-          const propertyResult = await this.savePropertyDetails(
-            landlord!.policyId,
-            data.propertyDetails
-          );
-
-          if (!propertyResult.ok) {
-            throw propertyResult.error;
-          }
-        }
-
-        // Save financial details to Policy if provided in propertyDetails
-        // Financial fields are sent via propertyDetails but stored in Policy
-        if (data.propertyDetails) {
-          const financialData = this.extractFinancialData(data.propertyDetails);
-
-          // Only save if at least one financial field is provided
-          const hasFinancialData = Object.values(financialData).some(v => v !== undefined);
-          if (hasFinancialData) {
-            const financialResult = await this.saveFinancialDetails(
-              landlord!.policyId,
-              financialData
-            );
-
-            if (!financialResult.ok) {
-              throw financialResult.error;
-            }
-          }
-        }
-
-        // Log activity
-        await logPolicyActivity({
-          policyId: landlord!.policyId,
-          action: partial ? 'landlord_info_partial_save' : 'landlord_info_completed',
-          description: partial
-            ? 'El arrendador guardó información parcial'
-            : 'El arrendador completó su información',
-          performedById: landlord!.id,
-          performedByType: 'landlord',
-          details: {
-            landlordId: landlord!.id,
-            isCompany: data.landlords[0]?.isCompany,
-            landlordCount: data.landlords.length,
-            partial,
-          },
-        });
-
-        return {
-          success: true,
-          message: partial
-            ? 'Información guardada parcialmente'
-            : 'Información actualizada correctamente',
-          landlord: {
-            id: landlord!.id,
-            informationComplete: !partial,
-          },
-        } as LandlordResponse;
-      });
-    } catch (error) {
-      this.log('error', 'Landlord submission error', error);
-      return Result.error(
-        new ServiceError(
-          ErrorCode.INTERNAL_ERROR,
-          'Error processing landlord submission',
-          500,
-          { error: (error as Error).message }
-        )
-      );
-    }
-  }
-
-  /**
    * Get landlord by ID
    */
   async getLandlordById(landlordId: string): AsyncResult<LandlordData> {
@@ -427,7 +282,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         return Result.error(landlordResult.error);
       }
 
-      return landlordResult.value as unknown as LandlordData;
+      return asLandlordData(landlordResult.value);
     }, 'getPrimaryLandlord');
   }
 
@@ -475,12 +330,12 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     isPrimary: boolean = false
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
-      const landlordData = data as any;
+      // data already has addressDetails in Partial<LandlordData>
 
       // Handle address if provided
       let addressId: string | undefined;
-      if (landlordData.addressDetails) {
-        const addressResult = await this.upsertAddress(landlordData.addressDetails);
+      if (data.addressDetails) {
+        const addressResult = await this.upsertAddress(data.addressDetails);
         if (addressResult.ok) {
           addressId = addressResult.value;
         }
@@ -544,7 +399,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       });
 
       this.log('info', 'Landlord created', { landlordId: landlord.id, policyId, isPrimary });
-      return landlord as unknown as LandlordData;
+      return asLandlordData(landlord);
     });
   }
 
@@ -595,7 +450,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       const document = await this.prisma.actorDocument.create({
         data: {
           landlordId,
-          category: documentType as any,
+          category: documentType as DocumentCategory,
           fileName,
           filePath: fileUrl,
           fileSize: 0, // Default or pass as arg
@@ -632,7 +487,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       if (!landlord) {
         throw new ServiceError(
           ErrorCode.NOT_FOUND,
-          'Actor no encontrado con el token proporcionado'
+          'Actor not found with the provided token'
         );
       }
 
@@ -808,7 +663,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
           }
         });
 
-        return updatedLandlord as unknown as LandlordData;
+        return asLandlordData(updatedLandlord);
       });
     } catch (error) {
       this.log('error', 'Multi-landlord save error', error);
@@ -845,7 +700,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
       );
       // Return the specific landlord that was updated
       if (result.ok) {
-        return Result.ok(result.value as unknown as LandlordWithRelations);
+        return Result.ok(asLandlordModel(result.value));
       }
       return Result.error(result.error);
     } else {
@@ -951,7 +806,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         return Result.error(
           new ServiceError(
             ErrorCode.VALIDATION_ERROR,
-            `Error submitting landlord ${(landlord as any).firstName || (landlord as any).companyName}: ${result.error?.message}`,
+            `Error submitting landlord ${('firstName' in landlord ? landlord.firstName : landlord.companyName)}: ${result.error?.message}`,
             400
           )
         );

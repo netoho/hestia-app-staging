@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { transitionPolicyStatus } from './policyWorkflowService';
 import { logPolicyActivity } from './policyService';
+import { ServiceError, ErrorCode } from './types/errors';
 
 /**
  * Service for managing policy status transitions
@@ -26,7 +27,7 @@ export class PolicyStatusService {
     });
 
     if (!policy) {
-      throw new Error('Policy not found');
+      throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
     const pendingActors: string[] = [];
@@ -97,7 +98,7 @@ export class PolicyStatusService {
       });
 
       if (!policy) {
-        throw new Error('Policy not found');
+        throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
       }
 
       // Only transition if currently in COLLECTING_INFO status
@@ -146,7 +147,7 @@ export class PolicyStatusService {
     });
 
     if (!policy) {
-      throw new Error('Policy not found');
+      throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
     const actorStatus = await this.checkAllActorsComplete(policyId);
@@ -213,7 +214,7 @@ export class PolicyStatusService {
     });
 
     if (!policy) {
-      throw new Error('Policy not found');
+      throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
     await transitionPolicyStatus(

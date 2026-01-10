@@ -4,36 +4,36 @@ import { useRouter } from 'next/navigation';
 import PolicyCard from './PolicyCard';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 
+interface Actor {
+  firstName?: string | null;
+  middleName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+  companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  informationComplete: boolean;
+  isPrimary?: boolean;
+  [key: string]: unknown;
+}
+
 interface Policy {
   id: string;
   policyNumber: string;
   status: PolicyStatus;
-  propertyAddress: string;
-  propertyType?: string;
+  propertyAddress?: { formattedAddress?: string | null } | null;
+  propertyDetails?: { propertyAddressDetails?: { formattedAddress?: string | null } | null } | null;
+  propertyType?: string | null;
   rentAmount: number;
-  totalPrice?: number;
-  createdAt: string;
-  package?: {
-    name: string;
-  };
-  tenant?: {
-    fullName?: string;
-    companyName?: string;
-    informationComplete: boolean;
-  } | null;
-  landlords?: Array<{
-    fullName?: string;
-    companyName?: string;
-    isPrimary?: boolean;
-    informationComplete: boolean;
-  }>;
-  jointObligors?: Array<{
-    informationComplete: boolean;
-  }>;
-  avals?: Array<{
-    informationComplete: boolean;
-  }>;
-  guarantorType?: string;
+  totalPrice?: number | null;
+  createdAt: Date | string;
+  package?: { name: string } | null;
+  tenant?: Actor | null;
+  landlords?: Actor[];
+  jointObligors?: Actor[];
+  avals?: Actor[];
+  guarantorType?: string | null;
+  [key: string]: unknown;
 }
 
 interface PoliciesCardsProps {

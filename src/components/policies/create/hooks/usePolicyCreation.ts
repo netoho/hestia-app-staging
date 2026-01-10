@@ -27,7 +27,6 @@ export function usePolicyCreation() {
     property: {
       policyNumber: generatePolicyNumber(),
       internalCode: '',
-      propertyAddress: '',
       propertyAddressDetails: null,
       propertyType: PropertyType.APARTMENT,
       propertyDescription: '',

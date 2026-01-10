@@ -4,10 +4,15 @@ import {
   protectedProcedure,
 } from '@/server/trpc';
 import { prisma } from '@/lib/prisma';
-import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  throwNotFound,
+  throwConflict,
+  throwValidationError,
+  throwInternalError,
+} from '@/lib/utils/trpcErrorHandler';
 
 // Allowed MIME types for avatars
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
@@ -17,15 +22,15 @@ const MAX_AVATAR_SIZE = 20 * 1024 * 1024; // 20MB
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  phone: z.string().min(1, 'El teléfono es requerido'),
+  phone: z.string().min(1, 'Phone is required'),
   companyName: z.string().optional(),
   address: z.string().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string()
-    .min(8, 'La contraseña debe tener al menos 8 caracteres')
-    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-    .regex(/[a-z]/, 'Debe contener al menos una minúscula')
-    .regex(/[0-9]/, 'Debe contener al menos un número')
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Must contain at least one number')
     .optional(),
 });
 
@@ -50,10 +55,7 @@ export const userRouter = createTRPCRouter({
       });
 
       if (!user) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'User not found',
-        });
+        throwNotFound('User', ctx.userId);
       }
 
       return user;
@@ -73,22 +75,16 @@ export const userRouter = createTRPCRouter({
       });
 
       if (!user) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'User not found',
-        });
+        throwNotFound('User', ctx.userId);
       }
 
-      const dataToUpdate: any = { ...profileData };
+      const dataToUpdate: Record<string, unknown> = { ...profileData };
 
       // Handle email change
       if (email && email !== user.email) {
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Email already in use',
-          });
+          throwConflict('Email');
         }
         dataToUpdate.email = email;
       }
@@ -96,23 +92,14 @@ export const userRouter = createTRPCRouter({
       // Handle password change
       if (newPassword) {
         if (!currentPassword) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Current password is required',
-          });
+          throwValidationError('Current password is required');
         }
         if (!user.password) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Cannot change password - no password set',
-          });
+          throwValidationError('Cannot change password - no password set');
         }
         const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordValid) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Invalid current password',
-          });
+          throwValidationError('Invalid current password');
         }
         dataToUpdate.password = await bcrypt.hash(newPassword, 10);
       }
@@ -150,19 +137,13 @@ export const userRouter = createTRPCRouter({
 
       // Validate content type
       if (!ALLOWED_AVATAR_TYPES.includes(contentType)) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Tipo de archivo inválido. Solo se permiten JPEG, PNG, HEIC y WebP',
-        });
+        throwValidationError('Invalid file type. Only JPEG, PNG, HEIC and WebP are allowed');
       }
 
       // Decode base64 and validate size
       const buffer = Buffer.from(file, 'base64');
       if (buffer.length > MAX_AVATAR_SIZE) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'El archivo es muy grande. El tamaño máximo es 20MB',
-        });
+        throwValidationError('File is too large. Maximum size is 20MB');
       }
 
       // Get current user for old avatar cleanup
@@ -194,10 +175,7 @@ export const userRouter = createTRPCRouter({
       });
 
       if (!uploadedPath) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Error al subir el avatar',
-        });
+        throwInternalError('Failed to upload avatar');
       }
 
       // Get public URL

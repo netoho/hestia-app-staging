@@ -34,7 +34,7 @@ const ValidateSectionSchema = z.object({
 }).refine(
   (data) => data.status !== 'REJECTED' || (data.rejectionReason && data.rejectionReason.trim().length >= 10),
   {
-    message: 'La razón de rechazo debe tener al menos 10 caracteres',
+    message: 'Rejection reason must be at least 10 characters',
     path: ['rejectionReason'],
   }
 );
@@ -47,7 +47,7 @@ const ValidateDocumentSchema = z.object({
 }).refine(
   (data) => data.status !== 'REJECTED' || (data.rejectionReason && data.rejectionReason.trim().length >= 10),
   {
-    message: 'La razón de rechazo debe tener al menos 10 caracteres',
+    message: 'Rejection reason must be at least 10 characters',
     path: ['rejectionReason'],
   }
 );

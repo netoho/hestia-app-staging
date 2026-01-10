@@ -22,6 +22,19 @@ export interface AddressDetails {
   formattedAddress?: string;
 }
 
+// Address with database metadata (from Prisma queries)
+export interface AddressWithMetadata extends AddressDetails {
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Helper to strip DB metadata from address for upserts
+export function cleanAddressData(address: AddressWithMetadata): AddressDetails {
+  const { id, createdAt, updatedAt, ...clean } = address;
+  return clean;
+}
+
 // Base actor interface shared by all actor types
 export interface BaseActorData {
   id?: string;
