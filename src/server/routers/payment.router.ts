@@ -334,7 +334,7 @@ export const paymentRouter = createTRPCRouter({
             type: payment.type,
             reason,
           },
-          performedBy: userId,
+          performedById: userId,
           performedByType: 'user',
         },
       });
