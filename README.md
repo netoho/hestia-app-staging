@@ -12,7 +12,7 @@ bun install
 bunx prisma generate
 
 # Run database migrations
-bunx prisma migrate dev
+bunx prisma migrate deploy
 
 # Seed database
 bunx prisma db seed
@@ -157,4 +157,4 @@ See [SESSION_CONTEXT.md](SESSION_CONTEXT.md) for detailed system context and rec
 
 ---
 
-**Last Updated:** 2026-01-01
+**Last Updated:** 2026-01-07
