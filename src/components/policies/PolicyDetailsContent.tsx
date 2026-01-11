@@ -34,8 +34,19 @@ import {
   Share2,
   Info,
   History,
-  XCircle
+  XCircle,
+  MoreVertical,
+  FileText,
+  CreditCard
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import { trpc } from '@/lib/trpc/client';
 
@@ -340,192 +351,184 @@ export default function PolicyDetailsContent({
     />
   );
 
+  // Progress indicator helper
+  const ProgressIndicator = ({
+    label,
+    current,
+    total,
+    icon: Icon,
+    onClick,
+  }: {
+    label: string;
+    current: number;
+    total: number;
+    icon: React.ElementType;
+    onClick?: () => void;
+  }) => {
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    const isComplete = current === total && total > 0;
+    const hasData = total > 0;
+
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-lg transition-all",
+          onClick && "hover:bg-gray-100 cursor-pointer",
+          !onClick && "cursor-default"
+        )}
+      >
+        <Icon className={cn(
+          "h-4 w-4",
+          isComplete ? "text-green-600" : "text-gray-500"
+        )} />
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className={cn(
+          "font-semibold",
+          isComplete ? "text-green-600" : "text-gray-900"
+        )}>
+          {hasData ? `${current}/${total}` : '—'}
+        </span>
+        {hasData && (
+          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                isComplete ? "bg-green-500" : "bg-blue-500"
+              )}
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+        )}
+      </button>
+    );
+  };
+
+  // Calculate payment stats
+  const completedPayments = policy.payments?.filter(
+    (p: { status: string }) => p.status === 'COMPLETED'
+  ).length ?? 0;
+  const totalPayments = policy.payments?.length ?? 0;
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-7xl animate-in fade-in duration-300">
-      {/* Header - Mobile Responsive */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard/policies')}
-            className="transition-all hover:scale-105 hover:shadow-md w-fit"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Volver</span>
-          </Button>
-          <div className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Protección {policy.policyNumber}</h1>
-              {getStatusBadge(policy.status)}
-              {policy.investigation?.verdict === 'APPROVED' && (
-                <Badge className="bg-blue-500 hover:bg-blue-600">
-                  <Shield className="h-3 w-3 mr-1" />
-                  Investigación Aprobada
-                </Badge>
-              )}
+      {/* Compact Header */}
+      <div className="mb-6 space-y-4">
+        {/* Row 1: Title + Status + Actions */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/dashboard/policies')}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold truncate">
+                  Protección {policy.policyNumber}
+                </h1>
+                {getStatusBadge(policy.status)}
+                {policy.investigation?.verdict === 'APPROVED' && (
+                  <Badge className="bg-blue-500 hover:bg-blue-600 shrink-0">
+                    <Shield className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">Investigación </span>Aprobada
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground truncate mt-0.5">
+                {policy.propertyAddress}
+              </p>
             </div>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">{policy.propertyAddress}</p>
           </div>
+
+          {/* Actions Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {/* Review Information - Staff/Admin */}
+              {(permissions.canApprove || permissions.canVerifyDocuments) &&
+               policy.status === 'UNDER_INVESTIGATION' &&
+               policy.investigation?.verdict !== 'APPROVED' && (
+                <DropdownMenuItem
+                  onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
+                  disabled={policy.progress && policy.progress.overall < 100}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Revisar Información
+                </DropdownMenuItem>
+              )}
+
+              {/* Approve Policy - Staff/Admin */}
+              {permissions.canApprove &&
+               allActorsApproved &&
+               policy.investigation?.verdict === 'APPROVED' &&
+               (policy.status === 'UNDER_INVESTIGATION' || policy.status === 'PENDING_APPROVAL') && (
+                <DropdownMenuItem onClick={approvePolicy} className="text-green-600">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {t.pages.policies.approvePolicy}
+                </DropdownMenuItem>
+              )}
+
+              {/* Send Invitations */}
+              {permissions.canSendInvitations && (policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
+                <DropdownMenuItem
+                  onClick={handleSendInvitations}
+                  disabled={sending === 'all'}
+                >
+                  {sending === 'all' ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  {t.pages.policies.sendInvitations}
+                </DropdownMenuItem>
+              )}
+
+              {/* Share Links */}
+              {permissions.canSendInvitations && (
+                <DropdownMenuItem onClick={() => setShowShareModal(true)}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Compartir Enlaces
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {/* Review Information Button - For Staff/Admin (only when investigation not yet approved) */}
-          {(permissions.canApprove || permissions.canVerifyDocuments) &&
-           policy.status === 'UNDER_INVESTIGATION' &&
-           policy.investigation?.verdict !== 'APPROVED' && (
-            <Button
-              onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg"
-              disabled={
-                policy.progress &&
-                policy.progress.overall < 100
-              }
-              title={
-                policy.progress && policy.progress.overall < 100
-                  ? "La información de los actores debe estar completa antes de revisar"
-                  : "Revisar información de la póliza"
-              }
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              Revisar Información
-            </Button>
-          )}
-
-          {/* Policy Approval Button - Only for Staff/Admin when investigation approved */}
-          {permissions.canApprove &&
-           allActorsApproved &&
-           policy.investigation?.verdict === 'APPROVED' &&
-           (policy.status === 'UNDER_INVESTIGATION' || policy.status === 'PENDING_APPROVAL') && (
-            <Button
-              onClick={approvePolicy}
-              className="bg-green-600 hover:bg-green-700 transition-all hover:scale-105 hover:shadow-lg"
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {t.pages.policies.approvePolicy}
-            </Button>
-          )}
-
-          {/* Send Invitations Button */}
-          {permissions.canSendInvitations && (policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
-            <Button
-              onClick={handleSendInvitations}
-              variant="default"
-              disabled={sending === 'all'}
-              className="transition-all hover:scale-105 hover:shadow-md disabled:hover:scale-100"
-            >
-              {sending === 'all' ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              {t.pages.policies.sendInvitations}
-            </Button>
-          )}
-
-          {/* Share Links Button */}
-          {permissions.canSendInvitations && (
-            <Button
-              onClick={() => setShowShareModal(true)}
-              variant="outline"
-              className="transition-all hover:scale-105 hover:shadow-md"
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartir Enlaces
-            </Button>
-          )}
+        {/* Row 2: Progress Indicators */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-gray-50 rounded-lg p-2">
+          <ProgressIndicator
+            label="Actores"
+            current={policy.progress?.completedActors ?? 0}
+            total={policy.progress?.totalActors ?? 0}
+            icon={Users}
+            onClick={() => setCurrentTab('tenant')}
+          />
+          <div className="hidden sm:block w-px h-6 bg-gray-300" />
+          <ProgressIndicator
+            label="Documentos"
+            current={policy.progress?.documentsUploaded ?? 0}
+            total={policy.progress?.documentsRequired ?? 0}
+            icon={FileText}
+            onClick={() => setCurrentTab('documents')}
+          />
+          <div className="hidden sm:block w-px h-6 bg-gray-300" />
+          <ProgressIndicator
+            label="Pagos"
+            current={completedPayments}
+            total={totalPayments}
+            icon={CreditCard}
+            onClick={() => setCurrentTab('payments')}
+          />
         </div>
       </div>
-
-      {/* Enhanced Progress Overview */}
-      <Card className="mb-6 transition-all hover:shadow-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <CardTitle>Progreso General</CardTitle>
-            </div>
-            {policy.progress && (
-              <Badge variant="outline" className="text-sm">
-                {policy.progress.completedActors} / {policy.progress.totalActors} Actores
-              </Badge>
-            )}
-          </div>
-          <CardDescription>
-            Estado de completitud de información y documentos
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {/* Main Progress Bar */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium">Progreso Total</span>
-                <span className="font-bold text-lg">
-                  {policy.progress?.overall || progressPercentage}%
-                </span>
-              </div>
-              <Progress
-                value={policy.progress?.overall || progressPercentage}
-                className="h-3 transition-all duration-500"
-              />
-            </div>
-
-            {/* Stats Grid */}
-            {policy.progress && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 hover:scale-105">
-                  <div className="text-2xl font-bold text-blue-600 transition-all">
-                    {policy.progress.totalActors}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">Actores Totales</div>
-                </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg transition-all hover:bg-green-100 hover:scale-105">
-                  <div className="text-2xl font-bold text-green-600 transition-all">
-                    {policy.progress.completedActors}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">Completados</div>
-                </div>
-                <div className="text-center p-3 bg-orange-50 rounded-lg transition-all hover:bg-orange-100 hover:scale-105">
-                  <div className="text-2xl font-bold text-orange-600 transition-all">
-                    {policy.progress.totalActors - policy.progress.completedActors}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">Pendientes</div>
-                </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg transition-all hover:bg-purple-100 hover:scale-105">
-                  <div className="text-2xl font-bold text-purple-600 transition-all">
-                    {policy.progress.documentsUploaded}/{policy.progress.documentsRequired}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">Documentos</div>
-                </div>
-                <div className="text-center p-3 bg-emerald-50 rounded-lg transition-all hover:bg-emerald-100 hover:scale-105">
-                  <div className="text-2xl font-bold text-emerald-600 transition-all">
-                    {policy.payments?.length ? (
-                      `${policy.payments.filter((p: { status: string }) => p.status === 'COMPLETED').length}/${policy.payments.length}`
-                    ) : '—'}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">Pagos</div>
-                </div>
-              </div>
-            )}
-
-            {/* Verification Status for Staff/Admin */}
-            {isStaffOrAdmin && (
-              <Alert className={allActorsApproved ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}>
-                {allActorsApproved ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Clock className="h-4 w-4 text-orange-600" />
-                )}
-                <AlertDescription className={allActorsApproved ? 'text-green-700' : 'text-orange-700'}>
-                  {allActorsApproved
-                    ? t.pages.policies.actorVerification.allActorsApproved
-                    : t.pages.policies.actorVerification.pendingActorApprovals}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Main Content Tabs - Mobile Scrollable */}
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
