@@ -448,7 +448,7 @@ export default function PolicyDetailsContent({
               className="transition-all hover:scale-105 hover:shadow-md"
             >
               <XCircle className="mr-2 h-4 w-4" />
-              Cancelar Proteccion
+              Cancelar Protección
             </Button>
           )}
         </div>
@@ -845,7 +845,7 @@ export default function PolicyDetailsContent({
               Marcar {markCompleteActor ? getActorTypeLabel(markCompleteActor.type) : 'Actor'} como Completo
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta accion marcara a {markCompleteActor?.name} como completo.
+              Esta acción marcara a {markCompleteActor?.name} como completo.
               Si faltan documentos requeridos, puede elegir continuar de todas formas.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -7,9 +7,9 @@ export const POLICY_STATUS_CONFIG: Record<PolicyStatus, {
 }> = {
   [PolicyStatus.DRAFT]: { label: 'Borrador', variant: 'secondary', filterVisible: true },
   [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando Info', variant: 'default', filterVisible: true },
-  [PolicyStatus.UNDER_INVESTIGATION]: { label: 'En Investigacion', variant: 'default', filterVisible: true },
+  [PolicyStatus.UNDER_INVESTIGATION]: { label: 'En Investigación', variant: 'default', filterVisible: true },
   [PolicyStatus.INVESTIGATION_REJECTED]: { label: 'Rechazado', variant: 'destructive', filterVisible: true },
-  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobacion', variant: 'default', filterVisible: true },
+  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobación', variant: 'default', filterVisible: true },
   [PolicyStatus.APPROVED]: { label: 'Aprobado', variant: 'default', filterVisible: true },
   [PolicyStatus.CONTRACT_PENDING]: { label: 'Contrato Pendiente', variant: 'default', filterVisible: true },
   [PolicyStatus.CONTRACT_SIGNED]: { label: 'Contrato Firmado', variant: 'default', filterVisible: true },

@@ -29,7 +29,7 @@ const CANCELLATION_REASONS: Record<PolicyCancellationReason, string> = {
   CLIENT_REQUEST: 'Solicitud del Cliente',
   NON_PAYMENT: 'Falta de Pago',
   FRAUD: 'Fraude',
-  DOCUMENTATION_ISSUES: 'Problemas de Documentacion',
+  DOCUMENTATION_ISSUES: 'Problemas de Documentación',
   LANDLORD_REQUEST: 'Solicitud del Arrendador',
   TENANT_REQUEST: 'Solicitud del Inquilino',
   OTHER: 'Otro',
@@ -57,8 +57,8 @@ export default function CancelPolicyModal({
   const cancelMutation = trpc.policy.cancelPolicy.useMutation({
     onSuccess: () => {
       toast({
-        title: 'Proteccion Cancelada',
-        description: `La proteccion ${policyNumber} ha sido cancelada exitosamente`,
+        title: 'Protección Cancelada',
+        description: `La protección ${policyNumber} ha sido cancelada exitosamente`,
       });
       onSuccess();
       handleClose();
@@ -66,7 +66,7 @@ export default function CancelPolicyModal({
     onError: (error) => {
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo cancelar la proteccion',
+        description: error.message || 'No se pudo cancelar la protección',
         variant: 'destructive',
       });
     },
@@ -93,28 +93,28 @@ export default function CancelPolicyModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancelar Proteccion</DialogTitle>
+          <DialogTitle>Cancelar Protección</DialogTitle>
           <DialogDescription>
-            Esta accion cancelara permanentemente la proteccion {policyNumber}
+            Esta acción cancelara permanentemente la protección {policyNumber}
           </DialogDescription>
         </DialogHeader>
 
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
-            Esta accion no se puede deshacer. Los administradores seran notificados.
+            Esta acción no se puede deshacer. Los administradores seran notificados.
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="reason">Razon de Cancelacion *</Label>
+            <Label htmlFor="reason">Razón de Cancelación *</Label>
             <Select
               value={reason}
               onValueChange={(value) => setReason(value as PolicyCancellationReason)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleccione una razon" />
+                <SelectValue placeholder="Seleccione una razón" />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(CANCELLATION_REASONS).map(([value, label]) => (
@@ -132,7 +132,7 @@ export default function CancelPolicyModal({
               id="comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Explique los detalles de la cancelacion..."
+              placeholder="Explique los detalles de la cancelación..."
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
@@ -155,7 +155,7 @@ export default function CancelPolicyModal({
             disabled={!isValid || cancelMutation.isPending}
           >
             {cancelMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Confirmar Cancelacion
+            Confirmar Cancelación
           </Button>
         </DialogFooter>
       </DialogContent>

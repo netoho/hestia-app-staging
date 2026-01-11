@@ -19,7 +19,7 @@ const CANCELLATION_REASON_LABELS: Record<string, string> = {
   CLIENT_REQUEST: 'Solicitud del Cliente',
   NON_PAYMENT: 'Falta de Pago',
   FRAUD: 'Fraude',
-  DOCUMENTATION_ISSUES: 'Problemas de Documentacion',
+  DOCUMENTATION_ISSUES: 'Problemas de Documentación',
   LANDLORD_REQUEST: 'Solicitud del Arrendador',
   TENANT_REQUEST: 'Solicitud del Inquilino',
   OTHER: 'Otro',
@@ -74,7 +74,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
               fontWeight: '700',
               letterSpacing: '-0.025em'
             }}>
-              Proteccion Cancelada
+              Protección Cancelada
             </Heading>
             <Text style={{
               margin: '8px 0 0 0',
@@ -82,7 +82,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              Notificacion de cancelacion
+              Notificación de cancelación
             </Text>
           </Section>
 
@@ -110,7 +110,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Se ha cancelado una proteccion en el sistema. A continuacion los detalles:
+              Se ha cancelado una protección en el sistema. A continuacion los detalles:
             </Text>
 
             {/* Cancellation Details Box */}
@@ -127,13 +127,13 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
                 fontWeight: '600',
                 color: brandColors.danger
               }}>
-                Detalles de la Cancelacion
+                Detalles de la Cancelación
               </Heading>
               <Text style={{ margin: '8px 0', color: brandColors.textPrimary }}>
-                <strong>Numero de Proteccion:</strong> {policyNumber}
+                <strong>Número de Protección:</strong> {policyNumber}
               </Text>
               <Text style={{ margin: '8px 0', color: brandColors.textPrimary }}>
-                <strong>Razon:</strong> {reasonLabel}
+                <strong>Razón:</strong> {reasonLabel}
               </Text>
               <Text style={{ margin: '8px 0', color: brandColors.textPrimary }}>
                 <strong>Comentario:</strong> {cancellationComment}
@@ -161,7 +161,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
                     display: 'inline-block',
                   }}
                 >
-                  Ver Proteccion
+                  Ver Protección
                 </a>
               </Section>
             )}
@@ -174,7 +174,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
               color: brandColors.textSecondary,
               marginTop: '20px'
             }}>
-              Este es un mensaje automatico del sistema. Si tienes preguntas sobre esta cancelacion, contacta al equipo que la realizo.
+              Este es un mensaje automático del sistema. Si tienes preguntas sobre esta cancelación, contacta al equipo que la realizo.
             </Text>
           </Section>
 

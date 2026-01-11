@@ -847,7 +847,7 @@ export const sendPolicyCancellationEmail = async (data: PolicyCancellationEmailD
     const { PolicyCancellationEmail } = await import('../../templates/email/react-email/PolicyCancellationEmail');
 
     const html = await render(await PolicyCancellationEmail(data));
-    const subject = emailSubject(`Proteccion Cancelada #${data.policyNumber}`);
+    const subject = emailSubject(`Protección Cancelada #${data.policyNumber}`);
 
     const cancelledDate = new Date(data.cancelledAt).toLocaleDateString('es-MX', {
       weekday: 'long',
@@ -859,20 +859,20 @@ export const sendPolicyCancellationEmail = async (data: PolicyCancellationEmailD
     });
 
     const text = `
-Proteccion Cancelada
+Protección Cancelada
 
 Hola${data.adminName ? ` ${data.adminName}` : ''},
 
-Se ha cancelado una proteccion en el sistema.
+Se ha cancelado una protección en el sistema.
 
 Detalles:
-- Numero de Proteccion: ${data.policyNumber}
-- Razon: ${data.cancellationReason}
+- Número de Protección: ${data.policyNumber}
+- Razón: ${data.cancellationReason}
 - Comentario: ${data.cancellationComment}
 - Cancelada por: ${data.cancelledByName}
 - Fecha: ${cancelledDate}
 
-${data.policyLink ? `Ver proteccion: ${data.policyLink}` : ''}
+${data.policyLink ? `Ver protección: ${data.policyLink}` : ''}
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
     `.trim();
