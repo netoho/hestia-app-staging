@@ -6,13 +6,13 @@ import nodemailer from 'nodemailer';
 import type { IMailgunClient } from 'mailgun.js/Types/Interfaces/MailgunClient/IMailgunClient';
 import type { Transporter } from 'nodemailer';
 import { generatePolicyUrl } from '../utils/tokenUtils';
-import { BRAND_CONFIG } from '@/lib/constants/brandConfig';
+import { brandInfo, emailSubject } from '@/lib/config/brand';
 
 // Email provider configuration
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'; // 'resend', 'mailgun', or 'smtp'
 const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-const COMPANY_NAME = BRAND_CONFIG.company.name;
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || BRAND_CONFIG.company.supportEmail;
+const COMPANY_NAME = brandInfo.name;
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || brandInfo.supportEmail;
 
 // Email provider clients (initialized lazily)
 let resendClient: Resend | null = null;
@@ -169,7 +169,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const { PolicySubmissionEmail } = await import('../../templates/email/react-email/PolicySubmissionEmail');
 
     const html = await render(await PolicySubmissionEmail(data));
-    const subject = `Solicitud Recibida - Protección Hestia #${data.policyId}`;
+    const subject = emailSubject(`Solicitud Recibida #${data.policyId}`);
 
     // Generate plain text version
     const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
@@ -256,7 +256,7 @@ export const sendActorInvitation = async (data: ActorInvitationData): Promise<bo
     };
 
     const actorTypeName = actorTypeNames[data.actorType];
-    const subject = `Acción Requerida: Completa tu información como ${actorTypeName} - Protección ${data.policyNumber}`;
+    const subject = emailSubject(`Completa tu información como ${actorTypeName} - ${data.policyNumber}`);
 
     // Generate plain text version
     const text = `
@@ -305,7 +305,7 @@ export const sendJoinUsNotification = async (data: JoinUsNotificationData): Prom
     const { JoinUsNotificationEmail } = await import('../../templates/email/react-email/JoinUsNotificationEmail');
 
     const html = await render(await JoinUsNotificationEmail(data));
-    const subject = `Nueva solicitud para unirse al equipo - ${data.name}`;
+    const subject = emailSubject(`Nueva solicitud - ${data.name}`);
 
     // Generate plain text version
     const text = `
@@ -375,7 +375,7 @@ export const sendActorRejectionEmail = async (params: ActorRejectionData): Promi
       aval: 'Aval',
     };
 
-    const subject = `Información Rechazada - Protección ${params.policyNumber}`;
+    const subject = emailSubject(`Información Rechazada - ${params.policyNumber}`);
 
     // Generate plain text version
     const text = `
@@ -431,7 +431,7 @@ export const sendUserInvitation = async (data: UserInvitationData): Promise<bool
     };
 
     const roleDescription = roleDescriptions[data.role];
-    const subject = `Bienvenido a Hestia - Configuración de Cuenta`;
+    const subject = emailSubject(`Bienvenido - Configuración de Cuenta`);
 
     // Generate plain text version
     const text = `
@@ -488,7 +488,7 @@ export const sendPolicyStatusUpdate = async (data: PolicyStatusUpdateData): Prom
     const html = await render(await PolicyStatusUpdateEmail(data));
     const isApproved = data.status === 'approved';
     const statusText = isApproved ? 'Aprobada' : 'Rechazada';
-    const subject = `Solicitud de Protección ${statusText} - Hestia`;
+    const subject = emailSubject(`Solicitud ${statusText}`);
 
     // Generate plain text version
     const text = `
@@ -570,7 +570,7 @@ export const sendActorIncompleteReminder = async (data: ActorIncompleteReminderD
     };
     const actorTypeLabel = actorTypeLabels[data.actorType] || data.actorType;
 
-    const subject = 'Recordatorio: Complete su información para la póliza';
+    const subject = emailSubject('Recordatorio: Complete su información');
     const text = `
 Hola ${data.actorName},
 
@@ -604,7 +604,7 @@ export const sendPolicyCreatorSummary = async (data: PolicyCreatorSummaryData): 
 
     const html = await render(await PolicyCreatorSummaryEmail(data));
 
-    const subject = `Recordatorio: Actores pendientes en póliza ${data.policyNumber}`;
+    const subject = emailSubject(`Recordatorio: Actores pendientes - ${data.policyNumber}`);
     const actorsListText = data.incompleteActors.map(actor =>
       `- ${actor.type}: ${actor.name} (${actor.email})`
     ).join('\n');
@@ -663,7 +663,7 @@ export const sendPasswordResetEmail = async (data: PasswordResetData): Promise<b
       expiryTime
     }));
 
-    const subject = 'Restablecer tu contraseña - Hestia';
+    const subject = emailSubject('Restablecer tu contraseña');
 
     // Generate plain text version
     const text = `
@@ -712,7 +712,7 @@ export interface PaymentCompletedData {
 
 export const sendPaymentCompletedEmail = async (data: PaymentCompletedData): Promise<boolean> => {
   try {
-    const subject = `Pago Confirmado - Póliza ${data.policyNumber}`;
+    const subject = emailSubject(`Pago Confirmado - ${data.policyNumber}`);
 
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
@@ -781,7 +781,7 @@ export interface AllPaymentsCompletedData {
 
 export const sendAllPaymentsCompletedEmail = async (data: AllPaymentsCompletedData): Promise<boolean> => {
   try {
-    const subject = `Todos los pagos completados - Póliza ${data.policyNumber}`;
+    const subject = emailSubject(`Pagos Completados - ${data.policyNumber}`);
 
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);

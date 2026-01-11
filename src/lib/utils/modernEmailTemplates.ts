@@ -2,6 +2,7 @@
 // Safe to import anywhere without Next.js bundling issues
 
 import { generatePolicyUrl } from '../utils/tokenUtils';
+import { emailSubject } from '@/lib/config/brand';
 import type { PolicyInvitationData, PolicySubmissionData, PolicyStatusUpdateData } from '../services/emailService';
 
 // Hestia brand colors
@@ -154,7 +155,7 @@ export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailCo
     day: 'numeric'
   });
 
-  const subject = 'Acción Requerida: Completa tu Solicitud de Protección Hestia';
+  const subject = emailSubject('Completa tu Solicitud de Protección');
 
   const html = `
 <!DOCTYPE html>
@@ -252,7 +253,7 @@ export function renderPolicySubmissionEmail(data: PolicySubmissionData): EmailCo
     minute: '2-digit'
   });
 
-  const subject = `Solicitud Recibida - Protección Hestia #${data.policyId}`;
+  const subject = emailSubject(`Solicitud Recibida #${data.policyId}`);
 
   const html = `
 <!DOCTYPE html>
@@ -341,7 +342,7 @@ export function renderPolicyStatusUpdateEmail(data: PolicyStatusUpdateData): Ema
   const statusText = isApproved ? 'Aprobada' : 'Rechazada';
   const headerColor = isApproved ? BRAND_COLORS.success : BRAND_COLORS.danger;
 
-  const subject = `Solicitud de Protección ${statusText} - Hestia`;
+  const subject = emailSubject(`Solicitud ${statusText}`);
 
   const html = `
 <!DOCTYPE html>
