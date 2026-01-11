@@ -224,7 +224,7 @@ export interface ActorInvitationData {
   token: string;
   url: string;
   policyNumber: string;
-  propertyAddress: string;
+  propertyAddress: string | object;
   expiryDate?: Date;
   initiatorName?: string;
 }
