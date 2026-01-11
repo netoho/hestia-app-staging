@@ -160,6 +160,7 @@ model Policy {
 
   // Status & Workflow
   status            PolicyStatus @default(DRAFT)
+  paymentStatus     PaymentStatus?  // Overall payment status (null = no payments, COMPLETED = all paid)
   currentStep       String      @default("initial")
 
   // Important Dates
@@ -957,7 +958,7 @@ model Payment {
   // Manual Payment Fields
   isManual          Boolean     @default(false)
   reference         String?
-  receiptUrl        String?     // Legacy field
+  receiptUrl        String?     // DEPRECATED: No longer used, kept for backwards compatibility
   receiptS3Key      String?     // S3 key for uploaded payment proof
   receiptFileName   String?     // Original filename of receipt
 
@@ -965,6 +966,7 @@ model Payment {
   verifiedBy        String?     // User ID who verified the payment
   verifiedAt        DateTime?
   verificationNotes String?     @db.Text
+  createdById       String?     // User ID who created the payment (for manual payments)
 
   // Details
   description       String?
@@ -1187,6 +1189,7 @@ enum PaymentStatus {
   PROCESSING
   COMPLETED
   FAILED
+  CANCELLED             // User/admin cancelled the payment
   REFUNDED
   PARTIAL
   PENDING_VERIFICATION  // Manual payment awaiting admin verification
