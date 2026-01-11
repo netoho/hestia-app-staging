@@ -160,6 +160,17 @@ export interface PolicyStatusUpdateData {
   reviewerName: string;
 }
 
+export interface PolicyCancellationEmailData {
+  adminEmail: string;
+  adminName?: string;
+  policyNumber: string;
+  cancellationReason: string;
+  cancellationComment: string;
+  cancelledByName: string;
+  cancelledAt: Date;
+  policyLink?: string;
+}
+
 // Email service functions
 
 export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionData): Promise<boolean> => {
@@ -825,6 +836,55 @@ Monto total: ${formatCurrency(data.totalAmount)}
     });
   } catch (error) {
     console.error('Failed to send all payments completed email:', error);
+    return false;
+  }
+};
+
+// Send policy cancellation notification to admin
+export const sendPolicyCancellationEmail = async (data: PolicyCancellationEmailData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyCancellationEmail } = await import('../../templates/email/react-email/PolicyCancellationEmail');
+
+    const html = await render(await PolicyCancellationEmail(data));
+    const subject = emailSubject(`Proteccion Cancelada #${data.policyNumber}`);
+
+    const cancelledDate = new Date(data.cancelledAt).toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const text = `
+Proteccion Cancelada
+
+Hola${data.adminName ? ` ${data.adminName}` : ''},
+
+Se ha cancelado una proteccion en el sistema.
+
+Detalles:
+- Numero de Proteccion: ${data.policyNumber}
+- Razon: ${data.cancellationReason}
+- Comentario: ${data.cancellationComment}
+- Cancelada por: ${data.cancelledByName}
+- Fecha: ${cancelledDate}
+
+${data.policyLink ? `Ver proteccion: ${data.policyLink}` : ''}
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.adminEmail,
+      subject,
+      html,
+      text,
+    });
+  } catch (error) {
+    console.error('Failed to send policy cancellation email:', error);
     return false;
   }
 };
