@@ -57,6 +57,11 @@ const ShareInvitationModal = dynamic(() => import('@/components/policies/ShareIn
   ssr: false
 });
 
+const CancelPolicyModal = dynamic(() => import('@/components/policies/CancelPolicyModal'), {
+  loading: () => null,
+  ssr: false
+});
+
 const InlineActorEditor = dynamic(() => import('@/components/policies/InlineActorEditor'), {
   loading: () => null,
   ssr: false
@@ -110,6 +115,7 @@ export default function PolicyDetailsContent({
     actorId: string;
   } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [markCompleteActor, setMarkCompleteActor] = useState<{
     type: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
     actorId: string;
@@ -431,6 +437,18 @@ export default function PolicyDetailsContent({
             >
               <Share2 className="mr-2 h-4 w-4" />
               Compartir Enlaces
+            </Button>
+          )}
+
+          {/* Cancel Policy Button - Staff/Admin only */}
+          {isStaffOrAdmin && policy.status !== 'CANCELLED' && policy.status !== 'EXPIRED' && (
+            <Button
+              onClick={() => setShowCancelModal(true)}
+              variant="destructive"
+              className="transition-all hover:scale-105 hover:shadow-md"
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Cancelar Protección
             </Button>
           )}
         </div>
@@ -810,6 +828,15 @@ export default function PolicyDetailsContent({
         policyNumber={policy.policyNumber}
       />
 
+      {/* Cancel Policy Modal */}
+      <CancelPolicyModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        policyId={policyId}
+        policyNumber={policy.policyNumber}
+        onSuccess={onRefresh}
+      />
+
       {/* Mark Complete Confirmation Dialog */}
       <AlertDialog open={!!markCompleteActor} onOpenChange={(open) => !open && setMarkCompleteActor(null)}>
         <AlertDialogContent>
@@ -818,7 +845,7 @@ export default function PolicyDetailsContent({
               Marcar {markCompleteActor ? getActorTypeLabel(markCompleteActor.type) : 'Actor'} como Completo
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta accion marcara a {markCompleteActor?.name} como completo.
+              Esta acción marcara a {markCompleteActor?.name} como completo.
               Si faltan documentos requeridos, puede elegir continuar de todas formas.
             </AlertDialogDescription>
           </AlertDialogHeader>

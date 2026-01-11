@@ -199,7 +199,7 @@ export default function InlineActorEditor({
         <DialogHeader>
           <DialogTitle>Editar {getActorTypeLabel()}</DialogTitle>
           <DialogDescription>
-            Actualice la informacion del {getActorTypeLabel().toLowerCase()} para esta proteccion
+            Actualice la informacion del {getActorTypeLabel().toLowerCase()} para esta protección
           </DialogDescription>
         </DialogHeader>
 
@@ -254,7 +254,7 @@ export default function InlineActorEditor({
           <AlertDialogHeader>
             <AlertDialogTitle>Marcar {getActorTypeLabel()} como Completo</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta accion marcara al {getActorTypeLabel().toLowerCase()} como completo.
+              Esta acción marcara al {getActorTypeLabel().toLowerCase()} como completo.
               Si faltan documentos requeridos, puede elegir continuar de todas formas.
             </AlertDialogDescription>
           </AlertDialogHeader>
