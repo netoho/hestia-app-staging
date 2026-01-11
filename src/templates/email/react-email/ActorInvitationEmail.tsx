@@ -229,7 +229,15 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              {actorTypeName} - Protección #{policyNumber} - ${propertyAddress}
+              {actorTypeName} - Protección #{policyNumber}
+            </Text>
+            <Text style={{
+              margin: '8px 0 0 0',
+              color: brandColors.textSecondary,
+              fontSize: '16px',
+              fontWeight: '400'
+            }}>
+              {propertyAddress}
             </Text>
           </Section>
 
