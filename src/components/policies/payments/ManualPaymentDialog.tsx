@@ -22,6 +22,7 @@ import {
 import { Loader2, Upload, FileText, X } from 'lucide-react';
 import { PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ManualPaymentDialogProps {
   open: boolean;
@@ -34,8 +35,8 @@ interface ManualPaymentDialogProps {
 
 const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   [PaymentType.INVESTIGATION_FEE]: 'Cuota de Investigación',
-  [PaymentType.TENANT_PORTION]: 'Porción del Inquilino',
-  [PaymentType.LANDLORD_PORTION]: 'Porción del Arrendador',
+  [PaymentType.TENANT_PORTION]: 'Pago del Inquilino',
+  [PaymentType.LANDLORD_PORTION]: 'Pago del Arrendador',
   [PaymentType.POLICY_PREMIUM]: 'Prima de Póliza',
   [PaymentType.PARTIAL_PAYMENT]: 'Pago Parcial',
   [PaymentType.INCIDENT_PAYMENT]: 'Pago por Incidencia',
@@ -71,8 +72,10 @@ export function ManualPaymentDialog({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { toast } = useToast();
   const recordManualPayment = trpc.payment.recordManualPayment.useMutation();
   const updatePaymentReceipt = trpc.payment.updatePaymentReceipt.useMutation();
+  const cancelPayment = trpc.payment.cancelPayment.useMutation();
 
   const isSubmitting = recordManualPayment.isPending || isUploading;
 
@@ -95,16 +98,37 @@ export function ManualPaymentDialog({
 
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Por favor ingrese un monto válido mayor a 0',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (parsedAmount > 1000000) {
+      toast({
+        title: 'Error',
+        description: 'El monto excede el límite máximo permitido',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (!selectedFile) {
+      toast({
+        title: 'Error',
+        description: 'Por favor seleccione un comprobante de pago',
+        variant: 'destructive',
+      });
       return;
     }
 
+    let payment: { id: string } | null = null;
+
     try {
       // 1. Create the manual payment record
-      const payment = await recordManualPayment.mutateAsync({
+      payment = await recordManualPayment.mutateAsync({
         policyId,
         type: paymentType,
         amount: parsedAmount,
@@ -113,29 +137,29 @@ export function ManualPaymentDialog({
       });
 
       // 2. Upload the receipt file
-      if (selectedFile) {
-        setIsUploading(true);
+      setIsUploading(true);
 
-        // Get presigned URL and upload
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('paymentId', payment.id);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('paymentId', payment.id);
 
-        const uploadResponse = await fetch(`/api/payments/${payment.id}/receipt`, {
-          method: 'POST',
-          body: formData,
-        });
+      const uploadResponse = await fetch(`/api/payments/${payment.id}/receipt`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (uploadResponse.ok) {
-          const { s3Key, fileName } = await uploadResponse.json();
-          // Update payment with receipt info
-          await updatePaymentReceipt.mutateAsync({
-            paymentId: payment.id,
-            receiptS3Key: s3Key,
-            receiptFileName: fileName,
-          });
-        }
+      if (!uploadResponse.ok) {
+        throw new Error('Error al subir el comprobante');
       }
+
+      const { s3Key, fileName } = await uploadResponse.json();
+
+      // 3. Update payment with receipt info
+      await updatePaymentReceipt.mutateAsync({
+        paymentId: payment.id,
+        receiptS3Key: s3Key,
+        receiptFileName: fileName,
+      });
 
       // Reset form
       setPaidBy(paymentType === PaymentType.LANDLORD_PORTION ? PayerType.LANDLORD : PayerType.TENANT);
@@ -143,10 +167,33 @@ export function ManualPaymentDialog({
       setReference('');
       setSelectedFile(null);
 
+      toast({
+        title: 'Pago registrado',
+        description: 'El pago manual ha sido registrado y está pendiente de verificación',
+      });
+
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error('Error recording manual payment:', error);
+
+      // If payment was created but upload failed, cancel the payment to avoid orphaned records
+      if (payment?.id) {
+        try {
+          await cancelPayment.mutateAsync({
+            paymentId: payment.id,
+            reason: 'Error al subir comprobante - pago cancelado automáticamente',
+          });
+        } catch (cancelError) {
+          console.error('Error cancelling orphaned payment:', cancelError);
+        }
+      }
+
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al registrar el pago manual',
+        variant: 'destructive',
+      });
     } finally {
       setIsUploading(false);
     }

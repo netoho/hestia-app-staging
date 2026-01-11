@@ -5,6 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Clock,
   Loader2,
   CheckCircle2,
@@ -16,13 +26,15 @@ import {
   AlertTriangle,
   Ban,
   Download,
+  Copy,
+  Check,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { PaymentStatus, PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
 
 interface PaymentCardProps {
   payment: PaymentWithStatus;
-  expectedAmount: number;
   isStaffOrAdmin: boolean;
   onManualPayment?: () => void;
   onVerify?: () => void;
@@ -40,6 +52,7 @@ const PAYMENT_STATUS_CONFIG: Record<
   [PaymentStatus.PROCESSING]: { label: 'Procesando', variant: 'default', className: 'bg-blue-500 hover:bg-blue-600', icon: Loader2 },
   [PaymentStatus.COMPLETED]: { label: 'Completado', variant: 'default', className: 'bg-green-500 hover:bg-green-600', icon: CheckCircle2 },
   [PaymentStatus.FAILED]: { label: 'Fallido', variant: 'destructive', icon: XCircle },
+  [PaymentStatus.CANCELLED]: { label: 'Cancelado', variant: 'outline', icon: Ban },
   [PaymentStatus.REFUNDED]: { label: 'Reembolsado', variant: 'outline', icon: RefreshCw },
   [PaymentStatus.PARTIAL]: { label: 'Parcial', variant: 'default', className: 'bg-yellow-500 hover:bg-yellow-600', icon: Clock },
   [PaymentStatus.PENDING_VERIFICATION]: { label: 'Por Verificar', variant: 'default', className: 'bg-orange-500 hover:bg-orange-600', icon: Eye },
@@ -47,8 +60,8 @@ const PAYMENT_STATUS_CONFIG: Record<
 
 const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   [PaymentType.INVESTIGATION_FEE]: 'Cuota de Investigación',
-  [PaymentType.TENANT_PORTION]: 'Porción del Inquilino',
-  [PaymentType.LANDLORD_PORTION]: 'Porción del Arrendador',
+  [PaymentType.TENANT_PORTION]: 'Pago del Inquilino',
+  [PaymentType.LANDLORD_PORTION]: 'Pago del Arrendador',
   [PaymentType.POLICY_PREMIUM]: 'Prima de Póliza',
   [PaymentType.PARTIAL_PAYMENT]: 'Pago Parcial',
   [PaymentType.INCIDENT_PAYMENT]: 'Pago por Incidencia',
@@ -83,14 +96,26 @@ function getExpiryInfo(expiryDate: Date | string | null | undefined): { text: st
 
   const expiry = new Date(expiryDate);
   const now = new Date();
-  const hoursRemaining = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const msRemaining = expiry.getTime() - now.getTime();
+  const hoursRemaining = msRemaining / (1000 * 60 * 60);
+  const minutesRemaining = msRemaining / (1000 * 60);
 
   if (hoursRemaining <= 0) {
     return { text: 'Link expirado', isExpired: true, isWarning: false };
   }
 
+  if (hoursRemaining < 1) {
+    return { text: `Expira en ${Math.ceil(minutesRemaining)} min`, isExpired: false, isWarning: true };
+  }
+
   if (hoursRemaining <= 6) {
-    return { text: `Expira en ${Math.ceil(hoursRemaining)} horas`, isExpired: false, isWarning: true };
+    const hours = Math.floor(hoursRemaining);
+    const mins = Math.ceil((hoursRemaining - hours) * 60);
+    return { text: `Expira en ${hours}h ${mins}m`, isExpired: false, isWarning: true };
+  }
+
+  if (hoursRemaining <= 24) {
+    return { text: `Expira en ${Math.ceil(hoursRemaining)} horas`, isExpired: false, isWarning: false };
   }
 
   return { text: `Expira: ${formatDate(expiryDate)}`, isExpired: false, isWarning: false };
@@ -107,6 +132,30 @@ export function PaymentCard({
   isCancelling = false,
 }: PaymentCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const { toast } = useToast();
+
+  const handleCopyUrl = async () => {
+    if (!payment.checkoutUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(payment.checkoutUrl);
+      setIsCopied(true);
+      toast({
+        title: 'URL copiada',
+        description: 'El link de pago ha sido copiado al portapapeles',
+      });
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo copiar el link',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleDownloadReceipt = async () => {
     if (!payment.receiptS3Key) return;
@@ -218,12 +267,29 @@ export function PaymentCard({
             </Button>
           )}
 
+          {/* Copy URL button */}
+          {isPending && hasCheckoutUrl && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyUrl}
+              disabled={isCopied}
+            >
+              {isCopied ? (
+                <Check className="h-4 w-4 mr-1" />
+              ) : (
+                <Copy className="h-4 w-4 mr-1" />
+              )}
+              {isCopied ? 'Copiado' : 'Copiar Link'}
+            </Button>
+          )}
+
           {/* Regenerate URL button (admin, expired) */}
           {isPending && payment.isExpired && isStaffOrAdmin && onRegenerateUrl && (
             <Button
               size="sm"
               variant="outline"
-              onClick={onRegenerateUrl}
+              onClick={() => setShowRegenerateConfirm(true)}
               disabled={isRegenerating}
             >
               {isRegenerating ? (
@@ -266,7 +332,7 @@ export function PaymentCard({
               size="sm"
               variant="ghost"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={onCancel}
+              onClick={() => setShowCancelConfirm(true)}
               disabled={isCancelling}
             >
               {isCancelling ? (
@@ -279,6 +345,53 @@ export function PaymentCard({
           )}
         </div>
       </CardContent>
+
+      {/* Cancel Payment Confirmation Dialog */}
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Pago</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Está seguro que desea cancelar este pago? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, mantener</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onCancel?.();
+                setShowCancelConfirm(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sí, cancelar pago
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Regenerate URL Confirmation Dialog */}
+      <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerar Link de Pago</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se generará un nuevo link de pago. El link anterior dejará de funcionar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onRegenerateUrl?.();
+                setShowRegenerateConfirm(false);
+              }}
+            >
+              Regenerar Link
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

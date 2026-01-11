@@ -9,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,8 +36,8 @@ interface VerifyPaymentDialogProps {
 
 const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   [PaymentType.INVESTIGATION_FEE]: 'Cuota de Investigación',
-  [PaymentType.TENANT_PORTION]: 'Porción del Inquilino',
-  [PaymentType.LANDLORD_PORTION]: 'Porción del Arrendador',
+  [PaymentType.TENANT_PORTION]: 'Pago del Inquilino',
+  [PaymentType.LANDLORD_PORTION]: 'Pago del Arrendador',
   [PaymentType.POLICY_PREMIUM]: 'Prima de Póliza',
   [PaymentType.PARTIAL_PAYMENT]: 'Pago Parcial',
   [PaymentType.INCIDENT_PAYMENT]: 'Pago por Incidencia',
@@ -65,6 +75,7 @@ export function VerifyPaymentDialog({
 }: VerifyPaymentDialogProps) {
   const [notes, setNotes] = useState('');
   const [action, setAction] = useState<'approve' | 'reject' | null>(null);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
   const verifyPayment = trpc.payment.verifyPayment.useMutation();
 
@@ -188,7 +199,7 @@ export function VerifyPaymentDialog({
           <Button
             type="button"
             variant="destructive"
-            onClick={() => handleVerify(false)}
+            onClick={() => setShowRejectConfirm(true)}
             disabled={isSubmitting}
           >
             {isSubmitting && action === 'reject' ? (
@@ -223,6 +234,30 @@ export function VerifyPaymentDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog open={showRejectConfirm} onOpenChange={setShowRejectConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rechazar Pago</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Está seguro que desea rechazar este pago? El pago será marcado como fallido y no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowRejectConfirm(false);
+                handleVerify(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sí, rechazar pago
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
