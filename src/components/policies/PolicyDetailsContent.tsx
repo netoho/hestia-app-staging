@@ -472,7 +472,7 @@ export default function PolicyDetailsContent({
 
             {/* Stats Grid */}
             {policy.progress && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 hover:scale-105">
                   <div className="text-2xl font-bold text-blue-600 transition-all">
                     {policy.progress.totalActors}
@@ -496,6 +496,14 @@ export default function PolicyDetailsContent({
                     {policy.progress.documentsUploaded}/{policy.progress.documentsRequired}
                   </div>
                   <div className="text-xs text-gray-600 mt-1">Documentos</div>
+                </div>
+                <div className="text-center p-3 bg-emerald-50 rounded-lg transition-all hover:bg-emerald-100 hover:scale-105">
+                  <div className="text-2xl font-bold text-emerald-600 transition-all">
+                    {policy.payments?.length ? (
+                      `${policy.payments.filter((p: { status: string }) => p.status === 'COMPLETED').length}/${policy.payments.length}`
+                    ) : '—'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">Pagos</div>
                 </div>
               </div>
             )}
