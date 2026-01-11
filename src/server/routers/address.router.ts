@@ -3,7 +3,7 @@ import {
   createTRPCRouter,
   publicProcedure,
 } from '@/server/trpc';
-import { searchPlaces, parseGooglePlaceToAddress } from '@/lib/services/googleMapsService';
+import { googleMapsService } from '@/lib/services/googleMapsService';
 
 export const addressRouter = createTRPCRouter({
   /**
@@ -21,7 +21,7 @@ export const addressRouter = createTRPCRouter({
         return { results: [] };
       }
 
-      const results = await searchPlaces(
+      const results = await googleMapsService.searchPlaces(
         input.input,
         input.sessionToken,
         input.country
@@ -40,7 +40,7 @@ export const addressRouter = createTRPCRouter({
       interiorNumber: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const address = await parseGooglePlaceToAddress(
+      const address = await googleMapsService.parseGooglePlaceToAddress(
         input.placeId,
         input.sessionToken,
         { interiorNumber: input.interiorNumber }

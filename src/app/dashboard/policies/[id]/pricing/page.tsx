@@ -61,10 +61,21 @@ export default function PricingEditPage({
 
   const { data: packages, isLoading: loadingPackages } = trpc.package.getAll.useQuery();
 
-  // tRPC mutation
+  // tRPC mutations
+  const generatePaymentLinksMutation = trpc.payment.generatePaymentLinks.useMutation();
+
   const updateMutation = trpc.pricing.updatePolicyPricing.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setSuccessMessage('Información de precio guardada exitosamente');
+
+      // Try to generate payment links (ignore if already exist)
+      try {
+        await generatePaymentLinksMutation.mutateAsync({ policyId });
+        setSuccessMessage('Precio y links de pago guardados exitosamente');
+      } catch {
+        // Ignore - payments may already exist
+      }
+
       setTimeout(() => {
         router.push(`/dashboard/policies/${policyId}`);
       }, 2000);
@@ -186,7 +197,7 @@ export default function PricingEditPage({
             <Alert className="mt-4">
               <AlertDescription>
                 <strong>Protección:</strong> {pricingData.policyNumber}<br />
-                <strong>Propiedad:</strong> {pricingData.propertyAddress}<br />
+                <strong>Propiedad:</strong> {pricingData.propertyAddress?.formattedAddress || 'N/A'}<br />
                 <strong>Renta Mensual:</strong> {formatCurrency(pricingData.rentAmount || 0)}
               </AlertDescription>
             </Alert>

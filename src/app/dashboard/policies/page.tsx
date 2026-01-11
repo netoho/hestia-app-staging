@@ -6,6 +6,7 @@ import PoliciesFilters from '@/components/policies/list/PoliciesFilters';
 import PoliciesList from '@/components/policies/list/PoliciesList';
 import PoliciesPagination from '@/components/policies/list/PoliciesPagination';
 import { trpc } from '@/lib/trpc/client';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
 /**
  * Main policies list page
@@ -19,7 +20,7 @@ export default function PoliciesPage() {
   const { data, isLoading } = trpc.policy.list.useQuery({
     page,
     limit: 20,
-    status: status !== 'all' ? status : undefined,
+    status: status !== 'all' ? status as PolicyStatus : undefined,
     search: search || undefined,
   });
 

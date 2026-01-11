@@ -332,7 +332,7 @@ export default function ProfilePage() {
                   <Button
                     type="submit"
                     className="bg-primary hover:bg-primary/90"
-                    disabled={updateMutation.isPending || !phone.trim() || (newPassword && (!isPasswordValid(newPassword) || newPassword !== confirmNewPassword))}
+                    disabled={updateMutation.isPending || !phone.trim() || !!(newPassword && (!isPasswordValid(newPassword) || newPassword !== confirmNewPassword))}
                   >
                     {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {t.actions.saveChanges}

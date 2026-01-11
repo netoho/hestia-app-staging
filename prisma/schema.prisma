@@ -951,11 +951,20 @@ model Payment {
   stripeIntentId    String?     @unique
   stripeSessionId   String?     @unique
   stripeCustomerId  String?
+  checkoutUrl       String?     // Stripe checkout URL for payment link
+  checkoutUrlExpiry DateTime?   // Checkout URL expiration (24h from creation)
 
   // Manual Payment Fields
   isManual          Boolean     @default(false)
   reference         String?
-  receiptUrl        String?
+  receiptUrl        String?     // Legacy field
+  receiptS3Key      String?     // S3 key for uploaded payment proof
+  receiptFileName   String?     // Original filename of receipt
+
+  // Verification Fields (for manual payments)
+  verifiedBy        String?     // User ID who verified the payment
+  verifiedAt        DateTime?
+  verificationNotes String?     @db.Text
 
   // Details
   description       String?
@@ -973,6 +982,7 @@ model Payment {
 
   @@index([policyId])
   @@index([status])
+  @@index([type])
 }
 
 // ============================================
@@ -1179,6 +1189,7 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIAL
+  PENDING_VERIFICATION  // Manual payment awaiting admin verification
 }
 
 enum PaymentMethod {
@@ -1192,6 +1203,8 @@ enum PaymentMethod {
 enum PaymentType {
   INVESTIGATION_FEE
   POLICY_PREMIUM
+  TENANT_PORTION      // Tenant's share of policy premium
+  LANDLORD_PORTION    // Landlord's share of policy premium
   PARTIAL_PAYMENT
   INCIDENT_PAYMENT
   REFUND

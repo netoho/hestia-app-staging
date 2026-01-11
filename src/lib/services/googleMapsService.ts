@@ -47,19 +47,27 @@ interface ParsedAddress {
   formattedAddress?: string;
 }
 
-interface GooglePrediction {
-  place_id: string;
-  description: string;
-  structured_formatting?: {
-    main_text?: string;
-    secondary_text?: string;
+// New Places API response types
+interface AutocompleteSuggestion {
+  placePrediction?: {
+    placeId: string;
+    text: {
+      text: string;
+      matches?: { startOffset: number; endOffset: number }[];
+    };
+    structuredFormat?: {
+      mainText: { text: string };
+      secondaryText: { text: string };
+    };
+    types?: string[];
   };
-  types?: string[];
 }
 
 interface GoogleAddressComponent {
-  long_name: string;
-  types?: string[];
+  longText: string;
+  shortText: string;
+  types: string[];
+  languageCode?: string;
 }
 
 class GoogleMapsService extends BaseService {
@@ -77,7 +85,7 @@ class GoogleMapsService extends BaseService {
   }
 
   /**
-   * Search for place predictions using Google Places Autocomplete
+   * Search for place predictions using Google Places Autocomplete (New)
    */
   async searchPlaces(
     input: string,
@@ -90,37 +98,52 @@ class GoogleMapsService extends BaseService {
       return [];
     }
 
-    const params = new URLSearchParams({
-      input,
-      key: this.apiKey!,
-      types: 'address',
-      language: 'es',
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': this.apiKey!,
+    };
 
     if (sessionToken) {
-      params.append('sessiontoken', sessionToken);
+      headers['X-Goog-Session-Token'] = sessionToken;
     }
+
+    const body = {
+      input,
+      includedRegionCodes: [_countryRestriction],
+      languageCode: 'es',
+      includedPrimaryTypes: ['street_address', 'subpremise'],
+    };
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`,
-        { cache: 'no-store' }
+        'https://places.googleapis.com/v1/places:autocomplete',
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          cache: 'no-store',
+        }
       );
 
       const data = await response.json();
 
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        this.log('error', 'Google Places API error', { status: data.status, message: data.error_message });
+      if (data.error) {
+        this.log('error', 'Google Places API error', { error: data.error });
         return [];
       }
 
-      return (data.predictions || []).map((prediction: GooglePrediction) => ({
-        placeId: prediction.place_id,
-        description: prediction.description,
-        mainText: prediction.structured_formatting?.main_text || '',
-        secondaryText: prediction.structured_formatting?.secondary_text || '',
-        types: prediction.types || [],
-      }));
+      return (data.suggestions || [])
+        .filter((s: AutocompleteSuggestion) => s.placePrediction)
+        .map((suggestion: AutocompleteSuggestion) => {
+          const prediction = suggestion.placePrediction!;
+          return {
+            placeId: prediction.placeId,
+            description: prediction.text.text,
+            mainText: prediction.structuredFormat?.mainText.text || '',
+            secondaryText: prediction.structuredFormat?.secondaryText.text || '',
+            types: prediction.types || [],
+          };
+        });
     } catch (error) {
       this.log('error', 'Error searching places', error);
       return [];
@@ -128,7 +151,7 @@ class GoogleMapsService extends BaseService {
   }
 
   /**
-   * Get detailed information about a place
+   * Get detailed information about a place using Places API (New)
    */
   async getPlaceDetails(
     placeId: string,
@@ -136,38 +159,55 @@ class GoogleMapsService extends BaseService {
   ): Promise<GooglePlaceDetails | null> {
     this.ensureApiKey();
 
-    const params = new URLSearchParams({
-      place_id: placeId,
-      key: this.apiKey!,
-      fields: 'formatted_address,geometry,address_components',
-      language: 'es',
-    });
+    const headers: Record<string, string> = {
+      'X-Goog-Api-Key': this.apiKey!,
+      'X-Goog-FieldMask': 'id,formattedAddress,addressComponents,location,shortFormattedAddress',
+      'Accept-Language': 'es',
+    };
 
     if (sessionToken) {
-      params.append('sessiontoken', sessionToken);
+      headers['X-Goog-Session-Token'] = sessionToken;
     }
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?${params}`,
-        { cache: 'no-store' }
+        `https://places.googleapis.com/v1/places/${placeId}`,
+        {
+          method: 'GET',
+          headers,
+          cache: 'no-store',
+        }
       );
 
       const data = await response.json();
 
-      if (data.status !== 'OK') {
-        this.log('error', 'Google Place Details API error', { status: data.status, message: data.error_message });
+      if (data.error) {
+        this.log('error', 'Google Place Details API error', { error: data.error });
         return null;
       }
 
-      const result = data.result;
-      const components = this.parseAddressComponents(result.address_components || []);
+      let components = this.parseAddressComponents(data.addressComponents || []);
+
+      // If administrative_area_level_2 (municipality/alcaldía) is missing, try reverse geocoding with coordinates
+      const lat = data.location?.latitude;
+      const lng = data.location?.longitude;
+      if (!components.municipality && lat && lng) {
+        const municipality = await this.findMunicipalityByCoordinates(lat, lng);
+        if (municipality) {
+          components = { ...components, municipality };
+        }
+      }
+
+      // Final fallback: use city if municipality is still missing
+      if (!components.municipality && components.city) {
+        components = { ...components, municipality: components.city };
+      }
 
       return {
         placeId,
-        formattedAddress: result.formatted_address || '',
-        latitude: result.geometry?.location?.lat || 0,
-        longitude: result.geometry?.location?.lng || 0,
+        formattedAddress: data.formattedAddress || '',
+        latitude: lat || 0,
+        longitude: lng || 0,
         addressComponents: components,
       };
     } catch (error) {
@@ -177,38 +217,72 @@ class GoogleMapsService extends BaseService {
   }
 
   /**
-   * Parse Google's address components into our format
+   * Find municipality by searching ALL reverse geocoding results for admin levels 2 or 3
+   */
+  private async findMunicipalityByCoordinates(lat: number, lng: number): Promise<string | null> {
+    const params = new URLSearchParams({
+      latlng: `${lat},${lng}`,
+      key: this.apiKey!,
+      language: 'es',
+    });
+
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?${params}`,
+        { cache: 'no-store' }
+      );
+
+      const data = await response.json();
+
+      if (data.status !== 'OK' || !data.results?.length) {
+        return null;
+      }
+
+      // Search through ALL results for administrative_area_level_2 or _level_3
+      for (const result of data.results) {
+        for (const component of result.address_components || []) {
+          const types: string[] = component.types || [];
+          if (types.includes('administrative_area_level_2') || types.includes('administrative_area_level_3')) {
+            return component.long_name;
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      this.log('error', 'Error finding municipality by coordinates', error);
+      return null;
+    }
+  }
+
+  /**
+   * Parse Google's address components into our format (New API uses camelCase)
    */
   private parseAddressComponents(components: GoogleAddressComponent[]): GooglePlaceDetails['addressComponents'] {
     const result: GooglePlaceDetails['addressComponents'] = {};
 
     for (const component of components) {
-      const types = component.types || [];
-      const value = component.long_name;
+      const types = component.types;
+      const value = component.longText;
 
       if (types.includes('street_number')) {
         result.streetNumber = value;
       } else if (types.includes('route')) {
         result.street = value;
-      } else if (types.includes('sublocality_level_1') || types.includes('neighborhood')) {
+      } else if (types.includes('sublocality_level_1') || types.includes('sublocality') || types.includes('neighborhood')) {
         result.neighborhood = value;
       } else if (types.includes('postal_code')) {
         result.postalCode = value;
-      } else if (types.includes('locality')) {
+      } else if (types.includes('administrative_area_level_2')) {
+        // Municipality/Alcaldía (e.g., Benito Juárez in CDMX)
         result.municipality = value;
+      } else if (types.includes('locality')) {
         result.city = value;
+        // Don't set municipality from locality - let reverse geocoding handle it
       } else if (types.includes('administrative_area_level_1')) {
         result.state = value;
       } else if (types.includes('country')) {
         result.country = value;
-      }
-    }
-
-    // For Mexico City, handle the special case where it might be administrative_area_level_2
-    if (!result.municipality) {
-      const adminArea2 = components.find(c => c.types?.includes('administrative_area_level_2'));
-      if (adminArea2) {
-        result.municipality = adminArea2.long_name;
       }
     }
 
@@ -296,33 +370,43 @@ class GoogleMapsService extends BaseService {
   }
 
   /**
-   * Geocode an address string to get coordinates
+   * Geocode an address string to get coordinates using Text Search (New)
    */
   async geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
     this.ensureApiKey();
 
-    const params = new URLSearchParams({
-      address,
-      key: this.apiKey!,
-      region: 'mx',
-      language: 'es',
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': this.apiKey!,
+      'X-Goog-FieldMask': 'places.location',
+    };
+
+    const body = {
+      textQuery: address,
+      languageCode: 'es',
+      regionCode: 'MX',
+    };
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?${params}`,
-        { cache: 'no-store' }
+        'https://places.googleapis.com/v1/places:searchText',
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          cache: 'no-store',
+        }
       );
 
       const data = await response.json();
 
-      if (data.status !== 'OK' || !data.results?.length) {
-        this.log('error', 'Geocoding API error', { status: data.status });
+      if (data.error || !data.places?.length) {
+        this.log('error', 'Text Search API error', { error: data.error });
         return null;
       }
 
-      const location = data.results[0].geometry?.location;
-      return location ? { lat: location.lat, lng: location.lng } : null;
+      const location = data.places[0].location;
+      return location ? { lat: location.latitude, lng: location.longitude } : null;
     } catch (error) {
       this.log('error', 'Error geocoding address', error);
       return null;
@@ -370,12 +454,3 @@ class GoogleMapsService extends BaseService {
 
 // Export singleton instance
 export const googleMapsService = new GoogleMapsService();
-
-// Export legacy functions for backwards compatibility
-export const searchPlaces = googleMapsService.searchPlaces.bind(googleMapsService);
-export const getPlaceDetails = googleMapsService.getPlaceDetails.bind(googleMapsService);
-export const parseGooglePlaceToAddress = googleMapsService.parseGooglePlaceToAddress.bind(googleMapsService);
-export const validateMexicanPostalCode = googleMapsService.validateMexicanPostalCode.bind(googleMapsService);
-export const formatAddress = googleMapsService.formatAddress.bind(googleMapsService);
-export const geocodeAddress = googleMapsService.geocodeAddress.bind(googleMapsService);
-export const validateAddress = googleMapsService.validateAddress.bind(googleMapsService);
