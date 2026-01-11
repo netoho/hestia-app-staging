@@ -25,7 +25,7 @@ cp .env.example .env
 # Edit .env with your database credentials
 
 # Run database migrations
-bunx prisma migrate dev
+bunx prisma migrate deploy
 
 # Start development server
 bun run dev
@@ -91,7 +91,7 @@ bun run lint
 bunx prisma studio
 
 # Create a new migration
-bunx prisma migrate dev --name your_migration_name
+bunx prisma migrate dev --create-only --name your_migration_name
 
 # Reset database (WARNING: deletes all data)
 bunx prisma migrate reset
@@ -379,7 +379,7 @@ enum NewActorType {
 
 ### Step 2: Run Migration
 ```bash
-bunx prisma migrate dev --name add_new_actor
+bunx prisma migrate dev --create-only --name add_new_actor
 ```
 
 ### Step 3: Create Schema
