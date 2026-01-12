@@ -504,6 +504,20 @@ export default function PolicyDetailsContent({
                   Compartir Enlaces
                 </DropdownMenuItem>
               )}
+
+              {/* Cancel Policy - Staff/Admin only */}
+              {isStaffOrAdmin && policy.status !== 'CANCELLED' && policy.status !== 'EXPIRED' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowCancelModal(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Cancelar Protección
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -533,84 +547,6 @@ export default function PolicyDetailsContent({
             icon={CreditCard}
             onClick={() => setCurrentTab('payments')}
           />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {/* Review Information Button - For Staff/Admin (only when investigation not yet approved) */}
-          {(permissions.canApprove || permissions.canVerifyDocuments) &&
-           policy.status === 'UNDER_INVESTIGATION' &&
-           policy.investigation?.verdict !== 'APPROVED' && (
-            <Button
-              onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg"
-              disabled={
-                policy.progress &&
-                policy.progress.overall < 100
-              }
-              title={
-                policy.progress && policy.progress.overall < 100
-                  ? "La información de los actores debe estar completa antes de revisar"
-                  : "Revisar información de la póliza"
-              }
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              Revisar Información
-            </Button>
-          )}
-
-          {/* Policy Approval Button - Only for Staff/Admin when investigation approved */}
-          {permissions.canApprove &&
-           allActorsApproved &&
-           policy.investigation?.verdict === 'APPROVED' &&
-           (policy.status === 'UNDER_INVESTIGATION' || policy.status === 'PENDING_APPROVAL') && (
-            <Button
-              onClick={approvePolicy}
-              className="bg-green-600 hover:bg-green-700 transition-all hover:scale-105 hover:shadow-lg"
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {t.pages.policies.approvePolicy}
-            </Button>
-          )}
-
-          {/* Send Invitations Button */}
-          {permissions.canSendInvitations && (policy.status === 'DRAFT' || policy.status === 'COLLECTING_INFO') && (
-            <Button
-              onClick={handleSendInvitations}
-              variant="default"
-              disabled={sending === 'all'}
-              className="transition-all hover:scale-105 hover:shadow-md disabled:hover:scale-100"
-            >
-              {sending === 'all' ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              {t.pages.policies.sendInvitations}
-            </Button>
-          )}
-
-          {/* Share Links Button */}
-          {permissions.canSendInvitations && (
-            <Button
-              onClick={() => setShowShareModal(true)}
-              variant="outline"
-              className="transition-all hover:scale-105 hover:shadow-md"
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartir Enlaces
-            </Button>
-          )}
-
-          {/* Cancel Policy Button - Staff/Admin only */}
-          {isStaffOrAdmin && policy.status !== 'CANCELLED' && policy.status !== 'EXPIRED' && (
-            <Button
-              onClick={() => setShowCancelModal(true)}
-              variant="destructive"
-              className="transition-all hover:scale-105 hover:shadow-md"
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Cancelar Protección
-            </Button>
-          )}
         </div>
       </div>
 
