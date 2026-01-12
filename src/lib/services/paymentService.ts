@@ -327,6 +327,32 @@ class PaymentService extends BaseService {
   }
 
   /**
+   * Check if all payments are completed and update policy status
+   * Used when activity log is already created elsewhere (e.g., manual payment verification)
+   */
+  private async updatePolicyPaymentStatusIfComplete(
+    tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
+    policyId: string
+  ): Promise<boolean> {
+    const allPayments = await tx.payment.findMany({
+      where: { policyId },
+      select: { status: true },
+    });
+
+    const allCompleted = allPayments.length > 0 &&
+      allPayments.every(p => p.status === PaymentStatus.COMPLETED);
+
+    if (allCompleted) {
+      await tx.policy.update({
+        where: { id: policyId },
+        data: { paymentStatus: PaymentStatus.COMPLETED },
+      });
+    }
+
+    return allCompleted;
+  }
+
+  /**
    * Update payment status based on Stripe webhook events
    */
   async updatePaymentStatus(
@@ -911,13 +937,13 @@ class PaymentService extends BaseService {
         },
       });
 
+      // Check and update policy payment status if approved
+      if (approved) {
+        await this.updatePolicyPaymentStatusIfComplete(tx, payment.policyId);
+      }
+
       return updated;
     });
-
-    // Check and update policy payment status if approved
-    if (approved) {
-      await this.checkAndUpdatePolicyPaymentStatus(payment.policyId);
-    }
 
     return updatedPayment;
   }
