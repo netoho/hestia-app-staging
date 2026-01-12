@@ -237,7 +237,7 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              {propertyAddress}
+              {formattedAddress}
             </Text>
           </Section>
 
