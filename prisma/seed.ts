@@ -26,7 +26,7 @@ const packagesData = [
       ]
     },
     ctaText: 'Comenzar',
-    ctaLink: '/register?package=basic',
+    ctaLink: '/contact?package=basic',
     highlight: false
   },
   {
@@ -56,7 +56,7 @@ const packagesData = [
       ]
     },
     ctaText: 'Elegir Esencial',
-    ctaLink: '/register?package=standard',
+    ctaLink: '/contact?package=standard',
     highlight: false
   },
   {
@@ -89,7 +89,7 @@ const packagesData = [
       ]
     },
     ctaText: 'Optar por Premium',
-    ctaLink: '/register?package=premium',
+    ctaLink: '/contact?package=premium',
     highlight: false
   },
 ];
