@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { calculatePolicyProgress } from '@/lib/utils/policy';
+import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 import ActorsList from './ActorsList';
 
 interface Actor {
@@ -46,20 +47,6 @@ interface PoliciesTableProps {
   policies: Policy[];
 }
 
-const STATUS_CONFIG = {
-  [PolicyStatus.DRAFT]: { label: 'Borrador', variant: 'secondary' as const },
-  [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando Info', variant: 'default' as const },
-  [PolicyStatus.UNDER_INVESTIGATION]: { label: 'En Investigación', variant: 'default' as const },
-  [PolicyStatus.INVESTIGATION_REJECTED]: { label: 'Rechazado', variant: 'destructive' as const },
-  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobación', variant: 'default' as const },
-  [PolicyStatus.APPROVED]: { label: 'Aprobado', variant: 'default' as const },
-  [PolicyStatus.CONTRACT_PENDING]: { label: 'Contrato Pendiente', variant: 'default' as const },
-  [PolicyStatus.CONTRACT_SIGNED]: { label: 'Contrato Firmado', variant: 'default' as const },
-  [PolicyStatus.ACTIVE]: { label: 'Activa', variant: 'default' as const },
-  [PolicyStatus.EXPIRED]: { label: 'Expirada', variant: 'secondary' as const },
-  [PolicyStatus.CANCELLED]: { label: 'Cancelada', variant: 'destructive' as const },
-};
-
 /**
  * Desktop table view for policies list
  */
@@ -67,7 +54,7 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
   const router = useRouter();
 
   const getStatusBadge = (status: PolicyStatus) => {
-    const config = STATUS_CONFIG[status] || { label: status, variant: 'secondary' as const };
+    const config = POLICY_STATUS_CONFIG[status] || { label: status, variant: 'secondary' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 

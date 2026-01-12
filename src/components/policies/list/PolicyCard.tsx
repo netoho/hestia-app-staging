@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { calculatePolicyProgress } from '@/lib/utils/policy';
+import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 import ActorsList from './ActorsList';
 
 interface Actor {
@@ -46,26 +47,12 @@ interface PolicyCardProps {
   onView: (policyId: string) => void;
 }
 
-const STATUS_CONFIG = {
-  [PolicyStatus.DRAFT]: { label: 'Borrador', variant: 'secondary' as const },
-  [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando Info', variant: 'default' as const },
-  [PolicyStatus.UNDER_INVESTIGATION]: { label: 'En Investigación', variant: 'default' as const },
-  [PolicyStatus.INVESTIGATION_REJECTED]: { label: 'Rechazado', variant: 'destructive' as const },
-  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobación', variant: 'default' as const },
-  [PolicyStatus.APPROVED]: { label: 'Aprobado', variant: 'default' as const },
-  [PolicyStatus.CONTRACT_PENDING]: { label: 'Contrato Pendiente', variant: 'default' as const },
-  [PolicyStatus.CONTRACT_SIGNED]: { label: 'Contrato Firmado', variant: 'default' as const },
-  [PolicyStatus.ACTIVE]: { label: 'Activa', variant: 'default' as const },
-  [PolicyStatus.EXPIRED]: { label: 'Expirada', variant: 'secondary' as const },
-  [PolicyStatus.CANCELLED]: { label: 'Cancelada', variant: 'destructive' as const },
-};
-
 /**
  * Mobile card view for a single policy
  */
 export default function PolicyCard({ policy, onView }: PolicyCardProps) {
   const progress = calculatePolicyProgress(policy);
-  const statusConfig = STATUS_CONFIG[policy.status] || { label: policy.status, variant: 'secondary' as const };
+  const statusConfig = POLICY_STATUS_CONFIG[policy.status] || { label: policy.status, variant: 'secondary' as const };
 
   return (
     <Card className="overflow-hidden cursor-pointer" onClick={() => onView(policy.id)}>

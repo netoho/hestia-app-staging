@@ -41,6 +41,7 @@ model User {
   sessions      Session[]
   createdPolicies Policy[]      @relation("CreatedByUser")
   managedPolicies Policy[]      @relation("ManagedByUser")
+  cancelledPolicies     Policy[]  @relation("CancelledByUser")
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -173,6 +174,13 @@ model Policy {
   // Rejection/Approval Details
   reviewNotes       String?     @db.Text
   rejectionReason   String?     @db.Text
+
+  // Cancellation Information
+  cancelledAt               DateTime?
+  cancellationReason        PolicyCancellationReason?
+  cancellationComment       String?
+  cancelledById             String?
+  cancelledBy               User?            @relation("CancelledByUser", fields: [cancelledById], references: [id])
 
   // Related Actors
   landlords         Landlord[]
@@ -1145,6 +1153,16 @@ enum PolicyStatus {
   ACTIVE
   EXPIRED
   CANCELLED
+}
+
+enum PolicyCancellationReason {
+  CLIENT_REQUEST
+  NON_PAYMENT
+  FRAUD
+  DOCUMENTATION_ISSUES
+  LANDLORD_REQUEST
+  TENANT_REQUEST
+  OTHER
 }
 
 enum DocumentCategory {

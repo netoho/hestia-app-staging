@@ -5,7 +5,7 @@ import {
   generateTenantToken
 } from '@/lib/services/actorTokenService';
 import prisma from "@/lib/prisma";
-import { sendActorInvitation } from "@/lib/services/emailService";
+import { sendActorInvitation, sendPolicyCancellationEmail } from "@/lib/services/emailService";
 import { formatFullName } from "@/lib/utils/names";
 import {AvalType, JointObligorType, TenantType} from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from "@/lib/services/policyService";
@@ -208,4 +208,49 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   });
 
   return invitations;
+}
+
+// Send policy cancellation notification to all admin users
+export const sendPolicyCancellationNotification = async (policyId: string): Promise<void> => {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      policyNumber: true,
+      cancellationReason: true,
+      cancellationComment: true,
+      cancelledAt: true,
+      cancelledBy: {
+        select: { name: true, email: true },
+      },
+    },
+  });
+
+  if (!policy || !policy.cancellationReason) {
+    console.error('Policy not found or not cancelled:', policyId);
+    return;
+  }
+
+  // Get all active admin users
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN', isActive: true },
+    select: { email: true, name: true },
+  });
+
+  const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
+
+  // Send to each admin
+  for (const admin of admins) {
+    if (!admin.email) continue;
+
+    await sendPolicyCancellationEmail({
+      adminEmail: admin.email,
+      adminName: admin.name || undefined,
+      policyNumber: policy.policyNumber,
+      cancellationReason: policy.cancellationReason,
+      cancellationComment: policy.cancellationComment || '',
+      cancelledByName: policy.cancelledBy?.name || 'Sistema',
+      cancelledAt: policy.cancelledAt || new Date(),
+      policyLink,
+    });
+  }
 }

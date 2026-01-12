@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import { getFilterableStatuses } from '@/lib/config/policyStatus';
 
 interface PoliciesFiltersProps {
   searchTerm: string;
@@ -63,12 +63,9 @@ export default function PoliciesFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value={PolicyStatus.DRAFT}>Borrador</SelectItem>
-              <SelectItem value={PolicyStatus.COLLECTING_INFO}>Recopilando Info</SelectItem>
-              <SelectItem value={PolicyStatus.UNDER_INVESTIGATION}>En Investigación</SelectItem>
-              <SelectItem value={PolicyStatus.APPROVED}>Aprobado</SelectItem>
-              <SelectItem value={PolicyStatus.ACTIVE}>Activa</SelectItem>
-              <SelectItem value={PolicyStatus.EXPIRED}>Expirada</SelectItem>
+              {getFilterableStatuses().map(({ status, label }) => (
+                <SelectItem key={status} value={status}>{label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

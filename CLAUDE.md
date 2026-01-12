@@ -1,4 +1,5 @@
-- We use bun, so you can check the build with `bun run build`
-- Remember this is a brand new project not yet deployed, we don't care about data migration nor about backwards compatibility
-- When looking at ENUMs or data that is both on the codebase and on the schema, remember to use always the schema, if there is a conflict always ask for clarification
-- Remember the primary landlord is then one with `isPrimary` set to true, do not rely on the index
+- We use bun, so you can check the build with `bun run build`.
+- Remember this is a brand new project not yet deployed, we don't care about data migration nor about backwards compatibility.
+- When looking at ENUMs or data that is both on the codebase and on the schema, remember to use always the schema, if there is a conflict always ask for clarification.
+- Remember the primary landlord is then one with `isPrimary` set to true, do not rely on the index.
+- Don't run migrations automatically never, tell us about them and we will run them manually.
