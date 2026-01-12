@@ -187,7 +187,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
       {breakdown.investigationFee > 0 && investigationPayment && (
         <PaymentCard
           payment={investigationPayment}
-          expectedAmount={breakdown.investigationFee}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
             openManualPaymentDialog(PaymentType.INVESTIGATION_FEE, breakdown.investigationFee)
@@ -212,7 +211,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
       {breakdown.tenantPercentage > 0 && breakdown.tenantAmountAfterFee > 0 && tenantPayment && (
         <PaymentCard
           payment={tenantPayment}
-          expectedAmount={breakdown.tenantAmountAfterFee}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
             openManualPaymentDialog(PaymentType.TENANT_PORTION, breakdown.tenantAmountAfterFee)
@@ -235,7 +233,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
       {breakdown.landlordPercentage > 0 && breakdown.landlordAmount > 0 && landlordPayment && (
         <PaymentCard
           payment={landlordPayment}
-          expectedAmount={breakdown.landlordAmount}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
             openManualPaymentDialog(PaymentType.LANDLORD_PORTION, breakdown.landlordAmount)

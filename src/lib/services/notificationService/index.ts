@@ -7,7 +7,7 @@ import {
 import prisma from "@/lib/prisma";
 import { sendActorInvitation, sendPolicyCancellationEmail } from "@/lib/services/emailService";
 import { formatFullName } from "@/lib/utils/names";
-import { TenantType } from "@/prisma/generated/prisma-client/enums";
+import {AvalType, JointObligorType, TenantType} from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from "@/lib/services/policyService";
 import { ServiceError, ErrorCode } from '../types/errors';
 
@@ -79,7 +79,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
       token: tokenData.token,
       url: tokenData.url,
       policyNumber: policy.policyNumber,
-      propertyAddress: policy.propertyDetails?.propertyAddressDetails,
+      propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
       expiryDate: tokenData.expiresAt,
       initiatorName,
     });
@@ -129,12 +129,12 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
   // Generate tokens for joint obligors
   for (const jo of policy.jointObligors) {
-    if (shouldProcessActor('jointObligor', actors) && jo.email && (resend || !jo.informationComplete)) {
+    if (shouldProcessActor('joint-obligor', actors) && jo.email && (resend || !jo.informationComplete)) {
       const tokenData = await generateJointObligorToken(jo.id);
 
       const sent = await sendActorInvitation({
         actorType: 'jointObligor',
-        isCompany: jo.isCompany,
+        isCompany: jo.jointObligorType === JointObligorType.COMPANY,
         email: jo.email,
         name: jo.companyName ||
           (jo.firstName ? formatFullName(
@@ -146,7 +146,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
         token: tokenData.token,
         url: tokenData.url,
         policyNumber: policy.policyNumber,
-        propertyAddress: policy.propertyAddress,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
         expiryDate: tokenData.expiresAt,
         initiatorName,
       });
@@ -169,7 +169,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
       const sent = await sendActorInvitation({
         actorType: 'aval',
-        isCompany: aval.isCompany,
+        isCompany: aval.avalType === AvalType.COMPANY,
         email: aval.email,
         name: aval.companyName ||
           (aval.firstName ? formatFullName(
@@ -181,7 +181,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
         token: tokenData.token,
         url: tokenData.url,
         policyNumber: policy.policyNumber,
-        propertyAddress: policy.propertyAddress,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
         expiryDate: tokenData.expiresAt,
         initiatorName,
       });

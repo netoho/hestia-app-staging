@@ -410,6 +410,12 @@ export async function getPolicyById(id: string) {
         select: {
           verdict: true,
         }
+      },
+      payments: {
+        select: {
+          id: true,
+          status: true,
+        }
       }
     }
   });

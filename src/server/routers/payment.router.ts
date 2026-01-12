@@ -163,9 +163,12 @@ export const paymentRouter = createTRPCRouter({
       reference: z.string().optional(),
       description: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
-        return await paymentService.createManualPayment(input);
+        return await paymentService.createManualPayment({
+          ...input,
+          createdById: ctx.user.id,
+        });
       } catch (error) {
         if (error instanceof Error && error.message.includes('already completed')) {
           throw new TRPCError({
@@ -317,7 +320,7 @@ export const paymentRouter = createTRPCRouter({
       const updatedPayment = await ctx.prisma.payment.update({
         where: { id: paymentId },
         data: {
-          status: PaymentStatus.FAILED,
+          status: PaymentStatus.CANCELLED,
           errorMessage: reason || 'Cancelled by admin',
         },
       });
