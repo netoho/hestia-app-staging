@@ -17,12 +17,12 @@ export interface Testimonial {
 
 export interface User {
   id: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   role: UserRole;
-  avatarUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  avatarUrl?: string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface NavItem {

@@ -7,6 +7,7 @@ import {
 } from '@/server/trpc';
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
+import { PackageService } from '@/lib/services/packageService';
 
 // Schema for creating/updating packages
 const PackageSchema = z.object({
@@ -20,21 +21,23 @@ const PackageSchema = z.object({
   order: z.number().int().default(0),
 });
 
+const packageService = new PackageService();
+
 export const packageRouter = createTRPCRouter({
   /**
    * Get all active packages
    */
   getAll: publicProcedure
     .query(async () => {
-      const packages = await prisma.package.findMany({
-        where: { isActive: true },
-        orderBy: [
-          { price: 'desc' },
-          { percentage: 'desc' },
-        ],
-      });
-
-      return packages;
+      const result = await packageService.getPackages();
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
+      // Filter to active only
+      return result.value.filter(pkg => pkg.isActive);
     }),
 
   /**
@@ -43,18 +46,22 @@ export const packageRouter = createTRPCRouter({
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
-      const pkg = await prisma.package.findUnique({
-        where: { id: input.id },
-      });
+      const result = await packageService.getPackageById(input.id);
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
 
-      if (!pkg) {
+      if (!result.value) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Package not found',
         });
       }
 
-      return pkg;
+      return result.value;
     }),
 
   /**
@@ -97,27 +104,20 @@ export const packageRouter = createTRPCRouter({
   recommend: publicProcedure
     .input(z.object({ rentAmount: z.number() }))
     .query(async ({ input }) => {
-      // Get all active packages
-      const packages = await prisma.package.findMany({
-        where: { isActive: true },
-        orderBy: [
-          { order: 'asc' },
-          { percentage: 'desc' },
-        ],
-      });
+      // Get all active packages using service
+      const result = await packageService.getPackages();
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
 
-      // Calculate price for each package
+      const packages = result.value.filter(pkg => pkg.isActive);
+
+      // Calculate price for each package using service method
       const packagesWithPrice = packages.map(pkg => {
-        let price = 0;
-
-        if (pkg.percentage) {
-          price = input.rentAmount * (pkg.percentage / 100);
-          if (pkg.minAmount && price < pkg.minAmount) {
-            price = pkg.minAmount;
-          }
-        } else if (pkg.price) {
-          price = pkg.price;
-        }
+        const price = packageService.calculatePrice(pkg, input.rentAmount);
 
         return {
           ...pkg,

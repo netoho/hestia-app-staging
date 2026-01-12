@@ -10,12 +10,7 @@ Hestia uses an abstracted storage layer that supports multiple providers for sec
 - **10-second default expiration** for download links
 - Supports S3-compatible services (MinIO, DigitalOcean Spaces, etc.)
 
-### 2. Firebase Storage
-- Google Cloud Storage integration
-- Compatible with existing Firebase setup
-- Signed URLs with configurable expiration
-
-### 3. Local Storage (Development/Demo)
+### 2. Local Storage (Development/Demo)
 - In-memory storage for testing
 - No external dependencies
 - Automatic cleanup on restart
@@ -85,28 +80,6 @@ AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXXX
 AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-### Firebase Storage Setup
-
-1. **Enable Firebase Storage** in Firebase Console
-2. **Set Storage Rules** (private by default)
-```javascript
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
-
-3. **Set Environment Variables**
-```env
-STORAGE_PROVIDER=firebase
-FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-FIREBASE_PROJECT_ID=your-project-id
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-```
-
 ### Local Storage Setup (Development)
 
 ```env
@@ -169,14 +142,6 @@ const signedUrl = await storage.getSignedUrl({
 ```typescript
 await storage.delete('policies/123/document.pdf');
 ```
-
-## Migration from Firebase to S3
-
-1. **Export existing files** from Firebase Storage
-2. **Upload to S3** using AWS CLI or migration script
-3. **Update environment variables** to use S3
-4. **Update database** with new file paths if needed
-5. **Test** file upload/download functionality
 
 ## Monitoring & Logging
 

@@ -72,7 +72,15 @@
       "Bash(git -C /Users/neto/Development/hestia-app status --short)",
       "Bash(git -C /Users/neto/Development/hestia-app log --all --full-history -- \"src/lib/utils/policyUtils.ts\")",
       "Bash(git -C /Users/neto/Development/hestia-app log --oneline src/lib/services/policyApplicationService.ts)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(do if ! grep -l '$\\(basename $f .ts\\)' /Users/neto/Development/hestia-app/src/**/*.{ts,tsx} /Users/neto/Development/hestia-app/src/app/**/*.{ts,tsx})",
+      "Bash(then echo $f)",
+      "Bash(for file in policyAuth jointObligorTabFields formMessages pdfService userService packageService PolicyStatusService)",
+      "Bash(do echo '=== $file ===')",
+      "Skill(session-start)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(bunx next lint:*)",
+      "Skill(session-update)"
     ],
     "deny": [],
     "ask": []

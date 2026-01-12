@@ -41,6 +41,7 @@ model User {
   sessions      Session[]
   createdPolicies Policy[]      @relation("CreatedByUser")
   managedPolicies Policy[]      @relation("ManagedByUser")
+  cancelledPolicies     Policy[]  @relation("CancelledByUser")
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -160,6 +161,7 @@ model Policy {
 
   // Status & Workflow
   status            PolicyStatus @default(DRAFT)
+  paymentStatus     PaymentStatus?  // Overall payment status (null = no payments, COMPLETED = all paid)
   currentStep       String      @default("initial")
 
   // Important Dates
@@ -172,6 +174,13 @@ model Policy {
   // Rejection/Approval Details
   reviewNotes       String?     @db.Text
   rejectionReason   String?     @db.Text
+
+  // Cancellation Information
+  cancelledAt               DateTime?
+  cancellationReason        PolicyCancellationReason?
+  cancellationComment       String?
+  cancelledById             String?
+  cancelledBy               User?            @relation("CancelledByUser", fields: [cancelledById], references: [id])
 
   // Related Actors
   landlords         Landlord[]
@@ -951,11 +960,21 @@ model Payment {
   stripeIntentId    String?     @unique
   stripeSessionId   String?     @unique
   stripeCustomerId  String?
+  checkoutUrl       String?     // Stripe checkout URL for payment link
+  checkoutUrlExpiry DateTime?   // Checkout URL expiration (24h from creation)
 
   // Manual Payment Fields
   isManual          Boolean     @default(false)
   reference         String?
-  receiptUrl        String?
+  receiptUrl        String?     // DEPRECATED: No longer used, kept for backwards compatibility
+  receiptS3Key      String?     // S3 key for uploaded payment proof
+  receiptFileName   String?     // Original filename of receipt
+
+  // Verification Fields (for manual payments)
+  verifiedBy        String?     // User ID who verified the payment
+  verifiedAt        DateTime?
+  verificationNotes String?     @db.Text
+  createdById       String?     // User ID who created the payment (for manual payments)
 
   // Details
   description       String?
@@ -973,6 +992,7 @@ model Payment {
 
   @@index([policyId])
   @@index([status])
+  @@index([type])
 }
 
 // ============================================
@@ -1135,6 +1155,16 @@ enum PolicyStatus {
   CANCELLED
 }
 
+enum PolicyCancellationReason {
+  CLIENT_REQUEST
+  NON_PAYMENT
+  FRAUD
+  DOCUMENTATION_ISSUES
+  LANDLORD_REQUEST
+  TENANT_REQUEST
+  OTHER
+}
+
 enum DocumentCategory {
   IDENTIFICATION
   INCOME_PROOF
@@ -1177,8 +1207,10 @@ enum PaymentStatus {
   PROCESSING
   COMPLETED
   FAILED
+  CANCELLED             // User/admin cancelled the payment
   REFUNDED
   PARTIAL
+  PENDING_VERIFICATION  // Manual payment awaiting admin verification
 }
 
 enum PaymentMethod {
@@ -1192,6 +1224,8 @@ enum PaymentMethod {
 enum PaymentType {
   INVESTIGATION_FEE
   POLICY_PREMIUM
+  TENANT_PORTION      // Tenant's share of policy premium
+  LANDLORD_PORTION    // Landlord's share of policy premium
   PARTIAL_PAYMENT
   INCIDENT_PAYMENT
   REFUND

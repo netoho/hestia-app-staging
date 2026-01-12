@@ -227,9 +227,9 @@ export default function JointObligorReferencesTabRHF({
                 ))}
 
                 {/* Show array-level validation errors */}
-                {form.formState.errors.personalReferences?.root && (
+                {form.formState.errors.personalReferences?.root?.message && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.personalReferences.root.message}
+                    {String(form.formState.errors.personalReferences.root.message)}
                   </p>
                 )}
               </div>
@@ -402,9 +402,9 @@ export default function JointObligorReferencesTabRHF({
                 ))}
 
                 {/* Show array-level validation errors */}
-                {form.formState.errors.commercialReferences?.root && (
+                {form.formState.errors.commercialReferences?.root?.message && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.commercialReferences.root.message}
+                    {String(form.formState.errors.commercialReferences.root.message)}
                   </p>
                 )}
               </div>

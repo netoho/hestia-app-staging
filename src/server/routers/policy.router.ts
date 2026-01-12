@@ -13,7 +13,7 @@ import {
   validatePolicyNumber,
 } from '@/lib/services/policyService';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
-import { PolicyStatus, GuarantorType, PropertyType, TenantType } from "@/prisma/generated/prisma-client/enums";
+import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
 import { TRPCError } from '@trpc/server';
 import { generateLandlordToken, generatePolicyActorTokens } from '@/lib/services/actorTokenService';
 import { sendActorInvitation } from '@/lib/services/emailService';
@@ -508,5 +508,72 @@ export const policyRouter = createTRPCRouter({
           cause: error,
         });
       }
+    }),
+
+  // Cancel a policy (ADMIN/STAFF only)
+  cancelPolicy: protectedProcedure
+    .input(z.object({
+      policyId: z.string(),
+      reason: z.nativeEnum(PolicyCancellationReason),
+      comment: z.string().min(1, 'Comment is required'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Only ADMIN/STAFF can cancel
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can cancel policies',
+        });
+      }
+
+      const { prisma } = await import('@/lib/prisma');
+
+      const policy = await prisma.policy.findUnique({
+        where: { id: input.policyId },
+        select: { id: true, status: true, policyNumber: true },
+      });
+
+      if (!policy) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Policy not found',
+        });
+      }
+
+      // Cannot cancel already cancelled or expired policies
+      if (policy.status === 'CANCELLED' || policy.status === 'EXPIRED') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot cancel a policy with status ${policy.status}`,
+        });
+      }
+
+      // Update policy with cancellation details
+      await prisma.policy.update({
+        where: { id: input.policyId },
+        data: {
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          cancellationReason: input.reason,
+          cancellationComment: input.comment,
+          cancelledById: ctx.userId,
+        },
+      });
+
+      // Log activity
+      await logPolicyActivity({
+        policyId: input.policyId,
+        action: 'policy_cancelled',
+        description: `Policy cancelled: ${input.reason}`,
+        details: { reason: input.reason, comment: input.comment },
+        performedById: ctx.userId,
+        performedByType: 'user',
+      });
+
+      // Notify admins
+      const { sendPolicyCancellationNotification } = await import('@/lib/services/notificationService');
+      await sendPolicyCancellationNotification(input.policyId);
+
+      return { success: true };
     }),
 });

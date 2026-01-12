@@ -98,7 +98,7 @@ export default function PolicyDetailsPage({
         policyId={policyId}
         permissions={permissions}
         isStaffOrAdmin={isStaffOrAdmin}
-        onRefresh={() => refetch()}
+        onRefresh={async () => { await refetch(); }}
       />
     </ErrorBoundary>
   );

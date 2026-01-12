@@ -215,7 +215,7 @@ export default function ShareInvitationModal({
         <DialogHeader>
           <DialogTitle>Compartir Enlaces de Invitación</DialogTitle>
           <DialogDescription>
-            Comparte los enlaces de acceso con los actores de la protección {policyNumber}
+            Enlaces de acceso de la protección <strong>{policyNumber}</strong>
           </DialogDescription>
         </DialogHeader>
 

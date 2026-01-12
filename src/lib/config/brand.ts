@@ -112,7 +112,20 @@ export const brandUrls = {
   }
 } as const;
 
+export const emailStyle = {
+  maxWidth: '600px',
+  padding: '20px',
+  fontFamily: 'Arial, sans-serif',
+  fontSize: '14px',
+  lineHeight: '1.6',
+} as const;
+
+/** Helper to generate consistent email subjects with company prefix */
+export const emailSubject = (text: string) =>
+  `${brandInfo.companyShortName}: ${text}`;
+
 export type BrandColors = typeof brandColors;
 export type BrandFonts = typeof brandFonts;
 export type BrandInfo = typeof brandInfo;
 export type BrandUrls = typeof brandUrls;
+export type EmailStyle = typeof emailStyle;
