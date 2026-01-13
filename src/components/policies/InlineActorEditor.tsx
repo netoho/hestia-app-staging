@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
+import { getActorTypeLabel } from '@/lib/utils/actor';
 
 // Import simplified form wizards
 import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
@@ -59,7 +60,7 @@ export default function InlineActorEditor({
     onSuccess: () => {
       toast({
         title: 'Actor marcado como completo',
-        description: `El ${getActorTypeLabel().toLowerCase()} ha sido marcado como completo exitosamente`,
+        description: `El ${getActorTypeLabel(actorType).toLowerCase()} ha sido marcado como completo exitosamente`,
       });
       // Invalidate queries
       utils.actor.listByPolicy.invalidate({ policyId });
@@ -91,21 +92,6 @@ export default function InlineActorEditor({
     { policyId, type: 'landlord' },
     { enabled: actorType === 'landlord' && isOpen && !!policyId }
   );
-
-  const getActorTypeLabel = () => {
-    switch (actorType) {
-      case 'tenant':
-        return 'Inquilino';
-      case 'landlord':
-        return 'Arrendador';
-      case 'aval':
-        return 'Aval';
-      case 'jointObligor':
-        return 'Obligado Solidario';
-      default:
-        return 'Actor';
-    }
-  };
 
   const handleComplete = () => {
     // Invalidate admin queries to ensure fresh data
@@ -197,9 +183,9 @@ export default function InlineActorEditor({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar {getActorTypeLabel()}</DialogTitle>
+          <DialogTitle>Editar {getActorTypeLabel(actorType)}</DialogTitle>
           <DialogDescription>
-            Actualice la informacion del {getActorTypeLabel().toLowerCase()} para esta protección
+            Actualice la informacion del {getActorTypeLabel(actorType).toLowerCase()} para esta protección
           </DialogDescription>
         </DialogHeader>
 
@@ -236,7 +222,7 @@ export default function InlineActorEditor({
               <Alert className="mt-4 border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Este {getActorTypeLabel().toLowerCase()} ya esta marcado como completo
+                  Este {getActorTypeLabel(actorType).toLowerCase()} ya esta marcado como completo
                 </AlertDescription>
               </Alert>
             )}
@@ -252,9 +238,9 @@ export default function InlineActorEditor({
       <AlertDialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Marcar {getActorTypeLabel()} como Completo</AlertDialogTitle>
+            <AlertDialogTitle>Marcar {getActorTypeLabel(actorType)} como Completo</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción marcara al {getActorTypeLabel().toLowerCase()} como completo.
+              Esta acción marcara al {getActorTypeLabel(actorType).toLowerCase()} como completo.
               Si faltan documentos requeridos, puede elegir continuar de todas formas.
             </AlertDialogDescription>
           </AlertDialogHeader>
