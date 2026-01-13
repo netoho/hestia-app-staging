@@ -374,6 +374,23 @@ export async function getPolicyById(id: string) {
           guaranteePropertyDetails: true,
         }
       },
+      tenantHistory: {
+        select: {
+          id: true,
+          tenantType: true,
+          firstName: true,
+          middleName: true,
+          paternalLastName: true,
+          maternalLastName: true,
+          companyName: true,
+          email: true,
+          phone: true,
+          replacedAt: true,
+          replacementReason: true,
+          verificationStatus: true,
+        },
+        orderBy: { replacedAt: 'desc' },
+      },
       propertyDetails: {
         include: {
           propertyAddressDetails: true,

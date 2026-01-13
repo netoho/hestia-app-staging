@@ -87,7 +87,7 @@ export default function RealEstateAdvisorsPage() {
               {t.pages.realEstateAdvisors.ctaText}
             </p>
             <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link href="/register?role=advisor">{t.pages.realEstateAdvisors.registerAsAdvisor}</Link>
+              <Link href="/contact?role=advisor">{t.pages.realEstateAdvisors.registerAsAdvisor}</Link>
             </Button>
           </div>
         </Section>

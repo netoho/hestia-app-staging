@@ -210,6 +210,70 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   return invitations;
 }
 
+// Send tenant replacement notification to manager and admins
+export const sendTenantReplacementNotification = async (
+  policyId: string,
+  managedById: string | null
+): Promise<void> => {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      policyNumber: true,
+      managedBy: {
+        select: { email: true, name: true },
+      },
+    },
+  });
+
+  if (!policy) {
+    console.error('Policy not found for tenant replacement notification:', policyId);
+    return;
+  }
+
+  // Get all admin users
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN', isActive: true },
+    select: { id: true, email: true, name: true },
+  });
+
+  // Build recipient list (manager + admins, no duplicates)
+  const recipients: Array<{ email: string; name: string | null }> = [];
+  const addedEmails = new Set<string>();
+
+  // Add manager if exists
+  if (policy.managedBy?.email) {
+    recipients.push({ email: policy.managedBy.email, name: policy.managedBy.name });
+    addedEmails.add(policy.managedBy.email);
+  }
+
+  // Add admins (excluding already added manager)
+  for (const admin of admins) {
+    if (admin.email && !addedEmails.has(admin.email)) {
+      recipients.push({ email: admin.email, name: admin.name });
+      addedEmails.add(admin.email);
+    }
+  }
+
+  const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
+
+  // Send simple notification email to each recipient
+  for (const recipient of recipients) {
+    try {
+      const { sendSimpleNotificationEmail } = await import('@/lib/services/emailService');
+      await sendSimpleNotificationEmail({
+        to: recipient.email,
+        recipientName: recipient.name || undefined,
+        subject: `Inquilino reemplazado en póliza #${policy.policyNumber}`,
+        message: `El inquilino ha sido reemplazado en la póliza #${policy.policyNumber}. El proceso de recolección de información ha sido reiniciado.`,
+        actionUrl: policyLink,
+        actionText: 'Ver póliza',
+      });
+    } catch (error) {
+      console.error('Failed to send tenant replacement notification to:', recipient.email, error);
+    }
+  }
+};
+
 // Send policy cancellation notification to all admin users
 export const sendPolicyCancellationNotification = async (policyId: string): Promise<void> => {
   const policy = await prisma.policy.findUnique({

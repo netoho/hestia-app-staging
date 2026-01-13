@@ -888,3 +888,68 @@ ${data.policyLink ? `Ver protección: ${data.policyLink}` : ''}
     return false;
   }
 };
+
+// Simple notification email interface
+interface SimpleNotificationEmailData {
+  to: string;
+  recipientName?: string;
+  subject: string;
+  message: string;
+  actionUrl?: string;
+  actionText?: string;
+}
+
+// Send a simple notification email (for internal notifications)
+export const sendSimpleNotificationEmail = async (data: SimpleNotificationEmailData): Promise<boolean> => {
+  try {
+    const subject = emailSubject(data.subject);
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">${COMPANY_NAME}</h1>
+  </div>
+  <div style="background: white; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+    <p style="margin: 0 0 15px;">Hola${data.recipientName ? ` ${data.recipientName}` : ''},</p>
+    <p style="margin: 0 0 20px;">${data.message}</p>
+    ${data.actionUrl && data.actionText ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.actionUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 5px; font-weight: 600;">${data.actionText}</a>
+    </div>
+    ` : ''}
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+    <p style="color: #666; font-size: 12px; margin: 0; text-align: center;">
+      © ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    </p>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+${data.recipientName ? `Hola ${data.recipientName},` : 'Hola,'}
+
+${data.message}
+
+${data.actionUrl ? `${data.actionText || 'Ver más'}: ${data.actionUrl}` : ''}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.to,
+      subject,
+      html,
+      text,
+    });
+  } catch (error) {
+    console.error('Failed to send simple notification email:', error);
+    return false;
+  }
+};

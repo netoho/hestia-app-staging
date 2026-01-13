@@ -107,16 +107,16 @@ export function PricingCalculator() {
   // Calculate price for each package based on rent amount
   const calculatePackagePrice = (pkg: Package): number => {
     const rent = parseFloat(rentAmount) || 0;
-    
+
     // For packages without percentage (flat fee)
     if (!pkg.percentage) {
       return pkg.price;
     }
-    
+
     // For percentage-based packages
     // Calculate percentage of monthly rent
     const percentagePrice = (rent * pkg.percentage) / 100;
-    
+
     // Return the maximum between minimum price and calculated percentage
     return Math.max(pkg.minAmount || pkg.price, percentagePrice);
   };
@@ -253,7 +253,6 @@ export function PricingCalculator() {
                 onChange={(e) => setCity(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className="w-full text-lg py-6 mb-6"
-                autoFocus
               />
 
               <Button

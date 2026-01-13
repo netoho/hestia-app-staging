@@ -3,3 +3,6 @@
 - When looking at ENUMs or data that is both on the codebase and on the schema, remember to use always the schema, if there is a conflict always ask for clarification.
 - Remember the primary landlord is then one with `isPrimary` set to true, do not rely on the index.
 - Don't run migrations automatically never, tell us about them and we will run them manually.
+- Don't put everything in a single file, split things in logical parts. For business logic add the routers, services, utils, etc. For components add folders and split them in smaller components.
+- When creating new components, prefer functional components with hooks over class components.
+- Always look for existing components or utilities before creating new ones.
