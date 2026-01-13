@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/currency';
 import type { ActorReviewInfo } from '@/lib/services/reviewService.types';
 
 interface QuickComparisonPanelProps {
@@ -31,16 +32,6 @@ const actorTypeIcons: Record<string, React.ElementType> = {
   jointObligor: Users,
   aval: Shield,
 };
-
-function formatCurrency(amount: number | undefined): string {
-  if (!amount) return '-';
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function calculateRTI(rentAmount: number, monthlyIncome: number | undefined): number | null {
   if (!monthlyIncome || monthlyIncome === 0) return null;
