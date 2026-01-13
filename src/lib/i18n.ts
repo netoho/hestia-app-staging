@@ -1,5 +1,5 @@
 
-import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
+import type { Testimonial, NavItem, FAQ, HowItWorksStep } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
 
@@ -45,7 +45,7 @@ const es = {
         error: "Error",
     },
 
-    policyStatus: {
+policyStatus: {
         draft: 'Borrador',
         sent_to_tenant: 'Enviada a Inquilin@',
         in_progress: 'En Proceso',
@@ -53,7 +53,73 @@ const es = {
         under_review: 'En Revisión',
         approved: 'Aprobada',
         denied: 'Rechazada',
-    } as Record<PolicyStatus, string>,
+    } as Record<string, string>,
+
+    // Full policy status labels (matching Prisma schema)
+    policyStatusFull: {
+        DRAFT: 'Borrador',
+        COLLECTING_INFO: 'Recopilando Información',
+        UNDER_INVESTIGATION: 'En Investigación',
+        INVESTIGATION_REJECTED: 'Investigación Rechazada',
+        PENDING_APPROVAL: 'Pendiente de Aprobación',
+        APPROVED: 'Aprobada',
+        CONTRACT_PENDING: 'Contrato Pendiente',
+        CONTRACT_SIGNED: 'Contrato Firmado',
+        ACTIVE: 'Activa',
+        EXPIRED: 'Expirada',
+        CANCELLED: 'Cancelada',
+    } as Record<string, string>,
+
+    guarantorType: {
+        NONE: 'Sin Garantía',
+        JOINT_OBLIGOR: 'Obligado Solidario',
+        AVAL: 'Aval',
+        BOTH: 'Ambos',
+    } as Record<string, string>,
+
+    propertyType: {
+        HOUSE: 'Casa',
+        APARTMENT: 'Departamento',
+        COMMERCIAL: 'Local Comercial',
+        OFFICE: 'Oficina',
+        WAREHOUSE: 'Bodega',
+        OTHER: 'Otro',
+    } as Record<string, string>,
+
+    employmentStatus: {
+        EMPLOYED: 'Empleado',
+        SELF_EMPLOYED: 'Autoempleado',
+        BUSINESS_OWNER: 'Empresario',
+        RETIRED: 'Jubilado',
+        STUDENT: 'Estudiante',
+        UNEMPLOYED: 'Desempleado',
+        OTHER: 'Otro',
+    } as Record<string, string>,
+
+    paymentStatusFull: {
+        PENDING: 'Pendiente',
+        PROCESSING: 'Procesando',
+        COMPLETED: 'Completado',
+        FAILED: 'Fallido',
+        CANCELLED: 'Cancelado',
+        REFUNDED: 'Reembolsado',
+        PARTIAL: 'Parcial',
+        PENDING_VERIFICATION: 'Pendiente de Verificación',
+    } as Record<string, string>,
+
+    investigationVerdict: {
+        APPROVED: 'Aprobado',
+        REJECTED: 'Rechazado',
+        HIGH_RISK: 'Alto Riesgo',
+        CONDITIONAL: 'Condicional',
+    } as Record<string, string>,
+
+    riskLevel: {
+        LOW: 'Bajo',
+        MEDIUM: 'Medio',
+        HIGH: 'Alto',
+        VERY_HIGH: 'Muy Alto',
+    } as Record<string, string>,
 
 
 
@@ -680,7 +746,7 @@ const es = {
                 staff: "Staff",
                 owner: "Propietario",
                 renter: "Inquilino",
-            } as Record<UserRole, string>,
+            } as Record<string, string>,
         },
         newPolicy: {
             title: "Crear Nueva Protección",
