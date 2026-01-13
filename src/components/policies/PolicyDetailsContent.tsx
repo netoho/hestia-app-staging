@@ -49,6 +49,9 @@ import {
 import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import { trpc } from '@/lib/trpc/client';
+import { formatFullName } from '@/lib/utils/names';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // Import lightweight components (eager loading)
 import ActorCard from '@/components/policies/details/ActorCard';
@@ -69,6 +72,11 @@ const ShareInvitationModal = dynamic(() => import('@/components/policies/ShareIn
 });
 
 const CancelPolicyModal = dynamic(() => import('@/components/policies/CancelPolicyModal'), {
+  loading: () => null,
+  ssr: false
+});
+
+const ReplaceTenantModal = dynamic(() => import('@/components/policies/ReplaceTenantModal'), {
   loading: () => null,
   ssr: false
 });
@@ -94,6 +102,10 @@ const PaymentsTab = dynamic(() => import('@/components/policies/payments/Payment
 });
 
 import PaymentsTabSkeleton from '@/components/policies/payments/PaymentsTabSkeleton';
+import { UserMinus } from 'lucide-react';
+
+// Statuses that allow tenant replacement
+const REPLACEABLE_STATUSES = ['DRAFT', 'COLLECTING_INFO', 'UNDER_INVESTIGATION', 'PENDING_APPROVAL'];
 
 interface PolicyDetailsContentProps {
   policy: any;
@@ -127,6 +139,7 @@ export default function PolicyDetailsContent({
   } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReplaceTenantModal, setShowReplaceTenantModal] = useState(false);
   const [markCompleteActor, setMarkCompleteActor] = useState<{
     type: 'tenant' | 'landlord' | 'aval' | 'jointObligor';
     actorId: string;
@@ -659,7 +672,22 @@ export default function PolicyDetailsContent({
         {/* Tenant Tab with Toggle */}
         <TabsContent value="tenant" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           {policy.tenant && (
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between items-center mb-4">
+              {/* Replace Tenant Button */}
+              {isStaffOrAdmin && REPLACEABLE_STATUSES.includes(policy.status) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowReplaceTenantModal(true)}
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                >
+                  <UserMinus className="h-4 w-4 mr-2" />
+                  Reemplazar
+                </Button>
+              )}
+              {(!isStaffOrAdmin || !REPLACEABLE_STATUSES.includes(policy.status)) && <div />}
+
+              {/* View Toggle */}
               <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                 <button
                   onClick={() => setTenantView('info')}
@@ -695,6 +723,43 @@ export default function PolicyDetailsContent({
               actorType="tenant"
               actorName={policy.tenant?.fullName || policy.tenant?.companyName}
             />
+          )}
+
+          {/* Tenant Replacement History */}
+          {policy.tenantHistory && policy.tenantHistory.length > 0 && (
+            <Card className="mt-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Historial de reemplazos ({policy.tenantHistory.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {policy.tenantHistory.map((prev: any) => (
+                    <div key={prev.id} className="border-l-2 border-muted pl-4 py-2">
+                      <p className="font-medium">
+                        {prev.tenantType === 'COMPANY'
+                          ? prev.companyName
+                          : formatFullName(
+                              prev.firstName || '',
+                              prev.paternalLastName || '',
+                              prev.maternalLastName || '',
+                              prev.middleName || undefined
+                            )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{prev.email}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Reemplazado: {format(new Date(prev.replacedAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">
+                        Razón: {prev.replacementReason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
@@ -847,6 +912,17 @@ export default function PolicyDetailsContent({
         onClose={() => setShowCancelModal(false)}
         policyId={policyId}
         policyNumber={policy.policyNumber}
+        onSuccess={onRefresh}
+      />
+
+      {/* Replace Tenant Modal */}
+      <ReplaceTenantModal
+        isOpen={showReplaceTenantModal}
+        onClose={() => setShowReplaceTenantModal(false)}
+        policyId={policyId}
+        policyNumber={policy.policyNumber}
+        currentTenantEmail={policy.tenant?.email || ''}
+        hasGuarantors={(policy.jointObligors?.length > 0) || (policy.avals?.length > 0)}
         onSuccess={onRefresh}
       />
 
