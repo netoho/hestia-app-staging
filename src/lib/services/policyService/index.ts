@@ -547,3 +547,86 @@ export async function validatePolicyNumber(policyNumber: string): Promise<{
 
   return { isValid: true };
 }
+
+/**
+ * Get complete policy data for PDF generation
+ * Includes all nested relations with full data
+ */
+export async function getPolicyForPDF(id: string) {
+  return prisma.policy.findUnique({
+    where: { id },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        }
+      },
+      managedBy: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        }
+      },
+      landlords: {
+        include: {
+          documents: true,
+          addressDetails: true,
+        },
+        orderBy: [
+          { isPrimary: 'desc' },
+          { createdAt: 'asc' }
+        ]
+      },
+      tenant: {
+        include: {
+          personalReferences: true,
+          commercialReferences: true,
+          documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          previousRentalAddressDetails: true,
+        }
+      },
+      jointObligors: {
+        include: {
+          personalReferences: true,
+          commercialReferences: true,
+          documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          guaranteePropertyDetails: true,
+        }
+      },
+      avals: {
+        include: {
+          personalReferences: true,
+          commercialReferences: true,
+          documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          guaranteePropertyDetails: true,
+        }
+      },
+      propertyDetails: {
+        include: {
+          propertyAddressDetails: true,
+          contractSigningAddressDetails: true,
+        }
+      },
+      documents: {
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
+      investigation: true,
+      payments: {
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
+    }
+  });
+}
