@@ -26,45 +26,15 @@ import { Loader2, CheckCircle2, XCircle, FileText, Download } from 'lucide-react
 import { PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
+import { formatCurrency } from '@/lib/utils/currency';
+import { formatDateTime } from '@/lib/utils/formatting';
+import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS } from '@/lib/constants/paymentConfig';
 
 interface VerifyPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   payment: PaymentWithStatus;
   onSuccess: () => void;
-}
-
-const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
-  [PaymentType.INVESTIGATION_FEE]: 'Cuota de Investigación',
-  [PaymentType.TENANT_PORTION]: 'Pago del Inquilino',
-  [PaymentType.LANDLORD_PORTION]: 'Pago del Arrendador',
-  [PaymentType.POLICY_PREMIUM]: 'Prima de Póliza',
-  [PaymentType.PARTIAL_PAYMENT]: 'Pago Parcial',
-  [PaymentType.INCIDENT_PAYMENT]: 'Pago por Incidencia',
-  [PaymentType.REFUND]: 'Reembolso',
-};
-
-const PAYER_TYPE_LABELS: Record<PayerType, string> = {
-  [PayerType.TENANT]: 'Inquilino',
-  [PayerType.LANDLORD]: 'Arrendador',
-  [PayerType.JOINT_OBLIGOR]: 'Obligado Solidario',
-  [PayerType.AVAL]: 'Aval',
-  [PayerType.COMPANY]: 'Empresa',
-};
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MXN`;
-}
-
-function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export function VerifyPaymentDialog({
@@ -151,7 +121,7 @@ export function VerifyPaymentDialog({
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Registrado</span>
-              <span>{formatDate(payment.createdAt)}</span>
+              <span>{formatDateTime(payment.createdAt)}</span>
             </div>
           </div>
 

@@ -32,6 +32,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { PaymentStatus, PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
+import { formatCurrency } from '@/lib/utils/currency';
+import { formatDateTime } from '@/lib/utils/formatting';
+import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS } from '@/lib/constants/paymentConfig';
 
 interface PaymentCardProps {
   payment: PaymentWithStatus;
@@ -57,39 +60,6 @@ const PAYMENT_STATUS_CONFIG: Record<
   [PaymentStatus.PARTIAL]: { label: 'Parcial', variant: 'default', className: 'bg-yellow-500 hover:bg-yellow-600', icon: Clock },
   [PaymentStatus.PENDING_VERIFICATION]: { label: 'Por Verificar', variant: 'default', className: 'bg-orange-500 hover:bg-orange-600', icon: Eye },
 };
-
-const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
-  [PaymentType.INVESTIGATION_FEE]: 'Cuota de Investigación',
-  [PaymentType.TENANT_PORTION]: 'Pago del Inquilino',
-  [PaymentType.LANDLORD_PORTION]: 'Pago del Arrendador',
-  [PaymentType.POLICY_PREMIUM]: 'Prima de Póliza',
-  [PaymentType.PARTIAL_PAYMENT]: 'Pago Parcial',
-  [PaymentType.INCIDENT_PAYMENT]: 'Pago por Incidencia',
-  [PaymentType.REFUND]: 'Reembolso',
-};
-
-const PAYER_TYPE_LABELS: Record<PayerType, string> = {
-  [PayerType.TENANT]: 'Inquilino',
-  [PayerType.LANDLORD]: 'Arrendador',
-  [PayerType.JOINT_OBLIGOR]: 'Obligado Solidario',
-  [PayerType.AVAL]: 'Aval',
-  [PayerType.COMPANY]: 'Empresa',
-};
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MXN`;
-}
-
-function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function getExpiryInfo(expiryDate: Date | string | null | undefined): { text: string; isExpired: boolean; isWarning: boolean } {
   if (!expiryDate) return { text: '', isExpired: false, isWarning: false };
@@ -118,7 +88,7 @@ function getExpiryInfo(expiryDate: Date | string | null | undefined): { text: st
     return { text: `Expira en ${Math.ceil(hoursRemaining)} horas`, isExpired: false, isWarning: false };
   }
 
-  return { text: `Expira: ${formatDate(expiryDate)}`, isExpired: false, isWarning: false };
+  return { text: `Expira: ${formatDateTime(expiryDate)}`, isExpired: false, isWarning: false };
 }
 
 export function PaymentCard({
@@ -216,7 +186,7 @@ export function PaymentCard({
           {isCompleted && payment.paidAt && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Fecha de pago</span>
-              <span>{formatDate(payment.paidAt)}</span>
+              <span>{formatDateTime(payment.paidAt)}</span>
             </div>
           )}
         </div>

@@ -23,6 +23,8 @@ import { Loader2, Upload, FileText, X } from 'lucide-react';
 import { PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils/currency';
+import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
 
 interface ManualPaymentDialogProps {
   open: boolean;
@@ -33,16 +35,6 @@ interface ManualPaymentDialogProps {
   onSuccess: () => void;
 }
 
-const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
-  [PaymentType.INVESTIGATION_FEE]: 'Cuota de Investigación',
-  [PaymentType.TENANT_PORTION]: 'Pago del Inquilino',
-  [PaymentType.LANDLORD_PORTION]: 'Pago del Arrendador',
-  [PaymentType.POLICY_PREMIUM]: 'Prima de Póliza',
-  [PaymentType.PARTIAL_PAYMENT]: 'Pago Parcial',
-  [PaymentType.INCIDENT_PAYMENT]: 'Pago por Incidencia',
-  [PaymentType.REFUND]: 'Reembolso',
-};
-
 const PAYER_TYPE_OPTIONS: { value: PayerType; label: string }[] = [
   { value: PayerType.TENANT, label: 'Inquilino' },
   { value: PayerType.LANDLORD, label: 'Arrendador' },
@@ -50,10 +42,6 @@ const PAYER_TYPE_OPTIONS: { value: PayerType; label: string }[] = [
   { value: PayerType.AVAL, label: 'Aval' },
   { value: PayerType.COMPANY, label: 'Empresa' },
 ];
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MXN`;
-}
 
 export function ManualPaymentDialog({
   open,
