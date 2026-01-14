@@ -1,0 +1,10 @@
+export { HeaderSection } from './HeaderSection';
+export { PolicyInfoSection } from './PolicyInfoSection';
+export { PropertySection } from './PropertySection';
+export { LandlordSection } from './LandlordSection';
+export { TenantSection } from './TenantSection';
+export { GuarantorSection } from './GuarantorSection';
+export { InvestigationSection } from './InvestigationSection';
+export { PaymentsSection } from './PaymentsSection';
+export { DocumentsSection } from './DocumentsSection';
+export { HistorySection } from './HistorySection';

@@ -81,9 +81,9 @@ export function isCompanyComplete(company: Partial<CompanyWithLegalRep>): boolea
   return !!(
     company.companyName &&
     company.companyRfc &&
-    company.firstName && // Legal rep first name
-    company.paternalLastName &&
-    company.maternalLastName &&
+    company.legalRepFirstName &&
+    company.legalRepPaternalLastName &&
+    // legalRepMaternalLastName is optional in schema
     company.legalRepPosition &&
     company.legalRepPhone &&
     company.legalRepEmail
@@ -95,10 +95,10 @@ export function isCompanyComplete(company: Partial<CompanyWithLegalRep>): boolea
  */
 export function formatLegalRepName(company: Partial<CompanyWithLegalRep>): string {
   const parts = [
-    company.firstName,
-    company.middleName,
-    company.paternalLastName,
-    company.maternalLastName,
+    company.legalRepFirstName,
+    company.legalRepMiddleName,
+    company.legalRepPaternalLastName,
+    company.legalRepMaternalLastName,
   ].filter(Boolean);
 
   return parts.join(' ');

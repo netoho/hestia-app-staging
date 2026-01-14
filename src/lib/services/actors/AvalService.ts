@@ -302,10 +302,11 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
         await this.prisma.personalReference.createMany({
           data: references.map(ref => ({
             avalId,
-            name: ref.name,
+            firstName: ref.firstName,
+            middleName: ref.middleName || null,
+            paternalLastName: ref.paternalLastName,
+            maternalLastName: ref.maternalLastName || null,
             phone: ref.phone,
-            homePhone: ref.homePhone || null,
-            cellPhone: ref.cellPhone || null,
             email: ref.email || null,
             relationship: ref.relationship,
             occupation: ref.occupation || null,
@@ -334,7 +335,10 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           data: references.map(ref => ({
             avalId,
             companyName: ref.companyName,
-            contactName: ref.contactName,
+            contactFirstName: ref.contactFirstName,
+            contactMiddleName: ref.contactMiddleName || null,
+            contactPaternalLastName: ref.contactPaternalLastName,
+            contactMaternalLastName: ref.contactMaternalLastName || null,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -583,15 +587,14 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       // Person validation
       if (!aval.firstName) errors.push('Nombre requerido');
       if (!aval.paternalLastName) errors.push('Apellido paterno requerido');
-      if (!aval.maternalLastName) errors.push('Apellido materno requerido');
-      // Employment fields are optional in schema - removed occupation, employerName, monthlyIncome checks
+      // maternalLastName is optional in schema
     } else {
       // Company validation
       if (!aval.companyName) errors.push('Razón social requerida');
       if (!aval.companyRfc) errors.push('RFC de empresa requerido');
       if (!aval.legalRepFirstName) errors.push('Nombre del representante requerido');
       if (!aval.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
-      if (!aval.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+      // legalRepMaternalLastName is optional in schema
     }
 
     // Common required fields
@@ -602,9 +605,9 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
 
     // Aval specific - must have property guarantee
     if (!aval.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
-    if (!aval.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
-    if (!aval.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
-    if (!aval.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+    if (!aval.propertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+    if (!aval.propertyRegistry) errors.push('Folio de registro de garantía requerido');
+    if (!aval.propertyValue) errors.push('Valor de propiedad de garantía requerido');
 
     // Check references (minimum 3 for aval)
     const referenceCount = aval.personalReferences?.length ?? 0;

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { VerificationBadge } from '@/components/shared/VerificationBadge';
 import {
   Building,
   User,
@@ -23,10 +23,6 @@ import {
   X,
   RefreshCw,
   AlertCircle,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Eye,
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
 
@@ -65,41 +61,6 @@ export default function ActorVerificationCard({
     actorName: string;
   }>({ open: false, actorType: '', actorId: '', actorName: '' });
   const [rejectionReason, setRejectionReason] = useState('');
-
-  const getVerificationBadge = (status?: string) => {
-    const config = {
-      PENDING: {
-        label: t.pages.policies.actorVerification.pending,
-        color: 'bg-gray-500',
-        icon: Clock,
-      },
-      APPROVED: {
-        label: t.pages.policies.actorVerification.approved,
-        color: 'bg-green-500',
-        icon: CheckCircle2,
-      },
-      REJECTED: {
-        label: t.pages.policies.actorVerification.rejected,
-        color: 'bg-red-500',
-        icon: XCircle,
-      },
-      IN_REVIEW: {
-        label: t.pages.policies.actorVerification.inReview,
-        color: 'bg-yellow-500',
-        icon: Eye,
-      },
-    };
-
-    const badgeConfig = config[status as keyof typeof config] || config.PENDING;
-    const Icon = badgeConfig.icon;
-
-    return (
-      <Badge className={`${badgeConfig.color} text-white flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {badgeConfig.label}
-      </Badge>
-    );
-  };
 
   const handleApprove = async (actorType: string, actorId: string) => {
     setApproving(actorId);
@@ -146,7 +107,7 @@ export default function ActorVerificationCard({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {getVerificationBadge(actor.verificationStatus)}
+            <VerificationBadge status={actor.verificationStatus || 'PENDING'} />
             {actor.informationComplete && actor.verificationStatus === 'PENDING' && (
               <div className="flex gap-2">
                 <Button

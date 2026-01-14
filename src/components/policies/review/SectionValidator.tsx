@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,7 +76,7 @@ export default function SectionValidator({
   forceExpanded = false,
 }: SectionValidatorProps) {
   const [isOpen, setIsOpen] = useState(forceExpanded);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const rejectDialog = useDialogState();
   const [rejectionReason, setRejectionReason] = useState('');
 
   // Auto-expand when forceExpanded changes
@@ -88,7 +89,7 @@ export default function SectionValidator({
   // Use tRPC mutation for section validation
   const validateSectionMutation = trpc.review.validateSection.useMutation({
     onSuccess: () => {
-      setShowRejectDialog(false);
+      rejectDialog.close();
       setRejectionReason('');
       onValidationComplete();
     },
@@ -340,7 +341,7 @@ export default function SectionValidator({
                     size="sm"
                     variant="destructive"
                     className="flex-1"
-                    onClick={() => setShowRejectDialog(true)}
+                    onClick={rejectDialog.open}
                     disabled={validateSectionMutation.isPending}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
@@ -355,7 +356,7 @@ export default function SectionValidator({
       </Card>
 
       {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      <Dialog open={rejectDialog.isOpen} onOpenChange={(open) => !open && rejectDialog.close()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rechazar {section.displayName}</DialogTitle>
@@ -376,7 +377,7 @@ export default function SectionValidator({
             <Button
               variant="outline"
               onClick={() => {
-                setShowRejectDialog(false);
+                rejectDialog.close();
                 setRejectionReason('');
               }}
             >

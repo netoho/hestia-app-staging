@@ -65,7 +65,7 @@ export function isPersonalReferenceComplete(ref: Partial<PersonalReference>): bo
   return !!(
     ref.firstName &&
     ref.paternalLastName &&
-    ref.maternalLastName &&
+    // maternalLastName is optional in schema
     ref.phone &&
     ref.relationship
   );
@@ -76,7 +76,7 @@ export function isCommercialReferenceComplete(ref: Partial<CommercialReference>)
     ref.companyName &&
     ref.contactFirstName &&
     ref.contactPaternalLastName &&
-    ref.contactMaternalLastName &&
+    // contactMaternalLastName is optional in schema
     ref.phone &&
     ref.relationship
   );

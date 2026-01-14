@@ -14,7 +14,7 @@ export function CtaSection() {
         {t.pages.home.ctaSubtitle}
       </p>
       <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-10 py-7 rounded-lg">
-        <Link href="/register">{t.actions.startNow} <ArrowRight className="ml-2 h-5 w-5" /></Link>
+        <Link href="/contact">{t.actions.startNow} <ArrowRight className="ml-2 h-5 w-5" /></Link>
       </Button>
     </Section>
   );

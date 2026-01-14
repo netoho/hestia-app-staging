@@ -92,7 +92,7 @@ export default function PropertyOwnersPage() {
             </p>
             <div className="space-x-4">
                <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Link href="/register?role=owner">{t.pages.propertyOwners.registerAsOwner}</Link>
+                <Link href="/contact?role=owner">{t.pages.propertyOwners.registerAsOwner}</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link href="/contact?subject=OwnerInquiry">{t.pages.propertyOwners.talkToExpert}</Link>

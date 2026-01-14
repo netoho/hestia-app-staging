@@ -6,6 +6,7 @@ import {Badge} from '@/components/ui/badge';
 import {Activity, CheckCircle, Edit, FileText, Mail, Upload, User, UserPlus, XCircle,} from 'lucide-react';
 import {format} from 'date-fns';
 import {es} from 'date-fns/locale';
+import { getActorTypeLabel } from '@/lib/utils/actor';
 
 interface ActivityItem {
   id: string;
@@ -112,13 +113,7 @@ export default function ActorActivityTimeline({
       return `Actividad de ${actorName}`;
     }
     if (actorType) {
-      const typeLabels: Record<string, string> = {
-        tenant: 'Inquilino',
-        landlord: 'Arrendador',
-        aval: 'Aval',
-        jointObligor: 'Obligado Solidario',
-      };
-      return `Actividad del ${typeLabels[actorType] || actorType}`;
+      return `Actividad del ${getActorTypeLabel(actorType)}`;
     }
     return 'Historial de Actividad';
   };

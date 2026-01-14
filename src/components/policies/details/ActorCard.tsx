@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { User, Mail, Phone, FileText, CheckCircle2, Users, Shield, Building, Edit, Send, RefreshCw } from 'lucide-react';
+import { Mail, Phone, Edit, Send, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { CompletionBadge } from '@/components/shared/CompletionBadge';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
@@ -10,6 +11,9 @@ import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { useMemo } from 'react';
 import { formatFullName } from '@/lib/utils/names';
+import { getActorTitle, getActorIcon, calculateActorProgress } from '@/lib/utils/actor';
+import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface ActorCardProps {
   actor: any;
@@ -22,25 +26,6 @@ interface ActorCardProps {
   canEdit?: boolean;
   sending?: boolean;
 }
-
-// Get a display label for the category
-const getCategoryLabel = (cat: string) => {
-  const labels: Record<string, string> = {
-    [DocumentCategory.IDENTIFICATION]: 'Identificación',
-    [DocumentCategory.INCOME_PROOF]: 'Comprobante de Ingresos',
-    [DocumentCategory.ADDRESS_PROOF]: 'Comprobante de Domicilio',
-    [DocumentCategory.EMPLOYMENT_LETTER]: 'Carta Laboral',
-    [DocumentCategory.BANK_STATEMENT]: 'Estado de Cuenta',
-    [DocumentCategory.PROPERTY_DEED]: 'Escritura de Propiedad',
-    [DocumentCategory.TAX_RETURN]: 'Declaración de Impuestos',
-    [DocumentCategory.TAX_STATUS_CERTIFICATE]: 'Constancia de Situación Fiscal',
-    [DocumentCategory.COMPANY_CONSTITUTION]: 'Escritura Constitutiva',
-    [DocumentCategory.LEGAL_POWERS]: 'Poderes Legales',
-    [DocumentCategory.PROPERTY_TAX_STATEMENT]: 'Boleta Predial',
-    [DocumentCategory.OTHER]: 'Otros',
-  };
-  return labels[cat] || cat;
-};
 
 export default function ActorCard({
   actor,
@@ -76,82 +61,18 @@ export default function ActorCard({
     isAdminEdit: true, // Using admin endpoints when viewing from ActorCard
   });
 
-  // Calculate actor progress
-  const calculateProgress = () => {
-    if (!actor) return 0;
-    if (actor.informationComplete) return 100;
+  const progress = calculateActorProgress(actor);
 
-    let completed = 0;
-    let total = 10;
-
-    // Check basic fields
-    if (actor.companyName || (actor.firstName && actor.paternalLastName)) completed++;
-    if (actor.email) completed++;
-    if (actor.phone) completed++;
-    if (actor.rfc || actor.companyRfc) completed++;
-    if (actor.address || actor.addressDetails) completed++;
-
-    // Employment/business
-    if (actor.occupation || (actor.legalRepFirstName && actor.legalRepPaternalLastName)) completed++;
-    if (actor.monthlyIncome) completed++;
-
-    // Additional
-    if (actor.curp || actor.passport) completed++;
-
-    // References
-    if (actor.references?.length > 0 || actor.commercialReferences?.length > 0) completed++;
-
-    // Documents
-    if (actor.documents?.length > 0) completed++;
-
-    return Math.round((completed / total) * 100);
-  };
-
-  const progress = calculateProgress();
-
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return '$0';
-    return `$${amount.toLocaleString('es-MX')}`;
-  };
-
-  const getActorTitle = () => {
-    switch (actorType) {
-      case 'tenant':
-        return 'Información del Inquilino';
-      case 'landlord':
-        return 'Información del Arrendador';
-      case 'jointObligor':
-        return 'Obligado Solidario';
-      case 'aval':
-        return 'Aval';
-      default:
-        return 'Actor';
-    }
-  };
-
-  const getActorIcon = () => {
-    switch (actorType) {
-      case 'tenant':
-        return <User className="h-5 w-5" />;
-      case 'landlord':
-        return <Building className="h-5 w-5" />;
-      case 'jointObligor':
-        return <Users className="h-5 w-5" />;
-      case 'aval':
-        return <Shield className="h-5 w-5" />;
-      default:
-        return <User className="h-5 w-5" />;
-    }
-  };
+  const ActorIcon = getActorIcon(actorType);
 
   if (!actor) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
           <div className="h-12 w-12 mx-auto mb-4 text-gray-400">
-            {getActorIcon()}
+            <ActorIcon className="h-5 w-5" />
           </div>
-          <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTitle().toLowerCase()}</p>
+          <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTitle(actorType).toLowerCase()}</p>
           {isStaffOrAdmin && (
             <Button onClick={() => {
               if (onEditClick) {
@@ -200,11 +121,11 @@ export default function ActorCard({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0 mt-1">
-              {getActorIcon()}
+              <ActorIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg">
-                {actorType === 'tenant' || actorType === 'landlord' ? getActorTitle() : displayName}
+                {actorType === 'tenant' || actorType === 'landlord' ? getActorTitle(actorType) : displayName}
               </h3>
               <p className="text-sm text-gray-600">{actor.email || 'Sin email'}</p>
               {actor.phone && (
@@ -218,14 +139,7 @@ export default function ActorCard({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {getVerificationBadge && getVerificationBadge(actor.verificationStatus || 'PENDING')}
-              {actor.informationComplete ? (
-                <Badge className="bg-green-500 text-white">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Completo
-                </Badge>
-              ) : (
-                <Badge className="bg-orange-500 text-white">Pendiente</Badge>
-              )}
+              <CompletionBadge isComplete={actor.informationComplete} showIcon />
             </div>
             <div className="flex items-center gap-2">
               {!actor.informationComplete && onSendInvitation && (
@@ -516,7 +430,7 @@ export default function ActorCard({
                 return (
                   <InlineDocumentManager
                     key={category}
-                    label={getCategoryLabel(category)}
+                    label={getDocumentCategoryLabel(category as DocumentCategory)}
                     documentType={category}
                     documents={docs}
                     readOnly={true}

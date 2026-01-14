@@ -1,11 +1,47 @@
 /**
  * Tab-to-Fields Mapping for Actor Form Wizards
  *
- * Defines which form fields belong to which tab for each actor type.
- * Used to filter partial saves so only relevant fields are sent to backend.
+ * This file provides a unified entry point for tab field configurations.
+ * For detailed INDIVIDUAL/COMPANY configurations, use the individual files:
+ * - landlordTabFields.ts
+ * - tenantTabFields.ts
+ * - avalTabFields.ts
+ * - jointObligorTabFields.ts
  *
- * This prevents validation errors on unfilled tabs when saving the current tab.
+ * This file maintains simplified configs for backwards compatibility.
  */
+
+// Re-export from individual files for detailed INDIVIDUAL/COMPANY support
+export {
+  LANDLORD_TAB_FIELDS as LANDLORD_TAB_FIELDS_TYPED,
+  filterLandlordFieldsByTab,
+  getLandlordTabFields,
+  isLandlordTabComplete,
+  getLandlordFormProgress,
+} from './landlordTabFields';
+
+export {
+  TENANT_TAB_FIELDS as TENANT_TAB_FIELDS_TYPED,
+  filterTenantFieldsByTab,
+  getTenantTabFields,
+  isTenantTabComplete,
+} from './tenantTabFields';
+
+export {
+  AVAL_TAB_FIELDS as AVAL_TAB_FIELDS_TYPED,
+  filterAvalFieldsByTab,
+  getAvalTabFields,
+  isAvalTabComplete,
+  calculateAvalCompletionPercentage,
+} from './avalTabFields';
+
+export {
+  JOINT_OBLIGOR_TAB_FIELDS as JOINT_OBLIGOR_TAB_FIELDS_TYPED,
+  filterJointObligorFieldsByTab,
+  getJointObligorTabFields,
+  isJointObligorTabComplete,
+  calculateJointObligorCompletionPercentage,
+} from './jointObligorTabFields';
 
 export type ActorType = 'landlord' | 'tenant' | 'aval' | 'jointObligor';
 
@@ -35,7 +71,7 @@ export const LANDLORD_TAB_FIELDS = {
     'curp',
     'rfc',
     'dateOfBirth',
-    'phoneNumber',
+    'phone',
     'workPhone',
     'email',
     'personalEmail',
@@ -50,7 +86,7 @@ export const LANDLORD_TAB_FIELDS = {
     'legalRepCurp',
     'legalRepRfc',
     'legalRepDateOfBirth',
-    'legalRepPhoneNumber',
+    'legalRepPhone',
     'legalRepEmail',
     // Company fields
     'companyName',
@@ -67,7 +103,7 @@ export const LANDLORD_TAB_FIELDS = {
     'bankName',
     'accountNumber',
     'clabe',
-    'accountHolderName',
+    'accountHolder',
     'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
@@ -95,7 +131,7 @@ export const TENANT_TAB_FIELDS = {
     'curp',
     'rfc',
     'dateOfBirth',
-    'phoneNumber',
+    'phone',
     'email',
     'workPhone',
     'personalEmail',
@@ -110,7 +146,7 @@ export const TENANT_TAB_FIELDS = {
     'legalRepCurp',
     'legalRepRfc',
     'legalRepDateOfBirth',
-    'legalRepPhoneNumber',
+    'legalRepPhone',
     'legalRepEmail',
     // Company fields
     'companyName',
@@ -122,8 +158,7 @@ export const TENANT_TAB_FIELDS = {
     'employmentStatus',
     'position',
     'employerName',
-    'employerPhoneNumber',
-    'monthlyIncome',
+        'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
     'incomeSource',
@@ -167,8 +202,7 @@ export const AVAL_TAB_FIELDS = {
     'curp',
     'rfc',
     'dateOfBirth',
-    'phoneNumber',
-    'email',
+    'phone',
     'email',
     'personalEmail',
     'workEmail',
@@ -182,7 +216,7 @@ export const AVAL_TAB_FIELDS = {
     'legalRepCurp',
     'legalRepRfc',
     'legalRepDateOfBirth',
-    'legalRepPhoneNumber',
+    'legalRepPhone',
     'legalRepEmail',
     // Company fields
     'companyName',
@@ -194,8 +228,7 @@ export const AVAL_TAB_FIELDS = {
     'employmentStatus',
     'position',
     'employerName',
-    'employerPhoneNumber',
-    'monthlyIncome',
+        'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
     'incomeSource',
@@ -235,8 +268,7 @@ export const JOINT_OBLIGOR_TAB_FIELDS = {
     'curp',
     'rfc',
     'dateOfBirth',
-    'phoneNumber',
-    'email',
+    'phone',
     'email',
     'personalEmail',
     'workEmail',
@@ -250,7 +282,7 @@ export const JOINT_OBLIGOR_TAB_FIELDS = {
     'legalRepCurp',
     'legalRepRfc',
     'legalRepDateOfBirth',
-    'legalRepPhoneNumber',
+    'legalRepPhone',
     'legalRepEmail',
     // Company fields
     'companyName',
@@ -262,8 +294,7 @@ export const JOINT_OBLIGOR_TAB_FIELDS = {
     'employmentStatus',
     'position',
     'employerName',
-    'employerPhoneNumber',
-    'monthlyIncome',
+        'monthlyIncome',
     'hasAdditionalIncome',
     'additionalIncomeSource',
     'incomeSource',

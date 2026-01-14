@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import type { PaymentBreakdown } from '@/lib/services/paymentService';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface PaymentSummaryCardProps {
   breakdown: PaymentBreakdown;
@@ -17,10 +18,6 @@ const OVERALL_STATUS_CONFIG = {
   partial: { label: 'Pago Parcial', variant: 'default' as const },
   completed: { label: 'Completado', variant: 'default' as const, className: 'bg-green-500 hover:bg-green-600' },
 };
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MXN`;
-}
 
 export function PaymentSummaryCard({
   breakdown,

@@ -16,6 +16,9 @@ import {
   History,
   Home
 } from 'lucide-react';
+import { getActorTypeLabel } from '@/lib/utils/actor';
+import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import SectionValidator from './SectionValidator';
 import ReviewDocumentCard from './ReviewDocumentCard';
 import FieldSearchBar, { SearchResults } from './FieldSearchBar';
@@ -58,35 +61,6 @@ export default function ActorReviewCard({
       case 'property_guarantee': return Home;
       default: return FileText;
     }
-  };
-
-  const getActorTypeLabel = () => {
-    switch (actor.actorType) {
-      case 'landlord': return 'Arrendador';
-      case 'tenant': return 'Inquilino';
-      case 'jointObligor': return 'Obligado Solidario';
-      case 'aval': return 'Aval';
-      default: return actor.actorType;
-    }
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      'IDENTIFICATION': 'Identificación',
-      'INCOME_PROOF': 'Ingresos',
-      'ADDRESS_PROOF': 'Domicilio',
-      'BANK_STATEMENT': 'Bancario',
-      'PROPERTY_DEED': 'Propiedad',
-      'PROPERTY_TAX_STATEMENT': 'Predial',
-      'TAX_RETURN': 'Fiscal',
-      'EMPLOYMENT_LETTER': 'Laboral',
-      'COMPANY_CONSTITUTION': 'Constitución',
-      'PASSPORT': 'Pasaporte',
-      'TAX_STATUS_CERTIFICATE': 'Situación Fiscal',
-      'LEGAL_POWERS': 'Poderes Legales',
-      'OTHER': 'Otro'
-    };
-    return labels[category] || category;
   };
 
   const getStatusBadge = (status: string) => {
@@ -133,7 +107,7 @@ export default function ActorReviewCard({
               )}
             </CardTitle>
             <CardDescription>
-              {getActorTypeLabel()}
+              {getActorTypeLabel(actor.actorType)}
               {actor.email && ` • ${actor.email}`}
             </CardDescription>
           </div>
@@ -258,7 +232,7 @@ export default function ActorReviewCard({
                           <ReviewDocumentCard
                             key={category}
                             category={category}
-                            categoryLabel={getCategoryLabel(category)}
+                            categoryLabel={getDocumentCategoryLabel(category as DocumentCategory)}
                             documents={sortedDocs}
                             policyId={policyId}
                             onValidationComplete={onValidationUpdate}

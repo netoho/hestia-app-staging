@@ -3,15 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import {
-  Building,
-  User,
-  Users,
-  Shield,
-  CheckCircle2,
-  Clock
-} from 'lucide-react';
+import { CheckCircle2, Clock } from 'lucide-react';
 import type { ActorReviewInfo } from '@/lib/services/reviewService.types';
+import { getActorTypeLabel, getActorIcon } from '@/lib/utils/actor';
 
 interface ActorListSidebarProps {
   actors: ActorReviewInfo[];
@@ -24,26 +18,6 @@ export default function ActorListSidebar({
   selectedActorId,
   onActorSelect
 }: ActorListSidebarProps) {
-  const getActorIcon = (actorType: string) => {
-    switch (actorType) {
-      case 'landlord': return Building;
-      case 'tenant': return User;
-      case 'jointObligor': return Users;
-      case 'aval': return Shield;
-      default: return User;
-    }
-  };
-
-  const getActorTypeLabel = (actorType: string) => {
-    switch (actorType) {
-      case 'landlord': return 'Arrendador';
-      case 'tenant': return 'Inquilino';
-      case 'jointObligor': return 'Obligado Solidario';
-      case 'aval': return 'Aval';
-      default: return actorType;
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
