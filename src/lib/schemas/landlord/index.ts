@@ -74,7 +74,7 @@ export const landlordOwnerInfoCompanySchema = z.object({
   legalRepMaternalLastName: z.string().optional().nullable(),
   legalRepPosition: z.string().min(1, 'Cargo del representante requerido'),
   legalRepRfc: rfcPersonSchema,
-  legalRepCurp: curpSchema,
+  // legalRepCurp removed - field does not exist in Prisma Landlord model
   legalRepPhone: phoneSchema,
   legalRepEmail: emailSchema,
 

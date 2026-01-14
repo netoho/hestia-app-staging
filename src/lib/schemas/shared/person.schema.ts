@@ -104,7 +104,7 @@ export function formatFullName(person: Partial<PersonName>): string {
 export function isPersonNameComplete(person: Partial<PersonName>): boolean {
   return !!(
     person.firstName &&
-    person.paternalLastName &&
-    person.maternalLastName
+    person.paternalLastName
+    // maternalLastName is optional in schema
   );
 }
