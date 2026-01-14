@@ -10,6 +10,7 @@ import {
   InvestigationSection,
   PaymentsSection,
   DocumentsSection,
+  HistorySection,
 } from './sections';
 import type { PDFPolicyData } from '@/lib/pdf/types';
 import { brandInfo } from '@/lib/config/brand';
@@ -33,9 +34,10 @@ export function PolicyDocument({ data }: PolicyDocumentProps) {
         <LandlordSection data={data} />
         <TenantSection data={data} />
         <GuarantorSection data={data} />
-        <InvestigationSection data={data} />
         <PaymentsSection data={data} />
         <DocumentsSection data={data} />
+        <InvestigationSection data={data} />
+        <HistorySection data={data} />
 
         {/* Footer */}
         <View style={styles.footer} fixed>

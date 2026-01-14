@@ -37,7 +37,8 @@ import {
   XCircle,
   MoreVertical,
   FileText,
-  CreditCard
+  CreditCard,
+  Download
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import { trpc } from '@/lib/trpc/client';
 import { formatFullName } from '@/lib/utils/names';
+import { downloadPolicyPdf } from '@/lib/pdf/downloadPdf';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -145,6 +147,7 @@ export default function PolicyDetailsContent({
     actorId: string;
     name: string;
   } | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Toggle states for actor views
   const [landlordView, setLandlordView] = useState<'info' | 'history'>('info');
@@ -231,6 +234,26 @@ export default function PolicyDetailsContent({
       id: markCompleteActor.actorId,
       skipValidation,
     });
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      await downloadPolicyPdf(policyId, policy.policyNumber);
+      toast({
+        title: t.pages.policies.details.toast.pdfGenerated,
+        description: t.pages.policies.details.toast.pdfGeneratedDesc,
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al descargar PDF',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const getActorTypeLabel = (type: string) => {
@@ -517,6 +540,16 @@ export default function PolicyDetailsContent({
                   Compartir Enlaces
                 </DropdownMenuItem>
               )}
+
+              {/* Download PDF */}
+              <DropdownMenuItem onClick={handleDownloadPdf} disabled={downloadingPdf}>
+                {downloadingPdf ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t.pages.policies.details.downloadPDF}
+              </DropdownMenuItem>
 
               {/* Cancel Policy - Staff/Admin only */}
               {isStaffOrAdmin && policy.status !== 'CANCELLED' && policy.status !== 'EXPIRED' && (

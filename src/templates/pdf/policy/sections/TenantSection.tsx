@@ -1,5 +1,5 @@
 import { View, Text } from '@react-pdf/renderer';
-import { styles, pdfColors, SectionTitle, SubsectionTitle, DataRow, DataRowBoolean, AddressBlock, SimpleTable } from '../../components';
+import { styles, pdfColors, SectionTitle, SubsectionTitle, DataRow, DataRowBoolean, AddressBlock, SimpleTable, DocumentList } from '../../components';
 import type { PDFPolicyData } from '@/lib/pdf/types';
 
 interface TenantSectionProps {
@@ -25,7 +25,7 @@ export function TenantSection({ data }: TenantSectionProps) {
       <SectionTitle title="Inquilino" />
       <View style={styles.sectionContent}>
         {/* Basic Info Card */}
-        <View style={styles.card}>
+        <View style={styles.card} wrap={false}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>
               {tenant.isCompany ? 'Empresa' : 'Persona Física'}: {tenant.name}
@@ -112,7 +112,7 @@ export function TenantSection({ data }: TenantSectionProps) {
 
         {/* Personal References */}
         {tenant.personalReferences.length > 0 && (
-          <View style={styles.subsection}>
+          <View style={styles.subsection} wrap={false}>
             <SubsectionTitle title="Referencias Personales" />
             <SimpleTable
               headers={['Nombre', 'Teléfono', 'Relación']}
@@ -126,14 +126,8 @@ export function TenantSection({ data }: TenantSectionProps) {
           </View>
         )}
 
-        {/* Documents count */}
-        {tenant.documents.length > 0 && (
-          <View style={styles.mt5}>
-            <Text style={{ fontSize: 7, color: pdfColors.textMuted }}>
-              Documentos cargados: {tenant.documents.length}
-            </Text>
-          </View>
-        )}
+        {/* Documents list */}
+        <DocumentList documents={tenant.documents} />
       </View>
     </View>
   );

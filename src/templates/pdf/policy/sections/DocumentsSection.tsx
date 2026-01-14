@@ -68,7 +68,7 @@ export function DocumentsSection({ data }: DocumentsSectionProps) {
       <SectionTitle title={`Documentos (${totalDocuments})`} />
       <View style={styles.sectionContent}>
         {allDocuments.map((group, groupIndex) => (
-          <View key={groupIndex} style={styles.subsection}>
+          <View key={groupIndex} style={styles.subsection} wrap={false}>
             <SubsectionTitle title={`${group.source} (${group.docs.length})`} />
             <SimpleTable
               headers={['Categoría', 'Archivo', 'Tamaño', 'Fecha']}

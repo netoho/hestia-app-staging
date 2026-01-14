@@ -1,5 +1,5 @@
 import { View, Text } from '@react-pdf/renderer';
-import { styles, pdfColors, SectionTitle, SubsectionTitle, DataRow, DataRowBoolean, AddressBlock, SimpleTable } from '../../components';
+import { styles, pdfColors, SectionTitle, SubsectionTitle, DataRow, DataRowBoolean, AddressBlock, SimpleTable, DocumentList } from '../../components';
 import type { PDFPolicyData, PDFJointObligor, PDFAval } from '@/lib/pdf/types';
 
 interface GuarantorSectionProps {
@@ -49,7 +49,7 @@ interface JointObligorCardProps {
 
 function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={styles.card} wrap={false}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>
           {jointObligor.isCompany ? 'Empresa' : 'Persona Física'}: {jointObligor.name}
@@ -117,7 +117,7 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
 
       {/* References */}
       {jointObligor.personalReferences.length > 0 && (
-        <View style={styles.mt5}>
+        <View style={styles.mt5} wrap={false}>
           <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias</Text>
           <SimpleTable
             headers={['Nombre', 'Teléfono', 'Relación']}
@@ -127,14 +127,8 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
         </View>
       )}
 
-      {/* Documents */}
-      {jointObligor.documents.length > 0 && (
-        <View style={styles.mt5}>
-          <Text style={{ fontSize: 7, color: pdfColors.textMuted }}>
-            Documentos cargados: {jointObligor.documents.length}
-          </Text>
-        </View>
-      )}
+      {/* Documents list */}
+      <DocumentList documents={jointObligor.documents} />
     </View>
   );
 }
@@ -146,7 +140,7 @@ interface AvalCardProps {
 
 function AvalCard({ aval, index }: AvalCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={styles.card} wrap={false}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>
           {aval.isCompany ? 'Empresa' : 'Persona Física'}: {aval.name}
@@ -210,7 +204,7 @@ function AvalCard({ aval, index }: AvalCardProps) {
 
       {/* References */}
       {aval.personalReferences.length > 0 && (
-        <View style={styles.mt5}>
+        <View style={styles.mt5} wrap={false}>
           <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias</Text>
           <SimpleTable
             headers={['Nombre', 'Teléfono', 'Relación']}
@@ -220,14 +214,8 @@ function AvalCard({ aval, index }: AvalCardProps) {
         </View>
       )}
 
-      {/* Documents */}
-      {aval.documents.length > 0 && (
-        <View style={styles.mt5}>
-          <Text style={{ fontSize: 7, color: pdfColors.textMuted }}>
-            Documentos cargados: {aval.documents.length}
-          </Text>
-        </View>
-      )}
+      {/* Documents list */}
+      <DocumentList documents={aval.documents} />
     </View>
   );
 }

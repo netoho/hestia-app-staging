@@ -17,6 +17,7 @@ import type {
   PDFPayment,
   PDFDocument,
   PDFPersonalReference,
+  PDFActivity,
 } from './types';
 
 type PolicyWithRelations = NonNullable<Awaited<ReturnType<typeof import('@/lib/services/policyService').getPolicyForPDF>>>;
@@ -385,6 +386,58 @@ function transformPayments(payments: PolicyWithRelations['payments']): PDFPaymen
 }
 
 /**
+ * Important activity actions to include in PDF history
+ */
+const IMPORTANT_ACTIONS = [
+  'created',
+  'status_changed',
+  'status_transition',
+  'force_status_transition',
+  'investigation_approved',
+  'policy_cancelled',
+  'all_payments_completed',
+  'tenant_replaced',
+  'actor_auto_approved',
+  'invitations_sent',
+];
+
+/**
+ * Get activity action label in Spanish
+ */
+function getActivityActionLabel(action: string): string {
+  const labels: Record<string, string> = {
+    created: 'Póliza Creada',
+    status_changed: 'Cambio de Estado',
+    status_transition: 'Transición de Estado',
+    force_status_transition: 'Cambio de Estado Manual',
+    investigation_approved: 'Investigación Aprobada',
+    policy_cancelled: 'Póliza Cancelada',
+    all_payments_completed: 'Pagos Completados',
+    tenant_replaced: 'Inquilino Reemplazado',
+    actor_auto_approved: 'Actor Aprobado',
+    invitations_sent: 'Invitaciones Enviadas',
+  };
+  return labels[action] || action;
+}
+
+/**
+ * Transform activity data - only important events
+ */
+function transformActivities(activities: PolicyWithRelations['activities']): PDFActivity[] {
+  if (!activities || activities.length === 0) return [];
+
+  return activities
+    .filter(a => IMPORTANT_ACTIONS.includes(a.action))
+    .map(a => ({
+      action: a.action,
+      actionLabel: getActivityActionLabel(a.action),
+      description: a.description,
+      performedByType: a.performedByType || null,
+      createdAt: formatDate(a.createdAt) || '-',
+    }));
+}
+
+/**
  * Main transformer function
  */
 export function transformPolicyForPDF(policy: PolicyWithRelations): PDFPolicyData {
@@ -443,5 +496,6 @@ export function transformPolicyForPDF(policy: PolicyWithRelations): PDFPolicyDat
     investigation: transformInvestigation(policy.investigation),
     payments: transformPayments(policy.payments),
     documents: transformDocuments(policy.documents),
+    activities: transformActivities(policy.activities),
   };
 }

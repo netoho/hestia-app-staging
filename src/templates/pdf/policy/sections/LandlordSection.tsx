@@ -1,5 +1,5 @@
 import { View, Text } from '@react-pdf/renderer';
-import { styles, pdfColors, SectionTitle, DataRow, AddressBlock } from '../../components';
+import { styles, pdfColors, SectionTitle, DataRow, AddressBlock, DocumentList } from '../../components';
 import type { PDFPolicyData, PDFLandlord } from '@/lib/pdf/types';
 
 interface LandlordSectionProps {
@@ -21,7 +21,7 @@ export function LandlordSection({ data }: LandlordSectionProps) {
   }
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} break>
       <SectionTitle title="Arrendador(es)" />
       <View style={styles.sectionContent}>
         {landlords.map((landlord, index) => (
@@ -39,7 +39,7 @@ interface LandlordCardProps {
 
 function LandlordCard({ landlord, index }: LandlordCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={styles.card} wrap={false}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>
           {landlord.isCompany ? 'Empresa' : 'Persona Física'}: {landlord.name}
@@ -87,14 +87,8 @@ function LandlordCard({ landlord, index }: LandlordCardProps) {
         </View>
       </View>
 
-      {/* Documents count */}
-      {landlord.documents.length > 0 && (
-        <View style={styles.mt5}>
-          <Text style={{ fontSize: 7, color: pdfColors.textMuted }}>
-            Documentos cargados: {landlord.documents.length}
-          </Text>
-        </View>
-      )}
+      {/* Documents list */}
+      <DocumentList documents={landlord.documents} />
     </View>
   );
 }

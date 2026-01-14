@@ -11,7 +11,7 @@ export function PaymentsSection({ data }: PaymentsSectionProps) {
 
   if (!payments || payments.length === 0) {
     return (
-      <View style={styles.section}>
+      <View style={styles.section} break>
         <SectionTitle title="Pagos" />
         <View style={styles.emptyState}>
           <Text>No hay pagos registrados</Text>
@@ -21,7 +21,7 @@ export function PaymentsSection({ data }: PaymentsSectionProps) {
   }
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} break>
       <SectionTitle title="Pagos" />
       <View style={styles.sectionContent}>
         <SimpleTable

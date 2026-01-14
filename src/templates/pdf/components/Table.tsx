@@ -31,7 +31,7 @@ export function Table({ columns, data, emptyMessage = 'Sin registros' }: TablePr
   );
 
   return (
-    <View style={styles.table}>
+    <View style={styles.table} wrap={false}>
       {/* Header */}
       <View style={styles.tableHeader}>
         {columns.map((col, index) => (
@@ -80,7 +80,7 @@ export function SimpleTable({
   const columnWidths = widths || headers.map(() => defaultWidth);
 
   return (
-    <View style={styles.table}>
+    <View style={styles.table} wrap={false}>
       {/* Header */}
       <View style={styles.tableHeader}>
         {headers.map((header, index) => (

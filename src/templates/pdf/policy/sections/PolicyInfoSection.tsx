@@ -39,16 +39,14 @@ export function PolicyInfoSection({ data }: PolicyInfoSectionProps) {
         {/* Financial details */}
         <View style={[styles.highlightBox, styles.mt10]}>
           <Text style={[styles.bold, styles.mb5]}>Detalles Financieros</Text>
-          <View style={styles.threeColumn}>
-            <View style={styles.columnThird}>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
               <DataRow label="Depósito" value={data.securityDeposit} />
               <DataRowBoolean label="Incluye IVA" value={data.hasIVA} />
-            </View>
-            <View style={styles.columnThird}>
               <DataRow label="Mantenimiento" value={data.maintenanceFee} />
-              <DataRowBoolean label="Mant. en Renta" value={data.maintenanceIncludedInRent} />
             </View>
-            <View style={styles.columnThird}>
+            <View style={styles.column}>
+              <DataRowBoolean label="Mant. en Renta" value={data.maintenanceIncludedInRent} />
               <DataRow label="Incremento Anual" value={data.rentIncreasePercentage} />
               <DataRow label="Método de Pago" value={data.paymentMethod} />
             </View>

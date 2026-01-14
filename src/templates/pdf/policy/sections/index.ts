@@ -7,3 +7,4 @@ export { GuarantorSection } from './GuarantorSection';
 export { InvestigationSection } from './InvestigationSection';
 export { PaymentsSection } from './PaymentsSection';
 export { DocumentsSection } from './DocumentsSection';
+export { HistorySection } from './HistorySection';

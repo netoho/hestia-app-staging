@@ -11,7 +11,7 @@ export function InvestigationSection({ data }: InvestigationSectionProps) {
 
   if (!investigation || !investigation.verdict) {
     return (
-      <View style={styles.section}>
+      <View style={styles.section} break>
         <SectionTitle title="Investigación" />
         <View style={styles.emptyState}>
           <Text>Investigación pendiente</Text>
@@ -21,7 +21,7 @@ export function InvestigationSection({ data }: InvestigationSectionProps) {
   }
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} break>
       <SectionTitle title="Investigación" />
       <View style={styles.sectionContent}>
         <View style={styles.card}>

@@ -627,6 +627,18 @@ export async function getPolicyForPDF(id: string) {
           createdAt: 'desc'
         }
       },
+      activities: {
+        select: {
+          id: true,
+          action: true,
+          description: true,
+          performedByType: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
     }
   });
 }

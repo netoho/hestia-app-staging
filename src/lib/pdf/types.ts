@@ -170,6 +170,14 @@ export interface PDFPayment {
   date: string;
 }
 
+export interface PDFActivity {
+  action: string;
+  actionLabel: string;
+  description: string;
+  performedByType: string | null;
+  createdAt: string;
+}
+
 export interface PDFPolicyData {
   // Header
   policyNumber: string;
@@ -217,4 +225,5 @@ export interface PDFPolicyData {
   investigation: PDFInvestigation | null;
   payments: PDFPayment[];
   documents: PDFDocument[];
+  activities: PDFActivity[];
 }
