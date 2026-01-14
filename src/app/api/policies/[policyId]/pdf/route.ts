@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 
 /**
  * GET /api/policies/[policyId]/pdf
- * Generate and download PDF for a policy (staff/admin only)
+ * Generate and download PDF for a policy (staff/admin/broker only)
  */
 export async function GET(
   request: NextRequest,

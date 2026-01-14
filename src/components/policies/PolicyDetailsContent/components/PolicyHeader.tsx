@@ -20,6 +20,7 @@ import {
   Share2,
   XCircle,
   MoreVertical,
+  Download,
 } from 'lucide-react';
 import { PolicyStatusBadge } from '@/components/shared/PolicyStatusIndicators';
 import { PolicyStatusType } from '@/lib/prisma-types';
@@ -41,10 +42,12 @@ interface PolicyHeaderProps {
   allActorsApproved: boolean;
   progressOverall?: number;
   sending: string | null;
+  downloadingPdf: boolean;
   onSendInvitations: () => void;
   onApprove: () => void;
   onShareClick: () => void;
   onCancelClick: () => void;
+  onDownloadPdf: () => void;
 }
 
 export function PolicyHeader({
@@ -58,10 +61,12 @@ export function PolicyHeader({
   allActorsApproved,
   progressOverall,
   sending,
+  downloadingPdf,
   onSendInvitations,
   onApprove,
   onShareClick,
   onCancelClick,
+  onDownloadPdf,
 }: PolicyHeaderProps) {
   const router = useRouter();
 
@@ -155,6 +160,16 @@ export function PolicyHeader({
               Compartir Enlaces
             </DropdownMenuItem>
           )}
+
+          {/* Download PDF */}
+          <DropdownMenuItem onClick={onDownloadPdf} disabled={downloadingPdf}>
+            {downloadingPdf ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {t.pages.policies.details.downloadPDF}
+          </DropdownMenuItem>
 
           {/* Cancel Policy - Staff/Admin only */}
           {isStaffOrAdmin && status !== 'CANCELLED' && status !== 'EXPIRED' && (

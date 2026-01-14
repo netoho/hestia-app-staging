@@ -32,6 +32,11 @@ const CancelPolicyModal = dynamic(() => import('@/components/policies/CancelPoli
   ssr: false
 });
 
+const ReplaceTenantModal = dynamic(() => import('@/components/policies/ReplaceTenantModal'), {
+  loading: () => null,
+  ssr: false
+});
+
 const InlineActorEditor = dynamic(() => import('@/components/policies/InlineActorEditor'), {
   loading: () => null,
   ssr: false
@@ -76,6 +81,7 @@ export default function PolicyDetailsContent({
   const [tabLoading, setTabLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReplaceTenantModal, setShowReplaceTenantModal] = useState(false);
   const [isTabsScrollable, setIsTabsScrollable] = useState(false);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -98,15 +104,17 @@ export default function PolicyDetailsContent({
     editingActor,
     markCompleteActor,
     isMarkingComplete,
+    downloadingPdf,
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
     handleMarkComplete,
+    handleDownloadPdf,
     handleEditActor,
     handleMarkActorComplete,
     closeEditingActor,
     closeMarkComplete,
-  } = usePolicyActions({ policyId, onRefresh });
+  } = usePolicyActions({ policyId, policyNumber: policy.policyNumber, onRefresh });
 
   // Check if all actors are approved
   const checkAllActorsApproved = () => {
@@ -152,10 +160,12 @@ export default function PolicyDetailsContent({
           allActorsApproved={checkAllActorsApproved()}
           progressOverall={policy.progress?.overall}
           sending={sending}
+          downloadingPdf={downloadingPdf}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
           onShareClick={() => setShowShareModal(true)}
           onCancelClick={() => setShowCancelModal(true)}
+          onDownloadPdf={handleDownloadPdf}
         />
 
         {/* Progress Bar */}
@@ -229,6 +239,10 @@ export default function PolicyDetailsContent({
               onEditClick={handleEditActor}
               onSendInvitation={sendIndividualInvitation}
               onMarkComplete={handleMarkActorComplete}
+              isStaffOrAdmin={isStaffOrAdmin}
+              policyStatus={policy.status}
+              tenantHistory={policy.tenantHistory}
+              onReplaceTenant={() => setShowReplaceTenantModal(true)}
             />
           )}
         </TabsContent>
@@ -297,6 +311,16 @@ export default function PolicyDetailsContent({
         onClose={() => setShowCancelModal(false)}
         policyId={policyId}
         policyNumber={policy.policyNumber}
+        onSuccess={onRefresh}
+      />
+
+      <ReplaceTenantModal
+        isOpen={showReplaceTenantModal}
+        onClose={() => setShowReplaceTenantModal(false)}
+        policyId={policyId}
+        policyNumber={policy.policyNumber}
+        currentTenantEmail={policy.tenant?.email || ''}
+        hasGuarantors={(policy.jointObligors?.length > 0) || (policy.avals?.length > 0)}
         onSuccess={onRefresh}
       />
 
