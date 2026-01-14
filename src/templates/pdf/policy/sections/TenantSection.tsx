@@ -95,14 +95,12 @@ export function TenantSection({ data }: TenantSectionProps) {
 
         {/* Living situation */}
         <View style={styles.highlightBox}>
-          <View style={styles.threeColumn}>
-            <View style={styles.columnThird}>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
               <DataRow label="No. Ocupantes" value={tenant.numberOfOccupants ? String(tenant.numberOfOccupants) : null} />
             </View>
-            <View style={styles.columnThird}>
+            <View style={styles.column}>
               <DataRowBoolean label="Tiene Mascotas" value={tenant.hasPets} />
-            </View>
-            <View style={styles.columnThird}>
               {tenant.petDescription && (
                 <DataRow label="Descripción" value={tenant.petDescription} />
               )}
