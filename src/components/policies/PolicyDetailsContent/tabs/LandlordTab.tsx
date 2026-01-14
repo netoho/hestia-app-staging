@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import ActorCard from '@/components/policies/details/ActorCard';
 import ActorActivityTimeline from '@/components/policies/ActorActivityTimeline';
@@ -92,11 +92,7 @@ export function LandlordTab({
           </div>
         ))
       ) : (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-gray-600">No se ha registrado información del arrendador</p>
-          </CardContent>
-        </Card>
+        <EmptyState title="No se ha registrado información del arrendador" />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import {
   Dialog,
   DialogContent,
@@ -53,7 +53,7 @@ export default function InlineActorEditor({
 }: InlineActorEditorProps) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
-  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const completeConfirmDialog = useDialogState();
 
   // Admin submit mutation
   const adminSubmitMutation = trpc.actor.adminSubmitActor.useMutation({
@@ -150,7 +150,7 @@ export default function InlineActorEditor({
       id: actorId,
       skipValidation,
     });
-    setShowCompleteConfirm(false);
+    completeConfirmDialog.close();
   };
 
   const getFormWizard = () => {
@@ -208,7 +208,7 @@ export default function InlineActorEditor({
                   </div>
                   <Button
                     variant="outline"
-                    onClick={() => setShowCompleteConfirm(true)}
+                    onClick={completeConfirmDialog.open}
                     disabled={adminSubmitMutation.isPending}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
@@ -235,7 +235,7 @@ export default function InlineActorEditor({
       </DialogContent>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
+      <AlertDialog open={completeConfirmDialog.isOpen} onOpenChange={(open) => !open && completeConfirmDialog.close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Marcar {getActorTypeLabel(actorType)} como Completo</AlertDialogTitle>

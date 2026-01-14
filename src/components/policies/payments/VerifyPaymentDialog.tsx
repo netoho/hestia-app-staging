@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,7 @@ export function VerifyPaymentDialog({
 }: VerifyPaymentDialogProps) {
   const [notes, setNotes] = useState('');
   const [action, setAction] = useState<'approve' | 'reject' | null>(null);
-  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const rejectConfirmDialog = useDialogState();
 
   const verifyPayment = trpc.payment.verifyPayment.useMutation();
 
@@ -169,7 +170,7 @@ export function VerifyPaymentDialog({
           <Button
             type="button"
             variant="destructive"
-            onClick={() => setShowRejectConfirm(true)}
+            onClick={rejectConfirmDialog.open}
             disabled={isSubmitting}
           >
             {isSubmitting && action === 'reject' ? (
@@ -206,7 +207,7 @@ export function VerifyPaymentDialog({
       </DialogContent>
 
       {/* Reject Confirmation Dialog */}
-      <AlertDialog open={showRejectConfirm} onOpenChange={setShowRejectConfirm}>
+      <AlertDialog open={rejectConfirmDialog.isOpen} onOpenChange={(open) => !open && rejectConfirmDialog.close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Rechazar Pago</AlertDialogTitle>
@@ -218,7 +219,7 @@ export function VerifyPaymentDialog({
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                setShowRejectConfirm(false);
+                rejectConfirmDialog.close();
                 handleVerify(false);
               }}
               className="bg-red-600 hover:bg-red-700"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -103,8 +104,8 @@ export function PaymentCard({
 }: PaymentCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const cancelDialog = useDialogState();
+  const regenerateDialog = useDialogState();
   const { toast } = useToast();
 
   const handleCopyUrl = async () => {
@@ -259,7 +260,7 @@ export function PaymentCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setShowRegenerateConfirm(true)}
+              onClick={regenerateDialog.open}
               disabled={isRegenerating}
             >
               {isRegenerating ? (
@@ -302,7 +303,7 @@ export function PaymentCard({
               size="sm"
               variant="ghost"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={() => setShowCancelConfirm(true)}
+              onClick={cancelDialog.open}
               disabled={isCancelling}
             >
               {isCancelling ? (
@@ -317,7 +318,7 @@ export function PaymentCard({
       </CardContent>
 
       {/* Cancel Payment Confirmation Dialog */}
-      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+      <AlertDialog open={cancelDialog.isOpen} onOpenChange={(open) => !open && cancelDialog.close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar Pago</AlertDialogTitle>
@@ -330,7 +331,7 @@ export function PaymentCard({
             <AlertDialogAction
               onClick={() => {
                 onCancel?.();
-                setShowCancelConfirm(false);
+                cancelDialog.close();
               }}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -341,7 +342,7 @@ export function PaymentCard({
       </AlertDialog>
 
       {/* Regenerate URL Confirmation Dialog */}
-      <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
+      <AlertDialog open={regenerateDialog.isOpen} onOpenChange={(open) => !open && regenerateDialog.close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Regenerar Link de Pago</AlertDialogTitle>
@@ -354,7 +355,7 @@ export function PaymentCard({
             <AlertDialogAction
               onClick={() => {
                 onRegenerateUrl?.();
-                setShowRegenerateConfirm(false);
+                regenerateDialog.close();
               }}
             >
               Regenerar Link

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,15 +48,14 @@ export default function DocumentValidator({
   policyId,
   onValidationComplete
 }: DocumentValidatorProps) {
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const rejectDialog = useDialogState();
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const { downloadDocument, downloading } = useDocumentDownload();
 
   // Use tRPC mutation for document validation
   const validateDocumentMutation = trpc.review.validateDocument.useMutation({
     onSuccess: () => {
-      setShowRejectDialog(false);
+      rejectDialog.close();
       setRejectionReason('');
       onValidationComplete();
     },
@@ -248,7 +248,7 @@ export default function DocumentValidator({
                     size="sm"
                     variant="destructive"
                     className="text-xs"
-                    onClick={() => setShowRejectDialog(true)}
+                    onClick={rejectDialog.open}
                     disabled={validateDocumentMutation.isPending}
                   >
                     <XCircle className="h-3 w-3 mr-1" />
@@ -262,7 +262,7 @@ export default function DocumentValidator({
       </Card>
 
       {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      <Dialog open={rejectDialog.isOpen} onOpenChange={(open) => !open && rejectDialog.close()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rechazar Documento</DialogTitle>
@@ -285,7 +285,7 @@ export default function DocumentValidator({
             <Button
               variant="outline"
               onClick={() => {
-                setShowRejectDialog(false);
+                rejectDialog.close();
                 setRejectionReason('');
               }}
             >

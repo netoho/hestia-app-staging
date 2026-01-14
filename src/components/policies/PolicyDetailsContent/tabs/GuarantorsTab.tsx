@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Users, Shield } from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
 import ActorCard from '@/components/policies/details/ActorCard';
 import ActorActivityTimeline from '@/components/policies/ActorActivityTimeline';
 import { ActorViewToggle } from '../components/ActorViewToggle';
@@ -57,12 +57,10 @@ export function GuarantorsTab({
   if (guarantorType === 'NONE') {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Esta protección no requiere garantías adicionales</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Shield}
+          title="Esta protección no requiere garantías adicionales"
+        />
       </div>
     );
   }
@@ -111,11 +109,7 @@ export function GuarantorsTab({
               </div>
             ))
           ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-gray-600">No se han registrado obligados solidarios</p>
-              </CardContent>
-            </Card>
+            <EmptyState title="No se han registrado obligados solidarios" />
           )}
         </div>
       )}
@@ -160,11 +154,7 @@ export function GuarantorsTab({
               </div>
             ))
           ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-gray-600">No se han registrado avales</p>
-              </CardContent>
-            </Card>
+            <EmptyState title="No se han registrado avales" />
           )}
         </div>
       )}

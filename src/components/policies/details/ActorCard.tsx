@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Mail, Phone, Edit, Send, RefreshCw } from 'lucide-react';
+import { Mail, Phone, Edit, Send, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { CompletionBadge } from '@/components/shared/CompletionBadge';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
