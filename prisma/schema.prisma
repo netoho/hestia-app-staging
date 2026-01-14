@@ -788,7 +788,7 @@ model PersonalReference {
   firstName        String // First name
   middleName       String? // Middle name (optional)
   paternalLastName String // Father's last name
-  maternalLastName String // Mother's last name
+  maternalLastName String? // Mother's last name (optional)
   phone            String
   homePhone        String?
   cellPhone        String?
@@ -823,7 +823,7 @@ model CommercialReference {
   contactFirstName        String // Contact first name
   contactMiddleName       String? // Contact middle name (optional)
   contactPaternalLastName String // Contact father's last name
-  contactMaternalLastName String // Contact mother's last name
+  contactMaternalLastName String? // Contact mother's last name (optional)
   phone                   String
   email                   String?
   relationship            String // supplier, client, partner, etc.

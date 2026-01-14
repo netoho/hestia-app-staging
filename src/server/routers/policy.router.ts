@@ -13,6 +13,7 @@ import {
   validatePolicyNumber,
 } from '@/lib/services/policyService';
 import { replaceTenantOnPolicy } from '@/lib/services/policyService/tenantReplacement';
+import { changeGuarantorType } from '@/lib/services/policyService/guarantorTypeChange';
 import { cancelPolicy } from '@/lib/services/policyService/cancellation';
 import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
@@ -32,6 +33,27 @@ const ReplaceTenantSchema = z.object({
     companyName: z.string().optional(),
   }),
   replaceGuarantors: z.boolean().default(false),
+});
+
+// Schema for changing guarantor type
+const ChangeGuarantorTypeSchema = z.object({
+  policyId: z.string(),
+  reason: z.string().min(1, 'Reason for change is required'),
+  newGuarantorType: z.nativeEnum(GuarantorType),
+  newJointObligors: z.array(z.object({
+    email: z.string().email(),
+    phone: z.string().min(1),
+    firstName: z.string().optional(),
+    paternalLastName: z.string().optional(),
+    maternalLastName: z.string().optional(),
+  })).optional(),
+  newAvals: z.array(z.object({
+    email: z.string().email(),
+    phone: z.string().min(1),
+    firstName: z.string().optional(),
+    paternalLastName: z.string().optional(),
+    maternalLastName: z.string().optional(),
+  })).optional(),
 });
 
 // Schema for creating a policy
@@ -487,6 +509,32 @@ export const policyRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: result.error || 'Failed to replace tenant',
+        });
+      }
+
+      return result;
+    }),
+
+  // Change guarantor type on a policy
+  changeGuarantorType: protectedProcedure
+    .input(ChangeGuarantorTypeSchema)
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can change guarantor type',
+        });
+      }
+
+      const result = await changeGuarantorType({
+        ...input,
+        performedById: ctx.userId,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to change guarantor type',
         });
       }
 

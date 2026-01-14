@@ -37,6 +37,11 @@ const ReplaceTenantModal = dynamic(() => import('@/components/policies/ReplaceTe
   ssr: false
 });
 
+const ChangeGuarantorTypeModal = dynamic(() => import('@/components/policies/ChangeGuarantorTypeModal'), {
+  loading: () => null,
+  ssr: false
+});
+
 const InlineActorEditor = dynamic(() => import('@/components/policies/InlineActorEditor'), {
   loading: () => null,
   ssr: false
@@ -82,6 +87,7 @@ export default function PolicyDetailsContent({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReplaceTenantModal, setShowReplaceTenantModal] = useState(false);
+  const [showChangeGuarantorTypeModal, setShowChangeGuarantorTypeModal] = useState(false);
   const [isTabsScrollable, setIsTabsScrollable] = useState(false);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -263,6 +269,11 @@ export default function PolicyDetailsContent({
               onEditClick={handleEditActor}
               onSendInvitation={sendIndividualInvitation}
               onMarkComplete={handleMarkActorComplete}
+              isStaffOrAdmin={isStaffOrAdmin}
+              policyStatus={policy.status}
+              jointObligorHistory={policy.jointObligorHistory}
+              avalHistory={policy.avalHistory}
+              onChangeGuarantorType={() => setShowChangeGuarantorTypeModal(true)}
             />
           )}
         </TabsContent>
@@ -321,6 +332,16 @@ export default function PolicyDetailsContent({
         policyNumber={policy.policyNumber}
         currentTenantEmail={policy.tenant?.email || ''}
         hasGuarantors={(policy.jointObligors?.length > 0) || (policy.avals?.length > 0)}
+        onSuccess={onRefresh}
+      />
+
+      <ChangeGuarantorTypeModal
+        isOpen={showChangeGuarantorTypeModal}
+        onClose={() => setShowChangeGuarantorTypeModal(false)}
+        policyId={policyId}
+        policyNumber={policy.policyNumber}
+        currentGuarantorType={policy.guarantorType || 'NONE'}
+        hasExistingGuarantors={(policy.jointObligors?.length > 0) || (policy.avals?.length > 0)}
         onSuccess={onRefresh}
       />
 

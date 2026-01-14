@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, Shield } from 'lucide-react';
+import { Users, Shield, History, RefreshCw } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { EmptyState } from '@/components/shared/EmptyState';
 import ActorCard from '@/components/policies/details/ActorCard';
 import ActorActivityTimeline from '@/components/policies/ActorActivityTimeline';
@@ -9,6 +11,13 @@ import { ActorViewToggle } from '../components/ActorViewToggle';
 import { ActorTabSkeleton } from '../components/ActorTabSkeleton';
 import { VerificationBadge } from '@/components/shared/VerificationBadge';
 import { ActorType } from '@/lib/utils/actor';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatFullName } from '@/lib/utils/names';
+import { PolicyStatusType } from '@/lib/prisma-types';
+
+// Statuses that allow guarantor type change
+const CHANGEABLE_STATUSES: PolicyStatusType[] = ['DRAFT', 'COLLECTING_INFO', 'UNDER_INVESTIGATION', 'PENDING_APPROVAL'];
 
 interface GuarantorsTabProps {
   guarantorType: string;
@@ -25,6 +34,11 @@ interface GuarantorsTabProps {
   onSendInvitation: (actorType: string, actorId: string) => void;
   onMarkComplete: (type: ActorType, actorId: string, name: string) => void;
   isLoading?: boolean;
+  isStaffOrAdmin?: boolean;
+  policyStatus?: PolicyStatusType;
+  jointObligorHistory?: any[];
+  avalHistory?: any[];
+  onChangeGuarantorType?: () => void;
 }
 
 export function GuarantorsTab({
@@ -39,6 +53,11 @@ export function GuarantorsTab({
   onSendInvitation,
   onMarkComplete,
   isLoading,
+  isStaffOrAdmin,
+  policyStatus,
+  jointObligorHistory,
+  avalHistory,
+  onChangeGuarantorType,
 }: GuarantorsTabProps) {
   const [view, setView] = useState<'info' | 'history'>('info');
 
@@ -53,21 +72,133 @@ export function GuarantorsTab({
     'Actor';
 
   const hasGuarantors = (jointObligors?.length > 0 || avals?.length > 0);
+  const hasHistory = (jointObligorHistory?.length || 0) > 0 || (avalHistory?.length || 0) > 0;
+  const canChangeType = isStaffOrAdmin && policyStatus && CHANGEABLE_STATUSES.includes(policyStatus);
 
   if (guarantorType === 'NONE') {
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="flex justify-between items-center">
+          {canChangeType && onChangeGuarantorType ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onChangeGuarantorType}
+              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Cambiar Tipo
+            </Button>
+          ) : (
+            <div />
+          )}
+        </div>
         <EmptyState
           icon={Shield}
           title="Esta protección no requiere garantías adicionales"
         />
+        {/* History for NONE type */}
+        {hasHistory && renderHistory()}
       </div>
+    );
+  }
+
+  function renderHistory() {
+    if (!hasHistory) return null;
+
+    return (
+      <Card className="mt-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Historial de cambios ({(jointObligorHistory?.length || 0) + (avalHistory?.length || 0)})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Joint Obligor History */}
+            {jointObligorHistory && jointObligorHistory.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Obligados Solidarios Archivados</p>
+                <div className="space-y-3">
+                  {jointObligorHistory.map((prev: any) => (
+                    <div key={prev.id} className="border-l-2 border-muted pl-4 py-2">
+                      <p className="font-medium">
+                        {prev.jointObligorType === 'COMPANY'
+                          ? prev.companyName
+                          : formatFullName(
+                              prev.firstName || '',
+                              prev.paternalLastName || '',
+                              prev.maternalLastName || '',
+                              prev.middleName || undefined
+                            )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{prev.email}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Archivado: {format(new Date(prev.replacedAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">
+                        Razón: {prev.replacementReason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Aval History */}
+            {avalHistory && avalHistory.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Avales Archivados</p>
+                <div className="space-y-3">
+                  {avalHistory.map((prev: any) => (
+                    <div key={prev.id} className="border-l-2 border-muted pl-4 py-2">
+                      <p className="font-medium">
+                        {prev.avalType === 'COMPANY'
+                          ? prev.companyName
+                          : formatFullName(
+                              prev.firstName || '',
+                              prev.paternalLastName || '',
+                              prev.maternalLastName || '',
+                              prev.middleName || undefined
+                            )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{prev.email}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Archivado: {format(new Date(prev.replacedAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">
+                        Razón: {prev.replacementReason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      {hasGuarantors && <ActorViewToggle value={view} onChange={setView} />}
+      <div className="flex justify-between items-center">
+        {canChangeType && onChangeGuarantorType ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onChangeGuarantorType}
+            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Cambiar Tipo
+          </Button>
+        ) : (
+          <div />
+        )}
+        {hasGuarantors && <ActorViewToggle value={view} onChange={setView} />}
+      </div>
 
       {/* Joint Obligors */}
       {(guarantorType === 'JOINT_OBLIGOR' || guarantorType === 'BOTH') && (
@@ -158,6 +289,9 @@ export function GuarantorsTab({
           )}
         </div>
       )}
+
+      {/* History Section */}
+      {renderHistory()}
     </div>
   );
 }

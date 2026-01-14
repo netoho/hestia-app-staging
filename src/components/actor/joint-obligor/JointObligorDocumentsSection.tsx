@@ -230,7 +230,7 @@ export default function JointObligorDocumentsSection({
                     documents={docs}
                     required={true}
                     allowMultiple={category === 'INCOME_PROOF'}
-                    onUpload={() => {}} // Read-only, no upload
+                    onUpload={(file) => uploadDocument(file, category, category.toLowerCase())}
                     onDelete={deleteDocument}
                     onDownload={downloadDocument}
                     operations={categoryOps}
