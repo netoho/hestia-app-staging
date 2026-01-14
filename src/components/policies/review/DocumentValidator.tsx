@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import type { DocumentValidationInfo } from '@/lib/services/reviewService.types';
+import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
+import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
@@ -45,15 +48,14 @@ export default function DocumentValidator({
   policyId,
   onValidationComplete
 }: DocumentValidatorProps) {
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const rejectDialog = useDialogState();
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const { downloadDocument, downloading } = useDocumentDownload();
 
   // Use tRPC mutation for document validation
   const validateDocumentMutation = trpc.review.validateDocument.useMutation({
     onSuccess: () => {
-      setShowRejectDialog(false);
+      rejectDialog.close();
       setRejectionReason('');
       onValidationComplete();
     },
@@ -125,24 +127,6 @@ export default function DocumentValidator({
     return labels[type.toLowerCase()] || type;
   };
 
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      'IDENTIFICATION': 'Identificación',
-      'INCOME_PROOF': 'Ingresos',
-      'ADDRESS_PROOF': 'Domicilio',
-      'BANK_STATEMENT': 'Bancario',
-      'PROPERTY_DEED': 'Propiedad',
-      'PROPERTY_TAX_STATEMENT': 'Predial',
-      'TAX_RETURN': 'Fiscal',
-      'EMPLOYMENT_LETTER': 'Laboral',
-      'COMPANY_CONSTITUTION': 'Constitución',
-      'PASSPORT': 'Pasaporte',
-      'TAX_STATUS_CERTIFICATE': 'Situación Fiscal',
-      'OTHER': 'Otro'
-    };
-    return labels[category] || category;
-  };
-
   const handleValidate = async (status: 'APPROVED' | 'REJECTED') => {
     if (status === 'REJECTED' && !rejectionReason.trim()) {
       return;
@@ -185,7 +169,7 @@ export default function DocumentValidator({
                     {getDocumentTypeLabel(document.documentType)}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {getCategoryLabel(document.category)}
+                    {getDocumentCategoryLabel(document.category as DocumentCategory)}
                   </Badge>
                   <Badge variant="outline" className={`text-xs ${getStatusBadgeColor()}`}>
                     <StatusIcon className="h-3 w-3 mr-1" />
@@ -264,7 +248,7 @@ export default function DocumentValidator({
                     size="sm"
                     variant="destructive"
                     className="text-xs"
-                    onClick={() => setShowRejectDialog(true)}
+                    onClick={rejectDialog.open}
                     disabled={validateDocumentMutation.isPending}
                   >
                     <XCircle className="h-3 w-3 mr-1" />
@@ -278,7 +262,7 @@ export default function DocumentValidator({
       </Card>
 
       {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      <Dialog open={rejectDialog.isOpen} onOpenChange={(open) => !open && rejectDialog.close()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rechazar Documento</DialogTitle>
@@ -301,7 +285,7 @@ export default function DocumentValidator({
             <Button
               variant="outline"
               onClick={() => {
-                setShowRejectDialog(false);
+                rejectDialog.close();
                 setRejectionReason('');
               }}
             >

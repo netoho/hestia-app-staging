@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/currency';
 import {
   FileSearch,
   FileCheck,
@@ -301,15 +302,6 @@ function getPaymentStatusText(status: string): string {
     FAILED: 'Fallido',
     REFUNDED: 'Reembolsado'
   };
-  
-  return displayMap[status] || status;
-}
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
+  return displayMap[status] || status;
 }

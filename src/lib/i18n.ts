@@ -62,7 +62,7 @@ const es = {
     // Layout Components
     layout: {
         root: {
-            metaTitle: "Hestia - Protecciones de Arrendamiento",
+            metaTitle: "Hestia PLP - Protecciones de Arrendamiento",
             metaDescription: "Asegura tus contratos de arrendamiento con Hestia. Protecciones de garantía integrales para propietarios e inquilinos.",
             metaKeywords: ['protección de arrendamiento', 'garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
         },

@@ -2,21 +2,11 @@
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import {
-  Edit,
-  Send,
-  User,
-  Building,
-  Users,
-  Shield,
-  FileText,
-  UserCheck,
-  Clock,
-  CheckCircle2,
-  XCircle
-} from 'lucide-react';
+import { Edit, Send, FileText, UserCheck } from 'lucide-react';
+import { getActorTypeLabel, getActorIcon, calculateActorProgress } from '@/lib/utils/actor';
+import { VerificationBadge } from '@/components/shared/VerificationBadge';
+import { CompletionBadge } from '@/components/shared/CompletionBadge';
 
 interface ActorProgressCardProps {
   actor: any;
@@ -36,88 +26,8 @@ export default function ActorProgressCard({
   onSendInvitation,
   permissions,
 }: ActorProgressCardProps) {
-  const getActorIcon = () => {
-    switch (actorType) {
-      case 'tenant':
-        return <User className="h-5 w-5" />;
-      case 'landlord':
-        return <Building className="h-5 w-5" />;
-      case 'jointObligor':
-        return <Users className="h-5 w-5" />;
-      case 'aval':
-        return <Shield className="h-5 w-5" />;
-      default:
-        return <User className="h-5 w-5" />;
-    }
-  };
-
-  const getActorTypeLabel = () => {
-    switch (actorType) {
-      case 'tenant':
-        return 'Inquilino';
-      case 'landlord':
-        return 'Arrendador';
-      case 'jointObligor':
-        return 'Obligado Solidario';
-      case 'aval':
-        return 'Aval';
-      default:
-        return 'Actor';
-    }
-  };
-
-  const getVerificationStatusBadge = (status: string) => {
-    const config = {
-      PENDING: { label: 'Pendiente', color: 'bg-gray-500', icon: Clock },
-      APPROVED: { label: 'Aprobado', color: 'bg-green-500', icon: CheckCircle2 },
-      REJECTED: { label: 'Rechazado', color: 'bg-red-500', icon: XCircle },
-      IN_REVIEW: { label: 'En Revisión', color: 'bg-yellow-500', icon: FileText },
-    };
-
-    const badgeConfig = config[status as keyof typeof config] || config.PENDING;
-    const Icon = badgeConfig.icon;
-
-    return (
-      <Badge className={`${badgeConfig.color} text-white flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {badgeConfig.label}
-      </Badge>
-    );
-  };
-
-  // Calculate progress based on actor data
-  const calculateProgress = () => {
-    if (!actor) return 0;
-
-    let completed = 0;
-    let total = 10; // Base fields
-
-    // Check basic info
-    if (actor.fullName || actor.companyName) completed++;
-    if (actor.email) completed++;
-    if (actor.phone) completed++;
-    if (actor.rfc || actor.companyRfc) completed++;
-    if (actor.address || actor.addressDetails) completed++;
-
-    // Check employment/business info
-    if (actor.occupation || actor.legalRepName) completed++;
-    if (actor.monthlyIncome || actor.companyRevenue) completed++;
-
-    // Check additional info
-    if (actor.curp || actor.passport) completed++;
-
-    // Check references
-    if (actor.references?.length > 0 || actor.commercialReferences?.length > 0) {
-      completed++;
-    }
-
-    // Documents
-    if (actor.documents?.length > 0) completed++;
-
-    return Math.round((completed / total) * 100);
-  };
-
-  const progress = actor?.informationComplete ? 100 : calculateProgress();
+  const ActorIcon = getActorIcon(actorType);
+  const progress = calculateActorProgress(actor);
   const completedFields = Math.floor((progress / 100) * 10);
   const documentsCount = actor?.documents?.length || 0;
   const referencesCount = (actor?.references?.length || 0) + (actor?.commercialReferences?.length || 0);
@@ -127,9 +37,9 @@ export default function ActorProgressCard({
       <Card>
         <CardContent className="py-12 text-center">
           <div className="h-12 w-12 mx-auto mb-4 text-gray-400 flex items-center justify-center">
-            {getActorIcon()}
+            <ActorIcon className="h-5 w-5" />
           </div>
-          <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTypeLabel().toLowerCase()}</p>
+          <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTypeLabel(actorType).toLowerCase()}</p>
           {permissions.canEdit && (
             <Button onClick={onEdit} size="sm">
               <Edit className="mr-2 h-4 w-4" />
@@ -147,22 +57,18 @@ export default function ActorProgressCard({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
-              {getActorIcon()}
+              <ActorIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold truncate">
-                {actor.fullName || actor.companyName || getActorTypeLabel()}
+                {actor.fullName || actor.companyName || getActorTypeLabel(actorType)}
               </h3>
               <p className="text-sm text-gray-600 truncate">{actor.email || 'Sin email'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {getVerificationStatusBadge(actor.verificationStatus || 'PENDING')}
-            {actor.informationComplete ? (
-              <Badge className="bg-green-500 text-white">Completo</Badge>
-            ) : (
-              <Badge className="bg-orange-500 text-white">Pendiente</Badge>
-            )}
+            <VerificationBadge status={actor.verificationStatus || 'PENDING'} />
+            <CompletionBadge isComplete={actor.informationComplete} />
             {permissions.canEdit && (
               <Button size="sm" variant="outline" onClick={onEdit} className="h-8 w-8 p-0 sm:w-auto sm:px-3">
                 <Edit className="h-4 w-4" />

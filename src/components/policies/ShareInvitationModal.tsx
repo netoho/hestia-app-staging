@@ -19,12 +19,12 @@ import {
   Mail,
   MessageCircle,
   Loader2,
-  CheckCircle2,
-  Clock,
   User,
   Phone,
   AlertCircle,
 } from 'lucide-react';
+import { getActorTypeLabel } from '@/lib/utils/actor';
+import { CompletionBadge } from '@/components/shared/CompletionBadge';
 
 interface ActorShareLink {
   actorId: string;
@@ -189,16 +189,6 @@ export default function ShareInvitationModal({
     }
   };
 
-  const getActorTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      tenant: 'Inquilino',
-      landlord: 'Arrendador',
-      'joint-obligor': 'Obligado Solidario',
-      aval: 'Aval',
-    };
-    return labels[type] || type;
-  };
-
   const isTokenExpired = (expiry: string) => {
     return new Date(expiry) < new Date();
   };
@@ -320,17 +310,7 @@ export default function ShareInvitationModal({
 
                           {/* Status Badges */}
                           <div className="flex flex-col items-end gap-1">
-                            {link.informationComplete ? (
-                              <Badge className="bg-green-500 text-white">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Completo
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-orange-500 text-white">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Pendiente
-                              </Badge>
-                            )}
+                            <CompletionBadge isComplete={link.informationComplete} showIcon />
                             {expired && (
                               <Badge variant="destructive" className="text-xs">
                                 Token Expirado
@@ -421,7 +401,7 @@ export default function ShareInvitationModal({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => { handleClose(); }}>
+          <Button variant="outline" onClick={onClose}>
             Cerrar
           </Button>
         </DialogFooter>
