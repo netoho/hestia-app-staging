@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
 import PoliciesCards from './PoliciesCards';
 import PoliciesTable from './PoliciesTable';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
@@ -59,14 +59,10 @@ export default function PoliciesList({ policies, loading }: PoliciesListProps) {
   // Empty state
   if (policies.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center">
-            <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-500">No se encontraron protecciones</p>
-          </div>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={FileText}
+        title="No se encontraron protecciones"
+      />
     );
   }
 

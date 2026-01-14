@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { User, Building, Users, Shield } from 'lucide-react';
+import { CompletionBadge } from '@/components/shared/CompletionBadge';
 
 interface ActorCardMinimalProps {
   actor: any;
@@ -52,11 +52,7 @@ export default function ActorCardMinimal({ actor, actorType, onExpand }: ActorCa
             {getActorIcon()}
             <span>{getActorTitle()}</span>
           </div>
-          {actor.informationComplete ? (
-            <Badge className="bg-green-500 text-white text-xs">Completo</Badge>
-          ) : (
-            <Badge className="bg-orange-500 text-white text-xs">Pendiente</Badge>
-          )}
+          <CompletionBadge isComplete={actor.informationComplete} size="sm" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
