@@ -13,7 +13,7 @@ export function formatDate(date: Date | string | null | undefined): string {
 
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return '-';
-  return new Date(date).toLocaleDateString('es-MX', {
+  return new Date(date).toLocaleString('es-MX', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
