@@ -386,7 +386,7 @@ export const sharedActorRouter = createTRPCRouter({
           maternalLastName: z.string().optional(),
           companyName: z.string().optional(),
           email: z.string().email(),
-          phoneNumber: z.string().optional(),
+          phone: z.string().optional(),
           rfc: z.string().optional(),
         }),
         tenant: z.object({
@@ -397,15 +397,15 @@ export const sharedActorRouter = createTRPCRouter({
           maternalLastName: z.string().optional(),
           companyName: z.string().optional(),
           email: z.string().email(),
-          phoneNumber: z.string().optional(),
+          phone: z.string().optional(),
         }),
         jointObligors: z.array(PersonSchema.extend({
           email: z.string().email(),
-          phoneNumber: z.string(),
+          phone: z.string(),
         })).optional(),
         avals: z.array(PersonSchema.extend({
           email: z.string().email(),
-          phoneNumber: z.string(),
+          phone: z.string(),
         })).optional(),
       }),
     }))
