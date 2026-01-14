@@ -40,7 +40,7 @@ export function MarkCompleteDialog({
             Marcar {actorType ? getActorTypeLabel(actorType) : 'Actor'} como Completo
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acción marcara a {actorName} como completo.
+            Esta acción marcará a {actorName} como completo.
             Si faltan documentos requeridos, puede elegir continuar de todas formas.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -48,7 +48,7 @@ export function MarkCompleteDialog({
           <Alert className="border-yellow-200 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-yellow-800">
-              Si hay documentos faltantes, se mostrara un error. Use &quot;Forzar Completo&quot; para omitir la validacion.
+              Si hay documentos faltantes, se mostrará un error. Use &quot;Forzar Completo&quot; para omitir la validación.
             </AlertDescription>
           </Alert>
         </div>

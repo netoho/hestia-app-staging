@@ -185,7 +185,7 @@ export default function InlineActorEditor({
         <DialogHeader>
           <DialogTitle>Editar {getActorTypeLabel(actorType)}</DialogTitle>
           <DialogDescription>
-            Actualice la informacion del {getActorTypeLabel(actorType).toLowerCase()} para esta protección
+            Actualice la información del {getActorTypeLabel(actorType).toLowerCase()} para esta protección
           </DialogDescription>
         </DialogHeader>
 
@@ -204,7 +204,7 @@ export default function InlineActorEditor({
               <DialogFooter className="mt-6 pt-4 border-t">
                 <div className="flex w-full items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Marcar como completo cuando toda la informacion este lista
+                    Marcar como completo cuando toda la información este lista
                   </div>
                   <Button
                     variant="outline"
@@ -222,7 +222,7 @@ export default function InlineActorEditor({
               <Alert className="mt-4 border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Este {getActorTypeLabel(actorType).toLowerCase()} ya esta marcado como completo
+                  Este {getActorTypeLabel(actorType).toLowerCase()} ya está marcado como completo
                 </AlertDescription>
               </Alert>
             )}
@@ -240,7 +240,7 @@ export default function InlineActorEditor({
           <AlertDialogHeader>
             <AlertDialogTitle>Marcar {getActorTypeLabel(actorType)} como Completo</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción marcara al {getActorTypeLabel(actorType).toLowerCase()} como completo.
+              Esta acción marcará al {getActorTypeLabel(actorType).toLowerCase()} como completo.
               Si faltan documentos requeridos, puede elegir continuar de todas formas.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -248,7 +248,7 @@ export default function InlineActorEditor({
             <Alert className="border-yellow-200 bg-yellow-50">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800">
-                Si hay documentos faltantes, se mostrara un error. Use &quot;Forzar Completo&quot; para omitir la validacion.
+                Si hay documentos faltantes, se mostrará un error. Use &quot;Forzar Completo&quot; para omitir la validación.
               </AlertDescription>
             </Alert>
           </div>
