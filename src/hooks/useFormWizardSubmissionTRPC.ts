@@ -3,7 +3,9 @@ import { useToast } from '@/hooks/use-toast';
 import { cleanFormAddresses } from '@/lib/utils/addressUtils';
 import { emptyStringsToNull } from '@/lib/utils/dataTransform';
 import { filterTenantFieldsByTab } from '@/lib/constants/tenantTabFields';
-import { filterFieldsByTab } from '@/lib/constants/actorTabFields';
+import { filterLandlordFieldsByTab } from '@/lib/constants/landlordTabFields';
+import { filterAvalFieldsByTab } from '@/lib/constants/avalTabFields';
+import { filterJointObligorFieldsByTab } from '@/lib/constants/jointObligorTabFields';
 import { trpc } from '@/lib/trpc/client';
 import type {
   ActorType,
@@ -113,22 +115,29 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
       // This prevents validation errors on unfilled tabs
       let filteredFormData: any;
 
-      if (actorType === 'tenant') {
-        // Use tenant-specific filtering with proper type handling
-        const tenantType = formData.tenantType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
-        filteredFormData = filterTenantFieldsByTab(
-          formData,
-          tenantType,
-          tabName
-        );
-      } else {
-        // Use generic filtering for other actors
-        const tabFieldsActorType = actorType === 'joint-obligor' ? 'jointObligor' : actorType;
-        filteredFormData = filterFieldsByTab(
-          formData,
-          tabFieldsActorType as 'landlord' | 'aval' | 'jointObligor',
-          tabName
-        );
+      switch (actorType) {
+        case 'tenant': {
+          const tenantType = formData.tenantType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
+          filteredFormData = filterTenantFieldsByTab(formData, tenantType, tabName);
+          break;
+        }
+        case 'landlord': {
+          const isCompany = Boolean(formData.isCompany);
+          filteredFormData = filterLandlordFieldsByTab(formData, isCompany, tabName);
+          break;
+        }
+        case 'aval': {
+          const avalType = formData.avalType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
+          filteredFormData = filterAvalFieldsByTab(formData, avalType, tabName as any);
+          break;
+        }
+        case 'joint-obligor': {
+          const joType = formData.jointObligorType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
+          filteredFormData = filterJointObligorFieldsByTab(formData, joType, tabName as any);
+          break;
+        }
+        default:
+          filteredFormData = formData;
       }
 
       // Clean address fields before submission
