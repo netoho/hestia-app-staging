@@ -4,9 +4,12 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
 import { ActorType } from '@/lib/utils/actor';
+import { downloadPolicyPdf } from '@/lib/pdf/downloadPdf';
+import { t } from '@/lib/i18n';
 
 interface UsePolicyActionsProps {
   policyId: string;
+  policyNumber: string;
   onRefresh: () => Promise<void>;
 }
 
@@ -21,13 +24,14 @@ interface EditingActor {
   actorId: string;
 }
 
-export function usePolicyActions({ policyId, onRefresh }: UsePolicyActionsProps) {
+export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolicyActionsProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
   const [sending, setSending] = useState<string | null>(null);
   const [editingActor, setEditingActor] = useState<EditingActor | null>(null);
   const [markCompleteActor, setMarkCompleteActor] = useState<MarkCompleteActor | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Send invitations mutation
   const sendInvitationsMutation = trpc.policy.sendInvitations.useMutation({
@@ -125,6 +129,26 @@ export function usePolicyActions({ policyId, onRefresh }: UsePolicyActionsProps)
     });
   };
 
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      await downloadPolicyPdf(policyId, policyNumber);
+      toast({
+        title: t.pages.policies.details.toast.pdfGenerated,
+        description: t.pages.policies.details.toast.pdfGeneratedDesc,
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al descargar PDF',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   // Actor callbacks for ActorCard
   const handleEditActor = (type: ActorType, actorId: string) => {
     setEditingActor({ type, actorId });
@@ -142,6 +166,7 @@ export function usePolicyActions({ policyId, onRefresh }: UsePolicyActionsProps)
     sending,
     editingActor,
     markCompleteActor,
+    downloadingPdf,
 
     // Mutations loading states
     isSending: sendInvitationsMutation.isPending,
@@ -153,6 +178,7 @@ export function usePolicyActions({ policyId, onRefresh }: UsePolicyActionsProps)
     sendIndividualInvitation,
     approvePolicy,
     handleMarkComplete,
+    handleDownloadPdf,
 
     // Actor callbacks
     handleEditActor,
