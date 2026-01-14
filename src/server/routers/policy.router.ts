@@ -12,12 +12,27 @@ import {
   logPolicyActivity,
   validatePolicyNumber,
 } from '@/lib/services/policyService';
+import { replaceTenantOnPolicy } from '@/lib/services/policyService/tenantReplacement';
+import { cancelPolicy } from '@/lib/services/policyService/cancellation';
+import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
 import { TRPCError } from '@trpc/server';
-import { generateLandlordToken, generatePolicyActorTokens } from '@/lib/services/actorTokenService';
-import { sendActorInvitation } from '@/lib/services/emailService';
-import {sendIncompleteActorInfoNotification} from "@/lib/services/notificationService";
+import { sendIncompleteActorInfoNotification } from "@/lib/services/notificationService";
+
+// Schema for replacing tenant
+const ReplaceTenantSchema = z.object({
+  policyId: z.string(),
+  replacementReason: z.string().min(1, 'Replacement reason is required'),
+  newTenant: z.object({
+    tenantType: z.nativeEnum(TenantType),
+    email: z.string().email(),
+    phone: z.string().min(1),
+    firstName: z.string().optional(),
+    companyName: z.string().optional(),
+  }),
+  replaceGuarantors: z.boolean().default(false),
+});
 
 // Schema for creating a policy
 const CreatePolicySchema = z.object({
@@ -342,16 +357,14 @@ export const policyRouter = createTRPCRouter({
   getShareLinks: protectedProcedure
     .input(z.object({ policyId: z.string() }))
     .query(async ({ input, ctx }) => {
+      // Check access for brokers
       const policy = await getPolicyById(input.policyId);
-
       if (!policy) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Policy not found',
         });
       }
-
-      // Check access for brokers
       if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -359,102 +372,14 @@ export const policyRouter = createTRPCRouter({
         });
       }
 
-      const { generateActorUrl } = await import('@/lib/services/actorTokenService');
-      const { formatFullName } = await import('@/lib/utils/names');
-
-      // Build share links for all actors
-      const shareLinks: any[] = [];
-
-      // Landlords (only primary)
-      for (const landlord of policy.landlords || []) {
-        if (landlord.accessToken && landlord.isPrimary) {
-          shareLinks.push({
-            actorId: landlord.id,
-            actorType: 'landlord',
-            actorName: landlord.companyName ||
-              (landlord.firstName ? formatFullName(
-                landlord.firstName,
-                landlord.paternalLastName || '',
-                landlord.maternalLastName || '',
-                landlord.middleName || undefined
-              ) : 'Sin nombre'),
-            email: landlord.email,
-            phone: landlord.phone,
-            url: generateActorUrl(landlord.accessToken, 'landlord'),
-            tokenExpiry: landlord.tokenExpiry,
-            informationComplete: landlord.informationComplete,
-          });
-        }
-      }
-
-      // Tenant
-      if (policy.tenant?.accessToken) {
-        shareLinks.push({
-          actorId: policy.tenant.id,
-          actorType: 'tenant',
-          actorName: policy.tenant.companyName ||
-            (policy.tenant.firstName ? formatFullName(
-              policy.tenant.firstName,
-              policy.tenant.paternalLastName || '',
-              policy.tenant.maternalLastName || '',
-              policy.tenant.middleName || undefined
-            ) : 'Sin nombre'),
-          email: policy.tenant.email,
-          phone: policy.tenant.phone,
-          url: generateActorUrl(policy.tenant.accessToken, 'tenant'),
-          tokenExpiry: policy.tenant.tokenExpiry,
-          informationComplete: policy.tenant.informationComplete,
+      const result = await getShareLinksForPolicy(input.policyId);
+      if (!result) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Policy not found',
         });
       }
-
-      // Joint Obligors
-      for (const jo of policy.jointObligors || []) {
-        if (jo.accessToken) {
-          shareLinks.push({
-            actorId: jo.id,
-            actorType: 'joint-obligor',
-            actorName: jo.companyName ||
-              (jo.firstName ? formatFullName(
-                jo.firstName,
-                jo.paternalLastName || '',
-                jo.maternalLastName || '',
-                jo.middleName || undefined
-              ) : 'Sin nombre'),
-            email: jo.email,
-            phone: jo.phone,
-            url: generateActorUrl(jo.accessToken, 'joint-obligor'),
-            tokenExpiry: jo.tokenExpiry,
-            informationComplete: jo.informationComplete,
-          });
-        }
-      }
-
-      // Avals
-      for (const aval of policy.avals || []) {
-        if (aval.accessToken) {
-          shareLinks.push({
-            actorId: aval.id,
-            actorType: 'aval',
-            actorName: aval.companyName ||
-              (aval.firstName ? formatFullName(
-                aval.firstName,
-                aval.paternalLastName || '',
-                aval.maternalLastName || '',
-                aval.middleName || undefined
-              ) : 'Sin nombre'),
-            email: aval.email,
-            phone: aval.phone,
-            url: generateActorUrl(aval.accessToken, 'aval'),
-            tokenExpiry: aval.tokenExpiry,
-            informationComplete: aval.informationComplete,
-          });
-        }
-      }
-
-      return {
-        policyNumber: policy.policyNumber,
-        shareLinks,
-      };
+      return result;
     }),
 
   /**
@@ -518,7 +443,6 @@ export const policyRouter = createTRPCRouter({
       comment: z.string().min(1, 'Comment is required'),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Only ADMIN/STAFF can cancel
       if (ctx.userRole === 'BROKER') {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -526,54 +450,46 @@ export const policyRouter = createTRPCRouter({
         });
       }
 
-      const { prisma } = await import('@/lib/prisma');
-
-      const policy = await prisma.policy.findUnique({
-        where: { id: input.policyId },
-        select: { id: true, status: true, policyNumber: true },
+      const result = await cancelPolicy({
+        policyId: input.policyId,
+        reason: input.reason,
+        comment: input.comment,
+        cancelledById: ctx.userId,
       });
 
-      if (!policy) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Policy not found',
-        });
-      }
-
-      // Cannot cancel already cancelled or expired policies
-      if (policy.status === 'CANCELLED' || policy.status === 'EXPIRED') {
+      if (!result.success) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Cannot cancel a policy with status ${policy.status}`,
+          message: result.error || 'Failed to cancel policy',
         });
       }
 
-      // Update policy with cancellation details
-      await prisma.policy.update({
-        where: { id: input.policyId },
-        data: {
-          status: 'CANCELLED',
-          cancelledAt: new Date(),
-          cancellationReason: input.reason,
-          cancellationComment: input.comment,
-          cancelledById: ctx.userId,
-        },
-      });
+      return result;
+    }),
 
-      // Log activity
-      await logPolicyActivity({
-        policyId: input.policyId,
-        action: 'policy_cancelled',
-        description: `Policy cancelled: ${input.reason}`,
-        details: { reason: input.reason, comment: input.comment },
+  // Replace tenant (and optionally guarantors) on a policy
+  replaceTenant: protectedProcedure
+    .input(ReplaceTenantSchema)
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can replace tenants',
+        });
+      }
+
+      const result = await replaceTenantOnPolicy({
+        ...input,
         performedById: ctx.userId,
-        performedByType: 'user',
       });
 
-      // Notify admins
-      const { sendPolicyCancellationNotification } = await import('@/lib/services/notificationService');
-      await sendPolicyCancellationNotification(input.policyId);
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to replace tenant',
+        });
+      }
 
-      return { success: true };
+      return result;
     }),
 });
