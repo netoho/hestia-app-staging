@@ -511,7 +511,7 @@ class PaymentService extends BaseService {
       throw new ServiceError(ErrorCode.NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
-    // Use pricing service to calculate the breakdown
+    // Use pricing service to get base calculation (especially investigationFee)
     const pricing = await pricingService.calculatePolicyPricing({
       packageId: policy.packageId || undefined,
       rentAmount: policy.rentAmount,
@@ -520,18 +520,43 @@ class PaymentService extends BaseService {
       includeInvestigationFee: true,
     });
 
+    // Use stored totalPrice if available (supports manual price override)
+    // Otherwise fall back to calculated pricing
+    let totalWithIva: number;
+    let subtotal: number;
+    let iva: number;
+    let tenantAmount: number;
+    let landlordAmount: number;
+
+    if (policy.totalPrice && policy.totalPrice > 0) {
+      // Manual override: use stored price
+      totalWithIva = policy.totalPrice;
+      subtotal = Math.round((totalWithIva / 1.16) * 100) / 100;
+      iva = Math.round((totalWithIva - subtotal) * 100) / 100;
+      // Recalculate amounts based on percentages
+      tenantAmount = Math.round((subtotal * (policy.tenantPercentage / 100)) * 100) / 100;
+      landlordAmount = Math.round((subtotal * (policy.landlordPercentage / 100)) * 100) / 100;
+    } else {
+      // Use calculated pricing
+      totalWithIva = pricing.totalWithIva;
+      subtotal = pricing.subtotal;
+      iva = pricing.iva;
+      tenantAmount = pricing.tenantAmount;
+      landlordAmount = pricing.landlordAmount;
+    }
+
     const investigationFee = pricing.investigationFee || 0;
-    const tenantAmountAfterFee = Math.max(0, pricing.tenantAmount - investigationFee);
+    const tenantAmountAfterFee = Math.max(0, tenantAmount - investigationFee);
 
     return {
       investigationFee,
-      subtotal: pricing.subtotal,
-      iva: pricing.iva,
-      totalWithIva: pricing.totalWithIva,
-      tenantPercentage: pricing.tenantPercentage,
-      landlordPercentage: pricing.landlordPercentage,
-      tenantAmount: pricing.tenantAmount,
-      landlordAmount: pricing.landlordAmount,
+      subtotal,
+      iva,
+      totalWithIva,
+      tenantPercentage: policy.tenantPercentage,
+      landlordPercentage: policy.landlordPercentage,
+      tenantAmount,
+      landlordAmount,
       tenantAmountAfterFee,
       includesInvestigationFee: investigationFee > 0,
     };
@@ -1078,6 +1103,34 @@ class PaymentService extends BaseService {
     return this.prisma.payment.findUnique({
       where: { id: paymentId },
     });
+  }
+
+  /**
+   * Get Stripe receipt URL for a payment
+   * Always fetches fresh from Stripe API (receipt URLs expire after 30 days)
+   */
+  async getStripeReceiptUrl(paymentId: string): Promise<string | null> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { stripeIntentId: true, status: true },
+    });
+
+    if (!payment) return null;
+    if (payment.status !== PaymentStatus.COMPLETED) return null;
+    if (!payment.stripeIntentId) return null;
+
+    try {
+      const stripeInstance = await getStripe();
+      const intent = await stripeInstance.paymentIntents.retrieve(payment.stripeIntentId, {
+        expand: ['latest_charge'],
+      });
+
+      const charge = intent.latest_charge as Stripe.Charge | null;
+      return charge?.receipt_url || null;
+    } catch (error) {
+      console.error('Error fetching Stripe receipt URL:', error);
+      return null;
+    }
   }
 }
 
