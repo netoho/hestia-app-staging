@@ -1089,6 +1089,9 @@ model Payment {
   verificationNotes String?   @db.Text
   createdById       String? // User ID who created the payment (for manual payments)
 
+  // Historical tracking (for tenant replacement)
+  paidByTenantName String? // Tenant name at payment time (set when tenant replaced)
+
   // Details
   description  String?
   metadata     Json?
