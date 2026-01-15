@@ -330,7 +330,7 @@ async function main() {
     update: { investigationFee: 200 },
     create: {
       id: 'system-config-1',
-      investigationFee: 200,
+      investigationFee: 1500, // 1740 with tax (IVA)
       defaultTokenExpiry: 7,
     }
   });
