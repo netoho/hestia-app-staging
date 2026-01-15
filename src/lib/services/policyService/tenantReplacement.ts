@@ -444,6 +444,12 @@ export async function replaceTenantOnPolicy(
       await tx.aval.deleteMany({
         where: { policyId: input.policyId },
       });
+
+      // Reset guarantorType to NONE so user can choose new type
+      await tx.policy.update({
+        where: { id: input.policyId },
+        data: { guarantorType: 'NONE' },
+      });
     }
 
     // 9. Delete investigation if exists
