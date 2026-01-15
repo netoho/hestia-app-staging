@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { validatePasswordResetToken, clearPasswordResetToken } from '@/lib/services/userTokenService';
+import { validatePasswordResetToken } from '@/lib/services/userTokenService';
 import { hashPassword } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { sendPasswordResetEmail } from '@/lib/services/emailService';
+import { sendSimpleNotificationEmail } from '@/lib/services/emailService';
 
 // Password validation schema with complexity requirements
 const resetPasswordSchema = z.object({
@@ -140,10 +140,13 @@ export async function POST(
     // Send confirmation email
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hestiaplp.com.mx';
-      await sendPasswordConfirmationEmail({
-        email: user.email || '',
-        name: user.name || undefined,
-        loginUrl: `${baseUrl}/login`,
+      await sendSimpleNotificationEmail({
+        to: user.email || '',
+        recipientName: user.name || undefined,
+        subject: 'Contraseña restablecida exitosamente',
+        message: 'Tu contraseña ha sido restablecida exitosamente. Si no realizaste este cambio, contacta a soporte inmediatamente.',
+        actionUrl: `${baseUrl}/login`,
+        actionText: 'Iniciar Sesión',
       });
     } catch (emailError) {
       // Don't fail the reset if confirmation email fails
@@ -161,12 +164,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
-
-// Helper function to send confirmation email (add to emailService later)
-async function sendPasswordConfirmationEmail(data: { email: string; name?: string; loginUrl: string }) {
-  // For now, we'll just log it
-  console.log(`[INFO] Password reset confirmation would be sent to ${data.email}`);
-  // TODO: Implement confirmation email template
-  return true;
 }
