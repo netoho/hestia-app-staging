@@ -181,18 +181,6 @@ const UpdateStatusSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Schema for saving drafts
-const PolicyDraftSchema = z.object({
-  policyNumber: z.string().optional(),
-  internalCode: z.string().optional(),
-  propertyData: z.any().optional(),
-  pricingData: z.any().optional(),
-  landlordData: z.any().optional(),
-  tenantData: z.any().optional(),
-  guarantorsData: z.any().optional(),
-  currentStep: z.string().optional(),
-});
-
 export const policyRouter = createTRPCRouter({
   /**
    * List policies with filters
@@ -307,39 +295,6 @@ export const policyRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const validation = await validatePolicyNumber(input.number);
       return validation;
-    }),
-
-  /**
-   * Save a draft policy (for auto-save functionality)
-   */
-  saveDraft: protectedProcedure
-    .input(PolicyDraftSchema)
-    .mutation(async ({ input, ctx }) => {
-      // Store draft in database or session
-      // This would be implemented based on your draft storage strategy
-      // For now, we'll store in a drafts table or session storage
-
-      const draftKey = `policy_draft_${ctx.userId}`;
-
-      // You could store this in Redis, database, or session
-      // For simplicity, we'll just return success
-      return {
-        success: true,
-        draftId: draftKey,
-        savedAt: new Date().toISOString(),
-      };
-    }),
-
-  /**
-   * Get saved draft for current user
-   */
-  getDraft: protectedProcedure
-    .query(async ({ ctx }) => {
-      const draftKey = `policy_draft_${ctx.userId}`;
-
-      // Retrieve draft from storage
-      // For now, return null (no draft)
-      return null;
     }),
 
   /**
