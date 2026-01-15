@@ -453,12 +453,29 @@ export async function replaceTenantOnPolicy(
       });
     }
 
-    // 10. Cancel pending TENANT payments
+    // 10. Handle TENANT payments
+    // Get tenant name for historical payments
+    const tenantName = currentTenant.tenantType === 'COMPANY'
+      ? currentTenant.companyName || 'Empresa'
+      : `${currentTenant.firstName || ''} ${currentTenant.paternalLastName || ''}`.trim() || 'Inquilino';
+
+    // Mark COMPLETED tenant payments with tenant name (for historical display)
     await tx.payment.updateMany({
       where: {
         policyId: input.policyId,
         paidBy: 'TENANT',
-        status: { in: ['PENDING', 'PROCESSING'] },
+        status: 'COMPLETED',
+        paidByTenantName: null,
+      },
+      data: { paidByTenantName: tenantName },
+    });
+
+    // Cancel ALL non-completed tenant payments
+    await tx.payment.updateMany({
+      where: {
+        policyId: input.policyId,
+        paidBy: 'TENANT',
+        status: { in: ['PENDING', 'PROCESSING', 'PENDING_VERIFICATION'] },
       },
       data: { status: 'CANCELLED' },
     });
