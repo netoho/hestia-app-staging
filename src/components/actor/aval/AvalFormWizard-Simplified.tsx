@@ -119,7 +119,6 @@ export default function AvalFormWizard({
     <div className="space-y-6">
       {/* Progress Indicator */}
       <FormWizardProgress
-        currentTab={wizard.activeTab}
         tabs={tabs}
         tabSaved={wizard.tabSaved}
       />
@@ -141,15 +140,14 @@ export default function AvalFormWizard({
             });
           }
         }}
-      />
-
-      {/* Tab Content - Using RHF versions */}
-      <div className="mt-6">
+      >
+        {/* Tab Content - Using RHF versions */}
+        <div className="mt-6">
         {wizard.activeTab === 'personal' && (
           <AvalPersonalInfoTabRHF
             avalType={avalType}
             initialData={initialData}
-            onSave={(data) => handleTabSave('personal', data)}
+            onSave={async (data) => { await handleTabSave('personal', data); }}
           />
         )}
 
@@ -157,7 +155,7 @@ export default function AvalFormWizard({
           <AvalEmploymentTabRHF
             avalType={avalType}
             initialData={initialData}
-            onSave={(data) => handleTabSave('employment', data)}
+            onSave={async (data) => { await handleTabSave('employment', data); }}
           />
         )}
 
@@ -165,7 +163,7 @@ export default function AvalFormWizard({
           <AvalPropertyGuaranteeTabRHF
             avalType={avalType}
             initialData={initialData}
-            onSave={(data) => handleTabSave('property', data)}
+            onSave={async (data) => { await handleTabSave('property', data); }}
             token={token}
             avalId={initialData?.id}
             initialDocuments={initialData?.documents || []}
@@ -176,7 +174,7 @@ export default function AvalFormWizard({
           <AvalReferencesTabRHF
             avalType={avalType}
             initialData={initialData}
-            onSave={(data) => handleTabSave('references', data)}
+            onSave={async (data) => { await handleTabSave('references', data); }}
           />
         )}
 
@@ -208,7 +206,8 @@ export default function AvalFormWizard({
             <button type="submit" className="hidden" />
           </form>
         )}
-      </div>
+        </div>
+      </FormWizardTabs>
 
       {/* Save Button for Current Tab */}
       <div className="flex justify-between items-center pt-6 border-t">

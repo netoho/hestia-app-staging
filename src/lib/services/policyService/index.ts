@@ -374,6 +374,57 @@ export async function getPolicyById(id: string) {
           guaranteePropertyDetails: true,
         }
       },
+      tenantHistory: {
+        select: {
+          id: true,
+          tenantType: true,
+          firstName: true,
+          middleName: true,
+          paternalLastName: true,
+          maternalLastName: true,
+          companyName: true,
+          email: true,
+          phone: true,
+          replacedAt: true,
+          replacementReason: true,
+          verificationStatus: true,
+        },
+        orderBy: { replacedAt: 'desc' },
+      },
+      jointObligorHistory: {
+        select: {
+          id: true,
+          jointObligorType: true,
+          firstName: true,
+          middleName: true,
+          paternalLastName: true,
+          maternalLastName: true,
+          companyName: true,
+          email: true,
+          phone: true,
+          replacedAt: true,
+          replacementReason: true,
+          verificationStatus: true,
+        },
+        orderBy: { replacedAt: 'desc' },
+      },
+      avalHistory: {
+        select: {
+          id: true,
+          avalType: true,
+          firstName: true,
+          middleName: true,
+          paternalLastName: true,
+          maternalLastName: true,
+          companyName: true,
+          email: true,
+          phone: true,
+          replacedAt: true,
+          replacementReason: true,
+          verificationStatus: true,
+        },
+        orderBy: { replacedAt: 'desc' },
+      },
       propertyDetails: {
         include: {
           propertyAddressDetails: true,
@@ -409,6 +460,12 @@ export async function getPolicyById(id: string) {
       investigation: {
         select: {
           verdict: true,
+        }
+      },
+      payments: {
+        select: {
+          id: true,
+          status: true,
         }
       }
     }
@@ -523,4 +580,99 @@ export async function validatePolicyNumber(policyNumber: string): Promise<{
   }
 
   return { isValid: true };
+}
+
+/**
+ * Get complete policy data for PDF generation
+ * Includes all nested relations with full data
+ */
+export async function getPolicyForPDF(id: string) {
+  return prisma.policy.findUnique({
+    where: { id },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        }
+      },
+      managedBy: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        }
+      },
+      landlords: {
+        include: {
+          documents: true,
+          addressDetails: true,
+        },
+        orderBy: [
+          { isPrimary: 'desc' },
+          { createdAt: 'asc' }
+        ]
+      },
+      tenant: {
+        include: {
+          personalReferences: true,
+          commercialReferences: true,
+          documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          previousRentalAddressDetails: true,
+        }
+      },
+      jointObligors: {
+        include: {
+          personalReferences: true,
+          commercialReferences: true,
+          documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          guaranteePropertyDetails: true,
+        }
+      },
+      avals: {
+        include: {
+          personalReferences: true,
+          commercialReferences: true,
+          documents: true,
+          addressDetails: true,
+          employerAddressDetails: true,
+          guaranteePropertyDetails: true,
+        }
+      },
+      propertyDetails: {
+        include: {
+          propertyAddressDetails: true,
+          contractSigningAddressDetails: true,
+        }
+      },
+      documents: {
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
+      investigation: true,
+      payments: {
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
+      activities: {
+        select: {
+          id: true,
+          action: true,
+          description: true,
+          performedByType: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
+    }
+  });
 }

@@ -64,7 +64,7 @@ export default function JointObligorDocumentsSection({
     });
 
     // Guarantee documents are shown separately (uploaded in Guarantee tab)
-    const guaranteeCategories = [
+    const guaranteeCategories: DocumentCategory[] = [
       DocumentCategory.INCOME_PROOF,
       DocumentCategory.PROPERTY_DEED,
       DocumentCategory.PROPERTY_TAX_STATEMENT,
@@ -230,7 +230,7 @@ export default function JointObligorDocumentsSection({
                     documents={docs}
                     required={true}
                     allowMultiple={category === 'INCOME_PROOF'}
-                    onUpload={() => {}} // Read-only, no upload
+                    onUpload={(file) => uploadDocument(file, category, category.toLowerCase())}
                     onDelete={deleteDocument}
                     onDownload={downloadDocument}
                     operations={categoryOps}

@@ -5,10 +5,11 @@ import {
   generateTenantToken
 } from '@/lib/services/actorTokenService';
 import prisma from "@/lib/prisma";
-import {sendActorInvitation} from "@/lib/services/emailService";
-import {formatFullName} from "@/lib/utils/names";
-import {TenantType} from "@/prisma/generated/prisma-client/enums";
-import {logPolicyActivity} from "@/lib/services/policyService";
+import { sendActorInvitation, sendPolicyCancellationEmail } from "@/lib/services/emailService";
+import { formatFullName } from "@/lib/utils/names";
+import {AvalType, JointObligorType, TenantType} from "@/prisma/generated/prisma-client/enums";
+import { logPolicyActivity } from "@/lib/services/policyService";
+import { ServiceError, ErrorCode } from '../types/errors';
 
 
 const shouldProcessActor = (actorType: string, actors: string[]) => {
@@ -53,7 +54,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   });
 
   if (!policy) {
-    throw new Error('Policy not found');
+    throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
   }
 
   const invitations = [];
@@ -78,7 +79,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
       token: tokenData.token,
       url: tokenData.url,
       policyNumber: policy.policyNumber,
-      propertyAddress: policy.propertyDetails?.propertyAddressDetails,
+      propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
       expiryDate: tokenData.expiresAt,
       initiatorName,
     });
@@ -128,12 +129,12 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
   // Generate tokens for joint obligors
   for (const jo of policy.jointObligors) {
-    if (shouldProcessActor('jointObligor', actors) && jo.email && (resend || !jo.informationComplete)) {
+    if (shouldProcessActor('joint-obligor', actors) && jo.email && (resend || !jo.informationComplete)) {
       const tokenData = await generateJointObligorToken(jo.id);
 
       const sent = await sendActorInvitation({
         actorType: 'jointObligor',
-        isCompany: jo.isCompany,
+        isCompany: jo.jointObligorType === JointObligorType.COMPANY,
         email: jo.email,
         name: jo.companyName ||
           (jo.firstName ? formatFullName(
@@ -145,7 +146,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
         token: tokenData.token,
         url: tokenData.url,
         policyNumber: policy.policyNumber,
-        propertyAddress: policy.propertyAddress,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
         expiryDate: tokenData.expiresAt,
         initiatorName,
       });
@@ -168,7 +169,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
       const sent = await sendActorInvitation({
         actorType: 'aval',
-        isCompany: aval.isCompany,
+        isCompany: aval.avalType === AvalType.COMPANY,
         email: aval.email,
         name: aval.companyName ||
           (aval.firstName ? formatFullName(
@@ -180,7 +181,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
         token: tokenData.token,
         url: tokenData.url,
         policyNumber: policy.policyNumber,
-        propertyAddress: policy.propertyAddress,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
         expiryDate: tokenData.expiresAt,
         initiatorName,
       });
@@ -207,4 +208,113 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   });
 
   return invitations;
+}
+
+// Send tenant replacement notification to manager and admins
+export const sendTenantReplacementNotification = async (
+  policyId: string,
+  managedById: string | null
+): Promise<void> => {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      policyNumber: true,
+      managedBy: {
+        select: { email: true, name: true },
+      },
+    },
+  });
+
+  if (!policy) {
+    console.error('Policy not found for tenant replacement notification:', policyId);
+    return;
+  }
+
+  // Get all admin users
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN', isActive: true },
+    select: { id: true, email: true, name: true },
+  });
+
+  // Build recipient list (manager + admins, no duplicates)
+  const recipients: Array<{ email: string; name: string | null }> = [];
+  const addedEmails = new Set<string>();
+
+  // Add manager if exists
+  if (policy.managedBy?.email) {
+    recipients.push({ email: policy.managedBy.email, name: policy.managedBy.name });
+    addedEmails.add(policy.managedBy.email);
+  }
+
+  // Add admins (excluding already added manager)
+  for (const admin of admins) {
+    if (admin.email && !addedEmails.has(admin.email)) {
+      recipients.push({ email: admin.email, name: admin.name });
+      addedEmails.add(admin.email);
+    }
+  }
+
+  const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
+
+  // Send simple notification email to each recipient
+  for (const recipient of recipients) {
+    try {
+      const { sendSimpleNotificationEmail } = await import('@/lib/services/emailService');
+      await sendSimpleNotificationEmail({
+        to: recipient.email,
+        recipientName: recipient.name || undefined,
+        subject: `Inquilino reemplazado en póliza #${policy.policyNumber}`,
+        message: `El inquilino ha sido reemplazado en la póliza #${policy.policyNumber}. El proceso de recolección de información ha sido reiniciado.`,
+        actionUrl: policyLink,
+        actionText: 'Ver póliza',
+      });
+    } catch (error) {
+      console.error('Failed to send tenant replacement notification to:', recipient.email, error);
+    }
+  }
+};
+
+// Send policy cancellation notification to all admin users
+export const sendPolicyCancellationNotification = async (policyId: string): Promise<void> => {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      policyNumber: true,
+      cancellationReason: true,
+      cancellationComment: true,
+      cancelledAt: true,
+      cancelledBy: {
+        select: { name: true, email: true },
+      },
+    },
+  });
+
+  if (!policy || !policy.cancellationReason) {
+    console.error('Policy not found or not cancelled:', policyId);
+    return;
+  }
+
+  // Get all active admin users
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN', isActive: true },
+    select: { email: true, name: true },
+  });
+
+  const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
+
+  // Send to each admin
+  for (const admin of admins) {
+    if (!admin.email) continue;
+
+    await sendPolicyCancellationEmail({
+      adminEmail: admin.email,
+      adminName: admin.name || undefined,
+      policyNumber: policy.policyNumber,
+      cancellationReason: policy.cancellationReason,
+      cancellationComment: policy.cancellationComment || '',
+      cancelledByName: policy.cancelledBy?.name || 'Sistema',
+      cancelledAt: policy.cancelledAt || new Date(),
+      policyLink,
+    });
+  }
 }

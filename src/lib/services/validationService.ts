@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { Prisma } from '@/prisma/generated/prisma-client';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { formatFullName } from '@/lib/utils/names';
@@ -7,6 +8,8 @@ import {
   type SectionType as ConfigSectionType,
   type ActorType as ConfigActorType,
 } from '@/lib/constants/actorSectionConfig';
+import { ServiceError, ErrorCode } from './types/errors';
+import { getActorDelegate, type ActorTableName } from '@/lib/utils/prismaActorDelegate';
 
 export type ValidationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW';
 
@@ -178,7 +181,7 @@ class ValidationService {
     });
 
     if (!document) {
-      throw new Error('Document not found');
+      throw new ServiceError(ErrorCode.NOT_FOUND, 'Document not found', 404, { documentId });
     }
 
     // Determine actor type and ID from document if not provided
@@ -318,7 +321,7 @@ class ValidationService {
     actorId?: string;
     documentId?: string;
   }) {
-    const where: any = { policyId };
+    const where: Prisma.ReviewNoteWhereInput = { policyId };
 
     if (filters?.actorType) where.actorType = filters.actorType;
     if (filters?.actorId) where.actorId = filters.actorId;
@@ -382,7 +385,7 @@ class ValidationService {
     });
 
     if (!policy) {
-      throw new Error('Policy not found');
+      throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
     // Get all section validations
@@ -490,7 +493,7 @@ class ValidationService {
   }
 
   // Helper methods
-  private getActorTypeFromDocument(document: any): ActorType | undefined {
+  private getActorTypeFromDocument(document: { landlordId?: string; tenantId?: string; jointObligorId?: string; avalId?: string }): ActorType | undefined {
     if (document.landlordId) return 'landlord';
     if (document.tenantId) return 'tenant';
     if (document.jointObligorId) return 'jointObligor';
@@ -498,7 +501,7 @@ class ValidationService {
     return undefined;
   }
 
-  private getActorIdFromDocument(document: any): string | undefined {
+  private getActorIdFromDocument(document: { landlordId?: string; tenantId?: string; jointObligorId?: string; avalId?: string }): string | undefined {
     return document.landlordId ||
            document.tenantId ||
            document.jointObligorId ||
@@ -506,12 +509,12 @@ class ValidationService {
   }
 
   private async getActorDocuments(actorType: ActorType, actorId: string) {
-    const whereClause = {
+    const whereClause: Prisma.ActorDocumentWhereInput = {
       [`${actorType}Id`]: actorId
-    };
+    } as Prisma.ActorDocumentWhereInput;
 
     return prisma.actorDocument.findMany({
-      where: whereClause as any
+      where: whereClause
     });
   }
 
@@ -519,8 +522,8 @@ class ValidationService {
    * Determine if an actor is a company
    */
   private async getActorIsCompany(actorType: ActorType, actorId: string): Promise<boolean> {
-    const model = this.getActorModel(actorType);
-    const actor = await (prisma as any)[model].findUnique({
+    const delegate = getActorDelegate(prisma, actorType as ActorTableName);
+    const actor = await delegate.findUnique({
       where: { id: actorId },
       select: actorType === 'landlord'
         ? { isCompany: true }
@@ -676,8 +679,8 @@ class ValidationService {
 
     if (allSectionsApproved && allDocumentsApproved) {
       // Update actor verification status to APPROVED
-      const model = this.getActorModel(actorType);
-      await (prisma as any)[model].update({
+      const delegate = getActorDelegate(prisma, actorType as ActorTableName);
+      await delegate.update({
         where: { id: actorId },
         data: {
           verificationStatus: 'APPROVED',

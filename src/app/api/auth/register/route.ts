@@ -8,7 +8,6 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().optional(),
-  role: z.enum(['BROKER', 'STAFF', 'ADMIN']).optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password, name, role } = validation.data;
+    const { email, password, name } = validation.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -38,13 +37,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash password and create user
+    // Public registration only creates BROKER accounts
+    // ADMIN/STAFF accounts must be created via admin invitation
     const hashedPassword = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        role: (role as UserRole) ?? UserRole.STAFF
+        role: UserRole.BROKER
       }
     });
 

@@ -1,4 +1,5 @@
 import { KeyedMutator } from 'swr';
+import { toast } from '@/hooks/use-toast';
 
 export interface OptimisticUpdateOptions<T> {
   mutate: KeyedMutator<T>;
@@ -204,22 +205,16 @@ export function addDocumentToActor<T extends { landlord?: any; tenant?: any; joi
   return updated;
 }
 
-// Toast notification helpers (simple implementation)
-// These can be replaced with your actual toast library implementation
-
+// Toast notification helpers
 function showSuccessToast(message: string) {
   if (typeof window !== 'undefined') {
-    console.log('Success:', message);
-    // TODO: Replace with actual toast implementation
-    // Example: toast.success(message)
+    toast({ title: message });
   }
 }
 
 function showErrorToast(message: string) {
   if (typeof window !== 'undefined') {
-    console.error('Error:', message);
-    // TODO: Replace with actual toast implementation
-    // Example: toast.error(message)
+    toast({ title: message, variant: 'destructive' });
   }
 }
 

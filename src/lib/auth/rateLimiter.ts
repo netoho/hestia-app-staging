@@ -121,6 +121,39 @@ export const passwordResetByIPLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for login attempts by email
+ * Limits: 5 attempts per email per 15 minutes
+ */
+export const loginByEmailLimiter = rateLimit({
+  maxRequests: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  keyGenerator: async (req: NextRequest) => {
+    try {
+      const body = await req.json();
+      const email = body.email?.toLowerCase() || 'unknown';
+      return `login:email:${email}`;
+    } catch {
+      return 'login:email:unknown';
+    }
+  },
+});
+
+/**
+ * Rate limiter for login attempts by IP
+ * Limits: 20 attempts per IP per 15 minutes
+ */
+export const loginByIPLimiter = rateLimit({
+  maxRequests: 20,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  keyGenerator: (req: NextRequest) => {
+    const ip = req.headers.get('x-forwarded-for') ||
+               req.headers.get('x-real-ip') ||
+               'unknown';
+    return `login:ip:${ip}`;
+  },
+});
+
+/**
  * Apply multiple rate limiters
  * @param limiters - Array of rate limiter functions
  * @returns Combined middleware function

@@ -52,46 +52,20 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
    * Validate person aval data
    */
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
-    // Add avalType to data for validation
     const dataWithType = { ...data, avalType: 'INDIVIDUAL' as const };
     const mode = isPartial ? 'partial' : 'strict';
     const result = validateAvalData(dataWithType, mode);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person aval data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person aval data') as Result<PersonActorData>;
   }
 
   /**
    * Validate company aval data
    */
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
-    // Add avalType to data for validation
     const dataWithType = { ...data, avalType: 'COMPANY' as const };
     const mode = isPartial ? 'partial' : 'strict';
     const result = validateAvalData(dataWithType, mode);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company aval data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company aval data') as Result<CompanyActorData>;
   }
 
   /**
@@ -102,19 +76,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     mode: 'strict' | 'partial' | 'admin' = 'strict'
   ): Result<AvalFormData> {
     const result = validateAvalData(data, mode);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid aval data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data);
+    return this.wrapZodValidation(result, 'Invalid aval data');
   }
 
   /**
@@ -140,7 +102,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       });
 
       if (!existingAval) {
-        throw new Error('Aval not found');
+        throw new ServiceError(ErrorCode.NOT_FOUND, 'Aval not found', 404, { avalId: id });
       }
 
       // Prepare data for database using the new utility
@@ -157,7 +119,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           isPartial ? 'partial' : 'strict'
         );
         if (!validationResult.ok) {
-          throw new Error(validationResult.error.message);
+          throw validationResult.error;
         }
       }
 
@@ -173,7 +135,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           existingAval?.addressId
         );
         if (!addressResult.ok) {
-          throw new Error('Failed to save current address');
+          throw new ServiceError(ErrorCode.DATABASE_ERROR, 'Failed to save current address', 500, { error: addressResult.error });
         }
         addressId = addressResult.value;
       }
@@ -185,7 +147,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           existingAval?.employerAddressId
         );
         if (!employerAddressResult.ok) {
-          throw new Error('Failed to save employer address');
+          throw new ServiceError(ErrorCode.DATABASE_ERROR, 'Failed to save employer address', 500, { error: employerAddressResult.error });
         }
         employerAddressId = employerAddressResult.value;
       }
@@ -197,7 +159,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           existingAval?.guaranteePropertyAddressId
         );
         if (!propertyAddressResult.ok) {
-          throw new Error('Failed to save guarantee property address');
+          throw new ServiceError(ErrorCode.DATABASE_ERROR, 'Failed to save guarantee property address', 500, { error: propertyAddressResult.error });
         }
         guaranteePropertyAddressId = propertyAddressResult.value;
       }
@@ -340,10 +302,11 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
         await this.prisma.personalReference.createMany({
           data: references.map(ref => ({
             avalId,
-            name: ref.name,
+            firstName: ref.firstName,
+            middleName: ref.middleName || null,
+            paternalLastName: ref.paternalLastName,
+            maternalLastName: ref.maternalLastName || null,
             phone: ref.phone,
-            homePhone: ref.homePhone || null,
-            cellPhone: ref.cellPhone || null,
             email: ref.email || null,
             relationship: ref.relationship,
             occupation: ref.occupation || null,
@@ -372,7 +335,10 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           data: references.map(ref => ({
             avalId,
             companyName: ref.companyName,
-            contactName: ref.contactName,
+            contactFirstName: ref.contactFirstName,
+            contactMiddleName: ref.contactMiddleName || null,
+            contactPaternalLastName: ref.contactPaternalLastName,
+            contactMaternalLastName: ref.contactMaternalLastName || null,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -383,169 +349,6 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
 
       this.log('info', 'Commercial references saved', { avalId, count: references.length });
     }, 'saveCommercialReferences');
-  }
-
-  /**
-   * Validate token and save aval data
-   * Main entry point for actor endpoints
-   */
-  async validateAndSave(
-    token: string,
-    data: any,
-    isPartialSave: boolean = false
-  ): AsyncResult<any> {
-    return this.executeTransaction(async (tx) => {
-      // Validate token
-      const avalResult = await this.executeDbOperation(async () => {
-        const aval = await tx.aval.findFirst({
-          where: { accessToken: token },
-          include: {
-            policy: {
-              select: {
-                id: true,
-                policyNumber: true,
-                status: true
-              }
-            }
-          }
-        });
-
-        if (!aval) {
-          throw new ServiceError(
-            ErrorCode.INVALID_TOKEN,
-            'Token inválido',
-            400
-          );
-        }
-
-        if (aval.tokenExpiry && aval.tokenExpiry < new Date()) {
-          throw new ServiceError(
-            ErrorCode.TOKEN_EXPIRED,
-            'Token expirado',
-            400
-          );
-        }
-
-        if (aval.informationComplete && !isPartialSave) {
-          throw new ServiceError(
-            ErrorCode.ALREADY_COMPLETE,
-            'La información ya fue completada',
-            400
-          );
-        }
-
-        return aval;
-      }, 'validateToken');
-
-      if (!avalResult.ok) {
-        return avalResult;
-      }
-
-      const aval = avalResult.value;
-
-      // Upsert addresses
-      const addressResult = await this.upsertMultipleAddresses({
-        addressDetails: data.addressDetails,
-        employerAddressDetails: data.employerAddressDetails,
-        guaranteePropertyDetails: data.guaranteePropertyDetails
-      });
-
-      if (!addressResult.ok) {
-        return addressResult;
-      }
-
-      // Prepare update data
-      const updateData: any = {
-        // Type
-        isCompany: data.isCompany,
-        // Individual Information - name fields
-        firstName: data.firstName || null,
-        middleName: data.middleName || null,
-        paternalLastName: data.paternalLastName || null,
-        maternalLastName: data.maternalLastName || null,
-        nationality: data.nationality,
-        curp: data.curp || null,
-        rfc: data.rfc || null,
-        passport: data.passport || null,
-        relationshipToTenant: data.relationshipToTenant || null,
-        // Company Information
-        companyName: data.companyName || null,
-        companyRfc: data.companyRfc || null,
-        // Legal rep name fields
-        legalRepFirstName: data.legalRepFirstName || null,
-        legalRepMiddleName: data.legalRepMiddleName || null,
-        legalRepPaternalLastName: data.legalRepPaternalLastName || null,
-        legalRepMaternalLastName: data.legalRepMaternalLastName || null,
-        legalRepPosition: data.legalRepPosition || null,
-        legalRepRfc: data.legalRepRfc || null,
-        legalRepPhone: data.legalRepPhone || null,
-        legalRepEmail: data.legalRepEmail || null,
-        // Contact Information
-        email: data.email,
-        phone: data.phone,
-        workPhone: data.workPhone || null,
-        personalEmail: data.personalEmail || null,
-        workEmail: data.workEmail || null,
-        // Employment (for individuals)
-        employmentStatus: data.employmentStatus || null,
-        occupation: data.occupation || null,
-        employerName: data.employerName || null,
-        employerAddress: data.employerAddress || null,
-        position: data.position || null,
-        monthlyIncome: data.monthlyIncome || null,
-        incomeSource: data.incomeSource || null,
-        // Property Guarantee Information
-        propertyAddress: data.propertyAddress || null,
-        propertyValue: data.propertyValue || null,
-        propertyDeedNumber: data.propertyDeedNumber || null,
-        propertyRegistry: data.propertyRegistry || null,
-        propertyTaxAccount: data.propertyTaxAccount || null,
-        propertyUnderLegalProceeding: data.propertyUnderLegalProceeding || false,
-        // Marriage Information
-        maritalStatus: data.maritalStatus || null,
-        spouseName: data.spouseName || null,
-        spouseRfc: data.spouseRfc || null,
-        spouseCurp: data.spouseCurp || null,
-        // Guarantee Method
-        guaranteeMethod: data.guaranteeMethod || null,
-        hasPropertyGuarantee: data.hasPropertyGuarantee ?? true,
-        // Additional info
-        additionalInfo: data.additionalInfo || null,
-        // Address IDs
-        ...addressResult.value,
-      };
-
-      // Mark as complete if not partial save
-      if (!isPartialSave) {
-        updateData.informationComplete = true;
-        updateData.completedAt = new Date();
-      }
-
-      // Update aval
-      const updatedAval = await tx.aval.update({
-        where: { id: aval.id },
-        data: updateData
-      });
-
-      // Save references
-      if (data.references) {
-        await this.savePersonalReferences(aval.id, data.references);
-      }
-      if (data.commercialReferences) {
-        await this.saveCommercialReferences(aval.id, data.commercialReferences);
-      }
-
-      return {
-        success: true,
-        message: isPartialSave
-          ? 'Información guardada exitosamente'
-          : 'Información completada exitosamente',
-        data: {
-          aval: updatedAval,
-          policyId: aval.policy.id
-        }
-      };
-    });
   }
 
   /**
@@ -784,15 +587,14 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       // Person validation
       if (!aval.firstName) errors.push('Nombre requerido');
       if (!aval.paternalLastName) errors.push('Apellido paterno requerido');
-      if (!aval.maternalLastName) errors.push('Apellido materno requerido');
-      // Employment fields are optional in schema - removed occupation, employerName, monthlyIncome checks
+      // maternalLastName is optional in schema
     } else {
       // Company validation
       if (!aval.companyName) errors.push('Razón social requerida');
       if (!aval.companyRfc) errors.push('RFC de empresa requerido');
       if (!aval.legalRepFirstName) errors.push('Nombre del representante requerido');
       if (!aval.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
-      if (!aval.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+      // legalRepMaternalLastName is optional in schema
     }
 
     // Common required fields
@@ -803,9 +605,9 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
 
     // Aval specific - must have property guarantee
     if (!aval.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
-    if (!aval.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
-    if (!aval.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
-    if (!aval.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+    if (!aval.propertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+    if (!aval.propertyRegistry) errors.push('Folio de registro de garantía requerido');
+    if (!aval.propertyValue) errors.push('Valor de propiedad de garantía requerido');
 
     // Check references (minimum 3 for aval)
     const referenceCount = aval.personalReferences?.length ?? 0;

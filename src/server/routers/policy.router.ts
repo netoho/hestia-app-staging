@@ -12,12 +12,49 @@ import {
   logPolicyActivity,
   validatePolicyNumber,
 } from '@/lib/services/policyService';
+import { replaceTenantOnPolicy } from '@/lib/services/policyService/tenantReplacement';
+import { changeGuarantorType } from '@/lib/services/policyService/guarantorTypeChange';
+import { cancelPolicy } from '@/lib/services/policyService/cancellation';
+import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
-import { PolicyStatus, GuarantorType, PropertyType, TenantType } from "@/prisma/generated/prisma-client/enums";
+import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
 import { TRPCError } from '@trpc/server';
-import { generateLandlordToken, generatePolicyActorTokens } from '@/lib/services/actorTokenService';
-import { sendActorInvitation } from '@/lib/services/emailService';
-import {sendIncompleteActorInfoNotification} from "@/lib/services/notificationService";
+import { sendIncompleteActorInfoNotification } from "@/lib/services/notificationService";
+
+// Schema for replacing tenant
+const ReplaceTenantSchema = z.object({
+  policyId: z.string(),
+  replacementReason: z.string().min(1, 'Replacement reason is required'),
+  newTenant: z.object({
+    tenantType: z.nativeEnum(TenantType),
+    email: z.string().email(),
+    phone: z.string().min(1),
+    firstName: z.string().optional(),
+    companyName: z.string().optional(),
+  }),
+  replaceGuarantors: z.boolean().default(false),
+});
+
+// Schema for changing guarantor type
+const ChangeGuarantorTypeSchema = z.object({
+  policyId: z.string(),
+  reason: z.string().min(1, 'Reason for change is required'),
+  newGuarantorType: z.nativeEnum(GuarantorType),
+  newJointObligors: z.array(z.object({
+    email: z.string().email(),
+    phone: z.string().min(1),
+    firstName: z.string().optional(),
+    paternalLastName: z.string().optional(),
+    maternalLastName: z.string().optional(),
+  })).optional(),
+  newAvals: z.array(z.object({
+    email: z.string().email(),
+    phone: z.string().min(1),
+    firstName: z.string().optional(),
+    paternalLastName: z.string().optional(),
+    maternalLastName: z.string().optional(),
+  })).optional(),
+});
 
 // Schema for creating a policy
 const CreatePolicySchema = z.object({
@@ -144,18 +181,6 @@ const UpdateStatusSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Schema for saving drafts
-const PolicyDraftSchema = z.object({
-  policyNumber: z.string().optional(),
-  internalCode: z.string().optional(),
-  propertyData: z.any().optional(),
-  pricingData: z.any().optional(),
-  landlordData: z.any().optional(),
-  tenantData: z.any().optional(),
-  guarantorsData: z.any().optional(),
-  currentStep: z.string().optional(),
-});
-
 export const policyRouter = createTRPCRouter({
   /**
    * List policies with filters
@@ -273,39 +298,6 @@ export const policyRouter = createTRPCRouter({
     }),
 
   /**
-   * Save a draft policy (for auto-save functionality)
-   */
-  saveDraft: protectedProcedure
-    .input(PolicyDraftSchema)
-    .mutation(async ({ input, ctx }) => {
-      // Store draft in database or session
-      // This would be implemented based on your draft storage strategy
-      // For now, we'll store in a drafts table or session storage
-
-      const draftKey = `policy_draft_${ctx.userId}`;
-
-      // You could store this in Redis, database, or session
-      // For simplicity, we'll just return success
-      return {
-        success: true,
-        draftId: draftKey,
-        savedAt: new Date().toISOString(),
-      };
-    }),
-
-  /**
-   * Get saved draft for current user
-   */
-  getDraft: protectedProcedure
-    .query(async ({ ctx }) => {
-      const draftKey = `policy_draft_${ctx.userId}`;
-
-      // Retrieve draft from storage
-      // For now, return null (no draft)
-      return null;
-    }),
-
-  /**
    * Update policy status
    */
   updateStatus: protectedProcedure
@@ -342,16 +334,14 @@ export const policyRouter = createTRPCRouter({
   getShareLinks: protectedProcedure
     .input(z.object({ policyId: z.string() }))
     .query(async ({ input, ctx }) => {
+      // Check access for brokers
       const policy = await getPolicyById(input.policyId);
-
       if (!policy) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Policy not found',
         });
       }
-
-      // Check access for brokers
       if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -359,102 +349,14 @@ export const policyRouter = createTRPCRouter({
         });
       }
 
-      const { generateActorUrl } = await import('@/lib/services/actorTokenService');
-      const { formatFullName } = await import('@/lib/utils/names');
-
-      // Build share links for all actors
-      const shareLinks: any[] = [];
-
-      // Landlords (only primary)
-      for (const landlord of policy.landlords || []) {
-        if (landlord.accessToken && landlord.isPrimary) {
-          shareLinks.push({
-            actorId: landlord.id,
-            actorType: 'landlord',
-            actorName: landlord.companyName ||
-              (landlord.firstName ? formatFullName(
-                landlord.firstName,
-                landlord.paternalLastName || '',
-                landlord.maternalLastName || '',
-                landlord.middleName || undefined
-              ) : 'Sin nombre'),
-            email: landlord.email,
-            phone: landlord.phone,
-            url: generateActorUrl(landlord.accessToken, 'landlord'),
-            tokenExpiry: landlord.tokenExpiry,
-            informationComplete: landlord.informationComplete,
-          });
-        }
-      }
-
-      // Tenant
-      if (policy.tenant?.accessToken) {
-        shareLinks.push({
-          actorId: policy.tenant.id,
-          actorType: 'tenant',
-          actorName: policy.tenant.companyName ||
-            (policy.tenant.firstName ? formatFullName(
-              policy.tenant.firstName,
-              policy.tenant.paternalLastName || '',
-              policy.tenant.maternalLastName || '',
-              policy.tenant.middleName || undefined
-            ) : 'Sin nombre'),
-          email: policy.tenant.email,
-          phone: policy.tenant.phone,
-          url: generateActorUrl(policy.tenant.accessToken, 'tenant'),
-          tokenExpiry: policy.tenant.tokenExpiry,
-          informationComplete: policy.tenant.informationComplete,
+      const result = await getShareLinksForPolicy(input.policyId);
+      if (!result) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Policy not found',
         });
       }
-
-      // Joint Obligors
-      for (const jo of policy.jointObligors || []) {
-        if (jo.accessToken) {
-          shareLinks.push({
-            actorId: jo.id,
-            actorType: 'joint-obligor',
-            actorName: jo.companyName ||
-              (jo.firstName ? formatFullName(
-                jo.firstName,
-                jo.paternalLastName || '',
-                jo.maternalLastName || '',
-                jo.middleName || undefined
-              ) : 'Sin nombre'),
-            email: jo.email,
-            phone: jo.phone,
-            url: generateActorUrl(jo.accessToken, 'joint-obligor'),
-            tokenExpiry: jo.tokenExpiry,
-            informationComplete: jo.informationComplete,
-          });
-        }
-      }
-
-      // Avals
-      for (const aval of policy.avals || []) {
-        if (aval.accessToken) {
-          shareLinks.push({
-            actorId: aval.id,
-            actorType: 'aval',
-            actorName: aval.companyName ||
-              (aval.firstName ? formatFullName(
-                aval.firstName,
-                aval.paternalLastName || '',
-                aval.maternalLastName || '',
-                aval.middleName || undefined
-              ) : 'Sin nombre'),
-            email: aval.email,
-            phone: aval.phone,
-            url: generateActorUrl(aval.accessToken, 'aval'),
-            tokenExpiry: aval.tokenExpiry,
-            informationComplete: aval.informationComplete,
-          });
-        }
-      }
-
-      return {
-        policyNumber: policy.policyNumber,
-        shareLinks,
-      };
+      return result;
     }),
 
   /**
@@ -508,5 +410,89 @@ export const policyRouter = createTRPCRouter({
           cause: error,
         });
       }
+    }),
+
+  // Cancel a policy (ADMIN/STAFF only)
+  cancelPolicy: protectedProcedure
+    .input(z.object({
+      policyId: z.string(),
+      reason: z.nativeEnum(PolicyCancellationReason),
+      comment: z.string().min(1, 'Comment is required'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can cancel policies',
+        });
+      }
+
+      const result = await cancelPolicy({
+        policyId: input.policyId,
+        reason: input.reason,
+        comment: input.comment,
+        cancelledById: ctx.userId,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to cancel policy',
+        });
+      }
+
+      return result;
+    }),
+
+  // Replace tenant (and optionally guarantors) on a policy
+  replaceTenant: protectedProcedure
+    .input(ReplaceTenantSchema)
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can replace tenants',
+        });
+      }
+
+      const result = await replaceTenantOnPolicy({
+        ...input,
+        performedById: ctx.userId,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to replace tenant',
+        });
+      }
+
+      return result;
+    }),
+
+  // Change guarantor type on a policy
+  changeGuarantorType: protectedProcedure
+    .input(ChangeGuarantorTypeSchema)
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can change guarantor type',
+        });
+      }
+
+      const result = await changeGuarantorType({
+        ...input,
+        performedById: ctx.userId,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to change guarantor type',
+        });
+      }
+
+      return result;
     }),
 });

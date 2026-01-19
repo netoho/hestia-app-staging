@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useDialogState } from '@/lib/hooks/useDialogState';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
+import { getActorTypeLabel } from '@/lib/utils/actor';
 
 // Import simplified form wizards
 import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
@@ -52,14 +53,14 @@ export default function InlineActorEditor({
 }: InlineActorEditorProps) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
-  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const completeConfirmDialog = useDialogState();
 
   // Admin submit mutation
   const adminSubmitMutation = trpc.actor.adminSubmitActor.useMutation({
     onSuccess: () => {
       toast({
         title: 'Actor marcado como completo',
-        description: `El ${getActorTypeLabel().toLowerCase()} ha sido marcado como completo exitosamente`,
+        description: `El ${getActorTypeLabel(actorType).toLowerCase()} ha sido marcado como completo exitosamente`,
       });
       // Invalidate queries
       utils.actor.listByPolicy.invalidate({ policyId });
@@ -91,21 +92,6 @@ export default function InlineActorEditor({
     { policyId, type: 'landlord' },
     { enabled: actorType === 'landlord' && isOpen && !!policyId }
   );
-
-  const getActorTypeLabel = () => {
-    switch (actorType) {
-      case 'tenant':
-        return 'Inquilino';
-      case 'landlord':
-        return 'Arrendador';
-      case 'aval':
-        return 'Aval';
-      case 'jointObligor':
-        return 'Obligado Solidario';
-      default:
-        return 'Actor';
-    }
-  };
 
   const handleComplete = () => {
     // Invalidate admin queries to ensure fresh data
@@ -164,7 +150,7 @@ export default function InlineActorEditor({
       id: actorId,
       skipValidation,
     });
-    setShowCompleteConfirm(false);
+    completeConfirmDialog.close();
   };
 
   const getFormWizard = () => {
@@ -197,9 +183,9 @@ export default function InlineActorEditor({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar {getActorTypeLabel()}</DialogTitle>
+          <DialogTitle>Editar {getActorTypeLabel(actorType)}</DialogTitle>
           <DialogDescription>
-            Actualice la informacion del {getActorTypeLabel().toLowerCase()} para esta proteccion
+            Actualice la información del {getActorTypeLabel(actorType).toLowerCase()} para esta protección
           </DialogDescription>
         </DialogHeader>
 
@@ -218,11 +204,11 @@ export default function InlineActorEditor({
               <DialogFooter className="mt-6 pt-4 border-t">
                 <div className="flex w-full items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Marcar como completo cuando toda la informacion este lista
+                    Marcar como completo cuando toda la información este lista
                   </div>
                   <Button
                     variant="outline"
-                    onClick={() => setShowCompleteConfirm(true)}
+                    onClick={completeConfirmDialog.open}
                     disabled={adminSubmitMutation.isPending}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
@@ -236,7 +222,7 @@ export default function InlineActorEditor({
               <Alert className="mt-4 border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Este {getActorTypeLabel().toLowerCase()} ya esta marcado como completo
+                  Este {getActorTypeLabel(actorType).toLowerCase()} ya está marcado como completo
                 </AlertDescription>
               </Alert>
             )}
@@ -249,12 +235,12 @@ export default function InlineActorEditor({
       </DialogContent>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
+      <AlertDialog open={completeConfirmDialog.isOpen} onOpenChange={(open) => !open && completeConfirmDialog.close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Marcar {getActorTypeLabel()} como Completo</AlertDialogTitle>
+            <AlertDialogTitle>Marcar {getActorTypeLabel(actorType)} como Completo</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta accion marcara al {getActorTypeLabel().toLowerCase()} como completo.
+              Esta acción marcará al {getActorTypeLabel(actorType).toLowerCase()} como completo.
               Si faltan documentos requeridos, puede elegir continuar de todas formas.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -262,7 +248,7 @@ export default function InlineActorEditor({
             <Alert className="border-yellow-200 bg-yellow-50">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800">
-                Si hay documentos faltantes, se mostrara un error. Use &quot;Forzar Completo&quot; para omitir la validacion.
+                Si hay documentos faltantes, se mostrará un error. Use &quot;Forzar Completo&quot; para omitir la validación.
               </AlertDescription>
             </Alert>
           </div>

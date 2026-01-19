@@ -1,6 +1,6 @@
 import { createTRPCRouter } from '@/server/trpc';
 import { policyRouter } from './policy.router';
-import { actorRouter } from './actor.router';
+import { actorRouter } from './actor';
 import { pricingRouter } from './pricing.router';
 import { packageRouter } from './package.router';
 import { paymentRouter } from './payment.router';

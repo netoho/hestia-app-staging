@@ -5,50 +5,41 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
-import { calculatePolicyProgress } from '@/lib/utils/policyUtils';
+import { calculatePolicyProgress } from '@/lib/utils/policy';
+import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 import ActorsList from './ActorsList';
+
+interface Actor {
+  firstName?: string | null;
+  middleName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+  companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  informationComplete: boolean;
+  isPrimary?: boolean;
+  [key: string]: unknown;
+}
 
 interface Policy {
   id: string;
   policyNumber: string;
-  internalCode?: string;
+  internalCode?: string | null;
   status: PolicyStatus;
-  propertyAddress: string;
-  propertyType?: string;
+  propertyAddress?: { formattedAddress?: string | null } | null;
+  propertyDetails?: { propertyAddressDetails?: { formattedAddress?: string | null } | null } | null;
+  propertyType?: string | null;
   rentAmount: number;
-  totalPrice?: number;
-  createdAt: string;
-  package?: {
-    name: string;
-  };
-  tenant?: {
-    fullName?: string;
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    informationComplete: boolean;
-  } | null;
-  landlords?: Array<{
-    fullName?: string;
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    isPrimary?: boolean;
-    informationComplete: boolean;
-  }>;
-  jointObligors?: Array<{
-    fullName?: string;
-    email?: string;
-    phone?: string;
-    informationComplete: boolean;
-  }>;
-  avals?: Array<{
-    fullName?: string;
-    email?: string;
-    phone?: string;
-    informationComplete: boolean;
-  }>;
-  guarantorType?: string;
+  totalPrice?: number | null;
+  createdAt: Date | string;
+  package?: { name: string } | null;
+  tenant?: Actor | null;
+  landlords?: Actor[];
+  jointObligors?: Actor[];
+  avals?: Actor[];
+  guarantorType?: string | null;
+  [key: string]: unknown;
 }
 
 interface PolicyCardProps {
@@ -56,26 +47,12 @@ interface PolicyCardProps {
   onView: (policyId: string) => void;
 }
 
-const STATUS_CONFIG = {
-  [PolicyStatus.DRAFT]: { label: 'Borrador', variant: 'secondary' as const },
-  [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando Info', variant: 'default' as const },
-  [PolicyStatus.UNDER_INVESTIGATION]: { label: 'En Investigación', variant: 'default' as const },
-  [PolicyStatus.INVESTIGATION_REJECTED]: { label: 'Rechazado', variant: 'destructive' as const },
-  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobación', variant: 'default' as const },
-  [PolicyStatus.APPROVED]: { label: 'Aprobado', variant: 'default' as const },
-  [PolicyStatus.CONTRACT_PENDING]: { label: 'Contrato Pendiente', variant: 'default' as const },
-  [PolicyStatus.CONTRACT_SIGNED]: { label: 'Contrato Firmado', variant: 'default' as const },
-  [PolicyStatus.ACTIVE]: { label: 'Activa', variant: 'default' as const },
-  [PolicyStatus.EXPIRED]: { label: 'Expirada', variant: 'secondary' as const },
-  [PolicyStatus.CANCELLED]: { label: 'Cancelada', variant: 'destructive' as const },
-};
-
 /**
  * Mobile card view for a single policy
  */
 export default function PolicyCard({ policy, onView }: PolicyCardProps) {
   const progress = calculatePolicyProgress(policy);
-  const statusConfig = STATUS_CONFIG[policy.status] || { label: policy.status, variant: 'secondary' as const };
+  const statusConfig = POLICY_STATUS_CONFIG[policy.status] || { label: policy.status, variant: 'secondary' as const };
 
   return (
     <Card className="overflow-hidden cursor-pointer" onClick={() => onView(policy.id)}>
@@ -99,7 +76,7 @@ export default function PolicyCard({ policy, onView }: PolicyCardProps) {
         {/* Property Info */}
         <div>
           <p className="text-sm font-medium text-muted-foreground mb-1">Propiedad</p>
-          <p className="text-sm font-medium">{policy.propertyAddress}</p>
+          <p className="text-sm font-medium">{policy.propertyDetails?.propertyAddressDetails?.formattedAddress || 'N/A'}</p>
           {policy.propertyType && (
             <p className="text-xs text-muted-foreground">{policy.propertyType}</p>
           )}

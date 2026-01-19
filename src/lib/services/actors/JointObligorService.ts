@@ -54,19 +54,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   validatePersonData(data: PersonActorData, isPartial: boolean = false): Result<PersonActorData> {
     const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid person joint obligor data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as PersonActorData);
+    return this.wrapZodValidation(result, 'Invalid person joint obligor data') as Result<PersonActorData>;
   }
 
   /**
@@ -75,19 +63,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   validateCompanyData(data: CompanyActorData, isPartial: boolean = false): Result<CompanyActorData> {
     const schema = isPartial ? jointObligorPartialSchema : jointObligorStrictSchema;
     const result = schema.safeParse(data);
-
-    if (!result.success) {
-      return Result.error(
-        new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid company joint obligor data',
-          400,
-          { errors: this.formatZodErrors(result.error) }
-        )
-      );
-    }
-
-    return Result.ok(result.data as CompanyActorData);
+    return this.wrapZodValidation(result, 'Invalid company joint obligor data') as Result<CompanyActorData>;
   }
 
   /**
@@ -295,7 +271,10 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           data: references.map(ref => ({
             jointObligorId,
             companyName: ref.companyName,
-            contactName: ref.contactName,
+            contactFirstName: ref.contactFirstName,
+            contactMiddleName: ref.contactMiddleName || null,
+            contactPaternalLastName: ref.contactPaternalLastName,
+            contactMaternalLastName: ref.contactMaternalLastName || null,
             phone: ref.phone,
             email: ref.email || null,
             relationship: ref.relationship,
@@ -549,7 +528,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       // Person validation
       if (!jointObligor.firstName) errors.push('Nombre requerido');
       if (!jointObligor.paternalLastName) errors.push('Apellido paterno requerido');
-      if (!jointObligor.maternalLastName) errors.push('Apellido materno requerido');
+      // maternalLastName is optional in schema
       if (!jointObligor.curp) errors.push('CURP requerido');
       if (!jointObligor.rfc) errors.push('RFC requerido');
       // Employment fields: occupation required only when employmentStatus is set, monthlyIncome only for income guarantee
@@ -562,7 +541,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       if (!jointObligor.companyRfc) errors.push('RFC de empresa requerido');
       if (!jointObligor.legalRepFirstName) errors.push('Nombre del representante requerido');
       if (!jointObligor.legalRepPaternalLastName) errors.push('Apellido paterno del representante requerido');
-      if (!jointObligor.legalRepMaternalLastName) errors.push('Apellido materno del representante requerido');
+      // legalRepMaternalLastName is optional in schema
     }
 
     // Common required fields
@@ -577,9 +556,9 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     if (jointObligor.guaranteeMethod === 'property') {
       // Property guarantee validation
       if (!jointObligor.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
-      if (!jointObligor.guaranteePropertyDeedNumber) errors.push('Número de escritura de garantía requerido');
-      if (!jointObligor.guaranteePropertyRegistryFolio) errors.push('Folio de registro de garantía requerido');
-      if (!jointObligor.guaranteePropertyValue) errors.push('Valor de propiedad de garantía requerido');
+      if (!jointObligor.propertyDeedNumber) errors.push('Número de escritura de garantía requerido');
+      if (!jointObligor.propertyRegistry) errors.push('Folio de registro de garantía requerido');
+      if (!jointObligor.propertyValue) errors.push('Valor de propiedad de garantía requerido');
     } else if (jointObligor.guaranteeMethod === 'income') {
       // Income guarantee validation
       if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');

@@ -1,26 +1,7 @@
-import prisma from "@/lib/prisma";
+import { BaseService } from './base/BaseService';
 import { Package } from "@/prisma/generated/prisma-client/client";
-
-// Premium package tiered percentages for high-value rents
-const PREMIUM_TIERS = [
-  { minRent: 100000, percentage: 42 },
-  { minRent: 90000, percentage: 43 },
-  { minRent: 80000, percentage: 44 },
-  { minRent: 70000, percentage: 45 },
-  { minRent: 60000, percentage: 46 },
-] as const;
-
-/**
- * Get the effective percentage for premium package based on rent amount
- */
-function getPremiumPercentage(rentAmount: number, basePercentage: number): number {
-  for (const tier of PREMIUM_TIERS) {
-    if (rentAmount >= tier.minRent) {
-      return tier.percentage;
-    }
-  }
-  return basePercentage;
-}
+import { PREMIUM_TIERS, TAX_CONFIG, LOCALE_CONFIG } from "@/lib/constants/businessConfig";
+import { ServiceError, ErrorCode } from './types/errors';
 
 export interface CalculationSummary {
   packageName: string;
@@ -64,298 +45,271 @@ export interface PricingInput {
   includeInvestigationFee?: boolean; // Optional, defaults to false
 }
 
-/**
- * Get the current investigation fee from system configuration
- */
-export async function getInvestigationFee(): Promise<number> {
-  const config = await prisma.systemConfig.findFirst({
-    where: { id: 'system-config-1' }
-  });
+class PricingService extends BaseService {
+  /**
+   * Get the effective percentage for premium package based on rent amount
+   */
+  private getPremiumPercentage(rentAmount: number, basePercentage: number): number {
+    for (const tier of PREMIUM_TIERS) {
+      if (rentAmount >= tier.minRent) {
+        return tier.percentage;
+      }
+    }
+    return basePercentage;
+  }
 
-  return config?.investigationFee || 200;
-}
-
-/**
- * Get package details including pricing
- */
-export async function getPackageDetails(packageId: string): Promise<Package | null> {
-  return prisma.package.findUnique({
-    where: { id: packageId }
-  });
-}
-
-/**
- * Calculate package price based on rent amount and package configuration
- */
-export function calculatePackagePrice(rentAmount: number, packageData: Package): number {
-  // If package has a percentage, calculate based on rent
-  if (packageData.percentage && packageData.percentage > 0) {
-    // For premium package, apply tiered percentages for high rents
-    const effectivePercentage = packageData.id === 'premium'
-      ? getPremiumPercentage(rentAmount, packageData.percentage)
-      : packageData.percentage;
-
-    const calculatedPrice = (rentAmount * effectivePercentage) / 100;
-
-    // Apply minimum amount if configured
-    if (packageData.minAmount && calculatedPrice < packageData.minAmount) {
-      return packageData.minAmount;
+  /**
+   * Validate that percentages sum to 100
+   */
+  private validatePercentageSplit(tenantPercentage?: number, landlordPercentage?: number): boolean {
+    if (tenantPercentage === undefined && landlordPercentage === undefined) {
+      return true; // Default split is valid
     }
 
-    return Math.round(calculatedPrice * 100) / 100; // Round to 2 decimals
+    if (tenantPercentage === undefined || landlordPercentage === undefined) {
+      return false; // Both must be provided if one is
+    }
+
+    const total = tenantPercentage + landlordPercentage;
+    return Math.abs(total - 100) < 0.01; // Allow for small floating point errors
   }
 
-  // Otherwise, use flat price
-  return packageData.price;
-}
+  /**
+   * Generate a human-readable formula string for the calculation
+   */
+  private generateFormulaString(
+    rentAmount: number,
+    packageData: Package | null,
+    packagePrice: number,
+    investigationFee: number,
+    includeInvestigationFee: boolean,
+    minimumApplied: boolean,
+    effectivePercentage?: number | null
+  ): string {
+    const formatMoney = (amount: number) => `$${amount.toLocaleString(LOCALE_CONFIG.DEFAULT)}`;
 
-/**
- * Validate that percentages sum to 100
- */
-export function validatePercentageSplit(tenantPercentage?: number, landlordPercentage?: number): boolean {
-  if (tenantPercentage === undefined && landlordPercentage === undefined) {
-    return true; // Default split is valid
+    if (!packageData) {
+      return includeInvestigationFee ?
+        `${formatMoney(0)} + ${formatMoney(investigationFee)} = ${formatMoney(investigationFee)}` :
+        formatMoney(0);
+    }
+
+    let formula = '';
+    const percentageToShow = effectivePercentage ?? packageData.percentage;
+
+    // Package calculation part
+    if (packageData.percentage && packageData.percentage > 0) {
+      if (minimumApplied) {
+        formula = `Mínimo de ${formatMoney(packageData.minAmount || 0)}`;
+      } else {
+        formula = `(${formatMoney(rentAmount)} × ${percentageToShow}%) = ${formatMoney(packagePrice)}`;
+      }
+    } else {
+      formula = `${formatMoney(packagePrice)}`;
+    }
+
+    // Add investigation fee if included
+    if (includeInvestigationFee) {
+      formula += ` + ${formatMoney(investigationFee)}`;
+    }
+
+    // Add subtotal
+    const subtotal = packagePrice + investigationFee;
+    formula += ` = ${formatMoney(subtotal)}`;
+
+    // Add IVA calculation
+    const iva = subtotal * TAX_CONFIG.IVA_RATE;
+    const totalWithIva = subtotal + iva;
+    formula += ` + IVA (${TAX_CONFIG.IVA_RATE * 100}%) ${formatMoney(iva)} = ${formatMoney(totalWithIva)}`;
+
+    return formula;
   }
 
-  if (tenantPercentage === undefined || landlordPercentage === undefined) {
-    return false; // Both must be provided if one is
+  /**
+   * Get the current investigation fee from system configuration
+   */
+  async getInvestigationFee(): Promise<number> {
+    const config = await this.prisma.systemConfig.findFirst({
+      where: { id: 'system-config-1' }
+    });
+
+    return config?.investigationFee || 200;
   }
 
-  const total = tenantPercentage + landlordPercentage;
-  return Math.abs(total - 100) < 0.01; // Allow for small floating point errors
-}
+  /**
+   * Get package details including pricing
+   */
+  async getPackageDetails(packageId: string): Promise<Package | null> {
+    return this.prisma.package.findUnique({
+      where: { id: packageId }
+    });
+  }
 
-/**
- * Calculate the complete pricing breakdown for a policy
- */
-export async function calculatePolicyPricing(input: PricingInput): Promise<PricingCalculation> {
-  // Get investigation fee only if requested
-  const includeInvestigationFee = input.includeInvestigationFee ?? false;
-  const investigationFee = includeInvestigationFee ? await getInvestigationFee() : 0;
-  const investigationFeeForResponse = includeInvestigationFee ? investigationFee : null;
-
-  // Initialize calculation summary
-  let calculationSummary: CalculationSummary | undefined;
-
-  // Calculate package price
-  let packagePrice = 0;
-  let packageData: Package | null = null;
-
-  if (input.packageId) {
-    packageData = await getPackageDetails(input.packageId);
-    if (packageData) {
-      packagePrice = calculatePackagePrice(input.rentAmount, packageData);
-
-      // Determine calculation method and details
-      const isPercentageBased = packageData.percentage && packageData.percentage > 0;
-
-      // Get effective percentage (may differ for premium tiered pricing)
-      const effectivePercentage = isPercentageBased && packageData.id === 'premium'
-        ? getPremiumPercentage(input.rentAmount, packageData.percentage)
+  /**
+   * Calculate package price based on rent amount and package configuration
+   */
+  calculatePackagePrice(rentAmount: number, packageData: Package): number {
+    // If package has a percentage, calculate based on rent
+    if (packageData.percentage && packageData.percentage > 0) {
+      // For premium package, apply tiered percentages for high rents
+      const effectivePercentage = packageData.id === 'premium'
+        ? this.getPremiumPercentage(rentAmount, packageData.percentage)
         : packageData.percentage;
 
-      const minimumApplied = isPercentageBased &&
-        packageData.minAmount &&
-        (input.rentAmount * effectivePercentage! / 100) < packageData.minAmount;
+      const calculatedPrice = (rentAmount * effectivePercentage) / 100;
 
-      // Build calculation summary
-      calculationSummary = {
-        packageName: packageData.name,
-        calculationMethod: isPercentageBased ? 'percentage' : 'flat',
-        rentAmount: input.rentAmount,
-        percentage: isPercentageBased ? effectivePercentage : undefined,
-        flatFee: !isPercentageBased ? packageData.price : undefined,
-        minimumAmount: packageData.minAmount || undefined,
-        minimumApplied,
-        investigationFeeIncluded: includeInvestigationFee,
-        formula: generateFormulaString(
-          input.rentAmount,
-          packageData,
-          packagePrice,
-          investigationFee,
-          includeInvestigationFee,
+      // Apply minimum amount if configured
+      if (packageData.minAmount && calculatedPrice < packageData.minAmount) {
+        return packageData.minAmount;
+      }
+
+      return Math.round(calculatedPrice * 100) / 100; // Round to 2 decimals
+    }
+
+    // Otherwise, use flat price
+    return packageData.price;
+  }
+
+  /**
+   * Calculate the complete pricing breakdown for a policy
+   */
+  async calculatePolicyPricing(input: PricingInput): Promise<PricingCalculation> {
+    // Get investigation fee only if requested
+    const includeInvestigationFee = input.includeInvestigationFee ?? false;
+    const investigationFee = includeInvestigationFee ? await this.getInvestigationFee() : 0;
+    const investigationFeeForResponse = includeInvestigationFee ? investigationFee : null;
+
+    // Initialize calculation summary
+    let calculationSummary: CalculationSummary | undefined;
+
+    // Calculate package price
+    let packagePrice = 0;
+    let packageData: Package | null = null;
+
+    if (input.packageId) {
+      packageData = await this.getPackageDetails(input.packageId);
+      if (packageData) {
+        packagePrice = this.calculatePackagePrice(input.rentAmount, packageData);
+
+        // Determine calculation method and details
+        const isPercentageBased = packageData.percentage && packageData.percentage > 0;
+
+        // Get effective percentage (may differ for premium tiered pricing)
+        const effectivePercentage = isPercentageBased && packageData.id === 'premium'
+          ? this.getPremiumPercentage(input.rentAmount, packageData.percentage)
+          : packageData.percentage;
+
+        const minimumApplied = isPercentageBased &&
+          packageData.minAmount &&
+          (input.rentAmount * effectivePercentage! / 100) < packageData.minAmount;
+
+        // Build calculation summary
+        calculationSummary = {
+          packageName: packageData.name,
+          calculationMethod: isPercentageBased ? 'percentage' : 'flat',
+          rentAmount: input.rentAmount,
+          percentage: isPercentageBased ? effectivePercentage : undefined,
+          flatFee: !isPercentageBased ? packageData.price : undefined,
+          minimumAmount: packageData.minAmount || undefined,
           minimumApplied,
-          effectivePercentage
-        ),
+          investigationFeeIncluded: includeInvestigationFee,
+          formula: this.generateFormulaString(
+            input.rentAmount,
+            packageData,
+            packagePrice,
+            investigationFee,
+            includeInvestigationFee,
+            minimumApplied,
+            effectivePercentage
+          ),
+          breakdown: {
+            base: packagePrice,
+            investigationFee: investigationFeeForResponse,
+            subtotal: 0,
+            iva: 0,
+            total: packagePrice + investigationFee
+          }
+        };
+      }
+    } else {
+      // No package selected
+      calculationSummary = {
+        packageName: 'Sin paquete',
+        calculationMethod: 'none',
+        rentAmount: input.rentAmount,
+        minimumApplied: false,
+        investigationFeeIncluded: includeInvestigationFee,
+        formula: includeInvestigationFee ? `$0 + $${investigationFee} = $${investigationFee}` : '$0',
         breakdown: {
-          base: packagePrice,
+          base: 0,
           investigationFee: investigationFeeForResponse,
-          total: packagePrice + investigationFee
+          subtotal: 0,
+          iva: 0,
+          total: investigationFee
         }
       };
     }
-  } else {
-    // No package selected
-    calculationSummary = {
-      packageName: 'Sin paquete',
-      calculationMethod: 'none',
-      rentAmount: input.rentAmount,
-      minimumApplied: false,
-      investigationFeeIncluded: includeInvestigationFee,
-      formula: includeInvestigationFee ? `$0 + $${investigationFee} = $${investigationFee}` : '$0',
-      breakdown: {
-        base: 0,
-        investigationFee: investigationFeeForResponse,
-        total: investigationFee
-      }
+
+    // Calculate subtotal
+    const subtotal = packagePrice + investigationFee;
+
+    // Calculate IVA
+    const ivaRate = TAX_CONFIG.IVA_RATE;
+    const iva = Math.round((subtotal * ivaRate) * 100) / 100;
+
+    // Calculate total with IVA
+    const totalWithIva = subtotal + iva;
+
+    // Determine percentage split
+    const tenantPercentage = input.tenantPercentage ?? 100;
+    const landlordPercentage = input.landlordPercentage ?? 0;
+
+    // Validate percentages
+    if (!this.validatePercentageSplit(tenantPercentage, landlordPercentage)) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'Tenant and landlord percentages must sum to 100%',
+        400,
+        { tenantPercentage, landlordPercentage }
+      );
+    }
+
+    // Calculate split amounts based on total with IVA
+    const tenantAmount = Math.round((totalWithIva * tenantPercentage / 100) * 100) / 100;
+    const landlordAmount = Math.round((totalWithIva * landlordPercentage / 100) * 100) / 100;
+
+    // Update calculation summary with IVA if it exists
+    if (calculationSummary) {
+      calculationSummary.breakdown.subtotal = subtotal;
+      calculationSummary.breakdown.iva = iva;
+      calculationSummary.breakdown.total = totalWithIva;
+    }
+
+    return {
+      packagePrice,
+      investigationFee: investigationFeeForResponse,
+      subtotal,
+      iva,
+      ivaRate,
+      totalWithIva,
+      tenantAmount,
+      landlordAmount,
+      total: totalWithIva,
+      tenantPercentage,
+      landlordPercentage,
+      calculationSummary
     };
   }
-
-  // Calculate subtotal
-  const subtotal = packagePrice + investigationFee;
-
-  // Calculate IVA (16% of subtotal)
-  const ivaRate = 0.16;
-  const iva = Math.round((subtotal * ivaRate) * 100) / 100;
-
-  // Calculate total with IVA
-  const totalWithIva = subtotal + iva;
-
-  // Determine percentage split
-  let tenantPercentage = input.tenantPercentage ?? 100;
-  let landlordPercentage = input.landlordPercentage ?? 0;
-
-  // Validate percentages
-  if (!validatePercentageSplit(tenantPercentage, landlordPercentage)) {
-    throw new Error('Tenant and landlord percentages must sum to 100%');
-  }
-
-  // Calculate split amounts based on total with IVA
-  const tenantAmount = Math.round((totalWithIva * tenantPercentage / 100) * 100) / 100;
-  const landlordAmount = Math.round((totalWithIva * landlordPercentage / 100) * 100) / 100;
-
-  // Update calculation summary with IVA if it exists
-  if (calculationSummary) {
-    calculationSummary.breakdown.subtotal = subtotal;
-    calculationSummary.breakdown.iva = iva;
-    calculationSummary.breakdown.total = totalWithIva;
-  }
-
-  return {
-    packagePrice,
-    investigationFee: investigationFeeForResponse,
-    subtotal,
-    iva,
-    ivaRate,
-    totalWithIva,
-    tenantAmount,
-    landlordAmount,
-    total: totalWithIva,
-    tenantPercentage,
-    landlordPercentage,
-    calculationSummary
-  };
 }
 
-/**
- * Generate a human-readable formula string for the calculation
- */
-function generateFormulaString(
-  rentAmount: number,
-  packageData: Package | null,
-  packagePrice: number,
-  investigationFee: number,
-  includeInvestigationFee: boolean,
-  minimumApplied: boolean,
-  effectivePercentage?: number | null
-): string {
-  const formatMoney = (amount: number) => `$${amount.toLocaleString('es-MX')}`;
+// Export singleton instance
+export const pricingService = new PricingService();
 
-  if (!packageData) {
-    return includeInvestigationFee ?
-      `${formatMoney(0)} + ${formatMoney(investigationFee)} = ${formatMoney(investigationFee)}` :
-      formatMoney(0);
-  }
-
-  let formula = '';
-  const percentageToShow = effectivePercentage ?? packageData.percentage;
-
-  // Package calculation part
-  if (packageData.percentage && packageData.percentage > 0) {
-    if (minimumApplied) {
-      formula = `Mínimo de ${formatMoney(packageData.minAmount || 0)}`;
-    } else {
-      formula = `(${formatMoney(rentAmount)} × ${percentageToShow}%) = ${formatMoney(packagePrice)}`;
-    }
-  } else {
-    formula = `${formatMoney(packagePrice)}`;
-  }
-
-  // Add investigation fee if included
-  if (includeInvestigationFee) {
-    formula += ` + ${formatMoney(investigationFee)}`;
-  }
-
-  // Add subtotal
-  const subtotal = packagePrice + investigationFee;
-  formula += ` = ${formatMoney(subtotal)}`;
-
-  // Add IVA calculation
-  const iva = subtotal * 0.16;
-  const totalWithIva = subtotal + iva;
-  formula += ` + IVA (16%) ${formatMoney(iva)} = ${formatMoney(totalWithIva)}`;
-
-  return formula;
-}
+// Export legacy functions for backwards compatibility
+export const getInvestigationFee = pricingService.getInvestigationFee.bind(pricingService);
+export const getPackageDetails = pricingService.getPackageDetails.bind(pricingService);
+export const calculatePackagePrice = pricingService.calculatePackagePrice.bind(pricingService);
+export const calculatePolicyPricing = pricingService.calculatePolicyPricing.bind(pricingService);
 
 // Re-export formatCurrency from shared utility for backwards compatibility
 export { formatCurrency } from '@/lib/utils/currency';
-
-/**
- * Get all active packages for selection
- */
-export async function getActivePackages() {
-  return prisma.package.findMany({
-    where: { isActive: true },
-    orderBy: { price: 'asc' }
-  });
-}
-
-/**
- * Calculate monthly payment if policy offers payment plans
- */
-export function calculateMonthlyPayment(
-  totalAmount: number,
-  months: number = 12,
-  interestRate: number = 0
-): number {
-  if (months <= 0) return totalAmount;
-
-  if (interestRate === 0) {
-    return Math.round((totalAmount / months) * 100) / 100;
-  }
-
-  // Calculate with interest (simple interest for now)
-  const interest = totalAmount * (interestRate / 100);
-  const totalWithInterest = totalAmount + interest;
-  return Math.round((totalWithInterest / months) * 100) / 100;
-}
-
-/**
- * Estimate total policy cost including potential incidents
- * This is for display purposes to show value proposition
- */
-export function estimatePotentialSavings(
-  rentAmount: number,
-  contractMonths: number = 12
-): {
-  potentialLoss: number;
-  policyCost: number;
-  savings: number;
-} {
-  // Potential loss scenarios
-  const missedRentMonths = 3; // Average months of missed rent in disputes
-  const legalFees = 15000; // Average legal fees
-  const propertyDamage = rentAmount * 2; // Typical damage claim
-
-  const potentialLoss = (rentAmount * missedRentMonths) + legalFees + propertyDamage;
-
-  // Rough estimate of policy cost (will be replaced with actual calculation)
-  const policyCost = rentAmount * 0.5; // 50% of one month's rent as estimate
-
-  return {
-    potentialLoss,
-    policyCost,
-    savings: potentialLoss - policyCost
-  };
-}

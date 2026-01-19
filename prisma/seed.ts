@@ -1,4 +1,4 @@
-import { UserRole } from "@/prisma/generated/prisma-client/enums";
+import { UserRole, EmploymentStatus } from "@/prisma/generated/prisma-client/enums";
 import prisma from "@/lib/prisma";
 
 import bcrypt from 'bcryptjs';
@@ -26,7 +26,7 @@ const packagesData = [
       ]
     },
     ctaText: 'Comenzar',
-    ctaLink: '/register?package=basic',
+    ctaLink: '/contact?package=basic',
     highlight: false
   },
   {
@@ -56,7 +56,7 @@ const packagesData = [
       ]
     },
     ctaText: 'Elegir Esencial',
-    ctaLink: '/register?package=standard',
+    ctaLink: '/contact?package=standard',
     highlight: false
   },
   {
@@ -89,7 +89,7 @@ const packagesData = [
       ]
     },
     ctaText: 'Optar por Premium',
-    ctaLink: '/register?package=premium',
+    ctaLink: '/contact?package=premium',
     highlight: false
   },
 ];
@@ -198,8 +198,6 @@ async function main() {
   const samplePolicy = await prisma.policy.create({
     data: {
       policyNumber: 'POL-2024-SAMPLE-001',
-      propertyAddress: 'Av. Reforma 123, Col. Centro, Ciudad de México',
-      propertyType: 'APARTMENT',
       rentAmount: 15000,
       totalPrice: 6000,
       guarantorType: 'JOINT_OBLIGOR',
@@ -242,7 +240,7 @@ async function main() {
           phone: '5587654321',
           workPhone: '5511223344',
           currentAddress: 'Calle Palmas 789, Col. Lomas, CDMX',
-          employmentStatus: 'employed',
+          employmentStatus: EmploymentStatus.EMPLOYED,
           occupation: 'Gerente de Marketing',
           employerName: 'Tech Solutions México',
           employerAddress: 'Torre Mayor, Piso 15, CDMX',
@@ -265,6 +263,7 @@ async function main() {
   await prisma.propertyDetails.create({
     data: {
       policyId: samplePolicy.id,
+      propertyType: 'APARTMENT',
       isFurnished: false,
       parkingSpaces: 2,
       hasElectricity: true,
@@ -299,7 +298,7 @@ async function main() {
   const jointObligor = existingJointObligor || await prisma.jointObligor.create({
     data: {
       policyId: samplePolicy.id,
-      isCompany: false,
+      jointObligorType: 'INDIVIDUAL',
       firstName: 'Carlos',
       paternalLastName: 'Rodríguez',
       maternalLastName: 'Martínez',
@@ -331,7 +330,7 @@ async function main() {
     update: { investigationFee: 200 },
     create: {
       id: 'system-config-1',
-      investigationFee: 200,
+      investigationFee: 1500, // 1740 with tax (IVA)
       defaultTokenExpiry: 7,
     }
   });
@@ -342,8 +341,6 @@ async function main() {
   const activePolicy = await prisma.policy.create({
     data: {
       policyNumber: 'POL-2024-ACTIVE-001',
-      propertyAddress: 'Polanco 789, Ciudad de México',
-      propertyType: 'HOUSE',
       rentAmount: 35000,
       totalPrice: 14000,
       guarantorType: 'AVAL',
@@ -421,6 +418,7 @@ async function main() {
   await prisma.propertyDetails.create({
     data: {
       policyId: activePolicy.id,
+      propertyType: 'HOUSE',
       isFurnished: true,
       parkingSpaces: 3,
       hasElectricity: true,
@@ -459,7 +457,7 @@ async function main() {
   const aval = existingAval || await prisma.aval.create({
     data: {
       policyId: activePolicy.id,
-      isCompany: false,
+      avalType: 'INDIVIDUAL',
       firstName: 'Pedro',
       paternalLastName: 'González',
       maternalLastName: 'López',

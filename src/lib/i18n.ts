@@ -1,5 +1,5 @@
 
-import type { Testimonial, NavItem, FAQ, HowItWorksStep, PolicyStatus, UserRole } from './types';
+import type { Testimonial, NavItem, FAQ, HowItWorksStep } from './types';
 import { Home, Users, Briefcase, Info, ShieldQuestion, FileText, Mail, Building2, UserCircle, Settings, LogOut, LayoutDashboard, UserPlus, PackageSearch, Shield, Handshake, Lightbulb, DollarSign, Clock, CheckSquare, Zap, BarChart3, MessageSquare, MapPin } from 'lucide-react';
 
 
@@ -45,7 +45,7 @@ const es = {
         error: "Error",
     },
 
-    policyStatus: {
+policyStatus: {
         draft: 'Borrador',
         sent_to_tenant: 'Enviada a Inquilin@',
         in_progress: 'En Proceso',
@@ -53,7 +53,73 @@ const es = {
         under_review: 'En Revisión',
         approved: 'Aprobada',
         denied: 'Rechazada',
-    } as Record<PolicyStatus, string>,
+    } as Record<string, string>,
+
+    // Full policy status labels (matching Prisma schema)
+    policyStatusFull: {
+        DRAFT: 'Borrador',
+        COLLECTING_INFO: 'Recopilando Información',
+        UNDER_INVESTIGATION: 'En Investigación',
+        INVESTIGATION_REJECTED: 'Investigación Rechazada',
+        PENDING_APPROVAL: 'Pendiente de Aprobación',
+        APPROVED: 'Aprobada',
+        CONTRACT_PENDING: 'Contrato Pendiente',
+        CONTRACT_SIGNED: 'Contrato Firmado',
+        ACTIVE: 'Activa',
+        EXPIRED: 'Expirada',
+        CANCELLED: 'Cancelada',
+    } as Record<string, string>,
+
+    guarantorType: {
+        NONE: 'Sin Garantía',
+        JOINT_OBLIGOR: 'Obligado Solidario',
+        AVAL: 'Aval',
+        BOTH: 'Ambos',
+    } as Record<string, string>,
+
+    propertyType: {
+        HOUSE: 'Casa',
+        APARTMENT: 'Departamento',
+        COMMERCIAL: 'Local Comercial',
+        OFFICE: 'Oficina',
+        WAREHOUSE: 'Bodega',
+        OTHER: 'Otro',
+    } as Record<string, string>,
+
+    employmentStatus: {
+        EMPLOYED: 'Empleado',
+        SELF_EMPLOYED: 'Autoempleado',
+        BUSINESS_OWNER: 'Empresario',
+        RETIRED: 'Jubilado',
+        STUDENT: 'Estudiante',
+        UNEMPLOYED: 'Desempleado',
+        OTHER: 'Otro',
+    } as Record<string, string>,
+
+    paymentStatusFull: {
+        PENDING: 'Pendiente',
+        PROCESSING: 'Procesando',
+        COMPLETED: 'Completado',
+        FAILED: 'Fallido',
+        CANCELLED: 'Cancelado',
+        REFUNDED: 'Reembolsado',
+        PARTIAL: 'Parcial',
+        PENDING_VERIFICATION: 'Pendiente de Verificación',
+    } as Record<string, string>,
+
+    investigationVerdict: {
+        APPROVED: 'Aprobado',
+        REJECTED: 'Rechazado',
+        HIGH_RISK: 'Alto Riesgo',
+        CONDITIONAL: 'Condicional',
+    } as Record<string, string>,
+
+    riskLevel: {
+        LOW: 'Bajo',
+        MEDIUM: 'Medio',
+        HIGH: 'Alto',
+        VERY_HIGH: 'Muy Alto',
+    } as Record<string, string>,
 
 
 
@@ -62,7 +128,7 @@ const es = {
     // Layout Components
     layout: {
         root: {
-            metaTitle: "Hestia - Protecciones de Arrendamiento",
+            metaTitle: "Hestia PLP - Protecciones de Arrendamiento",
             metaDescription: "Asegura tus contratos de arrendamiento con Hestia. Protecciones de garantía integrales para propietarios e inquilinos.",
             metaKeywords: ['protección de arrendamiento', 'garantía de alquiler', 'seguro de propiedad', 'evaluación de inquilinos', 'protección para propietarios', 'hestia'],
         },
@@ -336,9 +402,11 @@ const es = {
                 { videoId: "eemkb_-E_00", author: "Presentación Hestia" },
             ],
             testimonials: [
-                { id: 't1', name: 'Jazmin Garnelo', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis rentas. Su paquetes son el balance perfecto de protección y precio. ¡Súper recomendado!", avatarUrl: '/images/testimonials/yazmin.png', dataAiHint: 'woman portrait' },
-                { id: 't2', name: 'Michelle Arregui', role: 'Inquilino', quote: "Encontrar un nuevo apartamento fue estresante, pero el proceso de Hestia me hizo sentir seguro con mi contrato. La transparencia es admirable.", avatarUrl: '/images/testimonials/michelle.png', dataAiHint: 'man smiling' },
-                { id: 't3', name: 'Karim Goudiaby', role: 'Asesor Inmobiliario', quote: "Siempre recomiendo a mis clientes usar Hestia. Simplifica las negociaciones y proporciona una protección robusta, beneficiando a todos los involucrados.", avatarUrl: '/images/testimonials/karim.png', dataAiHint: 'professional woman' },
+                { id: 't1', name: 'Claudia Morán', role: 'Asesor Inmobiliario', quote: "La póliza jurídica HESTIA ofrece un servicio confiable, profesional y eficiente. La atención es clara y oportuna, con asesoría legal bien fundamentada y un acompañamiento constante. Brinda seguridad y tranquilidad al saber que se cuenta con un respaldo jurídico serio y comprometido. Muy recomendable.", avatarUrl: '/images/testimonials/claudia.png', dataAiHint: 'man smiling' },
+                { id: 't2', name: 'Ernesto Huerta', role: 'Inquilino', quote: "Siempre puedes contar con el equipo de soporte de Hestia, ellos te acompañan en todo el proceso. 100% recomendable.", avatarUrl: '/images/testimonials/neto.png', dataAiHint: 'man smiling' },
+                { id: 't3', name: 'Joris Antoine Manuel', role: 'Asesor Inmobiliario', quote: "Trabajar con Protección jurídica Hestia, fue un placer. Nos acompañaron durante todo el proceso de renta con mucho profesionalismo,  y reactividad. Mis clientes y yo  quedamos muy felices de la calidad del servicio y de la atencion que hemos recibido durante todas las operaciones.", avatarUrl: '/images/testimonials/joris.png', dataAiHint: 'man smiling' },
+                { id: 't4', name: 'Esteban García Luna', role: 'Asesor Inmobiliario', quote: "Hestia gestiona el riesgo inmobiliario sin fricciones, combinando rigor jurídico, procesos claros y operaciones ordenadas que generan confianza. Con una base sólida y una innovación centrada en el usuario. Es un partner con el que seguiremos colaborando en su próxima etapa.", avatarUrl: '/images/testimonials/esteban.png', dataAiHint: 'man smiling' },
+                //{ id: 't5', name: 'Jazmin Garnelo', role: 'Propietaria', quote: "Hestia revolucionó cómo administro mis rentas. Su paquetes son el balance perfecto de protección y precio. ¡Súper recomendado!", avatarUrl: '/images/testimonials/yazmin.png', dataAiHint: 'woman portrait' }
             ] as Testimonial[],
             howItWorksSteps: [
                 { id: "1", title: "Elige tu protección.", description: "Selecciona entre nuestra variedad de servicios diseñados para las necesidades de tu arrendamiento.", icon: "/images/icons/package.png", dataAiHint: "select package" },
@@ -678,7 +746,7 @@ const es = {
                 staff: "Staff",
                 owner: "Propietario",
                 renter: "Inquilino",
-            } as Record<UserRole, string>,
+            } as Record<string, string>,
         },
         newPolicy: {
             title: "Crear Nueva Protección",

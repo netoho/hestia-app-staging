@@ -1,307 +1,366 @@
 /**
- * Joint Obligor Tab Field Definitions
- * Maps which fields belong to each tab in the Joint Obligor form wizard
- *
- * Key features:
- * 1. Supports both INDIVIDUAL and COMPANY types
- * 2. Flexible guarantee method (income or property)
- * 3. Conditional fields based on guarantee selection
+ * Joint Obligor Tab Field Configuration
+ * Maps database fields to their respective tabs
+ * Single source of truth for joint obligor form structure
  */
 
-import {
-  JointObligorIndividualTab,
-  JointObligorCompanyTab,
-  JOINT_OBLIGOR_TABS,
-} from '@/lib/schemas/joint-obligor';
+import { JointObligor } from "@/prisma/generated/prisma-client";
 
-// Fields for Individual Joint Obligor tabs
-export const jointObligorIndividualTabFields: Record<JointObligorIndividualTab, string[]> = {
-  personal: [
-    'jointObligorType',
-    'relationshipToTenant',
-    'fullName',
-    'birthDate',
-    'birthPlace',
-    'nationality',
-    'curp',
-    'rfc',
-    'identificationNumber',
-    'email',
-    'phoneNumber',
-    'alternatePhoneNumber',
-    'addressDetails',
-    'addressDetails.street',
-    'addressDetails.exteriorNumber',
-    'addressDetails.interiorNumber',
-    'addressDetails.neighborhood',
-    'addressDetails.municipality',
-    'addressDetails.state',
-    'addressDetails.postalCode',
-    'addressDetails.country',
-    'addressDetails.references',
-  ],
+/**
+ * Joint Obligor tab field mapping - matches actual database fields
+ * These field names must match the Prisma schema exactly
+ *
+ * Tabs:
+ * - INDIVIDUAL: personal, employment, guarantee, references, documents
+ * - COMPANY: personal, guarantee, references, documents (no employment)
+ */
+export const JOINT_OBLIGOR_TAB_FIELDS = {
+  INDIVIDUAL: {
+    personal: [
+      'jointObligorType',
+      // Name fields (Mexican naming convention)
+      'firstName',
+      'middleName',
+      'paternalLastName',
+      'maternalLastName',
+      // Identification
+      'nationality',
+      'curp',
+      'rfc',
+      'passport',
+      'relationshipToTenant',
+      // Contact
+      'email',
+      'phone',
+      'workPhone',
+      'personalEmail',
+      'workEmail',
+      // Address
+      'address',
+      'addressDetails',
+    ] as (keyof JointObligor)[],
 
-  employment: [
-    'employmentStatus',
-    'occupation',
-    'employerName',
-    'position',
-    'monthlyIncome',
-    'incomeSource',
-    'employerAddressDetails',
-    'employerAddressDetails.street',
-    'employerAddressDetails.exteriorNumber',
-    'employerAddressDetails.interiorNumber',
-    'employerAddressDetails.neighborhood',
-    'employerAddressDetails.municipality',
-    'employerAddressDetails.state',
-    'employerAddressDetails.postalCode',
-    'employerAddressDetails.country',
-  ],
-
-  guarantee: [
-    'guaranteeMethod',
-    'hasPropertyGuarantee',
-    'hasProperties',
-    // Income guarantee fields
-    'bankName',
-    'accountHolder',
-    'monthlyIncome', // Also appears here for income guarantee validation
-    // Property guarantee fields
-    'guaranteePropertyDetails',
-    'guaranteePropertyDetails.street',
-    'guaranteePropertyDetails.exteriorNumber',
-    'guaranteePropertyDetails.interiorNumber',
-    'guaranteePropertyDetails.neighborhood',
-    'guaranteePropertyDetails.municipality',
-    'guaranteePropertyDetails.state',
-    'guaranteePropertyDetails.postalCode',
-    'guaranteePropertyDetails.country',
-    'propertyValue',
-    'propertyDeedNumber',
-    'propertyRegistry',
-    'propertyTaxAccount',
-    'propertyUnderLegalProceeding',
-    'maritalStatus',
-    'spouseName',
-    'spouseRfc',
-    'spouseCurp',
-  ],
-
-  references: [
-    'personalReferences',
-    'personalReferences[0].name',
-    'personalReferences[0].relationship',
-    'personalReferences[0].phoneNumber',
-    'personalReferences[0].email',
-    'personalReferences[0].address',
-    'personalReferences[0].yearsKnown',
-    'personalReferences[1].name',
-    'personalReferences[1].relationship',
-    'personalReferences[1].phoneNumber',
-    'personalReferences[1].email',
-    'personalReferences[1].address',
-    'personalReferences[1].yearsKnown',
-    'personalReferences[2].name',
-    'personalReferences[2].relationship',
-    'personalReferences[2].phoneNumber',
-    'personalReferences[2].email',
-    'personalReferences[2].address',
-    'personalReferences[2].yearsKnown',
-  ],
-
-  documents: [
-    'additionalInfo',
-    // Document fields are handled by file upload system
-  ],
-};
-
-// Fields for Company Joint Obligor tabs
-export const jointObligorCompanyTabFields: Record<JointObligorCompanyTab, string[]> = {
-  personal: [
-    'jointObligorType',
-    'relationshipToTenant',
-    'companyName',
-    'rfc',
-    'constitutionDate',
-    'companyType',
-    'industry',
-    'commercialActivity',
-    'taxId',
-    'legalRepName',
-    'legalRepRfc',
-    'legalRepCurp',
-    'legalRepEmail',
-    'legalRepPhone',
-    'email',
-    'phoneNumber',
-    'alternatePhoneNumber',
-    'addressDetails',
-    'addressDetails.street',
-    'addressDetails.exteriorNumber',
-    'addressDetails.interiorNumber',
-    'addressDetails.neighborhood',
-    'addressDetails.municipality',
-    'addressDetails.state',
-    'addressDetails.postalCode',
-    'addressDetails.country',
-    'addressDetails.references',
-  ],
-
-  guarantee: [
-    'guaranteeMethod',
-    'hasPropertyGuarantee',
-    'hasProperties',
-    // Income guarantee fields
-    'bankName',
-    'accountHolder',
-    'monthlyIncome',
-    // Property guarantee fields
-    'guaranteePropertyDetails',
-    'guaranteePropertyDetails.street',
-    'guaranteePropertyDetails.exteriorNumber',
-    'guaranteePropertyDetails.interiorNumber',
-    'guaranteePropertyDetails.neighborhood',
-    'guaranteePropertyDetails.municipality',
-    'guaranteePropertyDetails.state',
-    'guaranteePropertyDetails.postalCode',
-    'guaranteePropertyDetails.country',
-    'propertyValue',
-    'propertyDeedNumber',
-    'propertyRegistry',
-    'propertyTaxAccount',
-    'propertyUnderLegalProceeding',
-    // Note: Company doesn't have marriage info fields
-  ],
-
-  references: [
-    'commercialReferences',
-    'commercialReferences[0].companyName',
-    'commercialReferences[0].contactName',
-    'commercialReferences[0].position',
-    'commercialReferences[0].phoneNumber',
-    'commercialReferences[0].email',
-    'commercialReferences[0].relationship',
-    'commercialReferences[0].yearsKnown',
-    'commercialReferences[1].companyName',
-    'commercialReferences[1].contactName',
-    'commercialReferences[1].position',
-    'commercialReferences[1].phoneNumber',
-    'commercialReferences[1].email',
-    'commercialReferences[1].relationship',
-    'commercialReferences[1].yearsKnown',
-    'commercialReferences[2].companyName',
-    'commercialReferences[2].contactName',
-    'commercialReferences[2].position',
-    'commercialReferences[2].phoneNumber',
-    'commercialReferences[2].email',
-    'commercialReferences[2].relationship',
-    'commercialReferences[2].yearsKnown',
-  ],
-
-  documents: [
-    'additionalInfo',
-    // Document fields are handled by file upload system
-  ],
-};
-
-// Helper to get fields for a specific guarantee method
-export function getGuaranteeFields(guaranteeMethod: 'income' | 'property'): string[] {
-  if (guaranteeMethod === 'income') {
-    return [
-      'guaranteeMethod',
-      'hasPropertyGuarantee',
-      'hasProperties',
-      'bankName',
-      'accountHolder',
+    employment: [
+      'employmentStatus',
+      'occupation',
+      'employerName',
+      'employerAddress',
+      'employerAddressDetails',
+      'position',
       'monthlyIncome',
-    ];
-  } else {
-    return [
+      'incomeSource',
+    ] as (keyof JointObligor)[],
+
+    guarantee: [
       'guaranteeMethod',
       'hasPropertyGuarantee',
+      // Property guarantee fields
+      'propertyAddress',
       'guaranteePropertyDetails',
-      'guaranteePropertyDetails.street',
-      'guaranteePropertyDetails.exteriorNumber',
-      'guaranteePropertyDetails.interiorNumber',
-      'guaranteePropertyDetails.neighborhood',
-      'guaranteePropertyDetails.municipality',
-      'guaranteePropertyDetails.state',
-      'guaranteePropertyDetails.postalCode',
-      'guaranteePropertyDetails.country',
       'propertyValue',
       'propertyDeedNumber',
       'propertyRegistry',
       'propertyTaxAccount',
       'propertyUnderLegalProceeding',
+      // Marriage info (for property guarantee)
       'maritalStatus',
       'spouseName',
       'spouseRfc',
       'spouseCurp',
-    ];
-  }
-}
+      // Income guarantee fields
+      'bankName',
+      'accountHolder',
+      'hasProperties',
+    ] as (keyof JointObligor)[],
 
-// Get tab fields based on Joint Obligor type
+    references: [
+      'personalReferences',
+    ] as (keyof JointObligor)[],
+
+    documents: [
+      'additionalInfo',
+    ] as (keyof JointObligor)[],
+  },
+
+  COMPANY: {
+    personal: [
+      'jointObligorType',
+      // Company fields
+      'companyName',
+      'companyRfc',
+      // Legal representative
+      'legalRepFirstName',
+      'legalRepMiddleName',
+      'legalRepPaternalLastName',
+      'legalRepMaternalLastName',
+      'legalRepPosition',
+      'legalRepRfc',
+      'legalRepPhone',
+      'legalRepEmail',
+      // Contact
+      'email',
+      'phone',
+      'workPhone',
+      'personalEmail',
+      'workEmail',
+      // Address
+      'address',
+      'addressDetails',
+      'relationshipToTenant',
+    ] as (keyof JointObligor)[],
+
+    guarantee: [
+      'guaranteeMethod',
+      'hasPropertyGuarantee',
+      // Property guarantee fields
+      'propertyAddress',
+      'guaranteePropertyDetails',
+      'propertyValue',
+      'propertyDeedNumber',
+      'propertyRegistry',
+      'propertyTaxAccount',
+      'propertyUnderLegalProceeding',
+      // Income guarantee fields
+      'bankName',
+      'accountHolder',
+      'hasProperties',
+    ] as (keyof JointObligor)[],
+
+    references: [
+      'commercialReferences',
+    ] as (keyof JointObligor)[],
+
+    documents: [
+      'additionalInfo',
+    ] as (keyof JointObligor)[],
+  },
+} as const;
+
+/**
+ * Required fields for each tab (INDIVIDUAL type)
+ */
+export const JOINT_OBLIGOR_INDIVIDUAL_REQUIRED_FIELDS = {
+  personal: [
+    'jointObligorType',
+    'firstName',
+    'paternalLastName',
+    'maternalLastName',
+    'email',
+    'phone',
+    'addressDetails',
+    'relationshipToTenant',
+  ],
+  employment: [], // Employment fields optional for Joint Obligor
+  guarantee: [
+    'guaranteeMethod',
+  ],
+  references: [
+    'personalReferences', // Must have 3 references
+  ],
+  documents: [], // Optional
+} as const;
+
+/**
+ * Required fields for each tab (COMPANY type)
+ */
+export const JOINT_OBLIGOR_COMPANY_REQUIRED_FIELDS = {
+  personal: [
+    'jointObligorType',
+    'companyName',
+    'companyRfc',
+    'legalRepFirstName',
+    'legalRepPaternalLastName',
+    'legalRepMaternalLastName',
+    'legalRepPosition',
+    'email',
+    'phone',
+    'addressDetails',
+    'relationshipToTenant',
+  ],
+  guarantee: [
+    'guaranteeMethod',
+  ],
+  references: [
+    'commercialReferences', // Must have 3 references
+  ],
+  documents: [], // Optional
+} as const;
+
+// Combined required fields
+export const JOINT_OBLIGOR_REQUIRED_FIELDS = {
+  INDIVIDUAL: JOINT_OBLIGOR_INDIVIDUAL_REQUIRED_FIELDS,
+  COMPANY: JOINT_OBLIGOR_COMPANY_REQUIRED_FIELDS,
+} as const;
+
+// Type definitions
+export type JointObligorTypeEnum = 'INDIVIDUAL' | 'COMPANY';
+export type JointObligorTab = 'personal' | 'employment' | 'guarantee' | 'references' | 'documents';
+
+/**
+ * Get tab fields for a specific Joint Obligor type and tab
+ */
 export function getJointObligorTabFields(
-  tab: string,
-  jointObligorType: 'INDIVIDUAL' | 'COMPANY'
-): string[] {
-  if (jointObligorType === 'COMPANY') {
-    return jointObligorCompanyTabFields[tab as JointObligorCompanyTab] || [];
-  }
-  return jointObligorIndividualTabFields[tab as JointObligorIndividualTab] || [];
+  jointObligorType: JointObligorTypeEnum,
+  tab: JointObligorTab
+): readonly (keyof JointObligor)[] | undefined {
+  const fields = JOINT_OBLIGOR_TAB_FIELDS[jointObligorType];
+  if (!fields) return undefined;
+
+  return (fields as any)[tab];
 }
 
-// Check if all fields in a tab have values
-export function isTabComplete(
-  tab: string,
-  data: any,
-  jointObligorType: 'INDIVIDUAL' | 'COMPANY',
-  guaranteeMethod?: 'income' | 'property'
+/**
+ * Get required fields for a specific Joint Obligor type and tab
+ */
+export function getJointObligorRequiredFields(
+  jointObligorType: JointObligorTypeEnum,
+  tab: JointObligorTab
+): readonly string[] | undefined {
+  const fields = JOINT_OBLIGOR_REQUIRED_FIELDS[jointObligorType];
+  if (!fields) return undefined;
+
+  return (fields as any)[tab];
+}
+
+/**
+ * Filter Joint Obligor data to only include fields for a specific tab
+ */
+export function filterJointObligorFieldsByTab(
+  data: Partial<JointObligor>,
+  jointObligorType: JointObligorTypeEnum,
+  tab: JointObligorTab
+): Partial<JointObligor> {
+  const tabFields = getJointObligorTabFields(jointObligorType, tab);
+  if (!tabFields) return {};
+
+  const filtered: any = {};
+
+  for (const field of tabFields) {
+    if (field in data) {
+      filtered[field] = (data as any)[field];
+    }
+  }
+
+  // Handle special cases for nested data
+  if (tab === 'personal' && 'addressDetails' in data) {
+    filtered.addressDetails = data.addressDetails;
+  }
+  if (tab === 'employment' && 'employerAddressDetails' in data) {
+    filtered.employerAddressDetails = data.employerAddressDetails;
+  }
+  if (tab === 'guarantee' && 'guaranteePropertyDetails' in data) {
+    filtered.guaranteePropertyDetails = data.guaranteePropertyDetails;
+  }
+  if (tab === 'references') {
+    if (jointObligorType === 'INDIVIDUAL' && 'personalReferences' in data) {
+      filtered.personalReferences = data.personalReferences;
+    }
+    if (jointObligorType === 'COMPANY' && 'commercialReferences' in data) {
+      filtered.commercialReferences = data.commercialReferences;
+    }
+  }
+
+  return filtered;
+}
+
+/**
+ * Check if a tab has all required fields filled
+ */
+export function isJointObligorTabComplete(
+  data: Partial<JointObligor>,
+  jointObligorType: JointObligorTypeEnum,
+  tab: JointObligorTab
 ): boolean {
-  const fields = getJointObligorTabFields(tab, jointObligorType);
+  const requiredFields = getJointObligorRequiredFields(jointObligorType, tab);
+  if (!requiredFields) return true;
 
-  // Special handling for guarantee tab
-  if (tab === 'guarantee' && guaranteeMethod) {
-    const relevantFields = getGuaranteeFields(guaranteeMethod);
-    return relevantFields.every(field => {
-      const value = getNestedValue(data, field);
-      return value !== null && value !== undefined && value !== '';
-    });
+  for (const field of requiredFields) {
+    const value = (data as any)[field];
+
+    // Special handling for references - must have exactly 3
+    if (field === 'personalReferences' || field === 'commercialReferences') {
+      if (!Array.isArray(value) || value.length !== 3) {
+        return false;
+      }
+    } else if (field === 'addressDetails' || field === 'guaranteePropertyDetails') {
+      // Check if address object exists and has required fields
+      if (!value || typeof value !== 'object') {
+        return false;
+      }
+      const addr = value as any;
+      if (!addr.street || !addr.exteriorNumber || !addr.neighborhood ||
+          !addr.postalCode || !addr.municipality || !addr.city || !addr.state) {
+        return false;
+      }
+    } else {
+      // Regular field check
+      if (value === null || value === undefined || value === '') {
+        return false;
+      }
+    }
   }
 
-  // Check all fields in the tab
-  return fields.every(field => {
-    // Skip array index fields for references
-    if (field.includes('[') && field.includes(']')) {
-      return true; // Handled separately
+  // Additional validation for guarantee tab
+  if (tab === 'guarantee') {
+    const guaranteeMethod = (data as any).guaranteeMethod;
+    if (guaranteeMethod === 'property') {
+      // Property guarantee requires property fields
+      if (!(data as any).guaranteePropertyDetails || !(data as any).propertyValue) {
+        return false;
+      }
+      // Check marriage info if married
+      const maritalStatus = (data as any).maritalStatus;
+      if (maritalStatus === 'married_joint' || maritalStatus === 'married_separate') {
+        if (!(data as any).spouseName) {
+          return false;
+        }
+      }
     }
+  }
 
-    const value = getNestedValue(data, field);
-    // Allow false for boolean fields
-    if (typeof value === 'boolean') return true;
-    return value !== null && value !== undefined && value !== '';
-  });
+  return true;
 }
 
-// Helper to get nested object values
-function getNestedValue(obj: any, path: string): any {
-  const parts = path.split('.');
-  let current = obj;
+/**
+ * Get all tabs for a Joint Obligor type
+ */
+export function getJointObligorTabs(jointObligorType: JointObligorTypeEnum): readonly JointObligorTab[] {
+  if (jointObligorType === 'INDIVIDUAL') {
+    return ['personal', 'employment', 'guarantee', 'references', 'documents'] as const;
+  } else {
+    return ['personal', 'guarantee', 'references', 'documents'] as const;
+  }
+}
 
-  for (const part of parts) {
-    // Handle array notation
-    if (part.includes('[') && part.includes(']')) {
-      const [arrayName, indexStr] = part.split('[');
-      const index = parseInt(indexStr.replace(']', ''));
-      current = current?.[arrayName]?.[index];
-    } else {
-      current = current?.[part];
+/**
+ * Get the next incomplete tab for a Joint Obligor
+ */
+export function getNextIncompleteJointObligorTab(
+  data: Partial<JointObligor>,
+  jointObligorType: JointObligorTypeEnum
+): JointObligorTab | null {
+  const tabs = getJointObligorTabs(jointObligorType);
+
+  for (const tab of tabs) {
+    if (!isJointObligorTabComplete(data, jointObligorType, tab)) {
+      return tab;
     }
-
-    if (current === undefined) return undefined;
   }
 
-  return current;
+  return null;
+}
+
+/**
+ * Calculate completion percentage for a Joint Obligor
+ */
+export function calculateJointObligorCompletionPercentage(
+  data: Partial<JointObligor>,
+  jointObligorType: JointObligorTypeEnum
+): number {
+  const tabs = getJointObligorTabs(jointObligorType);
+  const completedTabs = tabs.filter(tab =>
+    isJointObligorTabComplete(data, jointObligorType, tab)
+  );
+
+  return Math.round((completedTabs.length / tabs.length) * 100);
 }

@@ -2,14 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyPassword, generateToken } from '@/lib/auth';
 import { z } from 'zod';
+import { loginByEmailLimiter, loginByIPLimiter, combineRateLimiters } from '@/lib/auth/rateLimiter';
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string()
 });
 
+const loginRateLimiter = combineRateLimiters(loginByIPLimiter, loginByEmailLimiter);
+
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await loginRateLimiter(request.clone());
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const body = await request.json();
     const validation = loginSchema.safeParse(body);
 
