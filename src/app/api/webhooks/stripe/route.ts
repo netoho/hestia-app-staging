@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWebhookSignature, updatePaymentById, updatePaymentStatus } from '@/lib/services/paymentService';
+import { verifyWebhookSignature, updatePaymentById } from '@/lib/services/paymentService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { sendPaymentCompletedEmail, sendAllPaymentsCompletedEmail } from '@/lib/services/emailService';
 import prisma from '@/lib/prisma';
@@ -151,19 +151,13 @@ export async function POST(request: NextRequest) {
         const policyId = session.metadata?.policyId;
 
         if (paymentId) {
-          // Update using internal ID
           await updatePaymentById(
             paymentId,
             PaymentStatus.FAILED,
             { errorMessage: 'Checkout session expired' }
           );
         } else {
-          // Fallback to Stripe ID lookup
-          await updatePaymentStatus(
-            session.id,
-            'FAILED',
-            { errorMessage: 'Checkout session expired' }
-          );
+          console.warn('Webhook: checkout.session.expired missing paymentId in metadata', session.id);
         }
 
         if (policyId) {
@@ -185,64 +179,9 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as any;
-        const paymentId = paymentIntent.metadata?.paymentId;
-
-        if (paymentId) {
-          // Idempotency check
-          const existingPayment = await prisma.payment.findUnique({
-            where: { id: paymentId },
-            select: { status: true },
-          });
-
-          if (existingPayment?.status === PaymentStatus.COMPLETED) {
-            console.log(`Webhook idempotency: payment ${paymentId} already completed, skipping`);
-            return NextResponse.json({ received: true, skipped: true });
-          }
-
-          await updatePaymentById(
-            paymentId,
-            PaymentStatus.COMPLETED,
-            {
-              paidAt: new Date(),
-              method: paymentIntent.payment_method_types?.[0] || 'card',
-              stripeIntentId: paymentIntent.id,
-            }
-          );
-        } else {
-          // Fallback to Stripe ID lookup for legacy payments
-          await updatePaymentStatus(
-            paymentIntent.id,
-            'COMPLETED',
-            {
-              paidAt: new Date(),
-              method: paymentIntent.payment_method_types?.[0] || 'card'
-            }
-          );
-        }
-        break;
-      }
-
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as any;
-        const paymentId = paymentIntent.metadata?.paymentId;
-
-        if (paymentId) {
-          await updatePaymentById(
-            paymentId,
-            PaymentStatus.FAILED,
-            { errorMessage: paymentIntent.last_payment_error?.message || 'Payment failed' }
-          );
-        } else {
-          await updatePaymentStatus(
-            paymentIntent.id,
-            'FAILED',
-            { errorMessage: paymentIntent.last_payment_error?.message || 'Payment failed' }
-          );
-        }
-        break;
-      }
+      // Note: payment_intent.succeeded and payment_intent.payment_failed are intentionally NOT handled.
+      // checkout.session.completed/expired already handle these cases and payment_intent events
+      // can cause race conditions (payment intent doesn't have paymentId in metadata).
 
       default:
         console.log(`Unhandled webhook event type: ${event.type}`);

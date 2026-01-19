@@ -31,6 +31,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { trpc } from '@/lib/trpc/client';
 import { PaymentStatus, PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
 import { formatCurrency } from '@/lib/utils/currency';
@@ -46,6 +47,7 @@ interface PaymentCardProps {
   onCancel?: () => void;
   isRegenerating?: boolean;
   isCancelling?: boolean;
+  isHistorical?: boolean;
 }
 
 const PAYMENT_STATUS_CONFIG: Record<
@@ -101,12 +103,15 @@ export function PaymentCard({
   onCancel,
   isRegenerating = false,
   isCancelling = false,
+  isHistorical = false,
 }: PaymentCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingStripeReceipt, setIsDownloadingStripeReceipt] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const cancelDialog = useDialogState();
   const regenerateDialog = useDialogState();
   const { toast } = useToast();
+  const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
 
   const handleCopyUrl = async () => {
     if (!payment.checkoutUrl) return;
@@ -142,6 +147,30 @@ export function PaymentCard({
       console.error('Error downloading receipt:', error);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadStripeReceipt = async () => {
+    setIsDownloadingStripeReceipt(true);
+    try {
+      const result = await getStripeReceipt.mutateAsync({ paymentId: payment.id });
+      if (result.receiptUrl) {
+        window.open(result.receiptUrl, '_blank');
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudo obtener el comprobante de Stripe',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Error al obtener el comprobante',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloadingStripeReceipt(false);
     }
   };
 
@@ -200,7 +229,7 @@ export function PaymentCard({
           </div>
         )}
 
-        {/* Receipt info */}
+        {/* Receipt info (manual payments) */}
         {payment.receiptFileName && (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -225,7 +254,34 @@ export function PaymentCard({
           </div>
         )}
 
-        {/* Actions */}
+        {/* Stripe receipt download (for completed Stripe payments without manual receipt) */}
+        {isCompleted && payment.stripeIntentId && !payment.receiptS3Key && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-3 w-3" />
+              <span>Pago con tarjeta</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2"
+              onClick={handleDownloadStripeReceipt}
+              disabled={isDownloadingStripeReceipt}
+            >
+              {isDownloadingStripeReceipt ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <>
+                  <Download className="h-3 w-3 mr-1" />
+                  <span>Comprobante</span>
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Actions (hidden for historical payments) */}
+        {!isHistorical && (
         <div className="flex flex-wrap gap-2 pt-2">
           {/* Pay with Stripe button */}
           {isPending && hasCheckoutUrl && (
@@ -315,6 +371,7 @@ export function PaymentCard({
             </Button>
           )}
         </div>
+        )}
       </CardContent>
 
       {/* Cancel Payment Confirmation Dialog */}

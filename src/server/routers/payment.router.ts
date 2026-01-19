@@ -167,7 +167,7 @@ export const paymentRouter = createTRPCRouter({
       try {
         return await paymentService.createManualPayment({
           ...input,
-          createdById: ctx.user.id,
+          createdById: ctx.userId,
         });
       } catch (error) {
         if (error instanceof Error && error.message.includes('already completed')) {
@@ -343,5 +343,16 @@ export const paymentRouter = createTRPCRouter({
       });
 
       return updatedPayment;
+    }),
+
+  /**
+   * Get Stripe receipt URL for a completed payment
+   * Fetches from Stripe API on demand
+   */
+  getStripeReceipt: protectedProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);
+      return { receiptUrl };
     }),
 });

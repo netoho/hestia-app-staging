@@ -127,21 +127,36 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   const { breakdown, payments, overallStatus, totalPaid, totalRemaining } = paymentSummary;
 
-  // Find existing payments by type
+  // Separate current payments from historical (tenant replaced) payments
+  const currentPayments = payments.filter((p) => !p.paidByTenantName);
+  const historicalPayments = payments.filter((p) => p.paidByTenantName);
+
+  // Group historical payments by tenant name
+  const historicalByTenant = historicalPayments.reduce((acc, payment) => {
+    const name = payment.paidByTenantName!;
+    if (!acc[name]) acc[name] = [];
+    acc[name].push(payment);
+    return acc;
+  }, {} as Record<string, typeof historicalPayments>);
+
+  // Find existing payments by type (only from current payments)
   const findPaymentByType = (type: PaymentType) =>
-    payments.find((p) => p.type === type && p.status !== PaymentStatus.FAILED);
+    currentPayments.find((p) => p.type === type && p.status !== PaymentStatus.FAILED && p.status !== PaymentStatus.CANCELLED);
 
   const investigationPayment = findPaymentByType(PaymentType.INVESTIGATION_FEE);
   const tenantPayment = findPaymentByType(PaymentType.TENANT_PORTION);
   const landlordPayment = findPaymentByType(PaymentType.LANDLORD_PORTION);
 
-  // Check if we have any pending payments (with checkout URLs)
-  const hasPendingPayments = payments.some(
+  // Check if we have any pending payments (with checkout URLs) - only current payments
+  const hasPendingPayments = currentPayments.some(
     (p) => p.status === PaymentStatus.PENDING && p.checkoutUrl
   );
 
-  // Check if we can generate payment links
-  const canGenerateLinks = isStaffOrAdmin && !hasPendingPayments && breakdown.totalWithIva > 0;
+  // Check if we can generate payment links (no current active payments)
+  const hasActiveCurrentPayments = currentPayments.some(
+    (p) => p.status !== PaymentStatus.CANCELLED && p.status !== PaymentStatus.FAILED
+  );
+  const canGenerateLinks = isStaffOrAdmin && !hasActiveCurrentPayments && breakdown.totalWithIva > 0;
 
   return (
     <div className="space-y-6">
@@ -153,8 +168,8 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
         overallStatus={overallStatus}
       />
 
-      {/* Generate Links Button (when no payments exist) */}
-      {canGenerateLinks && payments.length === 0 && (
+      {/* Generate Links Button (when no current active payments exist) */}
+      {canGenerateLinks && (
         <Card>
           <CardContent className="py-6">
             <div className="flex flex-col items-center text-center gap-4">
@@ -249,6 +264,30 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           isRegenerating={regeneratingPaymentId === landlordPayment.id}
           isCancelling={cancellingPaymentId === landlordPayment.id}
         />
+      )}
+
+      {/* Historical Payments (from replaced tenants) */}
+      {Object.keys(historicalByTenant).length > 0 && (
+        <div className="mt-8 space-y-6">
+          <h3 className="text-lg font-semibold text-muted-foreground border-b pb-2">
+            Pagos Históricos
+          </h3>
+          {Object.entries(historicalByTenant).map(([tenantName, tenantPayments]) => (
+            <div key={tenantName} className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Pagos realizados por {tenantName}
+              </h4>
+              {tenantPayments.map((payment) => (
+                <PaymentCard
+                  key={payment.id}
+                  payment={payment}
+                  isStaffOrAdmin={isStaffOrAdmin}
+                  isHistorical
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Manual Payment Dialog */}
