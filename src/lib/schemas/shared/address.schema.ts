@@ -54,13 +54,13 @@ export type AddressUpdate = z.infer<typeof addressUpdateSchema>;
  */
 export function formatAddress(address: Partial<Address>): string {
   const parts = [
-    address.street,
+    address.street && address.street,
     address.exteriorNumber && `#${address.exteriorNumber}`,
     address.interiorNumber && `Int. ${address.interiorNumber}`,
-    address.neighborhood,
-    address.municipality,
-    address.city,
-    address.state,
+    address.neighborhood && address.neighborhood,
+    address.municipality && address.municipality,
+    address.city && address.city,
+    address.state && address.state,
     address.postalCode && `C.P. ${address.postalCode}`,
     address.country !== 'México' && address.country,
   ].filter(Boolean);
