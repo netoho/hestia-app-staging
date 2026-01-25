@@ -514,7 +514,10 @@ class ValidationService {
     } as Prisma.ActorDocumentWhereInput;
 
     return prisma.actorDocument.findMany({
-      where: whereClause
+      where: {
+        ...whereClause,
+        uploadStatus: 'complete',
+      }
     });
   }
 
