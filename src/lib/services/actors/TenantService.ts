@@ -400,7 +400,8 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         tenantId,
-        category: { in: requiredDocs.map(d => d.category) }
+        category: { in: requiredDocs.map(d => d.category) },
+        uploadStatus: 'complete',
       },
       select: { category: true }
     });

@@ -647,7 +647,8 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         avalId,
-        category: { in: requiredDocs.map(d => d.category) }
+        category: { in: requiredDocs.map(d => d.category) },
+        uploadStatus: 'complete',
       },
       select: { category: true }
     });

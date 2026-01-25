@@ -609,7 +609,8 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         jointObligorId: obligorId,
-        category: { in: requiredDocs.map(d => d.category) }
+        category: { in: requiredDocs.map(d => d.category) },
+        uploadStatus: 'complete',
       },
       select: { category: true }
     });

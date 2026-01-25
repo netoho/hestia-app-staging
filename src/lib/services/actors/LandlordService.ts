@@ -760,7 +760,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         landlordId,
-        category: { in: requiredDocs.map(d => d.category) }
+        category: { in: requiredDocs.map(d => d.category) },
+        uploadStatus: 'complete',
       },
       select: { category: true }
     });
