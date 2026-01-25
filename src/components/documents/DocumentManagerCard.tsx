@@ -7,6 +7,7 @@ import { Document } from '@/types/documents';
 import { DocumentList } from './DocumentList';
 import { DocumentUploader } from './DocumentUploader';
 import { DocumentOperation } from '@/lib/documentManagement/types';
+import { getCategoryValidation } from '@/lib/constants/documentCategories';
 
 interface DocumentManagerCardProps {
   category: DocumentCategory;
@@ -43,6 +44,7 @@ export function DocumentManagerCard({
 }: DocumentManagerCardProps) {
   const hasDocuments = documents?.length > 0;
   const canUpload = !readOnly && (allowMultiple || !hasDocuments);
+  const validationConfig = getCategoryValidation(category);
 
   // Get upload operation for this category (include errors to display them)
   const uploadOperation = operations.find(
@@ -90,6 +92,8 @@ export function DocumentManagerCard({
             operation={uploadOperation}
             variant="compact"
             showProgress={true}
+            maxSizeMB={validationConfig.maxSizeMB}
+            formatsHint={validationConfig.formatsLabel}
           />
         )}
 
