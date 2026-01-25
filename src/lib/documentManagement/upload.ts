@@ -7,8 +7,8 @@ import { validateFile } from './validation';
  */
 export function uploadWithProgress(config: UploadConfig): Promise<any> {
   return new Promise((resolve, reject) => {
-    // Validate file first
-    const validation = validateFile(config.file);
+    // Validate file first (using category for config lookup)
+    const validation = validateFile(config.file, {}, config.category);
     if (!validation.valid) {
       const error = validation.error || 'Invalid file';
       config.onError?.(error);

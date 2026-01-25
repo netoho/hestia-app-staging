@@ -99,3 +99,37 @@ export function getDocumentCategoryDescription(category: DocumentCategory): stri
  * For actor-specific document requirements, use:
  * @see actorDocumentRequirements.ts - getDocumentRequirements(), getRequiredDocuments(), etc.
  */
+
+/**
+ * File upload validation configuration
+ */
+export interface CategoryValidationConfig {
+  maxSizeMB: number;
+  allowedMimeTypes: readonly string[];
+  allowedExtensions: readonly string[];
+  formatsLabel: string; // Human-readable format list for UI hints
+}
+
+export const defaultValidationConfig: CategoryValidationConfig = {
+  maxSizeMB: 100,
+  allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+  allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.webp'],
+  formatsLabel: 'PDF, JPG, PNG, WEBP',
+};
+
+/**
+ * Category-specific validation overrides (if needed)
+ * Example: larger files for property appraisals
+ */
+export const categoryValidationOverrides: Partial<Record<DocumentCategory, Partial<CategoryValidationConfig>>> = {
+  // [DocumentCategory.PROPERTY_APPRAISAL]: { maxSizeMB: 20 },
+};
+
+/**
+ * Get validation config for a document category
+ */
+export function getCategoryValidation(category?: DocumentCategory): CategoryValidationConfig {
+  if (!category) return defaultValidationConfig;
+  const override = categoryValidationOverrides[category];
+  return override ? { ...defaultValidationConfig, ...override } : defaultValidationConfig;
+}

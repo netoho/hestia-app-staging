@@ -1,31 +1,21 @@
 import { ValidationResult, ValidationOptions } from './types';
+import { getCategoryValidation, defaultValidationConfig } from '@/lib/constants/documentCategories';
+import type { DocumentCategory } from '@/types/policy';
 
 /**
- * Default maximum file size in bytes (10MB)
+ * Default maximum file size in bytes (derived from centralized config)
  */
-export const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+export const DEFAULT_MAX_FILE_SIZE = defaultValidationConfig.maxSizeMB * 1024 * 1024;
 
 /**
- * Allowed MIME types for document uploads
+ * Allowed MIME types for document uploads (derived from centralized config)
  */
-export const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-] as const;
+export const ALLOWED_MIME_TYPES = defaultValidationConfig.allowedMimeTypes;
 
 /**
- * Allowed file extensions
+ * Allowed file extensions (derived from centralized config)
  */
-export const ALLOWED_EXTENSIONS = [
-  '.pdf',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.webp',
-] as const;
+export const ALLOWED_EXTENSIONS = defaultValidationConfig.allowedExtensions;
 
 /**
  * Get file extension from filename
@@ -105,22 +95,35 @@ export function validateFileExtension(file: File, allowedExtensions?: string[]):
 
 /**
  * Comprehensive file validation
+ * Uses centralized config for the category, with options as overrides
  */
-export function validateFile(file: File, options: ValidationOptions = {}): ValidationResult {
+export function validateFile(
+  file: File,
+  options: ValidationOptions = {},
+  category?: DocumentCategory
+): ValidationResult {
+  // Get config for category (defaults if no category)
+  const config = getCategoryValidation(category as any);
+
+  // Merge options with config (options override config)
+  const maxSizeMB = options.maxSizeMB ?? config.maxSizeMB;
+  const allowedTypes = options.allowedTypes ?? [...config.allowedMimeTypes];
+  const allowedExtensions = options.allowedExtensions ?? [...config.allowedExtensions];
+
   // Validate file size
-  const sizeValidation = validateFileSize(file, options.maxSizeMB);
+  const sizeValidation = validateFileSize(file, maxSizeMB);
   if (!sizeValidation.valid) {
     return sizeValidation;
   }
 
   // Validate MIME type
-  const typeValidation = validateFileType(file, options.allowedTypes);
+  const typeValidation = validateFileType(file, allowedTypes);
   if (!typeValidation.valid) {
     return typeValidation;
   }
 
   // Validate extension
-  const extValidation = validateFileExtension(file, options.allowedExtensions);
+  const extValidation = validateFileExtension(file, allowedExtensions);
   if (!extValidation.valid) {
     return extValidation;
   }
