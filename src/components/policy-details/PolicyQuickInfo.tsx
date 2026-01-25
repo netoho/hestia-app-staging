@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
+import { formatDateTimeLong } from '@/lib/utils/formatting';
 
 interface PolicyQuickInfoProps {
   tenantEmail: string;
@@ -11,16 +12,6 @@ interface PolicyQuickInfoProps {
 }
 
 export function PolicyQuickInfo({ tenantEmail, createdAt, documentsCount, internalCode }: PolicyQuickInfoProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <Card className="mb-6">
       <CardContent className="pt-6">
@@ -37,7 +28,7 @@ export function PolicyQuickInfo({ tenantEmail, createdAt, documentsCount, intern
           </div>
           <div>
             <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.created}</p>
-            <p className="font-medium">{formatDate(createdAt)}</p>
+            <p className="font-medium">{formatDateTimeLong(createdAt)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">{t.pages.policies.details.quickInfo.documents}</p>
