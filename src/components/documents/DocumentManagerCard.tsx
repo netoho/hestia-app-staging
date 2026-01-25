@@ -44,9 +44,9 @@ export function DocumentManagerCard({
   const hasDocuments = documents?.length > 0;
   const canUpload = !readOnly && (allowMultiple || !hasDocuments);
 
-  // Get upload operation for this category
+  // Get upload operation for this category (include errors to display them)
   const uploadOperation = operations.find(
-    (op) => op.type === 'upload' && op.category === category && op.status === 'pending'
+    (op) => op.type === 'upload' && op.category === category && (op.status === 'pending' || op.status === 'error')
   );
 
   return (
