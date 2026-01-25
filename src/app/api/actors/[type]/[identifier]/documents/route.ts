@@ -3,6 +3,8 @@ import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { actorAuthService } from '@/lib/services/ActorAuthService';
 import { uploadActorDocument } from '@/lib/services/fileUploadService';
 import type { UploadedFile } from '@/lib/services/fileUploadService';
+import { getCategoryValidation } from '@/lib/constants/documentCategories';
+import { getFileExtension, formatFileSize } from '@/lib/documentManagement/validation';
 
 /**
  * POST /api/actors/[type]/[identifier]/documents
@@ -46,6 +48,35 @@ export async function POST(
     if (!file || !documentType || !category) {
       return NextResponse.json(
         { error: 'Archivo, tipo de documento y categoría son requeridos' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file using centralized config
+    const validationConfig = getCategoryValidation(category as DocumentCategory);
+    const maxSizeBytes = validationConfig.maxSizeMB * 1024 * 1024;
+
+    // Validate file size
+    if (file.size > maxSizeBytes) {
+      return NextResponse.json(
+        { error: `El archivo excede el tamaño máximo de ${validationConfig.maxSizeMB}MB. Tamaño actual: ${formatFileSize(file.size)}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate MIME type
+    if (!validationConfig.allowedMimeTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: `Tipo de archivo no permitido. Use: ${validationConfig.formatsLabel}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate file extension
+    const fileExt = getFileExtension(file.name);
+    if (!fileExt || !validationConfig.allowedExtensions.includes(fileExt)) {
+      return NextResponse.json(
+        { error: `Extensión de archivo no permitida. Use: ${validationConfig.allowedExtensions.join(', ')}` },
         { status: 400 }
       );
     }
