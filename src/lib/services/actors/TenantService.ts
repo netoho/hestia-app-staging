@@ -5,7 +5,7 @@
 
 import { PrismaClient, Prisma } from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
+import { DocumentCategory, DocumentUploadStatus } from "@/prisma/generated/prisma-client/enums";
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
@@ -50,7 +50,8 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
       previousRentalAddressDetails: true,
       personalReferences: true,
       commercialReferences: true,
-      policy: true
+      policy: true,
+      documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
     };
   }
 
@@ -401,7 +402,7 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
       where: {
         tenantId,
         category: { in: requiredDocs.map(d => d.category) },
-        uploadStatus: 'complete',
+        uploadStatus: DocumentUploadStatus.COMPLETE,
       },
       select: { category: true }
     });

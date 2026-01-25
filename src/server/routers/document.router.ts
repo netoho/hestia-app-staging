@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure, dualAuthProcedure } from '@/server/trpc';
 import { TRPCError } from '@trpc/server';
-import { DocumentCategory } from '@/prisma/generated/prisma-client/enums';
+import { DocumentCategory, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { documentService } from '@/lib/services/DocumentService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
 
@@ -278,6 +278,13 @@ export const documentRouter = createTRPCRouter({
         });
       }
 
+      if (document.uploadStatus !== DocumentUploadStatus.COMPLETE) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Document upload not complete',
+        });
+      }
+
       // Check ownership for actor auth
       if (auth.authType === 'actor') {
         const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
@@ -327,6 +334,13 @@ export const documentRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Document not found',
+        });
+      }
+
+      if (document.uploadStatus !== DocumentUploadStatus.COMPLETE) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Document upload not complete',
         });
       }
 
@@ -386,16 +400,16 @@ export const documentRouter = createTRPCRouter({
         where: { id: input.policyId },
         include: {
           tenant: {
-            include: { documents: true },
+            include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
           },
           landlords: {
-            include: { documents: true },
+            include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
           },
           jointObligors: {
-            include: { documents: true },
+            include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
           },
           avals: {
-            include: { documents: true },
+            include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
           },
         },
       });

@@ -3,6 +3,7 @@ import { generateSecureToken } from '@/lib/utils/tokenUtils';
 import type { PrismaClient, Prisma } from "@/prisma/generated/prisma-client/client";
 import { TOKEN_CONFIG } from "@/lib/constants/businessConfig";
 import { ServiceError, ErrorCode } from './types/errors';
+import { DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { getActorDelegate } from '@/lib/utils/prismaActorDelegate';
 
 // Type-safe return types for validate functions using Prisma's GetPayload
@@ -219,7 +220,7 @@ class ActorTokenService extends BaseService {
       },
       include: {
         policy: true,
-        documents: true,
+        documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         personalReferences: true,
         addressDetails: true,
         employerAddressDetails: true,
@@ -252,7 +253,7 @@ class ActorTokenService extends BaseService {
       },
       include: {
         policy: true,
-        documents: true,
+        documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         personalReferences: true,
         commercialReferences: true,
         addressDetails: true,
@@ -282,7 +283,7 @@ class ActorTokenService extends BaseService {
       },
       include: {
         policy: true,
-        documents: true,
+        documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         personalReferences: true,
         commercialReferences: true,
         addressDetails: true,
@@ -320,7 +321,7 @@ class ActorTokenService extends BaseService {
             }
           }
         },
-        documents: true,
+        documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         addressDetails: true
       }
     });

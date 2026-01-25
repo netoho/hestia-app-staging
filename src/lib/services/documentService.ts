@@ -6,7 +6,7 @@
 
 import { BaseService } from './base/BaseService';
 import { S3StorageProvider } from '@/lib/storage/providers/s3';
-import { DocumentCategory } from '@/prisma/generated/prisma-client/enums';
+import { DocumentCategory, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { v4 as uuidv4 } from 'uuid';
 import { createSafeS3Key, getFileExtension } from '@/lib/utils/filename';
 import { ServiceError, ErrorCode } from './types/errors';
@@ -200,7 +200,7 @@ class DocumentService extends BaseService {
         s3Bucket: process.env.AWS_S3_BUCKET || 'hestia-documents',
         s3Region: process.env.AWS_REGION || 'us-east-1',
         uploadedBy: params.uploadedBy || 'self',
-        uploadStatus: 'pending',
+        uploadStatus: DocumentUploadStatus.PENDING,
         ...(params.actorType === 'landlord' && { landlordId: params.actorId }),
         ...(params.actorType === 'tenant' && { tenantId: params.actorId }),
         ...(params.actorType === 'jointObligor' && { jointObligorId: params.actorId }),
@@ -239,7 +239,7 @@ class DocumentService extends BaseService {
       throw new ServiceError(ErrorCode.NOT_FOUND, 'Document not found', 404);
     }
 
-    if (document.uploadStatus === 'complete') {
+    if (document.uploadStatus === DocumentUploadStatus.COMPLETE) {
       return {
         success: true,
         document: {
@@ -273,7 +273,7 @@ class DocumentService extends BaseService {
     const updatedDoc = await this.prisma.actorDocument.update({
       where: { id: documentId },
       data: {
-        uploadStatus: 'complete',
+        uploadStatus: DocumentUploadStatus.COMPLETE,
         uploadedAt: new Date(),
       },
     });
@@ -378,7 +378,7 @@ class DocumentService extends BaseService {
     return this.prisma.actorDocument.findMany({
       where: {
         [actorField]: actorId,
-        uploadStatus: 'complete', // Only return completed uploads
+        uploadStatus: DocumentUploadStatus.COMPLETE,
       },
       orderBy: {
         createdAt: 'desc',
@@ -403,7 +403,7 @@ class DocumentService extends BaseService {
 
     return this.prisma.actorDocument.findMany({
       where: {
-        uploadStatus: 'pending',
+        uploadStatus: DocumentUploadStatus.PENDING,
         createdAt: { lt: cutoff },
       },
     });

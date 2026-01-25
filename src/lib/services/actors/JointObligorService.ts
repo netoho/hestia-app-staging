@@ -5,7 +5,7 @@
 
 import {Prisma, PrismaClient} from "@/prisma/generated/prisma-client/enums";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
+import { DocumentCategory, DocumentUploadStatus } from "@/prisma/generated/prisma-client/enums";
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
@@ -301,7 +301,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           personalReferences: true,
           commercialReferences: true,
         },
@@ -330,7 +330,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           personalReferences: true,
           commercialReferences: true,
           policy: true,
@@ -430,7 +430,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     return this.executeDbOperation(async () => {
       const jointObligor = await this.prisma.jointObligor.findUnique({
         where: { id: jointObligorId },
-        include: { documents: true },
+        include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
       });
 
       if (!jointObligor) return false;
@@ -610,7 +610,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       where: {
         jointObligorId: obligorId,
         category: { in: requiredDocs.map(d => d.category) },
-        uploadStatus: 'complete',
+        uploadStatus: DocumentUploadStatus.COMPLETE,
       },
       select: { category: true }
     });

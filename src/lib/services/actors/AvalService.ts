@@ -3,7 +3,7 @@
  * Handles all aval-related business logic and data operations
  */
 
-import {AvalType, DocumentCategory } from "@/prisma/generated/prisma-client/enums";
+import {AvalType, DocumentCategory, DocumentUploadStatus } from "@/prisma/generated/prisma-client/enums";
 import { Prisma, PrismaClient} from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
 import { DocumentCategory as DocumentCategoryEnum } from "@/prisma/generated/prisma-client/enums";
@@ -364,7 +364,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           guaranteePropertyDetails: true,
           personalReferences: true,
           commercialReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           policy: {
             select: {
               id: true,
@@ -400,7 +400,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
           guaranteePropertyDetails: true,
           personalReferences: true,
           commercialReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         },
         orderBy: {createdAt: 'asc'}
       });
@@ -538,7 +538,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     const result = await this.executeDbOperation(async () => {
       const aval = await this.prisma.aval.findUnique({
         where: { id: avalId },
-        include: { documents: true },
+        include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
       });
 
       if (!aval) return false;
@@ -648,7 +648,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       where: {
         avalId,
         category: { in: requiredDocs.map(d => d.category) },
-        uploadStatus: 'complete',
+        uploadStatus: DocumentUploadStatus.COMPLETE,
       },
       select: { category: true }
     });
