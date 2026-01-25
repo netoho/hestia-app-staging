@@ -111,7 +111,7 @@ export interface CategoryValidationConfig {
 }
 
 export const defaultValidationConfig: CategoryValidationConfig = {
-  maxSizeMB: 100,
+  maxSizeMB: 10,
   allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
   allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.webp'],
   formatsLabel: 'PDF, JPG, PNG, WEBP',
@@ -122,7 +122,7 @@ export const defaultValidationConfig: CategoryValidationConfig = {
  * Example: larger files for property appraisals
  */
 export const categoryValidationOverrides: Partial<Record<DocumentCategory, Partial<CategoryValidationConfig>>> = {
-  // [DocumentCategory.PROPERTY_APPRAISAL]: { maxSizeMB: 20 },
+  [DocumentCategory.PROPERTY_DEED]: { maxSizeMB: 35 },
 };
 
 /**
