@@ -4,6 +4,7 @@
 
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
+import { formatDateTimeLong } from '@/lib/utils/formatting';
 import { t } from '@/lib/i18n';
 import type {
   PDFPolicyData,
@@ -35,12 +36,13 @@ function safe<T>(value: T | null | undefined, formatter: (v: T) => string, fallb
 }
 
 /**
- * Format date in Spanish locale
+ * Format date in Spanish locale with weekday
  */
 function formatDate(date: Date | string | null | undefined): string | null {
   if (!date) return null;
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('es-MX', {
+    weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -449,13 +451,7 @@ export function transformPolicyForPDF(policy: PolicyWithRelations): PDFPolicyDat
     internalCode: policy.internalCode || null,
     status: policy.status,
     statusLabel: t.policyStatusFull[policy.status] || policy.status,
-    generatedAt: now.toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    generatedAt: formatDateTimeLong(now),
 
     // Core info
     rentAmount: policy.rentAmount ? formatCurrency(policy.rentAmount) : '-',

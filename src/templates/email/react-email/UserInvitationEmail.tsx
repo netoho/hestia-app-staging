@@ -10,6 +10,7 @@ import {
   Button,
 } from '@react-email/components';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+import { formatDateLong } from '@/lib/utils/formatting';
 
 export interface UserInvitationEmailProps {
   email: string;
@@ -58,12 +59,7 @@ export const UserInvitationEmail: React.FC<UserInvitationEmailProps> = ({
   const roleDescription = roleDescriptions[role];
   const permissions = rolePermissions[role];
 
-  const expiryDateFormatted = new Date(expiryDate).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const expiryDateFormatted = formatDateLong(expiryDate);
 
   const privacyUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.privacy}`;
   const termsUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.terms}`;
