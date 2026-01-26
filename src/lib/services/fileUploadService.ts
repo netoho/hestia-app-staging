@@ -4,6 +4,7 @@ import { DocumentCategory } from '@/types/policy';
 import { v4 as uuidv4 } from 'uuid';
 import { createSafeS3Key, getFileExtension } from '@/lib/utils/filename';
 import { ServiceError, ErrorCode } from './types/errors';
+import { DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 
 export interface UploadedFile {
   buffer: Buffer;
@@ -343,22 +344,22 @@ class FileUploadService extends BaseService {
       include: {
         tenant: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           },
         },
         jointObligors: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           },
         },
         avals: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           },
         },
         landlords: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           },
         },
       },

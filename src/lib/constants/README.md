@@ -243,6 +243,75 @@ export const DOCUMENT_CATEGORIES = {
 } as const;
 ```
 
+## Document Upload Validation (`documentCategories.ts`)
+
+Category-specific validation rules for file uploads. The UI automatically uses these rules to display hints and enforce limits.
+
+### Configuration
+
+```typescript
+// Default validation (applies to all categories)
+export const defaultValidationConfig: CategoryValidationConfig = {
+  maxSizeMB: 5,
+  allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+  allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.webp'],
+  formatsLabel: 'PDF, JPG, PNG, WEBP',
+};
+
+// Category-specific overrides
+export const categoryValidationOverrides: Partial<Record<DocumentCategory, Partial<CategoryValidationConfig>>> = {
+  [DocumentCategory.PROPERTY_DEED]: { maxSizeMB: 10 },
+  // Add more overrides as needed
+};
+```
+
+### Usage
+
+```typescript
+import { getCategoryValidation } from '@/lib/constants/documentCategories';
+
+// Get validation config for a category
+const config = getCategoryValidation(DocumentCategory.PROPERTY_DEED);
+// Returns: { maxSizeMB: 10, allowedMimeTypes: [...], formatsLabel: 'PDF, JPG, PNG, WEBP' }
+
+// Default if no category
+const defaultConfig = getCategoryValidation();
+// Returns: { maxSizeMB: 5, ... }
+```
+
+### UI Integration
+
+`DocumentManagerCard` automatically passes validation config to `DocumentUploader`:
+
+```typescript
+const validationConfig = getCategoryValidation(category);
+
+<DocumentUploader
+  maxSizeMB={validationConfig.maxSizeMB}
+  formatsHint={validationConfig.formatsLabel}
+  // ...
+/>
+```
+
+The upload hint displays: "Máx {maxSizeMB}MB. Formatos: {formatsLabel}"
+
+### Adding Custom Limits
+
+To add a custom limit for a category, add to `categoryValidationOverrides`:
+
+```typescript
+export const categoryValidationOverrides = {
+  [DocumentCategory.PROPERTY_DEED]: { maxSizeMB: 10 },
+  [DocumentCategory.PROPERTY_APPRAISAL]: { maxSizeMB: 15 },
+  [DocumentCategory.COMPANY_CONSTITUTION]: {
+    maxSizeMB: 20,
+    formatsLabel: 'PDF only',
+    allowedMimeTypes: ['application/pdf'],
+    allowedExtensions: ['.pdf'],
+  },
+};
+```
+
 ## Actor Document Requirements (`actorDocumentRequirements.ts`)
 
 Centralized configuration for required documents per actor type. Uses the Prisma-compatible `DocumentCategory` enum from `@/lib/enums`.

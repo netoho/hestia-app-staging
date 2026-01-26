@@ -2,13 +2,72 @@ import { UploadConfig, OperationProgress } from './types';
 import { validateFile } from './validation';
 
 /**
- * Upload file with progress tracking using XMLHttpRequest
- * This allows us to track upload progress, which is not possible with fetch
+ * Upload file directly to S3 using presigned URL with progress tracking
+ * This is the new recommended approach that bypasses Vercel's 4.5MB limit
+ */
+export function uploadToS3WithProgress(
+  presignedUrl: string,
+  file: File,
+  contentType: string,
+  onProgress?: (progress: OperationProgress) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    // Handle upload progress
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const progress: OperationProgress = {
+          loaded: event.loaded,
+          total: event.total,
+          percentage: Math.round((event.loaded / event.total) * 100),
+        };
+        onProgress?.(progress);
+      }
+    });
+
+    // Handle completion
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`S3 upload failed: ${xhr.status} ${xhr.statusText}`));
+      }
+    });
+
+    // Handle network errors
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error during S3 upload'));
+    });
+
+    // Handle abort
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload cancelled'));
+    });
+
+    // Handle cancellation via AbortSignal
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        xhr.abort();
+      });
+    }
+
+    // Start upload - PUT to presigned URL
+    xhr.open('PUT', presignedUrl);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.send(file);
+  });
+}
+
+/**
+ * Upload file with progress tracking using XMLHttpRequest (legacy REST endpoint)
+ * @deprecated Use uploadToS3WithProgress with presigned URLs instead
  */
 export function uploadWithProgress(config: UploadConfig): Promise<any> {
   return new Promise((resolve, reject) => {
-    // Validate file first
-    const validation = validateFile(config.file);
+    // Validate file first (using category for config lookup)
+    const validation = validateFile(config.file, {}, config.category);
     if (!validation.valid) {
       const error = validation.error || 'Invalid file';
       config.onError?.(error);

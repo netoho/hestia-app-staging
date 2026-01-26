@@ -11,6 +11,7 @@ import {
 } from '@react-email/components';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
 import { formatAddress } from "@/lib/schemas/shared/address.schema";
+import { formatDateLong } from '@/lib/utils/formatting';
 
 export interface ActorInvitationEmailProps {
   actorType: 'landlord' | 'tenant' | 'jointObligor' | 'aval';
@@ -181,12 +182,7 @@ export const ActorInvitationEmail: React.FC<ActorInvitationEmailProps> = ({
   const actorTypeName = actorTypeNames[actorType];
 
   const expiryDateFormatted = expiryDate
-    ? new Date(expiryDate).toLocaleDateString('es-MX', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+    ? formatDateLong(expiryDate)
     : 'en 7 días';
 
   const privacyUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.privacy}`;

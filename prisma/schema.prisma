@@ -921,6 +921,10 @@ model ActorDocument {
   avalId String?
   aval   Aval?   @relation(fields: [avalId], references: [id], onDelete: Cascade)
 
+  // Upload status for presigned URL flow
+  uploadStatus DocumentUploadStatus @default(COMPLETE)
+  uploadedAt   DateTime?
+
   // Metadata
   uploadedBy      String? // User ID or "self" for actor uploads
   verifiedAt      DateTime?
@@ -1388,4 +1392,9 @@ enum RulesType {
   CONDOMINIOS
   CONDOMINOS
   COLONOS
+}
+
+enum DocumentUploadStatus {
+  PENDING
+  COMPLETE
 }

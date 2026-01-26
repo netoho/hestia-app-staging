@@ -16,7 +16,7 @@ export function useDocumentDownload() {
     try {
       setDownloading(documentId);
 
-      const result = await trpcUtils.document.getDownloadUrl.fetch({ documentId });
+      const result = await trpcUtils.document.getDownloadUrlById.fetch({ documentId });
 
       if (!result.success || !result.downloadUrl) {
         throw new Error('Failed to get download URL');

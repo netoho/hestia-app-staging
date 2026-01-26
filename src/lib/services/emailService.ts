@@ -7,6 +7,7 @@ import type { IMailgunClient } from 'mailgun.js/Types/Interfaces/MailgunClient/I
 import type { Transporter } from 'nodemailer';
 import { generatePolicyUrl } from '../utils/tokenUtils';
 import { brandInfo, emailSubject } from '@/lib/config/brand';
+import { formatDate, formatDateLong, formatDateTimeLong } from '@/lib/utils/formatting';
 
 // Email provider configuration
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'; // 'resend', 'mailgun', or 'smtp'
@@ -183,14 +184,7 @@ export const sendPolicySubmissionConfirmation = async (data: PolicySubmissionDat
     const subject = emailSubject(`Solicitud Recibida #${data.policyId}`);
 
     // Generate plain text version
-    const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const submittedDate = formatDateTimeLong(data.submittedAt);
 
     const text = `
 ¡Gracias${data.tenantName ? `, ${data.tenantName}` : ''}!
@@ -288,7 +282,7 @@ Accede aquí: ${data.url}
 - 3 referencias personales con datos de contacto
 ${data.actorType === 'aval' ? '- Información de la propiedad en garantía' : ''}
 
-Importante: Este enlace expirará ${data.expiryDate ? `el ${new Date(data.expiryDate).toLocaleDateString('es-MX')}` : 'en 7 días'}.
+Importante: Este enlace expirará ${data.expiryDate ? `el ${formatDate(data.expiryDate)}` : 'en 7 días'}.
 
 Si tienes preguntas, contacta a: soporte@hestiaplp.com.mx
 
@@ -334,14 +328,7 @@ Mensaje del Solicitante:
 ${data.message}
 
 ---
-Fecha de solicitud: ${new Date().toLocaleDateString('es-MX', {
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+Fecha de solicitud: ${formatDateTimeLong(new Date())}
 
 Por favor, revisa esta solicitud y contacta al solicitante para continuar con el proceso de incorporación.
 
@@ -464,12 +451,7 @@ Tus credenciales de acceso:
 - Completar tu información de contacto
 - Explorar las herramientas disponibles
 
-Importante: Este enlace expirará el ${new Date(data.expiryDate).toLocaleDateString('es-MX', {
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-})}. Asegúrate de configurar tu cuenta antes de esa fecha.
+Importante: Este enlace expirará el ${formatDateLong(data.expiryDate)}. Asegúrate de configurar tu cuenta antes de esa fecha.
 
 Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos a soporte@hestiaplp.com.mx.
 
@@ -728,9 +710,6 @@ export const sendPaymentCompletedEmail = async (data: PaymentCompletedData): Pro
     const formatCurrency = (amount: number) =>
       new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
 
-    const formatDate = (date: Date) =>
-      new Date(date).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
     const html = `
       <!DOCTYPE html>
       <html>
@@ -746,7 +725,7 @@ export const sendPaymentCompletedEmail = async (data: PaymentCompletedData): Pro
             <p style="margin: 5px 0;"><strong>Póliza:</strong> ${data.policyNumber}</p>
             <p style="margin: 5px 0;"><strong>Concepto:</strong> ${data.paymentType}</p>
             <p style="margin: 5px 0;"><strong>Monto:</strong> ${formatCurrency(data.amount)}</p>
-            <p style="margin: 5px 0;"><strong>Fecha:</strong> ${formatDate(data.paidAt)}</p>
+            <p style="margin: 5px 0;"><strong>Fecha:</strong> ${formatDateLong(data.paidAt)}</p>
           </div>
           <p>Gracias por tu pago. Si tienes alguna pregunta, contáctanos en ${SUPPORT_EMAIL}.</p>
           <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
@@ -763,7 +742,7 @@ Tu pago ha sido procesado exitosamente.
 Póliza: ${data.policyNumber}
 Concepto: ${data.paymentType}
 Monto: ${formatCurrency(data.amount)}
-Fecha: ${formatDate(data.paidAt)}
+Fecha: ${formatDateLong(data.paidAt)}
 
 Gracias por tu pago. Si tienes alguna pregunta, contáctanos en ${SUPPORT_EMAIL}.
 
@@ -849,14 +828,7 @@ export const sendPolicyCancellationEmail = async (data: PolicyCancellationEmailD
     const html = await render(await PolicyCancellationEmail(data));
     const subject = emailSubject(`Protección Cancelada #${data.policyNumber}`);
 
-    const cancelledDate = new Date(data.cancelledAt).toLocaleDateString('es-MX', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const cancelledDate = formatDateTimeLong(data.cancelledAt);
 
     const text = `
 Protección Cancelada

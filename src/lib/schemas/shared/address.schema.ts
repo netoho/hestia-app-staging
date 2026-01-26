@@ -52,7 +52,10 @@ export type AddressUpdate = z.infer<typeof addressUpdateSchema>;
 /**
  * Helper to format address as string for display
  */
-export function formatAddress(address: Partial<Address>): string {
+export function formatAddress(address?: Partial<Address>): string {
+  if (!address) {
+    return 'Sin dirección';
+  }
   const parts = [
     address.street && address.street,
     address.exteriorNumber && `#${address.exteriorNumber}`,

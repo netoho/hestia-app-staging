@@ -3,6 +3,7 @@
 
 import { generatePolicyUrl } from '../utils/tokenUtils';
 import { emailSubject } from '@/lib/config/brand';
+import { formatDateLong, formatDateTimeLong } from '@/lib/utils/formatting';
 import type { PolicyInvitationData, PolicySubmissionData, PolicyStatusUpdateData } from '../services/emailService';
 
 // Hestia brand colors
@@ -148,12 +149,7 @@ export interface EmailContent {
 
 export function renderPolicyInvitationEmail(data: PolicyInvitationData): EmailContent {
   const policyUrl = generatePolicyUrl(data.accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-  const expiryDate = new Date(data.expiryDate).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const expiryDate = formatDateLong(data.expiryDate);
 
   const subject = emailSubject('Completa tu Solicitud de Protección');
 
@@ -244,14 +240,7 @@ Si tienes alguna pregunta, contáctanos en soporte@hestiaplp.com.mx
 }
 
 export function renderPolicySubmissionEmail(data: PolicySubmissionData): EmailContent {
-  const submittedDate = new Date(data.submittedAt).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const submittedDate = formatDateTimeLong(data.submittedAt);
 
   const subject = emailSubject(`Solicitud Recibida #${data.policyId}`);
 

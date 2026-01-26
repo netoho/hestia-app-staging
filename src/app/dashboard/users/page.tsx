@@ -18,6 +18,7 @@ import { TablePagination } from '@/components/shared/TablePagination';
 import { useToast } from '@/hooks/use-toast';
 import { useTableState } from '@/hooks/use-table-state';
 import { trpc } from '@/lib/trpc/client';
+import { formatDate } from '@/lib/utils/formatting';
 
 const roleVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     admin: 'destructive',
@@ -181,7 +182,7 @@ export default function UsersPage() {
                                                 {user.role.toLowerCase()}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{new Date(user.createdAt).toLocaleDateString('es-MX')}</TableCell>
+                                        <TableCell>{formatDate(user.createdAt)}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

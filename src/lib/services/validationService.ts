@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { Prisma } from '@/prisma/generated/prisma-client';
+import { DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { formatFullName } from '@/lib/utils/names';
@@ -363,22 +364,22 @@ class ValidationService {
       include: {
         landlords: {
           include: {
-            documents: true
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
           }
         },
         tenant: {
           include: {
-            documents: true
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
           }
         },
         jointObligors: {
           include: {
-            documents: true
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
           }
         },
         avals: {
           include: {
-            documents: true
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
           }
         }
       }
@@ -514,7 +515,10 @@ class ValidationService {
     } as Prisma.ActorDocumentWhereInput;
 
     return prisma.actorDocument.findMany({
-      where: whereClause
+      where: {
+        ...whereClause,
+        uploadStatus: DocumentUploadStatus.COMPLETE,
+      }
     });
   }
 

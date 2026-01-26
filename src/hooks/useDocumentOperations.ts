@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { DocumentCategory } from '@/types/policy';
 import { Document } from '@/types/documents';
 import {
@@ -9,7 +9,8 @@ import {
   DocumentOperation,
   OperationProgress,
 } from '@/lib/documentManagement/types';
-import { uploadWithProgress } from '@/lib/documentManagement/upload';
+import { uploadToS3WithProgress } from '@/lib/documentManagement/upload';
+import { validateFile } from '@/lib/documentManagement/validation';
 import { trpc } from '@/lib/trpc/client';
 
 interface UseDocumentOperationsProps {
@@ -45,12 +46,15 @@ export function useDocumentOperations({
   // Map actorType for tRPC calls
   const trpcActorType = mapActorType(actorType);
 
-  // tRPC query for listing documents
+  // Get tRPC utils for imperative mutations
+  const utils = trpc.useUtils();
+
+  // tRPC query for listing documents (now using document router)
   const {
     data: documentsData,
     isLoading: loading,
     refetch,
-  } = trpc.actor.listDocuments.useQuery(
+  } = trpc.document.listDocuments.useQuery(
     {
       type: trpcActorType,
       identifier: token || '',
@@ -79,12 +83,15 @@ export function useDocumentOperations({
     }
   );
 
-  // tRPC mutation for deleting documents
-  const deleteMutation = trpc.actor.deleteDocument.useMutation({
+  // tRPC mutations
+  const deleteMutation = trpc.document.deleteDocument.useMutation({
     onSuccess: () => {
       refetch();
     },
   });
+
+  const getUploadUrlMutation = trpc.document.getUploadUrl.useMutation();
+  const confirmUploadMutation = trpc.document.confirmUpload.useMutation();
 
   // Use the query data or create empty map
   const documents = documentsData || createEmptyDocumentMap();
@@ -114,7 +121,13 @@ export function useDocumentOperations({
     });
   }, []);
 
-  // Upload document with progress tracking (REST endpoint for XMLHttpRequest progress)
+  /**
+   * Upload document using presigned URL flow:
+   * 1. Validate file client-side
+   * 2. Get presigned URL from server (creates pending document)
+   * 3. Upload directly to S3 with progress
+   * 4. Confirm upload on server (marks document complete)
+   */
   const uploadDocument = useCallback(async (
     file: File,
     category: DocumentCategory,
@@ -137,42 +150,68 @@ export function useDocumentOperations({
     }));
 
     try {
-      // REST endpoint for upload (supports progress tracking)
-      const endpoint = `/api/actors/${trpcActorType}/${token}/documents`;
+      // 1. Validate file client-side first
+      const validation = validateFile(file, {}, category);
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Archivo inválido');
+      }
 
-      await uploadWithProgress({
-        file,
-        endpoint,
+      // 2. Get presigned URL from server
+      const uploadUrlResult = await getUploadUrlMutation.mutateAsync({
+        type: trpcActorType,
+        identifier: token,
         category,
         documentType,
-        onProgress: (progress: OperationProgress) => {
-          updateOperation(operationId, { progress });
-        },
-        onSuccess: () => {
-          updateOperation(operationId, { status: 'success' });
-          // Reload documents after successful upload
-          refetch();
-          // Remove operation after a delay
-          setTimeout(() => removeOperation(operationId), 2000);
-        },
-        onError: (error: string) => {
-          updateOperation(operationId, { status: 'error', error });
-          // Keep error visible for longer
-          setTimeout(() => removeOperation(operationId), 5000);
-        },
+        fileName: file.name,
+        contentType: file.type,
+        fileSize: file.size,
       });
+
+      if (!uploadUrlResult.success || !uploadUrlResult.uploadUrl) {
+        throw new Error('No se pudo obtener URL de carga');
+      }
+
+      // 3. Upload directly to S3 with progress tracking
+      await uploadToS3WithProgress(
+        uploadUrlResult.uploadUrl,
+        file,
+        file.type,
+        (progress: OperationProgress) => {
+          updateOperation(operationId, { progress });
+        }
+      );
+
+      // 4. Confirm upload on server
+      const confirmResult = await confirmUploadMutation.mutateAsync({
+        type: trpcActorType,
+        identifier: token,
+        documentId: uploadUrlResult.documentId,
+      });
+
+      if (!confirmResult.success) {
+        throw new Error('No se pudo confirmar la carga del documento');
+      }
+
+      // Success!
+      updateOperation(operationId, { status: 'success' });
+
+      // Reload documents after successful upload
+      refetch();
+
+      // Remove operation after a delay
+      setTimeout(() => removeOperation(operationId), 2000);
+
     } catch (error) {
       console.error('Upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al subir el archivo';
       updateOperation(operationId, {
         status: 'error',
-        error: error instanceof Error ? error.message : 'Error al subir el archivo',
+        error: errorMessage,
       });
+      // Keep error visible for longer
       setTimeout(() => removeOperation(operationId), 5000);
     }
-  }, [token, actorType, updateOperation, removeOperation, refetch]);
-
-  // Get tRPC utils for imperative queries
-  const utils = trpc.useUtils();
+  }, [token, trpcActorType, utils, updateOperation, removeOperation, refetch]);
 
   // Download document using tRPC to get presigned URL
   const downloadDocument = useCallback(async (documentId: string, fileName: string) => {
@@ -192,7 +231,7 @@ export function useDocumentOperations({
 
     try {
       // Use tRPC utils to fetch download URL imperatively
-      const result = await utils.actor.getDocumentDownloadUrl.fetch({
+      const result = await utils.document.getDownloadUrl.fetch({
         type: trpcActorType,
         identifier: token,
         documentId,
