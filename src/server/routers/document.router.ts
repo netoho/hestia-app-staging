@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure, dualAuthProcedure } from '@/server/trpc';
 import { TRPCError } from '@trpc/server';
 import { DocumentCategory, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
-import { documentService } from '@/lib/services/DocumentService';
+import { documentService } from '@/lib/services/documentService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
 
 // Actor types schema (shared with actor router)
