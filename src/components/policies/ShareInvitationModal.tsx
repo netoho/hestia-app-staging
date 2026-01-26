@@ -22,8 +22,10 @@ import {
   User,
   Phone,
   AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { getActorTypeLabel } from '@/lib/utils/actor';
+import { formatDate, formatDateTime } from '@/lib/utils/formatting';
 import { CompletionBadge } from '@/components/shared/CompletionBadge';
 
 interface ActorShareLink {
@@ -382,12 +384,11 @@ export default function ShareInvitationModal({
                         <div className="text-xs text-gray-500">
                           {expired ? (
                             <span className="text-red-600">
-                              El token expiró el {new Date(link.tokenExpiry).toLocaleDateString()}
+                              El token expiró el {formatDate(link.tokenExpiry)}
                             </span>
                           ) : (
                             <span>
-                              Enlace válida hasta: {new Date(link.tokenExpiry).toLocaleDateString()} a las{' '}
-                              {new Date(link.tokenExpiry).toLocaleTimeString()}
+                              Enlace válido hasta: {formatDateTime(link.tokenExpiry)}
                             </span>
                           )}
                         </div>

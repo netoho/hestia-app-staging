@@ -11,7 +11,8 @@ import {
   Img,
 } from '@react-email/components';
 import { PolicySubmissionData } from '@/lib/services/emailService';
-import {brandColors, brandInfo, brandUrls} from '@/lib/config/brand';
+import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+import { formatDateTimeLong } from '@/lib/utils/formatting';
 
 interface PolicySubmissionEmailProps extends PolicySubmissionData {}
 
@@ -21,14 +22,7 @@ export const PolicySubmissionEmail: React.FC<PolicySubmissionEmailProps> = ({
   policyId,
   submittedAt,
 }) => {
-  const submittedDate = new Date(submittedAt).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const submittedDate = formatDateTimeLong(submittedAt);
 
   return (
     <Html>

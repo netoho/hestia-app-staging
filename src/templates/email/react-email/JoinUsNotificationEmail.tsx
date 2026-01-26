@@ -12,6 +12,7 @@ import {
   Preview,
 } from '@react-email/components';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+import { formatDateTimeLong } from '@/lib/utils/formatting';
 
 export interface JoinUsNotificationEmailProps {
   name: string;
@@ -169,14 +170,7 @@ export const JoinUsNotificationEmail: React.FC<JoinUsNotificationEmailProps> = (
               marginTop: '20px',
               textAlign: 'center'
             }}>
-              Fecha de solicitud: {new Date().toLocaleDateString('es-MX', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              Fecha de solicitud: {formatDateTimeLong(new Date())}
             </Text>
           </Section>
 

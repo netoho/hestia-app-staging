@@ -1,6 +1,7 @@
 import useSWR from 'swr';
 import { activitiesConfig } from '@/lib/config/swrConfig';
 import { useMemo } from 'react';
+import { formatDate } from '@/lib/utils/formatting';
 
 export interface Activity {
   id: string;
@@ -53,7 +54,7 @@ export function usePolicyActivities(policyId: string | null, options?: {
     if (!filteredActivities.length) return {};
 
     return filteredActivities.reduce((groups, activity) => {
-      const date = new Date(activity.createdAt).toLocaleDateString();
+      const date = formatDate(activity.createdAt);
       if (!groups[date]) {
         groups[date] = [];
       }

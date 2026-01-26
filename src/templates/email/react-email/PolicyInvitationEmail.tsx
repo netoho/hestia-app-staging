@@ -14,6 +14,7 @@ import {
 import { PolicyInvitationData } from '@/lib/services/emailService';
 import { generatePolicyUrl } from '@/lib/utils/tokenUtils';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+import { formatDateLong } from '@/lib/utils/formatting';
 
 interface PolicyInvitationEmailProps {
   tenantEmail: string;
@@ -33,12 +34,7 @@ export const PolicyInvitationEmail: React.FC<PolicyInvitationEmailProps> = ({
   initiatorName,
 }) => {
   const policyUrl = generatePolicyUrl(accessToken, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-  const expiryDateFormatted = new Date(expiryDate).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const expiryDateFormatted = formatDateLong(expiryDate);
 
   return (
     <Html>

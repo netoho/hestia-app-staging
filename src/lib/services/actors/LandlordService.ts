@@ -5,7 +5,7 @@
 
 import { Prisma, PrismaClient } from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
+import { DocumentCategory, DocumentUploadStatus } from "@/prisma/generated/prisma-client/enums";
 import { BaseActorService } from './BaseActorService';
 import { AsyncResult, Result } from '../types/result';
 import { ErrorCode, ServiceError } from '../types/errors';
@@ -295,7 +295,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         where: { policyId },
         include: {
           addressDetails: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         },
         orderBy: [
           { isPrimary: 'desc' }, // Primary first
@@ -394,7 +394,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
         },
         include: {
           addressDetails: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         },
       });
 
@@ -515,7 +515,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     const result = await this.executeDbOperation(async () => {
       const landlord = await this.prisma.landlord.findUnique({
         where: { id: landlordId },
-        include: { documents: true },
+        include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
       });
 
       if (!landlord) return false;
@@ -659,7 +659,7 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
           where: {id: primaryLandlordId},
           include: {
             addressDetails: true,
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           }
         });
 
@@ -760,7 +760,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     const uploadedDocs = await this.prisma.actorDocument.findMany({
       where: {
         landlordId,
-        category: { in: requiredDocs.map(d => d.category) }
+        category: { in: requiredDocs.map(d => d.category) },
+        uploadStatus: DocumentUploadStatus.COMPLETE,
       },
       select: { category: true }
     });

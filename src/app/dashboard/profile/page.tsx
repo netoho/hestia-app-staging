@@ -14,6 +14,7 @@ import { trpc } from '@/lib/trpc/client';
 import { AvatarUploader } from '@/components/user/AvatarUploader';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { isPasswordValid } from '@/lib/validation/password';
+import { formatDate } from '@/lib/utils/formatting';
 
 export default function ProfilePage() {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -186,7 +187,7 @@ export default function ProfilePage() {
               <p><strong>{t.pages.profile.email}</strong> {profile?.email}</p>
               <p><strong>{t.pages.profile.phone}</strong> {profile?.phone || 'N/A'}</p>
               <p><strong>{t.pages.profile.address}</strong> {profile?.address || 'N/A'}</p>
-              <p><strong>{t.pages.profile.memberSince}</strong> {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('es-MX') : 'N/A'}</p>
+              <p><strong>{t.pages.profile.memberSince}</strong> {profile?.createdAt ? formatDate(profile.createdAt) : 'N/A'}</p>
             </CardContent>
           </Card>
         </div>

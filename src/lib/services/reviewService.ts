@@ -1,4 +1,5 @@
 import { validationService } from './validationService';
+import { DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { BaseService } from './base/BaseService';
 import { logPolicyActivity } from './policyService';
 import { formatFullName } from '@/lib/utils/names';
@@ -44,13 +45,13 @@ class ReviewService extends BaseService {
       include: {
         landlords: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
             addressDetails: true,
           }
         },
         tenant: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
             addressDetails: true,
             employerAddressDetails: true,
             previousRentalAddressDetails: true,
@@ -60,7 +61,7 @@ class ReviewService extends BaseService {
         },
         jointObligors: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
             addressDetails: true,
             employerAddressDetails: true,
             guaranteePropertyDetails: true,
@@ -70,7 +71,7 @@ class ReviewService extends BaseService {
         },
         avals: {
           include: {
-            documents: true,
+            documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
             addressDetails: true,
             employerAddressDetails: true,
             guaranteePropertyDetails: true,

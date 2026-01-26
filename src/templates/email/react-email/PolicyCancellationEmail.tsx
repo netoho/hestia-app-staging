@@ -12,6 +12,7 @@ import {
 } from '@react-email/components';
 import { PolicyCancellationEmailData } from '@/lib/services/emailService';
 import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+import { formatDateTimeLong } from '@/lib/utils/formatting';
 
 interface PolicyCancellationEmailProps extends PolicyCancellationEmailData {}
 
@@ -35,14 +36,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
   policyLink,
 }) => {
   const reasonLabel = CANCELLATION_REASON_LABELS[cancellationReason] || cancellationReason;
-  const cancelledDate = new Date(cancelledAt).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const cancelledDate = formatDateTimeLong(cancelledAt);
 
   return (
     <Html>

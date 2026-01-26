@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import { PolicyStatus, DocumentUploadStatus } from "@/prisma/generated/prisma-client/enums";
 import { PropertyDetailsService } from '../PropertyDetailsService';
 import { CreatePolicyData, logPolicyActivityParams } from './types';
 import { validatePolicyNumberFormat } from "@/lib/utils/policy";
@@ -339,7 +339,7 @@ export async function getPolicyById(id: string) {
       },
       landlords: {
         include: {
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
         },
         orderBy: [
@@ -350,7 +350,7 @@ export async function getPolicyById(id: string) {
       tenant: {
         include: {
           personalReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
           previousRentalAddressDetails: true,
@@ -359,7 +359,7 @@ export async function getPolicyById(id: string) {
       jointObligors: {
         include: {
           personalReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
@@ -368,7 +368,7 @@ export async function getPolicyById(id: string) {
       avals: {
         include: {
           personalReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
@@ -606,7 +606,7 @@ export async function getPolicyForPDF(id: string) {
       },
       landlords: {
         include: {
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
         },
         orderBy: [
@@ -618,7 +618,7 @@ export async function getPolicyForPDF(id: string) {
         include: {
           personalReferences: true,
           commercialReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
           previousRentalAddressDetails: true,
@@ -628,7 +628,7 @@ export async function getPolicyForPDF(id: string) {
         include: {
           personalReferences: true,
           commercialReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,
@@ -638,7 +638,7 @@ export async function getPolicyForPDF(id: string) {
         include: {
           personalReferences: true,
           commercialReferences: true,
-          documents: true,
+          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
           guaranteePropertyDetails: true,

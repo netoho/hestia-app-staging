@@ -19,6 +19,12 @@ interface DocumentUploaderProps {
   label?: string;
   buttonText?: string;
   showProgress?: boolean;
+  /** Max file size in MB for hint display */
+  maxSizeMB?: number;
+  /** Formats label for hint display (e.g., "PDF, JPG, PNG") */
+  formatsHint?: string;
+  /** Whether to show the hint text */
+  showHint?: boolean;
 }
 
 export function DocumentUploader({
@@ -32,6 +38,9 @@ export function DocumentUploader({
   label,
   buttonText,
   showProgress = true,
+  maxSizeMB = 10,
+  formatsHint = 'PDF, JPG, PNG, WEBP',
+  showHint = true,
 }: DocumentUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,7 +93,13 @@ export function DocumentUploader({
           )}
         </Button>
 
-        {showProgress && operation && operation.status === 'pending' && (
+        {showHint && !operation && (
+          <p className="text-xs text-muted-foreground">
+            Máx {maxSizeMB}MB. Formatos: {formatsHint}
+          </p>
+        )}
+
+        {showProgress && operation && (operation.status === 'pending' || operation.status === 'error') && (
           <DocumentProgress
             progress={operation.progress}
             status={operation.status}
@@ -125,7 +140,13 @@ export function DocumentUploader({
           </Button>
         </div>
 
-        {showProgress && operation && operation.status === 'pending' && (
+        {showHint && !operation && (
+          <p className="text-xs text-muted-foreground">
+            Máx {maxSizeMB}MB. Formatos: {formatsHint}
+          </p>
+        )}
+
+        {showProgress && operation && (operation.status === 'pending' || operation.status === 'error') && (
           <DocumentProgress
             progress={operation.progress}
             status={operation.status}
@@ -174,6 +195,12 @@ export function DocumentUploader({
           )}
         </Button>
       </div>
+
+      {showHint && !operation && (
+        <p className="text-xs text-muted-foreground">
+          Máx {maxSizeMB}MB. Formatos: {formatsHint}
+        </p>
+      )}
 
       {showProgress && operation && (
         <DocumentProgress
