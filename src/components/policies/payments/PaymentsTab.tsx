@@ -53,7 +53,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   const [addPaymentDialogOpen, setAddPaymentDialogOpen] = useState(false);
 
-  const [regeneratingPaymentId, setRegeneratingPaymentId] = useState<string | null>(null);
   const [cancellingPaymentId, setCancellingPaymentId] = useState<string | null>(null);
 
   const {
@@ -78,21 +77,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     },
   });
 
-  const regeneratePaymentUrl = trpc.payment.regeneratePaymentUrl.useMutation({
-    onSuccess: () => {
-      setRegeneratingPaymentId(null);
-      invalidatePayments();
-    },
-    onError: (error) => {
-      setRegeneratingPaymentId(null);
-      toast({
-        title: 'Error',
-        description: error.message || 'Error al regenerar link de pago',
-        variant: 'destructive',
-      });
-    },
-  });
-
   const cancelPayment = trpc.payment.cancelPayment.useMutation({
     onSuccess: () => {
       setCancellingPaymentId(null);
@@ -110,11 +94,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   const handleGenerateLinks = async () => {
     await generatePaymentLinks.mutateAsync({ policyId });
-  };
-
-  const handleRegenerateUrl = (paymentId: string) => {
-    setRegeneratingPaymentId(paymentId);
-    regeneratePaymentUrl.mutate({ paymentId });
   };
 
   const handleCancelPayment = (paymentId: string) => {
@@ -206,6 +185,11 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
       p.status !== PaymentStatus.CANCELLED
   );
 
+  // Get cancelled/failed payments to show at the end
+  const cancelledPayments = currentPayments.filter(
+    (p) => p.status === PaymentStatus.CANCELLED || p.status === PaymentStatus.FAILED
+  );
+
   // Check if we have any pending payments (with checkout URLs) - only current payments
   const hasPendingPayments = currentPayments.some(
     (p) => p.status === PaymentStatus.PENDING && p.checkoutUrl
@@ -284,18 +268,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openVerifyDialog(investigationPayment)
               : undefined
           }
-          onRegenerateUrl={
-            investigationPayment.isExpired
-              ? () => handleRegenerateUrl(investigationPayment.id)
-              : undefined
-          }
           onCancel={() => handleCancelPayment(investigationPayment.id)}
           onEdit={
             investigationPayment.status === PaymentStatus.PENDING
               ? () => openEditDialog(investigationPayment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === investigationPayment.id}
           isCancelling={cancellingPaymentId === investigationPayment.id}
         />
       )}
@@ -313,16 +291,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openVerifyDialog(tenantPayment)
               : undefined
           }
-          onRegenerateUrl={
-            tenantPayment.isExpired ? () => handleRegenerateUrl(tenantPayment.id) : undefined
-          }
           onCancel={() => handleCancelPayment(tenantPayment.id)}
           onEdit={
             tenantPayment.status === PaymentStatus.PENDING
               ? () => openEditDialog(tenantPayment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === tenantPayment.id}
           isCancelling={cancellingPaymentId === tenantPayment.id}
         />
       )}
@@ -340,16 +314,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openVerifyDialog(landlordPayment)
               : undefined
           }
-          onRegenerateUrl={
-            landlordPayment.isExpired ? () => handleRegenerateUrl(landlordPayment.id) : undefined
-          }
           onCancel={() => handleCancelPayment(landlordPayment.id)}
           onEdit={
             landlordPayment.status === PaymentStatus.PENDING
               ? () => openEditDialog(landlordPayment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === landlordPayment.id}
           isCancelling={cancellingPaymentId === landlordPayment.id}
         />
       )}
@@ -360,13 +330,13 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           key={payment.id}
           payment={payment}
           isStaffOrAdmin={isStaffOrAdmin}
+          onManualPayment={() =>
+            openManualPaymentDialog(payment.type as PaymentType, payment.amount)
+          }
           onVerify={
             payment.status === PaymentStatus.PENDING_VERIFICATION
               ? () => openVerifyDialog(payment)
               : undefined
-          }
-          onRegenerateUrl={
-            payment.isExpired ? () => handleRegenerateUrl(payment.id) : undefined
           }
           onCancel={() => handleCancelPayment(payment.id)}
           onEdit={
@@ -374,10 +344,25 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openEditDialog(payment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === payment.id}
           isCancelling={cancellingPaymentId === payment.id}
         />
       ))}
+
+      {/* Cancelled/Failed Payments */}
+      {cancelledPayments.length > 0 && (
+        <div className="mt-8 space-y-4">
+          <h3 className="text-lg font-semibold text-muted-foreground border-b pb-2">
+            Pagos Cancelados
+          </h3>
+          {cancelledPayments.map((payment) => (
+            <PaymentCard
+              key={payment.id}
+              payment={payment}
+              isStaffOrAdmin={isStaffOrAdmin}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Historical Payments (from replaced tenants) */}
       {Object.keys(historicalByTenant).length > 0 && (
