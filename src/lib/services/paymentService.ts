@@ -155,10 +155,16 @@ class PaymentService extends BaseService {
     description?: string;
     metadata?: any;
   }) {
+    // Calculate subtotal and IVA from amount (amount includes 16% IVA)
+    const subtotal = Math.round((amount / 1.16) * 100) / 100;
+    const iva = Math.round((amount - subtotal) * 100) / 100;
+
     return this.prisma.payment.create({
       data: {
         policyId,
         amount,
+        subtotal,
+        iva,
         currency,
         status: PaymentStatus.PENDING,
         stripeIntentId,
@@ -658,10 +664,16 @@ class PaymentService extends BaseService {
     }
 
     // 2. Create payment record with Stripe session info
+    // Calculate subtotal and IVA from total amount (amount includes 16% IVA)
+    const subtotal = Math.round((amount / 1.16) * 100) / 100;
+    const iva = Math.round((amount - subtotal) * 100) / 100;
+
     const payment = await this.prisma.payment.create({
       data: {
         policyId,
         amount,
+        subtotal,
+        iva,
         currency: 'MXN',
         status: PaymentStatus.PENDING,
         type,
@@ -869,11 +881,17 @@ class PaymentService extends BaseService {
       );
     }
 
+    // Calculate subtotal and IVA from amount (amount includes 16% IVA)
+    const subtotal = Math.round((amount / 1.16) * 100) / 100;
+    const iva = Math.round((amount - subtotal) * 100) / 100;
+
     // Create manual payment with PENDING_VERIFICATION status
     const payment = await this.prisma.payment.create({
       data: {
         policyId,
         amount,
+        subtotal,
+        iva,
         currency: 'MXN',
         status: PaymentStatus.PENDING_VERIFICATION,
         method: PaymentMethod.MANUAL,
@@ -1225,12 +1243,18 @@ class PaymentService extends BaseService {
 
     const session = await stripeInstance.checkout.sessions.create(sessionConfig);
 
+    // Calculate subtotal and IVA from new amount (newAmount includes 16% IVA)
+    const newSubtotal = Math.round((newAmount / 1.16) * 100) / 100;
+    const newIva = Math.round((newAmount - newSubtotal) * 100) / 100;
+
     // Update payment record with new amount and session
     await this.prisma.$transaction(async (tx) => {
       await tx.payment.update({
         where: { id: paymentId },
         data: {
           amount: newAmount,
+          subtotal: newSubtotal,
+          iva: newIva,
           stripeSessionId: session.id,
           checkoutUrl: session.url,
           checkoutUrlExpiry: expiresAt,
