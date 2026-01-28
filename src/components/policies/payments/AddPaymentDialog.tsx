@@ -25,6 +25,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
 import { PAYER_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -116,7 +117,7 @@ export function AddPaymentDialog({
   };
 
   const subtotal = parseFloat(amount) || 0;
-  const iva = Math.round(subtotal * 0.16 * 100) / 100;
+  const iva = Math.round(subtotal * TAX_CONFIG.IVA_RATE * 100) / 100;
   const total = Math.round((subtotal + iva) * 100) / 100;
   const payerLabel = PAYER_TYPE_LABELS[paidBy] || paidBy;
 

@@ -20,7 +20,6 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  RefreshCw,
   Eye,
   CreditCard,
   FileText,
@@ -30,6 +29,7 @@ import {
   Copy,
   Check,
   Pencil,
+  RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
@@ -38,16 +38,15 @@ import type { PaymentWithStatus } from '@/lib/services/paymentService';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDateTime } from '@/lib/utils/formatting';
 import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 interface PaymentCardProps {
   payment: PaymentWithStatus;
   isStaffOrAdmin: boolean;
   onManualPayment?: () => void;
   onVerify?: () => void;
-  onRegenerateUrl?: () => void;
   onCancel?: () => void;
   onEdit?: () => void;
-  isRegenerating?: boolean;
   isCancelling?: boolean;
   isHistorical?: boolean;
 }
@@ -101,10 +100,8 @@ export function PaymentCard({
   isStaffOrAdmin,
   onManualPayment,
   onVerify,
-  onRegenerateUrl,
   onCancel,
   onEdit,
-  isRegenerating = false,
   isCancelling = false,
   isHistorical = false,
 }: PaymentCardProps) {
@@ -112,15 +109,18 @@ export function PaymentCard({
   const [isDownloadingStripeReceipt, setIsDownloadingStripeReceipt] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const cancelDialog = useDialogState();
-  const regenerateDialog = useDialogState();
   const { toast } = useToast();
   const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
 
-  const handleCopyUrl = async () => {
-    if (!payment.checkoutUrl) return;
+  // Get the public payment URL
+  const getPaymentUrl = () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${baseUrl}/payments/${payment.id}`;
+  };
 
+  const handleCopyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(payment.checkoutUrl);
+      await navigator.clipboard.writeText(getPaymentUrl());
       setIsCopied(true);
       toast({
         title: 'URL copiada',
@@ -186,7 +186,6 @@ export function PaymentCard({
   const isPending = payment.status === PaymentStatus.PENDING;
   const isPendingVerification = payment.status === PaymentStatus.PENDING_VERIFICATION;
   const isCompleted = payment.status === PaymentStatus.COMPLETED;
-  const hasCheckoutUrl = payment.checkoutUrl && !payment.isExpired;
 
   return (
     <Card>
@@ -202,10 +201,11 @@ export function PaymentCard({
       <CardContent className="space-y-3">
         {/* Amount breakdown and payer */}
         <div className="space-y-1 text-sm">
-          {/* IVA Breakdown */}
+          {/* IVA Breakdown - use stored values with fallback for legacy payments */}
           {(() => {
-            const subtotal = Math.round((payment.amount / 1.16) * 100) / 100;
-            const iva = Math.round((payment.amount - subtotal) * 100) / 100;
+            // Use stored subtotal/iva if available, otherwise calculate (legacy payments)
+            const subtotal = payment.subtotal ?? Math.round((payment.amount / (1 + TAX_CONFIG.IVA_RATE)) * 100) / 100;
+            const iva = payment.iva ?? Math.round((payment.amount - subtotal) * 100) / 100;
             return (
               <div className="space-y-0.5">
                 <div className="flex justify-between text-muted-foreground">
@@ -303,19 +303,19 @@ export function PaymentCard({
         {/* Actions (hidden for historical payments) */}
         {!isHistorical && (
         <div className="flex flex-wrap gap-2 pt-2">
-          {/* Pay with Stripe button */}
-          {isPending && hasCheckoutUrl && (
+          {/* Pay with Stripe button - opens internal payment page */}
+          {isPending && !payment.isManual && (
             <Button
               size="sm"
-              onClick={() => window.open(payment.checkoutUrl!, '_blank')}
+              onClick={() => window.open(getPaymentUrl(), '_blank')}
             >
               <CreditCard className="h-4 w-4 mr-1" />
               Pagar con Stripe
             </Button>
           )}
 
-          {/* Copy URL button */}
-          {isPending && hasCheckoutUrl && (
+          {/* Copy URL button - copies internal payment URL */}
+          {isPending && !payment.isManual && (
             <Button
               size="sm"
               variant="outline"
@@ -328,23 +328,6 @@ export function PaymentCard({
                 <Copy className="h-4 w-4 mr-1" />
               )}
               {isCopied ? 'Copiado' : 'Copiar Link'}
-            </Button>
-          )}
-
-          {/* Regenerate URL button (admin, expired) */}
-          {isPending && payment.isExpired && isStaffOrAdmin && onRegenerateUrl && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={regenerateDialog.open}
-              disabled={isRegenerating}
-            >
-              {isRegenerating ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-1" />
-              )}
-              Regenerar Link
             </Button>
           )}
 
@@ -430,28 +413,6 @@ export function PaymentCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Regenerate URL Confirmation Dialog */}
-      <AlertDialog open={regenerateDialog.isOpen} onOpenChange={(open) => !open && regenerateDialog.close()}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Regenerar Link de Pago</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se generará un nuevo link de pago. El link anterior dejará de funcionar.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                onRegenerateUrl?.();
-                regenerateDialog.close();
-              }}
-            >
-              Regenerar Link
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   );
 }

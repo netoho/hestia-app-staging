@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, CreditCard, AlertCircle, Plus } from 'lucide-react';
 import { PaymentType, PaymentStatus } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
+import { useToast } from '@/hooks/use-toast';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
 import { PaymentCard } from './PaymentCard';
 import { ManualPaymentDialog } from './ManualPaymentDialog';
@@ -21,6 +22,9 @@ interface PaymentsTabProps {
 }
 
 export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabProps) {
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+
   const [manualPaymentDialog, setManualPaymentDialog] = useState<{
     open: boolean;
     paymentType: PaymentType;
@@ -49,7 +53,6 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   const [addPaymentDialogOpen, setAddPaymentDialogOpen] = useState(false);
 
-  const [regeneratingPaymentId, setRegeneratingPaymentId] = useState<string | null>(null);
   const [cancellingPaymentId, setCancellingPaymentId] = useState<string | null>(null);
 
   const {
@@ -59,37 +62,38 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     refetch,
   } = trpc.payment.getPaymentDetails.useQuery({ policyId });
 
-  const generatePaymentLinks = trpc.payment.generatePaymentLinks.useMutation({
-    onSuccess: () => refetch(),
-  });
+  const invalidatePayments = () => {
+    utils.payment.getPaymentDetails.invalidate({ policyId });
+  };
 
-  const regeneratePaymentUrl = trpc.payment.regeneratePaymentUrl.useMutation({
-    onSuccess: () => {
-      setRegeneratingPaymentId(null);
-      refetch();
-    },
-    onError: () => {
-      setRegeneratingPaymentId(null);
+  const generatePaymentLinks = trpc.payment.generatePaymentLinks.useMutation({
+    onSuccess: invalidatePayments,
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al generar links de pago',
+        variant: 'destructive',
+      });
     },
   });
 
   const cancelPayment = trpc.payment.cancelPayment.useMutation({
     onSuccess: () => {
       setCancellingPaymentId(null);
-      refetch();
+      invalidatePayments();
     },
-    onError: () => {
+    onError: (error) => {
       setCancellingPaymentId(null);
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al cancelar el pago',
+        variant: 'destructive',
+      });
     },
   });
 
   const handleGenerateLinks = async () => {
     await generatePaymentLinks.mutateAsync({ policyId });
-  };
-
-  const handleRegenerateUrl = (paymentId: string) => {
-    setRegeneratingPaymentId(paymentId);
-    regeneratePaymentUrl.mutate({ paymentId });
   };
 
   const handleCancelPayment = (paymentId: string) => {
@@ -147,8 +151,9 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
   const { breakdown, payments, overallStatus, totalPaid, totalRemaining } = paymentSummary;
 
   // Separate current payments from historical (tenant replaced) payments
-  const currentPayments = payments.filter((p) => !p.paidByTenantName);
-  const historicalPayments = payments.filter((p) => p.paidByTenantName);
+  // Use explicit null check to avoid issues with empty strings
+  const currentPayments = payments.filter((p) => p.paidByTenantName === null || p.paidByTenantName === undefined);
+  const historicalPayments = payments.filter((p) => p.paidByTenantName !== null && p.paidByTenantName !== undefined);
 
   // Group historical payments by tenant name
   const historicalByTenant = historicalPayments.reduce((acc, payment) => {
@@ -166,9 +171,23 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
   const tenantPayment = findPaymentByType(PaymentType.TENANT_PORTION);
   const landlordPayment = findPaymentByType(PaymentType.LANDLORD_PORTION);
 
-  // Get additional payments (PARTIAL_PAYMENT, INCIDENT_PAYMENT, etc.)
+  // Get additional payments (everything except standard policy payments)
+  // Using exclusion so new payment types are automatically included
+  const standardPaymentTypes = [
+    PaymentType.INVESTIGATION_FEE,
+    PaymentType.TENANT_PORTION,
+    PaymentType.LANDLORD_PORTION,
+  ];
   const additionalPayments = currentPayments.filter(
-    (p) => p.status !== PaymentStatus.CANCELLED
+    (p) =>
+      !standardPaymentTypes.includes(p.type as PaymentType) &&
+      p.status !== PaymentStatus.FAILED &&
+      p.status !== PaymentStatus.CANCELLED
+  );
+
+  // Get cancelled/failed payments to show at the end
+  const cancelledPayments = currentPayments.filter(
+    (p) => p.status === PaymentStatus.CANCELLED || p.status === PaymentStatus.FAILED
   );
 
   // Check if we have any pending payments (with checkout URLs) - only current payments
@@ -249,18 +268,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openVerifyDialog(investigationPayment)
               : undefined
           }
-          onRegenerateUrl={
-            investigationPayment.isExpired
-              ? () => handleRegenerateUrl(investigationPayment.id)
-              : undefined
-          }
           onCancel={() => handleCancelPayment(investigationPayment.id)}
           onEdit={
             investigationPayment.status === PaymentStatus.PENDING
               ? () => openEditDialog(investigationPayment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === investigationPayment.id}
           isCancelling={cancellingPaymentId === investigationPayment.id}
         />
       )}
@@ -278,16 +291,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openVerifyDialog(tenantPayment)
               : undefined
           }
-          onRegenerateUrl={
-            tenantPayment.isExpired ? () => handleRegenerateUrl(tenantPayment.id) : undefined
-          }
           onCancel={() => handleCancelPayment(tenantPayment.id)}
           onEdit={
             tenantPayment.status === PaymentStatus.PENDING
               ? () => openEditDialog(tenantPayment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === tenantPayment.id}
           isCancelling={cancellingPaymentId === tenantPayment.id}
         />
       )}
@@ -305,16 +314,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openVerifyDialog(landlordPayment)
               : undefined
           }
-          onRegenerateUrl={
-            landlordPayment.isExpired ? () => handleRegenerateUrl(landlordPayment.id) : undefined
-          }
           onCancel={() => handleCancelPayment(landlordPayment.id)}
           onEdit={
             landlordPayment.status === PaymentStatus.PENDING
               ? () => openEditDialog(landlordPayment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === landlordPayment.id}
           isCancelling={cancellingPaymentId === landlordPayment.id}
         />
       )}
@@ -325,13 +330,13 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           key={payment.id}
           payment={payment}
           isStaffOrAdmin={isStaffOrAdmin}
+          onManualPayment={() =>
+            openManualPaymentDialog(payment.type as PaymentType, payment.amount)
+          }
           onVerify={
             payment.status === PaymentStatus.PENDING_VERIFICATION
               ? () => openVerifyDialog(payment)
               : undefined
-          }
-          onRegenerateUrl={
-            payment.isExpired ? () => handleRegenerateUrl(payment.id) : undefined
           }
           onCancel={() => handleCancelPayment(payment.id)}
           onEdit={
@@ -339,10 +344,25 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               ? () => openEditDialog(payment)
               : undefined
           }
-          isRegenerating={regeneratingPaymentId === payment.id}
           isCancelling={cancellingPaymentId === payment.id}
         />
       ))}
+
+      {/* Cancelled/Failed Payments */}
+      {cancelledPayments.length > 0 && (
+        <div className="mt-8 space-y-4">
+          <h3 className="text-lg font-semibold text-muted-foreground border-b pb-2">
+            Pagos Cancelados
+          </h3>
+          {cancelledPayments.map((payment) => (
+            <PaymentCard
+              key={payment.id}
+              payment={payment}
+              isStaffOrAdmin={isStaffOrAdmin}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Historical Payments (from replaced tenants) */}
       {Object.keys(historicalByTenant).length > 0 && (
@@ -375,7 +395,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
         policyId={policyId}
         paymentType={manualPaymentDialog.paymentType}
         expectedAmount={manualPaymentDialog.expectedAmount}
-        onSuccess={() => refetch()}
+        onSuccess={invalidatePayments}
       />
 
       {/* Verify Payment Dialog */}
@@ -384,7 +404,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           open={verifyDialog.open}
           onOpenChange={(open) => setVerifyDialog((prev) => ({ ...prev, open }))}
           payment={verifyDialog.payment}
-          onSuccess={() => refetch()}
+          onSuccess={invalidatePayments}
         />
       )}
 
@@ -393,7 +413,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
         open={editDialog.open}
         onOpenChange={(open) => setEditDialog((prev) => ({ ...prev, open }))}
         payment={editDialog.payment}
-        onSuccess={() => refetch()}
+        onSuccess={invalidatePayments}
       />
 
       {/* Add Payment Dialog */}
@@ -401,7 +421,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
         open={addPaymentDialogOpen}
         onOpenChange={setAddPaymentDialogOpen}
         policyId={policyId}
-        onSuccess={() => refetch()}
+        onSuccess={invalidatePayments}
       />
     </div>
   );

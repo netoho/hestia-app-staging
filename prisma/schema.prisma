@@ -1066,7 +1066,9 @@ model Payment {
   id       String @id @default(cuid())
   policyId String
 
-  amount   Float
+  amount   Float // Total amount (subtotal + iva)
+  subtotal Float? // Amount before IVA (null for legacy payments)
+  iva      Float? // IVA amount at 16% (null for legacy payments)
   currency String         @default("MXN")
   status   PaymentStatus  @default(PENDING)
   method   PaymentMethod?

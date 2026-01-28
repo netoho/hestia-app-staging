@@ -18,6 +18,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
 import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
 
 interface EditPaymentDialogProps {
@@ -60,7 +61,7 @@ export function EditPaymentDialog({
   useEffect(() => {
     if (open && payment) {
       // Initialize with current subtotal (stored amount includes IVA)
-      const currentSubtotal = Math.round((payment.amount / 1.16) * 100) / 100;
+      const currentSubtotal = Math.round((payment.amount / (1 + TAX_CONFIG.IVA_RATE)) * 100) / 100;
       setAmount(currentSubtotal.toString());
       setShowConfirmation(false);
     }
@@ -121,13 +122,13 @@ export function EditPaymentDialog({
   const typeLabel = PAYMENT_TYPE_LABELS[payment.type as PaymentType] || payment.type;
 
   // Current values (stored amount includes IVA)
-  const currentSubtotal = Math.round((payment.amount / 1.16) * 100) / 100;
+  const currentSubtotal = Math.round((payment.amount / (1 + TAX_CONFIG.IVA_RATE)) * 100) / 100;
   const currentIva = Math.round((payment.amount - currentSubtotal) * 100) / 100;
   const currentTotal = payment.amount;
 
   // New values from input
   const newSubtotal = parseFloat(amount) || 0;
-  const newIva = Math.round(newSubtotal * 0.16 * 100) / 100;
+  const newIva = Math.round(newSubtotal * TAX_CONFIG.IVA_RATE * 100) / 100;
   const newTotal = Math.round((newSubtotal + newIva) * 100) / 100;
 
   const subtotalChanged = newSubtotal !== currentSubtotal && newSubtotal > 0;
