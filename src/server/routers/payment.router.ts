@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { createTRPCRouter, protectedProcedure, adminProcedure } from '@/server/trpc';
+import { createTRPCRouter, protectedProcedure, adminProcedure, publicProcedure } from '@/server/trpc';
 import { PaymentType, PayerType, PaymentStatus } from "@/prisma/generated/prisma-client/enums";
 import {
   paymentService,
@@ -8,6 +8,9 @@ import {
   type PolicyPaymentSessionsResult,
   type PaymentSummary,
 } from '@/lib/services/paymentService';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
+
+const IVA_MULTIPLIER = 1 + TAX_CONFIG.IVA_RATE;
 
 /**
  * Payment Router
@@ -371,7 +374,7 @@ export const paymentRouter = createTRPCRouter({
       const { userId } = ctx;
 
       // Calculate total with IVA (16%)
-      const totalWithIva = Math.round(subtotal * 1.16 * 100) / 100;
+      const totalWithIva = Math.round(subtotal * IVA_MULTIPLIER * 100) / 100;
 
       try {
         return await paymentService.editPaymentAmount(paymentId, totalWithIva, userId);
@@ -403,7 +406,7 @@ export const paymentRouter = createTRPCRouter({
       const { userId } = ctx;
 
       // Calculate total with IVA (16%)
-      const totalWithIva = Math.round(subtotal * 1.16 * 100) / 100;
+      const totalWithIva = Math.round(subtotal * IVA_MULTIPLIER * 100) / 100;
 
       // Verify policy exists
       const policy = await ctx.prisma.policy.findUnique({
@@ -437,7 +440,7 @@ export const paymentRouter = createTRPCRouter({
             details: {
               paymentId: result.paymentId,
               subtotal,
-              iva: Math.round(subtotal * 0.16 * 100) / 100,
+              iva: Math.round(subtotal * TAX_CONFIG.IVA_RATE * 100) / 100,
               totalWithIva,
               paidBy,
               type: PaymentType.PARTIAL_PAYMENT,
@@ -454,5 +457,54 @@ export const paymentRouter = createTRPCRouter({
           message: error instanceof Error ? error.message : 'Error al crear el pago',
         });
       }
+    }),
+
+  // ============================================
+  // PUBLIC ENDPOINTS (for /payments/[id] page)
+  // ============================================
+
+  /**
+   * Get public payment info for the payment page
+   * No auth required - returns minimal info safe for public display
+   */
+  getPublicPayment: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .query(async ({ input }) => {
+      const { paymentId } = input;
+
+      const result = await paymentService.getPublicPaymentInfo(paymentId);
+
+      if (!result) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Pago no encontrado',
+        });
+      }
+
+      return result;
+    }),
+
+  /**
+   * Create a checkout session for a pending payment
+   * No auth required - used by /payments/[id] page to redirect to Stripe
+   * Returns null if payment is already completed, cancelled, or manual
+   */
+  createCheckoutSession: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { paymentId } = input;
+
+      const result = await paymentService.getOrCreateCheckoutSession(paymentId);
+
+      if (!result) {
+        // Payment is not in a state where we can create a session
+        // (completed, cancelled, failed, manual, or not found)
+        return { checkoutUrl: null, reason: 'not_eligible' };
+      }
+
+      return {
+        checkoutUrl: result.checkoutUrl,
+        expiresAt: result.expiresAt,
+      };
     }),
 });
