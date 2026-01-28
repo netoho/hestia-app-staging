@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Payment" ADD COLUMN     "iva" DOUBLE PRECISION,
+ADD COLUMN     "subtotal" DOUBLE PRECISION;
