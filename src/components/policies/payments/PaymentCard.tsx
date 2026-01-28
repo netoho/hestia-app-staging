@@ -202,10 +202,11 @@ export function PaymentCard({
       <CardContent className="space-y-3">
         {/* Amount breakdown and payer */}
         <div className="space-y-1 text-sm">
-          {/* IVA Breakdown */}
+          {/* IVA Breakdown - use stored values with fallback for legacy payments */}
           {(() => {
-            const subtotal = Math.round((payment.amount / 1.16) * 100) / 100;
-            const iva = Math.round((payment.amount - subtotal) * 100) / 100;
+            // Use stored subtotal/iva if available, otherwise calculate (legacy payments)
+            const subtotal = payment.subtotal ?? Math.round((payment.amount / 1.16) * 100) / 100;
+            const iva = payment.iva ?? Math.round((payment.amount - subtotal) * 100) / 100;
             return (
               <div className="space-y-0.5">
                 <div className="flex justify-between text-muted-foreground">
