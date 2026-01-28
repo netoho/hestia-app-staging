@@ -29,6 +29,7 @@ import {
   Download,
   Copy,
   Check,
+  Pencil,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
@@ -45,6 +46,7 @@ interface PaymentCardProps {
   onVerify?: () => void;
   onRegenerateUrl?: () => void;
   onCancel?: () => void;
+  onEdit?: () => void;
   isRegenerating?: boolean;
   isCancelling?: boolean;
   isHistorical?: boolean;
@@ -101,6 +103,7 @@ export function PaymentCard({
   onVerify,
   onRegenerateUrl,
   onCancel,
+  onEdit,
   isRegenerating = false,
   isCancelling = false,
   isHistorical = false,
@@ -197,13 +200,30 @@ export function PaymentCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Amount and payer */}
+        {/* Amount breakdown and payer */}
         <div className="space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Monto</span>
-            <span className="font-medium">{formatCurrency(payment.amount)}</span>
-          </div>
-          <div className="flex justify-between">
+          {/* IVA Breakdown */}
+          {(() => {
+            const subtotal = Math.round((payment.amount / 1.16) * 100) / 100;
+            const iva = Math.round((payment.amount - subtotal) * 100) / 100;
+            return (
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>IVA (16%)</span>
+                  <span>{formatCurrency(iva)}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Total</span>
+                  <span>{formatCurrency(payment.amount)}</span>
+                </div>
+              </div>
+            );
+          })()}
+          <div className="flex justify-between pt-1 border-t">
             <span className="text-muted-foreground">Pagador</span>
             <span>{payerLabel}</span>
           </div>
@@ -325,6 +345,18 @@ export function PaymentCard({
                 <RefreshCw className="h-4 w-4 mr-1" />
               )}
               Regenerar Link
+            </Button>
+          )}
+
+          {/* Edit amount button (admin, pending) */}
+          {isPending && isStaffOrAdmin && onEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onEdit}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Editar Monto
             </Button>
           )}
 

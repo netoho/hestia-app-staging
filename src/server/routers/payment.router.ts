@@ -355,4 +355,104 @@ export const paymentRouter = createTRPCRouter({
       const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);
       return { receiptUrl };
     }),
+
+  /**
+   * Edit the amount of a pending payment
+   * Admin/Staff only - Cancels existing Stripe session and creates new one
+   * Input: subtotal (without IVA) - will add 16% IVA
+   */
+  editAmount: adminProcedure
+    .input(z.object({
+      paymentId: z.string(),
+      newAmount: z.number().positive().max(862069), // Max subtotal so total stays under 1M
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { paymentId, newAmount: subtotal } = input;
+      const { userId } = ctx;
+
+      // Calculate total with IVA (16%)
+      const totalWithIva = Math.round(subtotal * 1.16 * 100) / 100;
+
+      try {
+        return await paymentService.editPaymentAmount(paymentId, totalWithIva, userId);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('only edit amount for pending')) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Solo se puede editar el monto de pagos pendientes',
+          });
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * Create a new payment with Stripe checkout link
+   * Admin/Staff only - Creates ad-hoc payment for a policy
+   * Input: subtotal (without IVA) - will add 16% IVA
+   */
+  createNew: adminProcedure
+    .input(z.object({
+      policyId: z.string(),
+      amount: z.number().positive().max(862069), // Max subtotal so total stays under 1M
+      paidBy: z.nativeEnum(PayerType),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { policyId, amount: subtotal, paidBy, description } = input;
+      const { userId } = ctx;
+
+      // Calculate total with IVA (16%)
+      const totalWithIva = Math.round(subtotal * 1.16 * 100) / 100;
+
+      // Verify policy exists
+      const policy = await ctx.prisma.policy.findUnique({
+        where: { id: policyId },
+        select: { id: true },
+      });
+
+      if (!policy) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Póliza no encontrada',
+        });
+      }
+
+      try {
+        // Create checkout session using existing service method
+        const result = await paymentService.createTypedCheckoutSession({
+          policyId,
+          amount: totalWithIva,
+          type: PaymentType.PARTIAL_PAYMENT,
+          paidBy,
+          description: description || 'Pago Adicional',
+        });
+
+        // Log activity
+        await ctx.prisma.policyActivity.create({
+          data: {
+            policyId,
+            action: 'payment_created',
+            description: `Nuevo pago creado: ${description || 'Pago Adicional'}`,
+            details: {
+              paymentId: result.paymentId,
+              subtotal,
+              iva: Math.round(subtotal * 0.16 * 100) / 100,
+              totalWithIva,
+              paidBy,
+              type: PaymentType.PARTIAL_PAYMENT,
+            },
+            performedById: userId,
+            performedByType: 'user',
+          },
+        });
+
+        return result;
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Error al crear el pago',
+        });
+      }
+    }),
 });
