@@ -608,6 +608,10 @@ class PaymentService extends BaseService {
     // Use temporary ID initially, will update metadata after DB record created
     let session: Stripe.Checkout.Session;
     try {
+      // If tax rate is configured, send subtotal (before IVA) and let Stripe add tax
+      const taxRateId = process.env.STRIPE_TAX_RATE_ID;
+      const subtotalForStripe = taxRateId ? Math.round((amount / 1.16) * 100) : Math.round(amount * 100);
+
       session = await stripeInstance.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -618,9 +622,10 @@ class PaymentService extends BaseService {
                 name: description,
                 description: `Póliza ${policy.policyNumber}`,
               },
-              unit_amount: Math.round(amount * 100),
+              unit_amount: subtotalForStripe,
             },
             quantity: 1,
+            ...(taxRateId ? { tax_rates: [taxRateId] } : {}),
           },
         ],
         mode: 'payment',
@@ -1040,6 +1045,10 @@ class PaymentService extends BaseService {
     const successUrl = `${baseUrl}/dashboard/policies/${payment.policyId}?payment=success&type=${payment.type}`;
     const cancelUrl = `${baseUrl}/dashboard/policies/${payment.policyId}?payment=cancelled&type=${payment.type}`;
 
+    // If tax rate is configured, send subtotal (before IVA) and let Stripe add tax
+    const taxRateId = process.env.STRIPE_TAX_RATE_ID;
+    const subtotalForStripe = taxRateId ? Math.round((payment.amount / 1.16) * 100) : Math.round(payment.amount * 100);
+
     // Create new Stripe session with existing paymentId in metadata
     const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -1051,9 +1060,10 @@ class PaymentService extends BaseService {
               name: payment.description || 'Pago de Póliza',
               description: `Póliza ${payment.policy.policyNumber}`,
             },
-            unit_amount: Math.round(payment.amount * 100),
+            unit_amount: subtotalForStripe,
           },
           quantity: 1,
+          ...(taxRateId ? { tax_rates: [taxRateId] } : {}),
         },
       ],
       mode: 'payment',
@@ -1106,6 +1116,155 @@ class PaymentService extends BaseService {
   }
 
   /**
+   * Edit the amount of a pending payment
+   * Cancels existing Stripe session and creates a new one with the updated amount
+   */
+  async editPaymentAmount(
+    paymentId: string,
+    newAmount: number,
+    editedById: string
+  ): Promise<PaymentSessionResult> {
+    // Validate amount
+    if (newAmount <= 0) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount must be positive', 400, { newAmount });
+    }
+    if (newAmount > 1000000) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount exceeds maximum limit (1,000,000 MXN)', 400, { newAmount });
+    }
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        policy: {
+          select: { policyNumber: true, tenant: { select: { email: true } } },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'Can only edit amount for pending payments',
+        400,
+        { currentStatus: payment.status }
+      );
+    }
+
+    // Validate payment type and paidBy
+    if (!payment.type || !Object.values(PaymentType).includes(payment.type as PaymentType)) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Invalid payment type', 400, { type: payment.type });
+    }
+    if (!payment.paidBy || !Object.values(PayerType).includes(payment.paidBy as PayerType)) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Invalid payer type', 400, { paidBy: payment.paidBy });
+    }
+
+    const previousAmount = payment.amount;
+    const stripeInstance = await getStripe();
+
+    // Expire old Stripe session if exists
+    if (payment.stripeSessionId) {
+      try {
+        await stripeInstance.checkout.sessions.expire(payment.stripeSessionId);
+      } catch (error) {
+        // Session might already be expired or completed, continue anyway
+        console.warn('Failed to expire old Stripe session:', error);
+      }
+    }
+
+    // Create new Stripe session with updated amount
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const successUrl = `${baseUrl}/dashboard/policies/${payment.policyId}?payment=success&type=${payment.type}`;
+    const cancelUrl = `${baseUrl}/dashboard/policies/${payment.policyId}?payment=cancelled&type=${payment.type}`;
+
+    // Calculate subtotal for tax (exclusive IVA)
+    const taxRateId = process.env.STRIPE_TAX_RATE_ID;
+    const subtotalForStripe = taxRateId ? Math.round((newAmount / 1.16) * 100) : Math.round(newAmount * 100);
+
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'mxn',
+            product_data: {
+              name: payment.description || 'Pago de Póliza',
+              description: `Póliza ${payment.policy.policyNumber}`,
+            },
+            unit_amount: subtotalForStripe,
+          },
+          quantity: 1,
+          ...(taxRateId ? { tax_rates: [taxRateId] } : {}),
+        },
+      ],
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_email: payment.policy.tenant?.email,
+      metadata: {
+        paymentId: payment.id,
+        policyId: payment.policyId,
+        paymentType: payment.type,
+        paidBy: payment.paidBy,
+      },
+      payment_intent_data: {
+        metadata: {
+          paymentId: payment.id,
+          policyId: payment.policyId,
+          paymentType: payment.type,
+          paidBy: payment.paidBy,
+        },
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 86400,
+    };
+
+    const session = await stripeInstance.checkout.sessions.create(sessionConfig);
+
+    // Update payment record with new amount and session
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          amount: newAmount,
+          stripeSessionId: session.id,
+          checkoutUrl: session.url,
+          checkoutUrlExpiry: expiresAt,
+        },
+      });
+
+      // Log activity
+      await tx.policyActivity.create({
+        data: {
+          policyId: payment.policyId,
+          action: 'payment_amount_edited',
+          description: `Monto de pago editado: ${payment.type}`,
+          details: {
+            paymentId,
+            previousAmount,
+            newAmount,
+            paymentType: payment.type,
+          },
+          performedById: editedById,
+          performedByType: 'user',
+        },
+      });
+    });
+
+    return {
+      paymentId,
+      checkoutUrl: session.url!,
+      amount: newAmount,
+      type: payment.type as PaymentType,
+      expiresAt,
+    };
+  }
+
+  /**
    * Get Stripe receipt URL for a payment
    * Always fetches fresh from Stripe API (receipt URLs expire after 30 days)
    */
@@ -1155,6 +1314,7 @@ export const verifyManualPayment = paymentService.verifyManualPayment.bind(payme
 export const updatePaymentReceipt = paymentService.updatePaymentReceipt.bind(paymentService);
 export const regenerateCheckoutUrl = paymentService.regenerateCheckoutUrl.bind(paymentService);
 export const getPaymentById = paymentService.getPaymentById.bind(paymentService);
+export const editPaymentAmount = paymentService.editPaymentAmount.bind(paymentService);
 
 // Re-export class for type usage
 export { PaymentService };
