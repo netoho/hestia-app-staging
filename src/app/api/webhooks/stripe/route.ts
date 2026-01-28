@@ -145,18 +145,14 @@ export async function POST(request: NextRequest) {
       }
 
       case 'checkout.session.expired': {
+        // Session expired - just log it, DON'T mark payment as FAILED
+        // User can create a new session via /payments/[id]
         const session = event.data.object as any;
         const paymentId = session.metadata?.paymentId;
         const paymentType = session.metadata?.paymentType;
         const policyId = session.metadata?.policyId;
 
-        if (paymentId) {
-          await updatePaymentById(
-            paymentId,
-            PaymentStatus.FAILED,
-            { errorMessage: 'Checkout session expired' }
-          );
-        } else {
+        if (!paymentId) {
           console.warn('Webhook: checkout.session.expired missing paymentId in metadata', session.id);
         }
 
@@ -165,11 +161,10 @@ export async function POST(request: NextRequest) {
 
           await logPolicyActivity({
             policyId,
-            action: 'payment_expired',
-            description: `Link de pago expirado: ${typeDescription}`,
+            action: 'checkout_session_expired',
+            description: `Sesión de checkout expirada: ${typeDescription}`,
             performedById: 'system',
             details: {
-              reason: 'Checkout session expired',
               paymentType,
               stripeSessionId: session.id,
               paymentId,
