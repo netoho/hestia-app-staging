@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
+import { Loader2, CreditCard, AlertCircle, Plus } from 'lucide-react';
 import { PaymentType, PaymentStatus } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
 import { PaymentCard } from './PaymentCard';
 import { ManualPaymentDialog } from './ManualPaymentDialog';
 import { VerifyPaymentDialog } from './VerifyPaymentDialog';
+import { EditPaymentDialog } from './EditPaymentDialog';
+import { AddPaymentDialog } from './AddPaymentDialog';
 import PaymentsTabSkeleton from './PaymentsTabSkeleton';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
 
@@ -36,6 +38,16 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     open: false,
     payment: null,
   });
+
+  const [editDialog, setEditDialog] = useState<{
+    open: boolean;
+    payment: PaymentWithStatus | null;
+  }>({
+    open: false,
+    payment: null,
+  });
+
+  const [addPaymentDialogOpen, setAddPaymentDialogOpen] = useState(false);
 
   const [regeneratingPaymentId, setRegeneratingPaymentId] = useState<string | null>(null);
   const [cancellingPaymentId, setCancellingPaymentId] = useState<string | null>(null);
@@ -100,6 +112,13 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     });
   };
 
+  const openEditDialog = (payment: PaymentWithStatus) => {
+    setEditDialog({
+      open: true,
+      payment,
+    });
+  };
+
   if (isLoading) {
     return <PaymentsTabSkeleton />;
   }
@@ -147,6 +166,14 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
   const tenantPayment = findPaymentByType(PaymentType.TENANT_PORTION);
   const landlordPayment = findPaymentByType(PaymentType.LANDLORD_PORTION);
 
+  // Get additional payments (PARTIAL_PAYMENT, INCIDENT_PAYMENT, etc.)
+  const additionalPayments = currentPayments.filter(
+    (p) =>
+      (p.type === PaymentType.PARTIAL_PAYMENT || p.type === PaymentType.INCIDENT_PAYMENT) &&
+      p.status !== PaymentStatus.FAILED &&
+      p.status !== PaymentStatus.CANCELLED
+  );
+
   // Check if we have any pending payments (with checkout URLs) - only current payments
   const hasPendingPayments = currentPayments.some(
     (p) => p.status === PaymentStatus.PENDING && p.checkoutUrl
@@ -160,6 +187,20 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   return (
     <div className="space-y-6">
+      {/* Header with Add Payment button */}
+      {isStaffOrAdmin && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAddPaymentDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Agregar Pago
+          </Button>
+        </div>
+      )}
+
       {/* Summary Card */}
       <PaymentSummaryCard
         breakdown={breakdown}
@@ -217,6 +258,11 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               : undefined
           }
           onCancel={() => handleCancelPayment(investigationPayment.id)}
+          onEdit={
+            investigationPayment.status === PaymentStatus.PENDING
+              ? () => openEditDialog(investigationPayment)
+              : undefined
+          }
           isRegenerating={regeneratingPaymentId === investigationPayment.id}
           isCancelling={cancellingPaymentId === investigationPayment.id}
         />
@@ -239,6 +285,11 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
             tenantPayment.isExpired ? () => handleRegenerateUrl(tenantPayment.id) : undefined
           }
           onCancel={() => handleCancelPayment(tenantPayment.id)}
+          onEdit={
+            tenantPayment.status === PaymentStatus.PENDING
+              ? () => openEditDialog(tenantPayment)
+              : undefined
+          }
           isRegenerating={regeneratingPaymentId === tenantPayment.id}
           isCancelling={cancellingPaymentId === tenantPayment.id}
         />
@@ -261,10 +312,40 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
             landlordPayment.isExpired ? () => handleRegenerateUrl(landlordPayment.id) : undefined
           }
           onCancel={() => handleCancelPayment(landlordPayment.id)}
+          onEdit={
+            landlordPayment.status === PaymentStatus.PENDING
+              ? () => openEditDialog(landlordPayment)
+              : undefined
+          }
           isRegenerating={regeneratingPaymentId === landlordPayment.id}
           isCancelling={cancellingPaymentId === landlordPayment.id}
         />
       )}
+
+      {/* Additional Payments (PARTIAL_PAYMENT, INCIDENT_PAYMENT) */}
+      {additionalPayments.map((payment) => (
+        <PaymentCard
+          key={payment.id}
+          payment={payment}
+          isStaffOrAdmin={isStaffOrAdmin}
+          onVerify={
+            payment.status === PaymentStatus.PENDING_VERIFICATION
+              ? () => openVerifyDialog(payment)
+              : undefined
+          }
+          onRegenerateUrl={
+            payment.isExpired ? () => handleRegenerateUrl(payment.id) : undefined
+          }
+          onCancel={() => handleCancelPayment(payment.id)}
+          onEdit={
+            payment.status === PaymentStatus.PENDING
+              ? () => openEditDialog(payment)
+              : undefined
+          }
+          isRegenerating={regeneratingPaymentId === payment.id}
+          isCancelling={cancellingPaymentId === payment.id}
+        />
+      ))}
 
       {/* Historical Payments (from replaced tenants) */}
       {Object.keys(historicalByTenant).length > 0 && (
@@ -309,6 +390,22 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           onSuccess={() => refetch()}
         />
       )}
+
+      {/* Edit Payment Dialog */}
+      <EditPaymentDialog
+        open={editDialog.open}
+        onOpenChange={(open) => setEditDialog((prev) => ({ ...prev, open }))}
+        payment={editDialog.payment}
+        onSuccess={() => refetch()}
+      />
+
+      {/* Add Payment Dialog */}
+      <AddPaymentDialog
+        open={addPaymentDialogOpen}
+        onOpenChange={setAddPaymentDialogOpen}
+        policyId={policyId}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }
