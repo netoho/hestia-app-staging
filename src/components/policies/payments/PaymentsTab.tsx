@@ -186,7 +186,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   // Find existing payments by type (only from current payments)
   const findPaymentByType = (type: PaymentType) =>
-    currentPayments.find((p) => p.type === type && p.status !== PaymentStatus.FAILED && p.status !== PaymentStatus.CANCELLED);
+    currentPayments.find((p) => p.type === type && p.status !== PaymentStatus.CANCELLED);
 
   const investigationPayment = findPaymentByType(PaymentType.INVESTIGATION_FEE);
   const tenantPayment = findPaymentByType(PaymentType.TENANT_PORTION);
@@ -213,7 +213,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   // Check if we can generate payment links (no current active payments)
   const hasActiveCurrentPayments = currentPayments.some(
-    (p) => p.status !== PaymentStatus.CANCELLED && p.status !== PaymentStatus.FAILED
+    (p) => p.status !== PaymentStatus.CANCELLED
   );
   const canGenerateLinks = isStaffOrAdmin && !hasActiveCurrentPayments && breakdown.totalWithIva > 0;
 
