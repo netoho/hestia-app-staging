@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature, updatePaymentById } from '@/lib/services/paymentService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { sendPaymentCompletedEmail, sendAllPaymentsCompletedEmail } from '@/lib/services/emailService';
+import { getActiveAdmins } from '@/lib/services/userService';
 import prisma from '@/lib/prisma';
 import { PaymentStatus } from '@/prisma/generated/prisma-client/enums';
 
@@ -140,16 +141,23 @@ export async function POST(request: NextRequest) {
               details: { totalPayments: allPayments.length }
             });
 
-            // Send notification to admin
+            // Send notification to all admin users
             const totalAmount = allPayments.reduce((sum, p) => sum + p.amount, 0);
-            const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@hestiaplp.com.mx';
+            const admins = await getActiveAdmins();
 
-            await sendAllPaymentsCompletedEmail({
-              adminEmail,
-              policyNumber: policy?.policyNumber || policyId,
-              totalPayments: allPayments.length,
-              totalAmount
-            });
+            if (admins.length === 0) {
+              console.warn('No active admin users found - skipping admin notification');
+            } else {
+              for (const admin of admins) {
+                if (!admin.email) continue;
+                await sendAllPaymentsCompletedEmail({
+                  adminEmail: admin.email,
+                  policyNumber: policy?.policyNumber || policyId,
+                  totalPayments: allPayments.length,
+                  totalAmount
+                });
+              }
+            }
           }
         }
         break;
