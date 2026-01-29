@@ -43,18 +43,29 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ received: true, error: 'Missing paymentId' });
         }
 
-        // Idempotency check: skip if payment already completed
-        const existingPayment = await prisma.payment.findUnique({
-          where: { id: paymentId },
-          select: { status: true },
+        // Atomic idempotency check: try to claim the payment by setting PROCESSING
+        // This prevents race conditions when multiple webhooks fire simultaneously
+        const claimResult = await prisma.payment.updateMany({
+          where: {
+            id: paymentId,
+            status: PaymentStatus.PENDING, // Only claim if still PENDING
+          },
+          data: {
+            status: PaymentStatus.PROCESSING,
+          },
         });
 
-        if (existingPayment?.status === PaymentStatus.COMPLETED) {
-          console.log(`Webhook idempotency: payment ${paymentId} already completed, skipping`);
+        if (claimResult.count === 0) {
+          // Payment already claimed by another webhook or already completed
+          const existingPayment = await prisma.payment.findUnique({
+            where: { id: paymentId },
+            select: { status: true },
+          });
+          console.log(`Webhook idempotency: payment ${paymentId} status is ${existingPayment?.status}, skipping`);
           return NextResponse.json({ received: true, skipped: true });
         }
 
-        // Update payment status using our internal ID
+        // Update payment status to COMPLETED
         const payment = await updatePaymentById(
           paymentId,
           PaymentStatus.COMPLETED,
@@ -171,6 +182,57 @@ export async function POST(request: NextRequest) {
             }
           });
         }
+        break;
+      }
+
+      case 'charge.refunded': {
+        // Handle refunds - update payment status to REFUNDED
+        const charge = event.data.object as any;
+        const paymentIntentId = charge.payment_intent;
+
+        if (!paymentIntentId) {
+          console.warn('Webhook: charge.refunded missing payment_intent', charge.id);
+          break;
+        }
+
+        // Find payment by stripeIntentId
+        const refundedPayment = await prisma.payment.findFirst({
+          where: { stripeIntentId: paymentIntentId },
+          select: { id: true, policyId: true, type: true, amount: true },
+        });
+
+        if (!refundedPayment) {
+          console.warn(`Webhook: No payment found for payment_intent ${paymentIntentId}`);
+          break;
+        }
+
+        // Update payment status to REFUNDED
+        await prisma.payment.update({
+          where: { id: refundedPayment.id },
+          data: {
+            status: PaymentStatus.REFUNDED,
+            refundedAt: new Date(),
+            refundAmount: charge.amount_refunded / 100,
+          },
+        });
+
+        // Log activity
+        const refundTypeDescription = PAYMENT_TYPE_DESCRIPTIONS[refundedPayment.type] || refundedPayment.type || 'Pago';
+        await logPolicyActivity({
+          policyId: refundedPayment.policyId,
+          action: 'payment_refunded',
+          description: `Reembolso procesado: ${refundTypeDescription}`,
+          performedById: 'system',
+          details: {
+            paymentId: refundedPayment.id,
+            chargeId: charge.id,
+            originalAmount: refundedPayment.amount,
+            refundAmount: charge.amount_refunded / 100,
+            paymentType: refundedPayment.type,
+          },
+        });
+
+        console.log(`Webhook: Payment ${refundedPayment.id} marked as REFUNDED (${charge.amount_refunded / 100} MXN)`);
         break;
       }
 
