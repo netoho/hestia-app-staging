@@ -126,7 +126,7 @@ export const ActorAdminUpdateSchema = z.object({
   partial: z.boolean().optional(),
   informationComplete: z.boolean().optional(),
   tabName: z.string().optional(),
-}).passthrough();
+});
 
 // Service factory
 export function getActorService(type: z.infer<typeof ActorTypeSchema>): TenantService | LandlordService | AvalService | JointObligorService {
