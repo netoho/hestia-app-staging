@@ -723,7 +723,7 @@ class PaymentService extends BaseService {
     if (existingPayments.length > 0) {
       throw new ServiceError(
         ErrorCode.ALREADY_EXISTS,
-        'Policy already has pending payments. Use regenerateCheckoutUrl to update expired links.',
+        'Policy already has pending payments. Expired links auto-refresh when accessed.',
         400,
         { existingCount: existingPayments.length }
       );
@@ -1016,112 +1016,6 @@ class PaymentService extends BaseService {
         receiptFileName,
       },
     });
-  }
-
-  /**
-   * Regenerate an expired checkout URL for a payment
-   * Creates new Stripe session and updates existing payment atomically
-   */
-  async regenerateCheckoutUrl(paymentId: string): Promise<PaymentSessionResult> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-      include: {
-        policy: {
-          select: { policyNumber: true, tenant: { select: { email: true } } },
-        },
-      },
-    });
-
-    if (!payment) {
-      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
-    }
-
-    if (payment.status !== PaymentStatus.PENDING) {
-      throw new ServiceError(
-        ErrorCode.VALIDATION_ERROR,
-        'Can only regenerate URL for pending payments',
-        400,
-        { currentStatus: payment.status }
-      );
-    }
-
-    // Validate payment type and paidBy before using
-    if (!payment.type || !Object.values(PaymentType).includes(payment.type as PaymentType)) {
-      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Invalid payment type', 400, { type: payment.type });
-    }
-    if (!payment.paidBy || !Object.values(PayerType).includes(payment.paidBy as PayerType)) {
-      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Invalid payer type', 400, { paidBy: payment.paidBy });
-    }
-
-    const stripeInstance = await getStripe();
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    const successUrl = `${baseUrl}/payments/${paymentId}?status=success`;
-    const cancelUrl = `${baseUrl}/payments/${paymentId}?status=cancelled`;
-
-    // If tax rate is configured, send subtotal (before IVA) and let Stripe add tax
-    const taxRateId = process.env.STRIPE_TAX_RATE_ID;
-    const subtotalForStripe = taxRateId ? Math.round((payment.amount / IVA_MULTIPLIER) * 100) : Math.round(payment.amount * 100);
-
-    // Idempotency key for regeneration - uses old sessionId so retries are idempotent
-    const idempotencyKey = `regenerate-${paymentId}-${payment.stripeSessionId}`;
-
-    // Create new Stripe session with existing paymentId in metadata
-    const session = await stripeInstance.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'mxn',
-            product_data: {
-              name: payment.description || 'Pago de Póliza',
-              description: `Póliza ${payment.policy.policyNumber}`,
-            },
-            unit_amount: subtotalForStripe,
-          },
-          quantity: 1,
-          ...(taxRateId ? { tax_rates: [taxRateId] } : {}),
-        },
-      ],
-      mode: 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer_email: payment.policy.tenant?.email,
-      metadata: {
-        paymentId: payment.id, // Use existing payment ID
-        policyId: payment.policyId,
-        paymentType: payment.type,
-        paidBy: payment.paidBy,
-      },
-      payment_intent_data: {
-        metadata: {
-          paymentId: payment.id,
-          policyId: payment.policyId,
-          paymentType: payment.type,
-          paidBy: payment.paidBy,
-        },
-      },
-      expires_at: Math.floor(Date.now() / 1000) + 86400,
-    }, { idempotencyKey });
-
-    // Update existing payment with new session info
-    await this.prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        stripeSessionId: session.id,
-        checkoutUrl: session.url,
-        checkoutUrlExpiry: expiresAt,
-      },
-    });
-
-    return {
-      paymentId,
-      checkoutUrl: session.url!,
-      amount: payment.amount,
-      type: payment.type as PaymentType,
-      expiresAt,
-    };
   }
 
   /**
@@ -1490,7 +1384,6 @@ export const getPaymentSummary = paymentService.getPaymentSummary.bind(paymentSe
 export const createManualPayment = paymentService.createManualPayment.bind(paymentService);
 export const verifyManualPayment = paymentService.verifyManualPayment.bind(paymentService);
 export const updatePaymentReceipt = paymentService.updatePaymentReceipt.bind(paymentService);
-export const regenerateCheckoutUrl = paymentService.regenerateCheckoutUrl.bind(paymentService);
 export const getPaymentById = paymentService.getPaymentById.bind(paymentService);
 export const editPaymentAmount = paymentService.editPaymentAmount.bind(paymentService);
 export const getOrCreateCheckoutSession = paymentService.getOrCreateCheckoutSession.bind(paymentService);

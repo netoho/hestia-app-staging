@@ -212,30 +212,6 @@ export const paymentRouter = createTRPCRouter({
     }),
 
   /**
-   * Regenerate an expired checkout URL for a payment
-   * Admin/Staff only
-   */
-  regeneratePaymentUrl: adminProcedure
-    .input(z.object({
-      paymentId: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      const { paymentId } = input;
-
-      try {
-        return await paymentService.regenerateCheckoutUrl(paymentId);
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('only regenerate URL for pending')) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Solo se puede regenerar URL para pagos pendientes',
-          });
-        }
-        throw error;
-      }
-    }),
-
-  /**
    * Update payment with receipt information after S3 upload
    * Admin/Staff only
    */
