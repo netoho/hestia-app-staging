@@ -9,8 +9,8 @@ import {
   type PaymentSummary,
 } from '@/lib/services/paymentService';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
-
-const IVA_MULTIPLIER = 1 + TAX_CONFIG.IVA_RATE;
+import { PAYMENT_LIMITS } from '@/lib/config/payments';
+import { calculateIVA } from '@/lib/utils/money';
 
 /**
  * Payment Router
@@ -367,17 +367,17 @@ export const paymentRouter = createTRPCRouter({
   editAmount: adminProcedure
     .input(z.object({
       paymentId: z.string(),
-      newAmount: z.number().positive().max(862069), // Max subtotal so total stays under 1M
+      newAmount: z.number().positive().max(PAYMENT_LIMITS.MAX_SUBTOTAL), // Max subtotal so total stays under 1M
     }))
     .mutation(async ({ input, ctx }) => {
       const { paymentId, newAmount: subtotal } = input;
       const { userId } = ctx;
 
       // Calculate total with IVA (16%)
-      const totalWithIva = Math.round(subtotal * IVA_MULTIPLIER * 100) / 100;
+      const breakdown = calculateIVA(subtotal);
 
       try {
-        return await paymentService.editPaymentAmount(paymentId, totalWithIva, userId);
+        return await paymentService.editPaymentAmount(paymentId, breakdown.total, userId);
       } catch (error) {
         if (error instanceof Error && error.message.includes('only edit amount for pending')) {
           throw new TRPCError({
@@ -397,7 +397,7 @@ export const paymentRouter = createTRPCRouter({
   createNew: adminProcedure
     .input(z.object({
       policyId: z.string(),
-      amount: z.number().positive().max(862069), // Max subtotal so total stays under 1M
+      amount: z.number().positive().max(PAYMENT_LIMITS.MAX_SUBTOTAL), // Max subtotal so total stays under 1M
       paidBy: z.nativeEnum(PayerType),
       description: z.string().optional(),
     }))
@@ -406,7 +406,7 @@ export const paymentRouter = createTRPCRouter({
       const { userId } = ctx;
 
       // Calculate total with IVA (16%)
-      const totalWithIva = Math.round(subtotal * IVA_MULTIPLIER * 100) / 100;
+      const breakdown = calculateIVA(subtotal);
 
       // Verify policy exists
       const policy = await ctx.prisma.policy.findUnique({
@@ -425,7 +425,7 @@ export const paymentRouter = createTRPCRouter({
         // Create checkout session using existing service method
         const result = await paymentService.createTypedCheckoutSession({
           policyId,
-          amount: totalWithIva,
+          amount: breakdown.total,
           type: PaymentType.PARTIAL_PAYMENT,
           paidBy,
           description: description || 'Pago Adicional',
@@ -439,9 +439,9 @@ export const paymentRouter = createTRPCRouter({
             description: `Nuevo pago creado: ${description || 'Pago Adicional'}`,
             details: {
               paymentId: result.paymentId,
-              subtotal,
-              iva: Math.round(subtotal * TAX_CONFIG.IVA_RATE * 100) / 100,
-              totalWithIva,
+              subtotal: breakdown.subtotal,
+              iva: breakdown.iva,
+              totalWithIva: breakdown.total,
               paidBy,
               type: PaymentType.PARTIAL_PAYMENT,
             },
