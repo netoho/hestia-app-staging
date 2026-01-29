@@ -243,7 +243,7 @@ class PaymentService extends BaseService {
     });
 
     // Create checkout session in Stripe with idempotency key for retry safety
-    const idempotencyKey = `checkout-${policyId}-${amount}-${Date.now()}`;
+    const idempotencyKey = `checkout-${policyId}-${amount}`;
     const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -641,7 +641,7 @@ class PaymentService extends BaseService {
       const subtotalForStripe = taxRateId ? Math.round((amount / IVA_MULTIPLIER) * 100) : Math.round(amount * 100);
 
       // Idempotency key based on payment ID for retry safety
-      const idempotencyKey = `typed-${payment.id}-${Date.now()}`;
+      const idempotencyKey = `typed-${payment.id}`;
       session = await stripeInstance.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -1064,8 +1064,8 @@ class PaymentService extends BaseService {
     const taxRateId = process.env.STRIPE_TAX_RATE_ID;
     const subtotalForStripe = taxRateId ? Math.round((payment.amount / IVA_MULTIPLIER) * 100) : Math.round(payment.amount * 100);
 
-    // Idempotency key for regeneration - unique per attempt
-    const idempotencyKey = `regenerate-${paymentId}-${Date.now()}`;
+    // Idempotency key for regeneration - uses old sessionId so retries are idempotent
+    const idempotencyKey = `regenerate-${paymentId}-${payment.stripeSessionId}`;
 
     // Create new Stripe session with existing paymentId in metadata
     const session = await stripeInstance.checkout.sessions.create({
@@ -1181,8 +1181,8 @@ class PaymentService extends BaseService {
     const taxRateId = process.env.STRIPE_TAX_RATE_ID;
     const subtotalForStripe = taxRateId ? Math.round((payment.amount / IVA_MULTIPLIER) * 100) : Math.round(payment.amount * 100);
 
-    // Idempotency key for on-demand session creation
-    const idempotencyKey = `session-${paymentId}-${Date.now()}`;
+    // Idempotency key for on-demand session creation - uses existing sessionId or 'new'
+    const idempotencyKey = `session-${paymentId}-${payment.stripeSessionId ?? 'new'}`;
 
     // Create new Stripe session
     const session = await stripeInstance.checkout.sessions.create({
@@ -1394,8 +1394,8 @@ class PaymentService extends BaseService {
       expires_at: Math.floor(Date.now() / 1000) + 86400,
     };
 
-    // Idempotency key for edit operation - unique per edit attempt
-    const idempotencyKey = `edit-${paymentId}-${newAmount}-${Date.now()}`;
+    // Idempotency key for edit operation - same payment+amount = same session
+    const idempotencyKey = `edit-${paymentId}-${newAmount}`;
     const session = await stripeInstance.checkout.sessions.create(sessionConfig, { idempotencyKey });
 
     // Calculate subtotal and IVA from new amount (newAmount includes 16% IVA)
