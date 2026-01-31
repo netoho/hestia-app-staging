@@ -155,8 +155,7 @@ export async function POST(request: NextRequest) {
         if (oldKey && oldKey.startsWith('avatars/')) {
           await currentStorageProvider.delete(oldKey);
         }
-      } catch (error) {
-        console.error('Failed to delete old avatar:', error);
+      } catch {
         // Don't fail the request if deletion fails
       }
     }
@@ -167,8 +166,7 @@ export async function POST(request: NextRequest) {
       user: updatedUser,
       avatarUrl: uploadedUrl,
     });
-  } catch (error) {
-    console.error('Error uploading avatar:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Error al subir el avatar' },
       { status: 500 }
@@ -218,8 +216,7 @@ export async function DELETE(request: NextRequest) {
       if (key && key.startsWith('avatars/')) {
         await currentStorageProvider.delete(key);
       }
-    } catch (error) {
-      console.error('Failed to delete avatar from S3:', error);
+    } catch {
       // Continue even if S3 deletion fails
     }
 
@@ -240,8 +237,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Avatar eliminado correctamente',
       user: updatedUser,
     });
-  } catch (error) {
-    console.error('Error deleting avatar:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Error al eliminar el avatar' },
       { status: 500 }

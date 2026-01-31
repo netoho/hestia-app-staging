@@ -57,8 +57,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error generating policy PDF:', error);
-
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json({ error: 'Póliza no encontrada' }, { status: 404 });
     }
