@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
         // Find payment by stripeIntentId
         const refundedPayment = await prisma.payment.findFirst({
           where: { stripeIntentId: paymentIntentId },
-          select: { id: true, policyId: true, type: true, amount: true },
+          select: { id: true, policyId: true, type: true, amount: true, status: true },
         });
 
         if (!refundedPayment) {
@@ -214,15 +214,23 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        // Update payment status to REFUNDED
-        await prisma.payment.update({
-          where: { id: refundedPayment.id },
+        // Atomic idempotency: only update if not already REFUNDED
+        const refundResult = await prisma.payment.updateMany({
+          where: {
+            id: refundedPayment.id,
+            status: { not: PaymentStatus.REFUNDED },
+          },
           data: {
             status: PaymentStatus.REFUNDED,
             refundedAt: new Date(),
             refundAmount: charge.amount_refunded / 100,
           },
         });
+
+        if (refundResult.count === 0) {
+          // Already refunded, skip duplicate processing
+          break;
+        }
 
         // Log activity
         const refundTypeDescription = PAYMENT_TYPE_DESCRIPTIONS[refundedPayment.type] || refundedPayment.type || 'Pago';
