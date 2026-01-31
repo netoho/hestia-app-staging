@@ -160,7 +160,13 @@ export const paymentRouter = createTRPCRouter({
   recordManualPayment: adminProcedure
     .input(z.object({
       policyId: z.string(),
-      type: z.nativeEnum(PaymentType),
+      // Only allow types appropriate for manual payment entry
+      type: z.enum([
+        PaymentType.TENANT_PORTION,
+        PaymentType.LANDLORD_PORTION,
+        PaymentType.PARTIAL_PAYMENT,
+        PaymentType.INCIDENT_PAYMENT,
+      ]),
       amount: z.number().positive(),
       paidBy: z.nativeEnum(PayerType),
       reference: z.string().optional(),
