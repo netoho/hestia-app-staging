@@ -9,12 +9,14 @@ import { PolicyHeader } from './components/PolicyHeader';
 import { PolicyProgressBar } from './components/PolicyProgressBar';
 import { MarkCompleteDialog } from './components/MarkCompleteDialog';
 import { ActorTabSkeleton } from './components/ActorTabSkeleton';
+import { SectionHeader } from './components/SectionHeader';
 
 // Tab components
 import { OverviewTab, LandlordTab, TenantTab, GuarantorsTab } from './tabs';
 
 // Hook
 import { usePolicyActions } from './hooks/usePolicyActions';
+import { trpc } from '@/lib/trpc/client';
 
 // Skeletons
 import DocumentListSkeleton from '@/components/ui/skeleton/DocumentListSkeleton';
@@ -89,6 +91,7 @@ export default function PolicyDetailsContent({
   const [showReplaceTenantModal, setShowReplaceTenantModal] = useState(false);
   const [showChangeGuarantorTypeModal, setShowChangeGuarantorTypeModal] = useState(false);
   const [isTabsScrollable, setIsTabsScrollable] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   // Check if tabs container is scrollable
@@ -151,6 +154,42 @@ export default function PolicyDetailsContent({
     setTimeout(() => setTabLoading(false), 150);
   };
 
+  // tRPC utils for invalidation
+  const utils = trpc.useUtils();
+
+  // Handle refresh with loading state (policy data)
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Handle actor tabs refresh (policy + documents)
+  const handleActorRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Invalidate document queries for all actors
+      await utils.document.listDocuments.invalidate();
+      // Also refresh policy data
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Handle payments refresh (payment data only)
+  const handlePaymentRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await utils.payment.getPaymentDetails.invalidate({ policyId });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-7xl animate-in fade-in duration-300">
       {/* Header */}
@@ -167,11 +206,13 @@ export default function PolicyDetailsContent({
           progressOverall={policy.progress?.overall}
           sending={sending}
           downloadingPdf={downloadingPdf}
+          isRefreshing={isRefreshing}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
           onShareClick={() => setShowShareModal(true)}
           onCancelClick={() => setShowCancelModal(true)}
           onDownloadPdf={handleDownloadPdf}
+          onRefresh={handleRefresh}
         />
 
         {/* Progress Bar */}
@@ -210,11 +251,13 @@ export default function PolicyDetailsContent({
 
         {/* Overview Tab */}
         <TabsContent value="overview">
+          <SectionHeader title="Información General" onRefresh={handleRefresh} isRefreshing={isRefreshing} />
           <OverviewTab policy={policy} policyId={policyId} />
         </TabsContent>
 
         {/* Landlord Tab */}
         <TabsContent value="landlord">
+          <SectionHeader title="Arrendador" onRefresh={handleActorRefresh} isRefreshing={isRefreshing} />
           {tabLoading && currentTab === 'landlord' ? (
             <ActorTabSkeleton />
           ) : (
@@ -233,6 +276,7 @@ export default function PolicyDetailsContent({
 
         {/* Tenant Tab */}
         <TabsContent value="tenant">
+          <SectionHeader title="Inquilino" onRefresh={handleActorRefresh} isRefreshing={isRefreshing} />
           {tabLoading && currentTab === 'tenant' ? (
             <ActorTabSkeleton />
           ) : (
@@ -255,6 +299,7 @@ export default function PolicyDetailsContent({
 
         {/* Guarantors Tab */}
         <TabsContent value="guarantors">
+          <SectionHeader title="Obligado Solidario / Aval" onRefresh={handleActorRefresh} isRefreshing={isRefreshing} />
           {tabLoading && currentTab === 'guarantors' ? (
             <ActorTabSkeleton />
           ) : (
@@ -280,16 +325,19 @@ export default function PolicyDetailsContent({
 
         {/* Payments Tab */}
         <TabsContent value="payments" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <SectionHeader title="Pagos" onRefresh={handlePaymentRefresh} isRefreshing={isRefreshing} />
           <PaymentsTab policyId={policyId} isStaffOrAdmin={isStaffOrAdmin} />
         </TabsContent>
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <SectionHeader title="Documentos" onRefresh={handleRefresh} isRefreshing={isRefreshing} />
           <DocumentsList documents={policy.documents} />
         </TabsContent>
 
         {/* Timeline Tab */}
         <TabsContent value="timeline" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <SectionHeader title="Actividad" onRefresh={handleRefresh} isRefreshing={isRefreshing} />
           <ActivityTimeline activities={policy.activities} />
         </TabsContent>
       </Tabs>
