@@ -1,9 +1,9 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,10 +16,11 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
-import { Calculator, RefreshCw } from 'lucide-react';
+import { Calculator, RefreshCw, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { pricingStepSchema, type PricingStepData } from '@/lib/schemas/policy/wizard';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
+import { Button } from '@/components/ui/button';
 
 interface PricingStepRHFProps {
   initialData: Partial<PricingStepData>;
@@ -53,6 +54,7 @@ export default function PricingStepRHF({
       landlordPercentage: 0,
       manualPrice: null,
       isManualOverride: false,
+      calculatedPrice: null,
       ...initialData,
     },
   });
@@ -62,6 +64,28 @@ export default function PricingStepRHF({
   const watchedLandlordPercentage = form.watch('landlordPercentage');
   const watchedIsManualOverride = form.watch('isManualOverride');
   const watchedManualPrice = form.watch('manualPrice');
+
+  // Track previous packageId to detect changes
+  const prevPackageIdRef = useRef(watchedPackageId);
+
+  // Auto-calculate when packageId changes
+  useEffect(() => {
+    if (
+      watchedPackageId &&
+      rentAmount &&
+      watchedPackageId !== prevPackageIdRef.current
+    ) {
+      prevPackageIdRef.current = watchedPackageId;
+      onCalculate(watchedPackageId);
+    }
+  }, [watchedPackageId, rentAmount, onCalculate]);
+
+  // Update calculatedPrice when pricingResult changes
+  useEffect(() => {
+    if (pricingResult?.subtotal) {
+      form.setValue('calculatedPrice', pricingResult.subtotal, { shouldValidate: true });
+    }
+  }, [pricingResult, form]);
 
   const handleSubmit = async (data: PricingStepData) => {
     await onSave(data);
@@ -152,28 +176,21 @@ export default function PricingStepRHF({
               )}
             />
 
-            {/* Calculate Button */}
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                onClick={() => onCalculate(watchedPackageId)}
-                disabled={!rentAmount || !watchedPackageId || isCalculating}
-                variant="outline"
-                size="lg"
-              >
-                {isCalculating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2" />
-                    Calculando...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="mr-2 h-4 w-4" />
-                    Calcular Precio
-                  </>
-                )}
-              </Button>
-            </div>
+            {/* Auto-calculation status */}
+            {isCalculating && (
+              <div className="flex items-center justify-center p-4 bg-blue-50 rounded-lg">
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600 mr-2" />
+                <span className="text-blue-600">Calculando precio...</span>
+              </div>
+            )}
+
+            {!rentAmount && watchedPackageId && (
+              <Alert>
+                <AlertDescription>
+                  Regrese al paso anterior para ingresar el monto de renta
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Pricing Result */}
             {pricingResult && (

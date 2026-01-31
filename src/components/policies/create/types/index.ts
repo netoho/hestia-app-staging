@@ -58,6 +58,7 @@ export interface PricingFormData {
   landlordPercentage: number;
   manualPrice: number | null;
   isManualOverride: boolean;
+  calculatedPrice: number | null;
 }
 
 /**

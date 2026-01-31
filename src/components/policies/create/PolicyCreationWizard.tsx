@@ -78,6 +78,7 @@ const initialFormData: PolicyCreationFormData = {
     landlordPercentage: 0,
     manualPrice: null,
     isManualOverride: false,
+    calculatedPrice: null,
   },
   landlord: {
     isCompany: false,
