@@ -930,29 +930,16 @@ class PaymentService extends BaseService {
     verifierId: string,
     notes?: string
   ): Promise<Payment> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!payment) {
-      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
-    }
-
-    if (payment.status !== PaymentStatus.PENDING_VERIFICATION) {
-      throw new ServiceError(
-        ErrorCode.VALIDATION_ERROR,
-        'Payment is not pending verification',
-        400,
-        { currentStatus: payment.status }
-      );
-    }
-
     const newStatus = approved ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
-    // Use transaction to ensure payment update + activity log are atomic
+    // Use transaction with atomic claim to prevent race conditions
     const updatedPayment = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.payment.update({
-        where: { id: paymentId },
+      // Atomic claim: only proceed if payment is still PENDING_VERIFICATION
+      const claimResult = await tx.payment.updateMany({
+        where: {
+          id: paymentId,
+          status: PaymentStatus.PENDING_VERIFICATION,
+        },
         data: {
           status: newStatus,
           verifiedBy: verifierId,
@@ -960,6 +947,28 @@ class PaymentService extends BaseService {
           verificationNotes: notes,
           paidAt: approved ? new Date() : undefined,
         },
+      });
+
+      if (claimResult.count === 0) {
+        // Payment was already processed or doesn't exist
+        const existing = await tx.payment.findUnique({
+          where: { id: paymentId },
+          select: { status: true },
+        });
+        if (!existing) {
+          throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+        }
+        throw new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Payment is not pending verification',
+          400,
+          { currentStatus: existing.status }
+        );
+      }
+
+      // Fetch the updated payment for activity logging
+      const payment = await tx.payment.findUniqueOrThrow({
+        where: { id: paymentId },
       });
 
       // Log activity
@@ -987,7 +996,7 @@ class PaymentService extends BaseService {
         await this.updatePolicyPaymentStatusIfComplete(tx, payment.policyId);
       }
 
-      return updated;
+      return payment;
     });
 
     return updatedPayment;
