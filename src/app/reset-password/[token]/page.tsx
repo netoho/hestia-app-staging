@@ -64,8 +64,7 @@ export default function ResetPasswordPage() {
         } else {
           setTokenError(result.error || 'Token inválido o expirado');
         }
-      } catch (error) {
-        console.error('Token validation failed:', error);
+      } catch {
         setTokenError('Error al validar el token');
       } finally {
         setIsValidating(false);
@@ -104,7 +103,6 @@ export default function ResetPasswordPage() {
         router.push('/login');
       }, 3000);
     } catch (error: any) {
-      console.error('Password reset failed:', error);
       setError(error.message || 'Error al restablecer la contraseña. Por favor, intenta de nuevo.');
     } finally {
       setIsSubmitting(false);

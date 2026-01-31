@@ -155,8 +155,7 @@ export function AddressAutocomplete({
 
         setSuggestions(data.results || []);
         setShowSuggestions(true);
-      } catch (error) {
-        console.error('Error searching addresses:', error);
+      } catch {
         setSuggestions([]);
       } finally {
         setIsLoading(false);
@@ -205,8 +204,8 @@ export function AddressAutocomplete({
         // Show manual form to allow editing
         setShowManualForm(true);
       }
-    } catch (error) {
-      console.error('Error getting place details:', error);
+    } catch {
+      // Error handled silently
     } finally {
       setIsLoading(false);
     }
