@@ -27,7 +27,7 @@ export default function PaymentPage() {
   const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
 
   // Stripe receipt mutation
-  const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
+  const getStripeReceipt = trpc.payment.getStripePublicReceipt.useMutation();
 
   const handleDownloadReceipt = async () => {
     setIsDownloadingReceipt(true);

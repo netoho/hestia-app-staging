@@ -342,6 +342,17 @@ export const paymentRouter = createTRPCRouter({
     }),
 
   /**
+   * Get Stripe receipt URL for a completed payment
+   * Fetches from Stripe API on demand PUBLIC procedure #TODO: add rate limiting
+   */
+  getStripePublicReceipt: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);
+      return { receiptUrl };
+    }),
+
+  /**
    * Edit the amount of a pending payment
    * Admin/Staff only - Cancels existing Stripe session and creates new one
    * Input: subtotal (without IVA) - will add 16% IVA
