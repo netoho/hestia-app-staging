@@ -16,6 +16,22 @@ export const calculateIVA = (subtotal: number) => {
   };
 };
 
+interface CalculateBreakdownParams {
+  amount: number;
+  includesTax?: boolean;
+}
+
+
+export const calculateBreakdown = ({
+  amount,
+  includesTax = true,
+}: CalculateBreakdownParams) => {
+  if (includesTax) {
+    return calculateSubtotalFromTotal(amount);
+  }
+  return calculateTotalWithIVA(amount)
+}
+
 /**
  * Calculate subtotal from total (reverse IVA calculation).
  * Used when you have the final amount and need to extract subtotal/IVA.
@@ -31,6 +47,18 @@ export const calculateSubtotalFromTotal = (total: number) => {
     total: totalCents / 100,
   };
 };
+
+/** Calculate total amount including IVA from subtotal.
+ */
+export const calculateTotalWithIVA = (subtotal: number) => {
+  const totalCents = Math.round(subtotal * 100 * (1 + TAX_CONFIG.IVA_RATE));
+  const ivaCents = totalCents - Math.round(subtotal * 100);
+  return {
+    subtotal: subtotal,
+    iva: ivaCents / 100,
+    total: totalCents / 100,
+  }
+}
 
 /**
  * Format currency amount in MXN.
