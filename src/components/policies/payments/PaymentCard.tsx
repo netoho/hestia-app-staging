@@ -302,11 +302,12 @@ export function PaymentCard({
 
         {/* Actions (hidden for historical payments) */}
         {!isHistorical && (
-        <div className="flex flex-wrap gap-2 pt-2">
-          {/* Pay with Stripe button - opens internal payment page */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-2">
+          {/* Primary: Pay with Stripe button - full width on mobile */}
           {isPending && !payment.isManual && (
             <Button
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => window.open(getPaymentUrl(), '_blank')}
             >
               <CreditCard className="h-4 w-4 mr-1" />
@@ -314,77 +315,80 @@ export function PaymentCard({
             </Button>
           )}
 
-          {/* Copy URL button - copies internal payment URL */}
-          {isPending && !payment.isManual && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCopyUrl}
-              disabled={isCopied}
-            >
-              {isCopied ? (
-                <Check className="h-4 w-4 mr-1" />
-              ) : (
-                <Copy className="h-4 w-4 mr-1" />
-              )}
-              {isCopied ? 'Copiado' : 'Copiar Link'}
-            </Button>
-          )}
+          {/* Secondary actions - row */}
+          <div className="flex flex-wrap gap-2">
+            {/* Copy URL button */}
+            {isPending && !payment.isManual && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCopyUrl}
+                disabled={isCopied}
+              >
+                {isCopied ? (
+                  <Check className="h-4 w-4 mr-1" />
+                ) : (
+                  <Copy className="h-4 w-4 mr-1" />
+                )}
+                {isCopied ? 'Copiado' : 'Copiar Link'}
+              </Button>
+            )}
 
-          {/* Edit amount button (admin, pending) */}
-          {isPending && isStaffOrAdmin && onEdit && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onEdit}
-            >
-              <Pencil className="h-4 w-4 mr-1" />
-              Editar Monto
-            </Button>
-          )}
+            {/* Edit amount button (admin, pending) */}
+            {isPending && isStaffOrAdmin && onEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onEdit}
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Editar Monto
+              </Button>
+            )}
 
-          {/* Record manual payment button (admin, pending) */}
-          {isPending && isStaffOrAdmin && onManualPayment && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onManualPayment}
-            >
-              <FileText className="h-4 w-4 mr-1" />
-              Registrar Pago Manual
-            </Button>
-          )}
+            {/* Record manual payment button (admin, pending) */}
+            {isPending && isStaffOrAdmin && onManualPayment && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onManualPayment}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Registrar Pago Manual
+              </Button>
+            )}
 
-          {/* Verify payment button (admin, pending verification) */}
-          {isPendingVerification && isStaffOrAdmin && onVerify && (
-            <Button
-              size="sm"
-              variant="default"
-              className="bg-orange-500 hover:bg-orange-600"
-              onClick={onVerify}
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              Verificar Pago
-            </Button>
-          )}
+            {/* Verify payment button (admin, pending verification) */}
+            {isPendingVerification && isStaffOrAdmin && onVerify && (
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-orange-500 hover:bg-orange-600"
+                onClick={onVerify}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Verificar Pago
+              </Button>
+            )}
 
-          {/* Cancel payment button (admin, pending) */}
-          {isPending && isStaffOrAdmin && onCancel && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={cancelDialog.open}
-              disabled={isCancelling}
-            >
-              {isCancelling ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Ban className="h-4 w-4 mr-1" />
-              )}
-              Cancelar
-            </Button>
-          )}
+            {/* Cancel payment button (admin, pending) */}
+            {isPending && isStaffOrAdmin && onCancel && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={cancelDialog.open}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Ban className="h-4 w-4 mr-1" />
+                )}
+                Cancelar
+              </Button>
+            )}
+          </div>
         </div>
         )}
       </CardContent>

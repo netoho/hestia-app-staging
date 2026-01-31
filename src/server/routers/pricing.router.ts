@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { GuarantorType } from "@/prisma/generated/prisma-client/enums";
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 // Schema for price calculation
 const CalculatePriceSchema = z.object({
@@ -69,7 +70,7 @@ export const pricingRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       // If manual price is provided, use it
       if (input.manualPrice) {
-        const iva = input.manualPrice * 0.16;
+        const iva = input.manualPrice * TAX_CONFIG.IVA_RATE;
         const totalWithIva = input.manualPrice + iva;
         const tenantAmount = totalWithIva * (input.tenantPercentage / 100);
         const landlordAmount = totalWithIva * (input.landlordPercentage / 100);

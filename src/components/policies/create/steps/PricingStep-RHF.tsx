@@ -19,6 +19,7 @@ import {
 import { Calculator, RefreshCw } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { pricingStepSchema, type PricingStepData } from '@/lib/schemas/policy/wizard';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 interface PricingStepRHFProps {
   initialData: Partial<PricingStepData>;
@@ -348,7 +349,7 @@ export default function PricingStepRHF({
                         </div>
                         {watchedManualPrice && (
                           <p className="text-sm text-gray-600 mt-2">
-                            Total con IVA: {formatCurrency((watchedManualPrice || 0) * 1.16)}
+                            Total con IVA: {formatCurrency((watchedManualPrice || 0) * (1 + TAX_CONFIG.IVA_RATE))}
                           </p>
                         )}
                         <FormMessage />

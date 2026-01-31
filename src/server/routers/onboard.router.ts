@@ -164,20 +164,20 @@ export const onboardRouter = createTRPCRouter({
       }
 
       // Verify user was onboarded within last 5 minutes
-      // if (!user.emailVerified) {
-      //   throw new TRPCError({
-      //     code: 'UNAUTHORIZED',
-      //     message: 'Usuario no ha completado el onboarding',
-      //   });
-      // }
-      //
-      // const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      // if (user.emailVerified < fiveMinutesAgo) {
-      //   throw new TRPCError({
-      //     code: 'UNAUTHORIZED',
-      //     message: 'El tiempo para subir avatar ha expirado. Por favor inicia sesión.',
-      //   });
-      // }
+      if (!user.emailVerified) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Usuario no ha completado el onboarding',
+        });
+      }
+
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      if (user.emailVerified < fiveMinutesAgo) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'El tiempo para subir avatar ha expirado. Por favor inicia sesión.',
+        });
+      }
 
       // Decode base64 and validate size
       const buffer = Buffer.from(file, 'base64');

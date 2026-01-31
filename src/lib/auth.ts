@@ -3,10 +3,11 @@ import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions as authOptionsImported } from './auth/auth-config';
+import { env } from '@/lib/config/env';
 
 export const authOptions = authOptionsImported;
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = env.JWT_SECRET;
 const JWT_EXPIRES_IN = '7d';
 
 export interface JWTPayload {

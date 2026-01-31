@@ -705,46 +705,30 @@ export interface PaymentCompletedData {
 
 export const sendPaymentCompletedEmail = async (data: PaymentCompletedData): Promise<boolean> => {
   try {
+    const { render } = await import('@react-email/render');
+    const { PaymentCompletedEmail } = await import('../../templates/email/react-email/PaymentCompletedEmail');
+
+    const html = await render(await PaymentCompletedEmail({
+      payerName: data.payerName,
+      policyNumber: data.policyNumber,
+      paymentType: data.paymentType,
+      amount: data.amount,
+      paidAt: data.paidAt,
+    }));
+
     const subject = emailSubject(`Pago Confirmado - ${data.policyNumber}`);
-
-    const formatCurrency = (amount: number) =>
-      new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0;">¡Pago Confirmado!</h1>
-        </div>
-        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-          <p>Hola${data.payerName ? ` ${data.payerName}` : ''},</p>
-          <p>Tu pago ha sido procesado exitosamente.</p>
-          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
-            <p style="margin: 5px 0;"><strong>Póliza:</strong> ${data.policyNumber}</p>
-            <p style="margin: 5px 0;"><strong>Concepto:</strong> ${data.paymentType}</p>
-            <p style="margin: 5px 0;"><strong>Monto:</strong> ${formatCurrency(data.amount)}</p>
-            <p style="margin: 5px 0;"><strong>Fecha:</strong> ${formatDateLong(data.paidAt)}</p>
-          </div>
-          <p>Gracias por tu pago. Si tienes alguna pregunta, contáctanos en ${SUPPORT_EMAIL}.</p>
-          <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
-        </div>
-      </body>
-      </html>
-    `.trim();
 
     const text = `
 Hola${data.payerName ? ` ${data.payerName}` : ''},
 
 Tu pago ha sido procesado exitosamente.
 
-Póliza: ${data.policyNumber}
+Poliza: ${data.policyNumber}
 Concepto: ${data.paymentType}
-Monto: ${formatCurrency(data.amount)}
+Monto: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.amount)}
 Fecha: ${formatDateLong(data.paidAt)}
 
-Gracias por tu pago. Si tienes alguna pregunta, contáctanos en ${SUPPORT_EMAIL}.
+Gracias por tu pago. Si tienes alguna pregunta, contactanos en ${SUPPORT_EMAIL}.
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
     `.trim();
@@ -771,38 +755,23 @@ export interface AllPaymentsCompletedData {
 
 export const sendAllPaymentsCompletedEmail = async (data: AllPaymentsCompletedData): Promise<boolean> => {
   try {
+    const { render } = await import('@react-email/render');
+    const { AllPaymentsCompletedEmail } = await import('../../templates/email/react-email/AllPaymentsCompletedEmail');
+
+    const html = await render(await AllPaymentsCompletedEmail({
+      policyNumber: data.policyNumber,
+      totalPayments: data.totalPayments,
+      totalAmount: data.totalAmount,
+    }));
+
     const subject = emailSubject(`Pagos Completados - ${data.policyNumber}`);
 
-    const formatCurrency = (amount: number) =>
-      new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(amount);
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0;">Pagos Completados</h1>
-        </div>
-        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-          <p>Todos los pagos de la póliza han sido completados.</p>
-          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-            <p style="margin: 5px 0;"><strong>Póliza:</strong> ${data.policyNumber}</p>
-            <p style="margin: 5px 0;"><strong>Total de pagos:</strong> ${data.totalPayments}</p>
-            <p style="margin: 5px 0;"><strong>Monto total:</strong> ${formatCurrency(data.totalAmount)}</p>
-          </div>
-          <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.</p>
-        </div>
-      </body>
-      </html>
-    `.trim();
-
     const text = `
-Todos los pagos de la póliza han sido completados.
+Todos los pagos de la poliza han sido completados.
 
-Póliza: ${data.policyNumber}
+Poliza: ${data.policyNumber}
 Total de pagos: ${data.totalPayments}
-Monto total: ${formatCurrency(data.totalAmount)}
+Monto total: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.totalAmount)}
 
 © ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
     `.trim();

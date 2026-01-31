@@ -12,6 +12,8 @@ import { ServiceError, ErrorCode } from './types/errors';
 import { BaseService } from './base/BaseService';
 import { pricingService } from './pricingService';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
+import { calculateSubtotalFromTotal } from '@/lib/utils/money';
+import { PAYMENT_LIMITS } from '@/lib/config/payments';
 
 // IVA multiplier for convenience (1 + 0.16 = 1.16)
 const IVA_MULTIPLIER = 1 + TAX_CONFIG.IVA_RATE;
@@ -160,15 +162,14 @@ class PaymentService extends BaseService {
     metadata?: any;
   }) {
     // Calculate subtotal and IVA from amount (amount includes 16% IVA)
-    const subtotal = Math.round((amount / IVA_MULTIPLIER) * 100) / 100;
-    const iva = Math.round((amount - subtotal) * 100) / 100;
+    const breakdown = calculateSubtotalFromTotal(amount);
 
     return this.prisma.payment.create({
       data: {
         policyId,
         amount,
-        subtotal,
-        iva,
+        subtotal: breakdown.subtotal,
+        iva: breakdown.iva,
         currency,
         status: PaymentStatus.PENDING,
         stripeIntentId,
@@ -241,7 +242,8 @@ class PaymentService extends BaseService {
       select: { packageName: true, tenantEmail: true },
     });
 
-    // Create checkout session in Stripe
+    // Create checkout session in Stripe with idempotency key for retry safety
+    const idempotencyKey = `checkout-${policyId}-${amount}`;
     const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -272,7 +274,7 @@ class PaymentService extends BaseService {
           ...metadata,
         },
       },
-    });
+    }, { idempotencyKey });
 
     // Create payment record in database
     const payment = await this.createPaymentRecord({
@@ -541,8 +543,9 @@ class PaymentService extends BaseService {
     if (policy.totalPrice && policy.totalPrice > 0) {
       // Manual override: use stored price
       totalWithIva = policy.totalPrice;
-      subtotal = Math.round((totalWithIva / IVA_MULTIPLIER) * 100) / 100;
-      iva = Math.round((totalWithIva - subtotal) * 100) / 100;
+      const breakdown = calculateSubtotalFromTotal(totalWithIva);
+      subtotal = breakdown.subtotal;
+      iva = breakdown.iva;
       // Recalculate amounts based on percentages
       tenantAmount = Math.round((subtotal * (policy.tenantPercentage / 100)) * 100) / 100;
       landlordAmount = Math.round((subtotal * (policy.landlordPercentage / 100)) * 100) / 100;
@@ -588,8 +591,8 @@ class PaymentService extends BaseService {
     if (amount <= 0) {
       throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount must be positive', 400, { amount });
     }
-    if (amount > 1000000) {
-      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount exceeds maximum limit', 400, { amount });
+    if (amount > PAYMENT_LIMITS.MAX_TOTAL) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount exceeds maximum limit', 400, { amount, maxAllowed: PAYMENT_LIMITS.MAX_TOTAL });
     }
 
     const stripeInstance = await getStripe();
@@ -609,16 +612,15 @@ class PaymentService extends BaseService {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Calculate subtotal and IVA from total amount (amount includes 16% IVA)
-    const subtotal = Math.round((amount / IVA_MULTIPLIER) * 100) / 100;
-    const iva = Math.round((amount - subtotal) * 100) / 100;
+    const breakdown = calculateSubtotalFromTotal(amount);
 
     // 1. Create payment record FIRST (without Stripe session)
     const payment = await this.prisma.payment.create({
       data: {
         policyId,
         amount,
-        subtotal,
-        iva,
+        subtotal: breakdown.subtotal,
+        iva: breakdown.iva,
         currency: 'MXN',
         status: PaymentStatus.PENDING,
         type,
@@ -638,6 +640,8 @@ class PaymentService extends BaseService {
       const taxRateId = process.env.STRIPE_TAX_RATE_ID;
       const subtotalForStripe = taxRateId ? Math.round((amount / IVA_MULTIPLIER) * 100) : Math.round(amount * 100);
 
+      // Idempotency key based on payment ID for retry safety
+      const idempotencyKey = `typed-${payment.id}`;
       session = await stripeInstance.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -673,7 +677,7 @@ class PaymentService extends BaseService {
           },
         },
         expires_at: Math.floor(Date.now() / 1000) + 86400, // 24 hours
-      });
+      }, { idempotencyKey });
     } catch (error) {
       // If Stripe fails, delete the orphaned payment record
       await this.prisma.payment.delete({ where: { id: payment.id } });
@@ -719,7 +723,7 @@ class PaymentService extends BaseService {
     if (existingPayments.length > 0) {
       throw new ServiceError(
         ErrorCode.ALREADY_EXISTS,
-        'Policy already has pending payments. Use regenerateCheckoutUrl to update expired links.',
+        'Policy already has pending payments. Expired links auto-refresh when accessed.',
         400,
         { existingCount: existingPayments.length }
       );
@@ -848,12 +852,12 @@ class PaymentService extends BaseService {
     }
 
     // Validate amount
-    if (amount <= 0 || amount > 1000000) {
+    if (amount <= 0 || amount > PAYMENT_LIMITS.MAX_TOTAL) {
       throw new ServiceError(
         ErrorCode.VALIDATION_ERROR,
-        'Amount must be between 0 and 1,000,000 MXN',
+        `Amount must be between 0 and ${PAYMENT_LIMITS.MAX_TOTAL.toLocaleString()} MXN`,
         400,
-        { amount }
+        { amount, maxAllowed: PAYMENT_LIMITS.MAX_TOTAL }
       );
     }
 
@@ -876,16 +880,15 @@ class PaymentService extends BaseService {
     }
 
     // Calculate subtotal and IVA from amount (amount includes 16% IVA)
-    const subtotal = Math.round((amount / IVA_MULTIPLIER) * 100) / 100;
-    const iva = Math.round((amount - subtotal) * 100) / 100;
+    const breakdown = calculateSubtotalFromTotal(amount);
 
     // Create manual payment with PENDING_VERIFICATION status
     const payment = await this.prisma.payment.create({
       data: {
         policyId,
         amount,
-        subtotal,
-        iva,
+        subtotal: breakdown.subtotal,
+        iva: breakdown.iva,
         currency: 'MXN',
         status: PaymentStatus.PENDING_VERIFICATION,
         method: PaymentMethod.MANUAL,
@@ -1016,109 +1019,6 @@ class PaymentService extends BaseService {
   }
 
   /**
-   * Regenerate an expired checkout URL for a payment
-   * Creates new Stripe session and updates existing payment atomically
-   */
-  async regenerateCheckoutUrl(paymentId: string): Promise<PaymentSessionResult> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-      include: {
-        policy: {
-          select: { policyNumber: true, tenant: { select: { email: true } } },
-        },
-      },
-    });
-
-    if (!payment) {
-      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
-    }
-
-    if (payment.status !== PaymentStatus.PENDING) {
-      throw new ServiceError(
-        ErrorCode.VALIDATION_ERROR,
-        'Can only regenerate URL for pending payments',
-        400,
-        { currentStatus: payment.status }
-      );
-    }
-
-    // Validate payment type and paidBy before using
-    if (!payment.type || !Object.values(PaymentType).includes(payment.type as PaymentType)) {
-      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Invalid payment type', 400, { type: payment.type });
-    }
-    if (!payment.paidBy || !Object.values(PayerType).includes(payment.paidBy as PayerType)) {
-      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Invalid payer type', 400, { paidBy: payment.paidBy });
-    }
-
-    const stripeInstance = await getStripe();
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    const successUrl = `${baseUrl}/payments/${paymentId}?status=success`;
-    const cancelUrl = `${baseUrl}/payments/${paymentId}?status=cancelled`;
-
-    // If tax rate is configured, send subtotal (before IVA) and let Stripe add tax
-    const taxRateId = process.env.STRIPE_TAX_RATE_ID;
-    const subtotalForStripe = taxRateId ? Math.round((payment.amount / IVA_MULTIPLIER) * 100) : Math.round(payment.amount * 100);
-
-    // Create new Stripe session with existing paymentId in metadata
-    const session = await stripeInstance.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'mxn',
-            product_data: {
-              name: payment.description || 'Pago de Póliza',
-              description: `Póliza ${payment.policy.policyNumber}`,
-            },
-            unit_amount: subtotalForStripe,
-          },
-          quantity: 1,
-          ...(taxRateId ? { tax_rates: [taxRateId] } : {}),
-        },
-      ],
-      mode: 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer_email: payment.policy.tenant?.email,
-      metadata: {
-        paymentId: payment.id, // Use existing payment ID
-        policyId: payment.policyId,
-        paymentType: payment.type,
-        paidBy: payment.paidBy,
-      },
-      payment_intent_data: {
-        metadata: {
-          paymentId: payment.id,
-          policyId: payment.policyId,
-          paymentType: payment.type,
-          paidBy: payment.paidBy,
-        },
-      },
-      expires_at: Math.floor(Date.now() / 1000) + 86400,
-    });
-
-    // Update existing payment with new session info
-    await this.prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        stripeSessionId: session.id,
-        checkoutUrl: session.url,
-        checkoutUrlExpiry: expiresAt,
-      },
-    });
-
-    return {
-      paymentId,
-      checkoutUrl: session.url!,
-      amount: payment.amount,
-      type: payment.type as PaymentType,
-      expiresAt,
-    };
-  }
-
-  /**
    * Get or create a checkout session for a payment
    * Used by public /payments/[id] page to create sessions on demand
    * Returns null if payment is already completed, cancelled, failed, or manual
@@ -1175,6 +1075,9 @@ class PaymentService extends BaseService {
     const taxRateId = process.env.STRIPE_TAX_RATE_ID;
     const subtotalForStripe = taxRateId ? Math.round((payment.amount / IVA_MULTIPLIER) * 100) : Math.round(payment.amount * 100);
 
+    // Idempotency key for on-demand session creation - uses existing sessionId or 'new'
+    const idempotencyKey = `session-${paymentId}-${payment.stripeSessionId ?? 'new'}`;
+
     // Create new Stripe session
     const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -1211,7 +1114,7 @@ class PaymentService extends BaseService {
         },
       },
       expires_at: Math.floor(Date.now() / 1000) + 86400, // 24 hours
-    });
+    }, { idempotencyKey });
 
     // Update payment record with new session info
     await this.prisma.payment.update({
@@ -1290,8 +1193,8 @@ class PaymentService extends BaseService {
     if (newAmount <= 0) {
       throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount must be positive', 400, { newAmount });
     }
-    if (newAmount > 1000000) {
-      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Amount exceeds maximum limit (1,000,000 MXN)', 400, { newAmount });
+    if (newAmount > PAYMENT_LIMITS.MAX_TOTAL) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, `Amount exceeds maximum limit (${PAYMENT_LIMITS.MAX_TOTAL.toLocaleString()} MXN)`, 400, { newAmount, maxAllowed: PAYMENT_LIMITS.MAX_TOTAL });
     }
 
     const payment = await this.prisma.payment.findUnique({
@@ -1385,11 +1288,12 @@ class PaymentService extends BaseService {
       expires_at: Math.floor(Date.now() / 1000) + 86400,
     };
 
-    const session = await stripeInstance.checkout.sessions.create(sessionConfig);
+    // Idempotency key for edit operation - same payment+amount = same session
+    const idempotencyKey = `edit-${paymentId}-${newAmount}`;
+    const session = await stripeInstance.checkout.sessions.create(sessionConfig, { idempotencyKey });
 
     // Calculate subtotal and IVA from new amount (newAmount includes 16% IVA)
-    const newSubtotal = Math.round((newAmount / IVA_MULTIPLIER) * 100) / 100;
-    const newIva = Math.round((newAmount - newSubtotal) * 100) / 100;
+    const breakdown = calculateSubtotalFromTotal(newAmount);
 
     // Update payment record with new amount and session
     await this.prisma.$transaction(async (tx) => {
@@ -1397,8 +1301,8 @@ class PaymentService extends BaseService {
         where: { id: paymentId },
         data: {
           amount: newAmount,
-          subtotal: newSubtotal,
-          iva: newIva,
+          subtotal: breakdown.subtotal,
+          iva: breakdown.iva,
           stripeSessionId: session.id,
           checkoutUrl: session.url,
           checkoutUrlExpiry: expiresAt,
@@ -1480,7 +1384,6 @@ export const getPaymentSummary = paymentService.getPaymentSummary.bind(paymentSe
 export const createManualPayment = paymentService.createManualPayment.bind(paymentService);
 export const verifyManualPayment = paymentService.verifyManualPayment.bind(paymentService);
 export const updatePaymentReceipt = paymentService.updatePaymentReceipt.bind(paymentService);
-export const regenerateCheckoutUrl = paymentService.regenerateCheckoutUrl.bind(paymentService);
 export const getPaymentById = paymentService.getPaymentById.bind(paymentService);
 export const editPaymentAmount = paymentService.editPaymentAmount.bind(paymentService);
 export const getOrCreateCheckoutSession = paymentService.getOrCreateCheckoutSession.bind(paymentService);

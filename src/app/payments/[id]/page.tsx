@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle2, XCircle, Clock, AlertCircle, CreditCard } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Clock, AlertCircle, CreditCard, Download } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { PaymentStatus, PaymentType } from '@/prisma/generated/prisma-client/enums';
 import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
@@ -24,6 +24,24 @@ export default function PaymentPage() {
   const statusParam = searchParams.get('status');
 
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
+
+  // Stripe receipt mutation
+  const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
+
+  const handleDownloadReceipt = async () => {
+    setIsDownloadingReceipt(true);
+    try {
+      const result = await getStripeReceipt.mutateAsync({ paymentId });
+      if (result.receiptUrl) {
+        window.open(result.receiptUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+    } finally {
+      setIsDownloadingReceipt(false);
+    }
+  };
 
   // Fetch payment info
   const {
@@ -149,6 +167,10 @@ export default function PaymentPage() {
             <div className="space-y-4">
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">ID de transacción</span>
+                  <span className="font-mono text-xs">{payment.id.slice(0, 8).toUpperCase()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Concepto</span>
                   <span className="font-medium">{typeLabel}</span>
                 </div>
@@ -174,6 +196,20 @@ export default function PaymentPage() {
                 </div>
               </div>
 
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleDownloadReceipt}
+                disabled={isDownloadingReceipt}
+              >
+                {isDownloadingReceipt ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Descargar Comprobante
+              </Button>
+
               <p className="text-sm text-center text-muted-foreground">
                 Recibirás un correo de confirmación con los detalles de tu pago.
               </p>
@@ -195,7 +231,7 @@ export default function PaymentPage() {
             </div>
             <CardTitle>Pago Cancelado</CardTitle>
             <CardDescription>
-              Has cancelado el proceso de pago
+              Has cancelado el proceso de pago. No se ha realizado ningún cargo.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -214,6 +250,10 @@ export default function PaymentPage() {
                   <span className="font-bold text-lg">{formatCurrency(payment.amount)}</span>
                 </div>
               </div>
+
+              <p className="text-sm text-muted-foreground text-center">
+                Puedes intentar de nuevo cuando estés listo. Si tienes problemas, contáctanos.
+              </p>
 
               <Button
                 className="w-full"
@@ -234,6 +274,12 @@ export default function PaymentPage() {
                     Intentar de nuevo
                   </>
                 )}
+              </Button>
+
+              <Button variant="ghost" size="sm" className="w-full" asChild>
+                <a href={`mailto:${brandInfo.supportEmail}`}>
+                  ¿Necesitas ayuda?
+                </a>
               </Button>
             </div>
           </CardContent>
