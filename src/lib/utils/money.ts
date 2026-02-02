@@ -29,8 +29,8 @@ export const calculateBreakdown = ({
   if (includesTax) {
     return calculateSubtotalFromTotal(amount);
   }
-  return calculateTotalWithIVA(amount)
-}
+  return calculateTotalWithIVA(amount);
+};
 
 /**
  * Calculate subtotal from total (reverse IVA calculation).
@@ -57,8 +57,8 @@ export const calculateTotalWithIVA = (subtotal: number) => {
     subtotal: subtotal,
     iva: ivaCents / 100,
     total: totalCents / 100,
-  }
-}
+  };
+};
 
 /**
  * Format currency amount in MXN.
