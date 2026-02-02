@@ -80,7 +80,9 @@
       "Skill(session-start)",
       "WebFetch(domain:developers.google.com)",
       "Bash(bunx next lint:*)",
-      "Skill(session-update)"
+      "Skill(session-update)",
+      "Bash(brew --prefix:*)",
+      "Bash(/opt/homebrew/bin/gh pr view:*)"
     ],
     "deny": [],
     "ask": []
