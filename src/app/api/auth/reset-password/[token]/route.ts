@@ -59,8 +59,7 @@ export async function GET(
       email: maskedEmail,
       name: user.name,
     });
-  } catch (error) {
-    console.error('[ERROR] Token validation failed:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Error al validar el token' },
       { status: 500 }
@@ -134,9 +133,6 @@ export async function POST(
       });
     });
 
-    // Log successful password reset for security monitoring
-    console.log(`[SECURITY] Password successfully reset for user: ${user.id} at ${new Date().toISOString()}`);
-
     // Send confirmation email
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hestiaplp.com.mx';
@@ -148,17 +144,15 @@ export async function POST(
         actionUrl: `${baseUrl}/login`,
         actionText: 'Iniciar Sesión',
       });
-    } catch (emailError) {
+    } catch {
       // Don't fail the reset if confirmation email fails
-      console.error('[WARNING] Failed to send password reset confirmation email:', emailError);
     }
 
     return NextResponse.json({
       success: true,
       message: 'Tu contraseña ha sido restablecida exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.',
     });
-  } catch (error) {
-    console.error('[ERROR] Password reset failed:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Error al restablecer la contraseña. Por favor, intenta de nuevo.' },
       { status: 500 }

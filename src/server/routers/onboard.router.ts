@@ -233,8 +233,8 @@ export const onboardRouter = createTRPCRouter({
           if (oldKey && oldKey.startsWith('avatars/')) {
             await storageProvider.delete(oldKey);
           }
-        } catch (error) {
-          console.error('Failed to delete old avatar:', error);
+        } catch {
+          // Ignore deletion errors
         }
       }
 

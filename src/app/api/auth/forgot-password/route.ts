@@ -46,11 +46,6 @@ export async function POST(request: NextRequest) {
         expiryHours: 1,
       });
 
-      // Log the password reset attempt (for security monitoring)
-      console.log(`[SECURITY] Password reset requested for email: ${email.substring(0, 3)}***@***.*** at ${new Date().toISOString()}`);
-    } else {
-      // Log failed attempts (user not found) for security monitoring
-      console.log(`[SECURITY] Password reset attempted for non-existent email: ${email.substring(0, 3)}***@***.*** at ${new Date().toISOString()}`);
     }
 
     // Always return the same response to prevent email enumeration
@@ -58,9 +53,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Si existe una cuenta con ese correo electrónico, recibirás un enlace para restablecer tu contraseña en breve.',
     });
-  } catch (error) {
-    console.error('[ERROR] Password reset request failed:', error);
-
+  } catch {
     // Return generic error to avoid leaking information
     return NextResponse.json(
       { error: 'Error al procesar la solicitud. Por favor, intenta de nuevo más tarde.' },

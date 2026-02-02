@@ -160,7 +160,13 @@ export const paymentRouter = createTRPCRouter({
   recordManualPayment: adminProcedure
     .input(z.object({
       policyId: z.string(),
-      type: z.nativeEnum(PaymentType),
+      // Only allow types appropriate for manual payment entry
+      type: z.enum([
+        PaymentType.TENANT_PORTION,
+        PaymentType.LANDLORD_PORTION,
+        PaymentType.PARTIAL_PAYMENT,
+        PaymentType.INCIDENT_PAYMENT,
+      ]),
       amount: z.number().positive(),
       paidBy: z.nativeEnum(PayerType),
       reference: z.string().optional(),
@@ -329,6 +335,17 @@ export const paymentRouter = createTRPCRouter({
    * Fetches from Stripe API on demand
    */
   getStripeReceipt: protectedProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);
+      return { receiptUrl };
+    }),
+
+  /**
+   * Get Stripe receipt URL for a completed payment
+   * Fetches from Stripe API on demand PUBLIC procedure #TODO: add rate limiting
+   */
+  getStripePublicReceipt: publicProcedure
     .input(z.object({ paymentId: z.string() }))
     .mutation(async ({ input }) => {
       const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);

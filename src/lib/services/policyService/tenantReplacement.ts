@@ -523,6 +523,7 @@ export async function replaceTenantOnPolicy(
     resend: false,
     initiatorName: 'Sistema',
     initiatorId: input.performedById,
+    ipAddress: 'system',
   });
 
   return { success: true };

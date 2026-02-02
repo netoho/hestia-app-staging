@@ -12,7 +12,7 @@ import { ServiceError, ErrorCode } from './types/errors';
 import { BaseService } from './base/BaseService';
 import { pricingService } from './pricingService';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
-import { calculateSubtotalFromTotal } from '@/lib/utils/money';
+import { calculateBreakdown } from '@/lib/utils/money';
 import { PAYMENT_LIMITS } from '@/lib/config/payments';
 
 // IVA multiplier for convenience (1 + 0.16 = 1.16)
@@ -134,6 +134,7 @@ export interface CreateTypedCheckoutParams {
   paidBy: PayerType;
   description: string;
   customerEmail?: string;
+  includesTax?: boolean;
 }
 
 class PaymentService extends BaseService {
@@ -162,7 +163,7 @@ class PaymentService extends BaseService {
     metadata?: any;
   }) {
     // Calculate subtotal and IVA from amount (amount includes 16% IVA)
-    const breakdown = calculateSubtotalFromTotal(amount);
+    const breakdown = calculateBreakdown({ amount, includesTax: true });
 
     return this.prisma.payment.create({
       data: {
@@ -543,7 +544,7 @@ class PaymentService extends BaseService {
     if (policy.totalPrice && policy.totalPrice > 0) {
       // Manual override: use stored price
       totalWithIva = policy.totalPrice;
-      const breakdown = calculateSubtotalFromTotal(totalWithIva);
+      const breakdown = calculateBreakdown({ amount: totalWithIva, includesTax: true });
       subtotal = breakdown.subtotal;
       iva = breakdown.iva;
       // Recalculate amounts based on percentages
@@ -586,6 +587,7 @@ class PaymentService extends BaseService {
     paidBy,
     description,
     customerEmail,
+    includesTax = true,
   }: CreateTypedCheckoutParams): Promise<PaymentSessionResult> {
     // Validate amount
     if (amount <= 0) {
@@ -612,7 +614,7 @@ class PaymentService extends BaseService {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Calculate subtotal and IVA from total amount (amount includes 16% IVA)
-    const breakdown = calculateSubtotalFromTotal(amount);
+    const breakdown = calculateBreakdown({ amount, includesTax });
 
     // 1. Create payment record FIRST (without Stripe session)
     const payment = await this.prisma.payment.create({
@@ -744,6 +746,7 @@ class PaymentService extends BaseService {
         type: PaymentType.INVESTIGATION_FEE,
         paidBy: PayerType.TENANT,
         description: 'Cuota de Investigación',
+        includesTax: false,
       });
     }
 
@@ -755,6 +758,7 @@ class PaymentService extends BaseService {
         type: PaymentType.TENANT_PORTION,
         paidBy: PayerType.TENANT,
         description: 'Pago del Inquilino - Prima de Póliza',
+        includesTax: false,
       });
     }
 
@@ -766,6 +770,7 @@ class PaymentService extends BaseService {
         type: PaymentType.LANDLORD_PORTION,
         paidBy: PayerType.LANDLORD,
         description: 'Pago del Arrendador - Prima de Póliza',
+        includesTax: false,
       });
     }
 
@@ -880,7 +885,7 @@ class PaymentService extends BaseService {
     }
 
     // Calculate subtotal and IVA from amount (amount includes 16% IVA)
-    const breakdown = calculateSubtotalFromTotal(amount);
+    const breakdown = calculateBreakdown({ amount, includesTax: true });
 
     // Create manual payment with PENDING_VERIFICATION status
     const payment = await this.prisma.payment.create({
@@ -930,29 +935,16 @@ class PaymentService extends BaseService {
     verifierId: string,
     notes?: string
   ): Promise<Payment> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!payment) {
-      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
-    }
-
-    if (payment.status !== PaymentStatus.PENDING_VERIFICATION) {
-      throw new ServiceError(
-        ErrorCode.VALIDATION_ERROR,
-        'Payment is not pending verification',
-        400,
-        { currentStatus: payment.status }
-      );
-    }
-
     const newStatus = approved ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
-    // Use transaction to ensure payment update + activity log are atomic
+    // Use transaction with atomic claim to prevent race conditions
     const updatedPayment = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.payment.update({
-        where: { id: paymentId },
+      // Atomic claim: only proceed if payment is still PENDING_VERIFICATION
+      const claimResult = await tx.payment.updateMany({
+        where: {
+          id: paymentId,
+          status: PaymentStatus.PENDING_VERIFICATION,
+        },
         data: {
           status: newStatus,
           verifiedBy: verifierId,
@@ -960,6 +952,28 @@ class PaymentService extends BaseService {
           verificationNotes: notes,
           paidAt: approved ? new Date() : undefined,
         },
+      });
+
+      if (claimResult.count === 0) {
+        // Payment was already processed or doesn't exist
+        const existing = await tx.payment.findUnique({
+          where: { id: paymentId },
+          select: { status: true },
+        });
+        if (!existing) {
+          throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+        }
+        throw new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Payment is not pending verification',
+          400,
+          { currentStatus: existing.status }
+        );
+      }
+
+      // Fetch the updated payment for activity logging
+      const payment = await tx.payment.findUniqueOrThrow({
+        where: { id: paymentId },
       });
 
       // Log activity
@@ -987,7 +1001,7 @@ class PaymentService extends BaseService {
         await this.updatePolicyPaymentStatusIfComplete(tx, payment.policyId);
       }
 
-      return updated;
+      return payment;
     });
 
     return updatedPayment;
@@ -1293,7 +1307,7 @@ class PaymentService extends BaseService {
     const session = await stripeInstance.checkout.sessions.create(sessionConfig, { idempotencyKey });
 
     // Calculate subtotal and IVA from new amount (newAmount includes 16% IVA)
-    const breakdown = calculateSubtotalFromTotal(newAmount);
+    const breakdown = calculateBreakdown({ amount: newAmount, includesTax: true });
 
     // Update payment record with new amount and session
     await this.prisma.$transaction(async (tx) => {

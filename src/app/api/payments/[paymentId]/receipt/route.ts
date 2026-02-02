@@ -101,7 +101,6 @@ export async function POST(
       fileName: file.name,
     });
   } catch (error: any) {
-    console.error('Receipt upload error:', error);
     return NextResponse.json(
       { error: error.message || 'Error uploading receipt' },
       { status: 500 }
@@ -187,7 +186,6 @@ export async function GET(
       fileName: payment.receiptFileName,
     });
   } catch (error: any) {
-    console.error('Receipt download error:', error);
     return NextResponse.json(
       { error: error.message || 'Error getting receipt' },
       { status: 500 }

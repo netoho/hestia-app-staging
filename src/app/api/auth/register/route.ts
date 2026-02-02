@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
       token
     }, { status: 201 });
 
-  } catch (error) {
-    console.error('Registration error:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to register user' },
       { status: 500 }

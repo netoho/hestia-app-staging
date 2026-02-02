@@ -5,7 +5,19 @@
 
 import { z } from 'zod';
 import { emailSchema } from '../shared/contact.schema';
+import { addressSchema } from '../shared/address.schema';
 import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
+
+/**
+ * Extended address schema with Google Places fields and validation state
+ */
+const propertyAddressSchema = addressSchema.extend({
+  id: z.string().optional(),
+  placeId: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  formattedAddress: z.string().optional(),
+});
 
 /**
  * Step 1: Property Information
@@ -13,7 +25,7 @@ import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/pris
 export const propertyStepSchema = z.object({
   policyNumber: z.string().min(1, 'Número de póliza requerido'),
   internalCode: z.string().optional(),
-  propertyAddressDetails: z.any().optional().nullable(),
+  propertyAddressDetails: propertyAddressSchema,
   propertyType: z.nativeEnum(PropertyType),
   propertyDescription: z.string().optional(),
   rentAmount: z.string().min(1, 'Monto de renta requerido').refine(
@@ -62,9 +74,20 @@ export const pricingStepSchema = z.object({
   landlordPercentage: z.number().min(0).max(100),
   manualPrice: z.number().nullable().optional(),
   isManualOverride: z.boolean().default(false),
+  // Auto-calculated price (set when package changes)
+  calculatedPrice: z.number().nullable().optional(),
 }).refine(
   (data) => Math.abs(data.tenantPercentage + data.landlordPercentage - 100) < 0.01,
   { message: 'Los porcentajes deben sumar 100%', path: ['tenantPercentage'] }
+).refine(
+  (data) => {
+    // Must have calculated price OR manual override with manual price
+    if (data.isManualOverride) {
+      return data.manualPrice !== null && data.manualPrice !== undefined && data.manualPrice > 0;
+    }
+    return data.calculatedPrice !== null && data.calculatedPrice !== undefined && data.calculatedPrice > 0;
+  },
+  { message: 'Debe calcular el precio o ingresar un precio manual', path: ['packageId'] }
 );
 
 /**
@@ -107,9 +130,9 @@ export const landlordStepSchema = z.discriminatedUnion('isCompany', [
  */
 export const tenantStepSchema = z.object({
   tenantType: z.nativeEnum(TenantType).default(TenantType.INDIVIDUAL),
-  firstName: z.string().optional(),
+  firstName: z.string().min(1, 'Nombre requerido'),
   middleName: z.string().optional(),
-  paternalLastName: z.string().optional(),
+  paternalLastName: z.string().min(1, 'Apellido paterno requerido'),
   maternalLastName: z.string().optional(),
   companyName: z.string().optional(),
   email: emailSchema,

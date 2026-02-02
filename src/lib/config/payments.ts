@@ -20,10 +20,4 @@ export const PAYMENT_SESSION_CONFIG = {
   EXPIRY_CRITICAL_HOURS: 1,
 };
 
-export const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  INVESTIGATION_FEE: 'Cuota de Investigación',
-  TENANT_PORTION: 'Pago del Inquilino',
-  LANDLORD_PORTION: 'Pago del Arrendador',
-  PARTIAL_PAYMENT: 'Pago Parcial',
-  INCIDENT_PAYMENT: 'Pago por Incidente',
-};
+// Note: PAYMENT_TYPE_LABELS is in @/lib/constants/paymentConfig.ts

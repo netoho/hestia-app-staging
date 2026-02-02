@@ -61,8 +61,7 @@ export default function ForgotPasswordPage() {
 
       // Success - show success message
       setIsSuccess(true);
-    } catch (error) {
-      console.error('Password reset request failed:', error);
+    } catch {
       setError('Error al procesar la solicitud. Por favor, intenta de nuevo más tarde.');
     } finally {
       setIsSubmitting(false);
