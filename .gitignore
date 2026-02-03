@@ -35,6 +35,13 @@ pnpm-debug.log*
 # local env files
 .env*.local
 .env
+env-*
+
+# local development
+tests/
+.github/
+documents/
+docker-compose.test.yml
 
 # vercel
 .vercel

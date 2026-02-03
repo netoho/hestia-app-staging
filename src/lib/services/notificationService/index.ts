@@ -6,6 +6,7 @@ import {
 } from '@/lib/services/actorTokenService';
 import prisma from "@/lib/prisma";
 import { sendActorInvitation, sendPolicyCancellationEmail } from "@/lib/services/emailService";
+import { getActiveAdmins } from "@/lib/services/userService";
 import { formatFullName } from "@/lib/utils/names";
 import {AvalType, JointObligorType, TenantType} from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from "@/lib/services/policyService";
@@ -295,10 +296,7 @@ export const sendPolicyCancellationNotification = async (policyId: string): Prom
   }
 
   // Get all active admin users
-  const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN', isActive: true },
-    select: { email: true, name: true },
-  });
+  const admins = await getActiveAdmins();
 
   const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
 

@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calculator, RefreshCw, Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { PricingFormData } from '../../types';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 interface PricingStepProps {
   propertyData: any;
@@ -290,7 +291,7 @@ export default function PricingStep({
                 </div>
                 {pricingData.manualPrice && (
                   <p className="text-sm text-gray-600 mt-2">
-                    Total con IVA: {formatCurrency((pricingData.manualPrice || 0) * 1.16)}
+                    Total con IVA: {formatCurrency((pricingData.manualPrice || 0) * (1 + TAX_CONFIG.IVA_RATE))}
                   </p>
                 )}
               </div>

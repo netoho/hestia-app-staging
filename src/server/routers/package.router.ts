@@ -8,6 +8,7 @@ import {
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { PackageService } from '@/lib/services/packageService';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 // Schema for creating/updating packages
 const PackageSchema = z.object({
@@ -122,7 +123,7 @@ export const packageRouter = createTRPCRouter({
         return {
           ...pkg,
           calculatedPrice: price,
-          calculatedPriceWithIVA: price * 1.16,
+          calculatedPriceWithIVA: price * (1 + TAX_CONFIG.IVA_RATE),
         };
       });
 

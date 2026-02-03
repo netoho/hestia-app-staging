@@ -56,7 +56,6 @@ export function PropertyFeaturesSection({
             label="Tiene reglamento"
             checked={hasRules}
             onCheckedChange={(checked) => {
-              console.log('falksjfadsj', checked);
               if (!checked) {
                 // Clear rulesType if unchecking hasRules
                 onChange('rulesType', undefined);

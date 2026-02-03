@@ -43,11 +43,13 @@ interface PolicyHeaderProps {
   progressOverall?: number;
   sending: string | null;
   downloadingPdf: boolean;
+  isRefreshing?: boolean;
   onSendInvitations: () => void;
   onApprove: () => void;
   onShareClick: () => void;
   onCancelClick: () => void;
   onDownloadPdf: () => void;
+  onRefresh?: () => void;
 }
 
 export function PolicyHeader({
@@ -62,11 +64,13 @@ export function PolicyHeader({
   progressOverall,
   sending,
   downloadingPdf,
+  isRefreshing,
   onSendInvitations,
   onApprove,
   onShareClick,
   onCancelClick,
   onDownloadPdf,
+  onRefresh,
 }: PolicyHeaderProps) {
   const router = useRouter();
 
@@ -106,8 +110,23 @@ export function PolicyHeader({
         </div>
       </div>
 
-      {/* Actions Dropdown */}
-      <DropdownMenu>
+      <div className="flex items-center gap-2">
+        {/* Refresh Button */}
+        {onRefresh && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="shrink-0"
+            title="Actualizar datos"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
+
+        {/* Actions Dropdown */}
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0">
             <MoreVertical className="h-4 w-4" />
@@ -186,6 +205,7 @@ export function PolicyHeader({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </div>
   );
 }

@@ -101,7 +101,6 @@ export async function POST(
       fileName: file.name,
     });
   } catch (error: any) {
-    console.error('Receipt upload error:', error);
     return NextResponse.json(
       { error: error.message || 'Error uploading receipt' },
       { status: 500 }
@@ -132,6 +131,7 @@ export async function GET(
       select: {
         receiptS3Key: true,
         receiptFileName: true,
+        paidBy: true,
         policy: {
           select: {
             createdById: true,
@@ -150,14 +150,23 @@ export async function GET(
     // 3. Authorization check - admin/staff can access all, others need policy access
     const userRole = session.user.role;
     const userId = session.user.id;
+    const isStaffOrAdmin = ['ADMIN', 'STAFF'].includes(userRole);
 
-    if (!['ADMIN', 'STAFF'].includes(userRole)) {
+    if (!isStaffOrAdmin) {
       const isCreator = payment.policy.createdById === userId;
       const isManager = payment.policy.managedById === userId;
       const isTenant = payment.policy.tenant?.id === userId;
       const isLandlord = payment.policy.landlords.some(l => l.id === userId);
 
+      // Must be associated with policy
       if (!isCreator && !isManager && !isTenant && !isLandlord) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      // Additionally, must be the payer (tenant can't download landlord receipts)
+      const isPayer = (payment.paidBy === 'TENANT' && isTenant) ||
+                      (payment.paidBy === 'LANDLORD' && isLandlord);
+      if (!isCreator && !isManager && !isPayer) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
@@ -177,7 +186,6 @@ export async function GET(
       fileName: payment.receiptFileName,
     });
   } catch (error: any) {
-    console.error('Receipt download error:', error);
     return NextResponse.json(
       { error: error.message || 'Error getting receipt' },
       { status: 500 }

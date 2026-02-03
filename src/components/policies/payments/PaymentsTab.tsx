@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CreditCard, AlertCircle, Plus } from 'lucide-react';
 import { PaymentType, PaymentStatus } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
@@ -201,6 +202,11 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
   );
   const canGenerateLinks = isStaffOrAdmin && !hasActiveCurrentPayments && breakdown.totalWithIva > 0;
 
+  // Check for payments needing verification
+  const pendingVerificationPayments = currentPayments.filter(
+    (p) => p.status === PaymentStatus.PENDING_VERIFICATION
+  );
+
   return (
     <div className="space-y-6">
       {/* Header with Add Payment button */}
@@ -224,6 +230,18 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
         totalRemaining={totalRemaining}
         overallStatus={overallStatus}
       />
+
+      {/* Pending Verification Alert */}
+      {isStaffOrAdmin && pendingVerificationPayments.length > 0 && (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            {pendingVerificationPayments.length === 1
+              ? '1 pago pendiente de verificación'
+              : `${pendingVerificationPayments.length} pagos pendientes de verificación`}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Generate Links Button (when no current active payments exist) */}
       {canGenerateLinks && (

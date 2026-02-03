@@ -11,6 +11,7 @@ import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
 import { trpc } from '@/lib/trpc/client';
 import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
 import { generatePolicyNumber } from '@/lib/utils/policy';
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 // Import RHF step components
 import PropertyStepRHF from './steps/PropertyStep-RHF';
@@ -77,6 +78,7 @@ const initialFormData: PolicyCreationFormData = {
     landlordPercentage: 0,
     manualPrice: null,
     isManualOverride: false,
+    calculatedPrice: null,
   },
   landlord: {
     isCompany: false,
@@ -279,7 +281,7 @@ export default function PolicyCreationWizard() {
       tenantPercentage: formData.pricing.tenantPercentage,
       landlordPercentage: formData.pricing.landlordPercentage,
       totalPrice: formData.pricing.isManualOverride && formData.pricing.manualPrice
-        ? formData.pricing.manualPrice * 1.16
+        ? formData.pricing.manualPrice * (1 + TAX_CONFIG.IVA_RATE)
         : (calculatePriceMutation.data?.totalWithIva || 0),
 
       // Guarantor

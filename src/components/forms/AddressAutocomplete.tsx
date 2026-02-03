@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, MapPin, X } from 'lucide-react';
+import { Loader2, MapPin, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import debounce from 'lodash/debounce';
 import { trpc } from '@/lib/trpc/client';
+import { isAddressComplete } from '@/lib/schemas/shared/address.schema';
 
 interface AddressData {
   id?: string;
@@ -26,9 +27,12 @@ interface AddressData {
   formattedAddress?: string;
 }
 
+export type AddressValidationState = 'empty' | 'typing' | 'loading' | 'validated' | 'manual';
+
 interface AddressAutocompleteProps {
   value?: Partial<AddressData>;
   onChange: (address: AddressData) => void;
+  onValidationStateChange?: (state: AddressValidationState, isComplete: boolean) => void;
   onBlur?: () => void;
   disabled?: boolean;
   error?: string;
@@ -49,6 +53,7 @@ interface Suggestion {
 export function AddressAutocomplete({
   value = {},
   onChange,
+  onValidationStateChange,
   onBlur,
   disabled = false,
   error,
@@ -62,8 +67,9 @@ export function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showManualForm, setShowManualForm] = useState(showFullForm);
+  const [showManualForm, setShowManualForm] = useState(true);
   const [sessionToken] = useState(() => crypto.randomUUID());
+  const [validationState, setValidationState] = useState<AddressValidationState>('empty');
   const [formData, setFormData] = useState<AddressData>({
     id: value?.id || '',
     street: value?.street || '',
@@ -84,14 +90,22 @@ export function AddressAutocomplete({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
+  // Update validation state and notify parent
+  const updateValidationState = useCallback((newState: AddressValidationState, address: Partial<AddressData>) => {
+    setValidationState(newState);
+    const complete = isAddressComplete(address);
+    onValidationStateChange?.(newState, complete);
+  }, [onValidationStateChange]);
+
   // Update form data when value prop changes
   useEffect(() => {
     if (value) {
-      setFormData(prev => ({
-        ...prev,
+      const newFormData = {
+        ...formData,
         ...value,
         country: value.country || 'México',
-      }));
+      };
+      setFormData(newFormData);
 
       // Set search input to formatted address if available
       if (value.formattedAddress) {
@@ -108,9 +122,20 @@ export function AddressAutocomplete({
         if (value.municipality) parts.push(value.municipality);
         setSearchInput(parts.join(', '));
       }
+
+      // Determine initial validation state
+      if (isAddressComplete(newFormData)) {
+        if (value.placeId) {
+          updateValidationState('validated', newFormData);
+        } else {
+          updateValidationState('manual', newFormData);
+        }
+      } else if (value.street || value.neighborhood) {
+        updateValidationState('typing', newFormData);
+      }
     } else {
       // Reset to empty state if value is null/undefined
-      setFormData({
+      const emptyData = {
         street: '',
         exteriorNumber: '',
         interiorNumber: '',
@@ -120,9 +145,12 @@ export function AddressAutocomplete({
         city: '',
         state: '',
         country: 'México',
-      });
+      };
+      setFormData(emptyData);
       setSearchInput('');
+      updateValidationState('empty', emptyData);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Click outside handler
@@ -155,8 +183,7 @@ export function AddressAutocomplete({
 
         setSuggestions(data.results || []);
         setShowSuggestions(true);
-      } catch (error) {
-        console.error('Error searching addresses:', error);
+      } catch {
         setSuggestions([]);
       } finally {
         setIsLoading(false);
@@ -167,12 +194,18 @@ export function AddressAutocomplete({
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchInput(value);
+    const inputValue = e.target.value;
+    setSearchInput(inputValue);
 
-    if (value.length >= 3) {
-      searchAddresses(value);
+    if (inputValue.length >= 3) {
+      updateValidationState('typing', formData);
+      searchAddresses(inputValue);
+    } else if (inputValue.length > 0) {
+      updateValidationState('typing', formData);
+      setSuggestions([]);
+      setShowSuggestions(false);
     } else {
+      updateValidationState('empty', formData);
       setSuggestions([]);
       setShowSuggestions(false);
     }
@@ -183,6 +216,7 @@ export function AddressAutocomplete({
     setIsLoading(true);
     setShowSuggestions(false);
     setSearchInput(suggestion.description);
+    updateValidationState('loading', formData);
 
     try {
       const data = await utils.address.details.fetch({
@@ -201,25 +235,35 @@ export function AddressAutocomplete({
 
         setFormData(address);
         onChange(address);
+        updateValidationState('validated', address);
 
         // Show manual form to allow editing
         setShowManualForm(true);
       }
-    } catch (error) {
-      console.error('Error getting place details:', error);
+    } catch {
+      // Error - revert to typing state
+      updateValidationState('typing', formData);
     } finally {
       setIsLoading(false);
     }
   };
 
   // Handle manual form field change
-  const handleFieldChange = (field: keyof AddressData, value: string | number) => {
+  const handleFieldChange = (field: keyof AddressData, fieldValue: string | number) => {
     const newData = {
       ...formData,
-      [field]: value,
+      [field]: fieldValue,
     };
     setFormData(newData);
     onChange(newData as AddressData);
+
+    // Update validation state based on completeness
+    if (isAddressComplete(newData)) {
+      updateValidationState('manual', newData);
+    } else if (validationState !== 'validated') {
+      // Keep typing state if manually editing incomplete address (unless it was validated from API)
+      updateValidationState('typing', newData);
+    }
   };
 
   // Clear address
@@ -239,7 +283,42 @@ export function AddressAutocomplete({
     setSearchInput('');
     setSuggestions([]);
     setShowSuggestions(false);
+    setShowManualForm(true);
     onChange(emptyAddress);
+    updateValidationState('empty', emptyAddress);
+  };
+
+  // Get border color based on validation state
+  const getBorderClass = () => {
+    if (error) return 'border-red-500 focus:ring-red-500';
+    switch (validationState) {
+      case 'validated':
+        return 'border-green-500 focus:ring-green-500';
+      case 'typing':
+        return 'border-yellow-500 focus:ring-yellow-500';
+      case 'manual':
+        return isAddressComplete(formData) ? 'border-green-500 focus:ring-green-500' : 'border-blue-500 focus:ring-blue-500';
+      case 'loading':
+        return 'border-blue-400 focus:ring-blue-400';
+      default:
+        return '';
+    }
+  };
+
+  // Get status icon
+  const getStatusIcon = () => {
+    switch (validationState) {
+      case 'validated':
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case 'typing':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case 'manual':
+        return isAddressComplete(formData) ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : null;
+      case 'loading':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -247,15 +326,17 @@ export function AddressAutocomplete({
       {/* Search Input */}
       <div className="space-y-2">
         {label && (
-          <Label htmlFor="address-search">
-            {label} {required && <span>*</span>}
+          <Label htmlFor={`address-search-${sessionToken}`}>
+            {label} {required && <span className="text-red-500">*</span>}
           </Label>
         )}
         <div className="relative">
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              id="address-search"
+              id={`address-search-${sessionToken}`}
+              name={`address_${sessionToken}`}
+              autoComplete="new-password"
               type="text"
               value={searchInput}
               onChange={handleSearchChange}
@@ -263,22 +344,22 @@ export function AddressAutocomplete({
               placeholder={placeholder}
               disabled={disabled}
               className={cn(
-                'pl-10 pr-10',
-                error && 'border-red-500'
+                'pl-10 pr-16',
+                getBorderClass()
               )}
             />
-            {searchInput && !disabled && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-              >
-                <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-              </button>
-            )}
-            {isLoading && (
-              <Loader2 className="absolute right-10 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-            )}
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+              {getStatusIcon()}
+              {searchInput && !disabled && !isLoading && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="ml-1"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Suggestions Dropdown */}
@@ -301,6 +382,7 @@ export function AddressAutocomplete({
           )}
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
+
       </div>
 
       {/* Toggle Manual Form */}
@@ -310,7 +392,7 @@ export function AddressAutocomplete({
           onClick={() => setShowManualForm(!showManualForm)}
           className="text-sm text-blue-600 hover:text-blue-800"
         >
-          {showManualForm ? 'Ocultar campos' : 'Ingresar manualmente'}
+          {showManualForm ? 'Ocultar campos' : 'Mostrar campos'}
         </button>
       )}
 

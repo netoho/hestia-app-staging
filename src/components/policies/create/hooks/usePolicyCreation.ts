@@ -13,6 +13,7 @@ import {
   ActorFormData,
 } from '../types';
 import { PropertyType, GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
+import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 /**
  * Main hook for policy creation with tRPC
@@ -352,7 +353,7 @@ export function usePolicyCreation() {
       tenantPercentage: formData.pricing.tenantPercentage,
       landlordPercentage: formData.pricing.landlordPercentage,
       totalPrice: formData.pricing.isManualOverride && formData.pricing.manualPrice
-        ? formData.pricing.manualPrice * 1.16
+        ? formData.pricing.manualPrice * (1 + TAX_CONFIG.IVA_RATE)
         : (calculatePriceMutation.data?.totalWithIva || 0),
 
       // Guarantor

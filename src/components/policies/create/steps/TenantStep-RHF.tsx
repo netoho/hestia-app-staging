@@ -118,7 +118,7 @@ export default function TenantStepRHF({
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Nombre</FormLabel>
+                        <FormLabel required>Nombre</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -158,7 +158,7 @@ export default function TenantStepRHF({
                     name="paternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Apellido Paterno</FormLabel>
+                        <FormLabel required>Apellido Paterno</FormLabel>
                         <FormControl>
                           <Input
                             {...field}

@@ -184,6 +184,16 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
     );
   }
 
+  async getActiveAdmins(): AsyncResult<Array<{ id: string; email: string; name: string | null }>> {
+    return this.executeDbOperation(
+      () => this.prisma.user.findMany({
+        where: { role: 'ADMIN', isActive: true },
+        select: { id: true, email: true, name: true },
+      }),
+      'getActiveAdmins'
+    );
+  }
+
   // Private helpers
   private buildWhereClause(filter: UserFilterDTO): Record<string, unknown> {
     const where: Record<string, unknown> = {};
@@ -243,6 +253,12 @@ export const updateUser = async (id: string, data: UpdateUserDTO) => {
 
 export const deleteUser = async (id: string) => {
   const result = await userService.delete(id);
+  if (!result.ok) throw result.error;
+  return result.value;
+};
+
+export const getActiveAdmins = async () => {
+  const result = await userService.getActiveAdmins();
   if (!result.ok) throw result.error;
   return result.value;
 };
