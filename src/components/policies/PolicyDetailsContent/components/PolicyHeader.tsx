@@ -21,6 +21,7 @@ import {
   XCircle,
   MoreVertical,
   Download,
+  FileSearch,
 } from 'lucide-react';
 import { PolicyStatusBadge } from '@/components/shared/PolicyStatusIndicators';
 import { PolicyStatusType } from '@/lib/prisma-types';
@@ -177,6 +178,16 @@ export function PolicyHeader({
             <DropdownMenuItem onClick={onShareClick}>
               <Share2 className="mr-2 h-4 w-4" />
               Compartir Enlaces
+            </DropdownMenuItem>
+          )}
+
+          {/* Investigations */}
+          {isStaffOrAdmin && (
+            <DropdownMenuItem
+              onClick={() => router.push(`/dashboard/policies/${policyId}/investigations`)}
+            >
+              <FileSearch className="mr-2 h-4 w-4" />
+              Investigaciones
             </DropdownMenuItem>
           )}
 
