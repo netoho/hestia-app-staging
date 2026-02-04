@@ -1083,6 +1083,8 @@ model ActorInvestigationDocument {
   s3Key        String @unique
   s3Bucket     String
 
+  uploadStatus DocumentUploadStatus @default(PENDING)
+
   investigation ActorInvestigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
