@@ -6,3 +6,4 @@
 - Don't put everything in a single file, split things in logical parts. For business logic add the routers, services, utils, etc. For components add folders and split them in smaller components.
 - When creating new components, prefer functional components with hooks over class components.
 - Always look for existing components or utilities before creating new ones.
+- We deploy on vercel so take than into account, for example avoid uploading large files directly to the server. Use the services (s3 presigned urls, etc) instead.
