@@ -50,7 +50,16 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
       previousRentalAddressDetails: true,
       personalReferences: true,
       commercialReferences: true,
-      policy: true,
+      policy: {
+        include: {
+          propertyDetails: {
+            include: {
+              propertyAddressDetails: true,
+              contractSigningAddressDetails: true,
+            }
+          }
+        }
+      },
       documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
     };
   }
