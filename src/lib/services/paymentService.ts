@@ -757,7 +757,7 @@ class PaymentService extends BaseService {
         amount: breakdown.tenantAmountAfterFee,
         type: PaymentType.TENANT_PORTION,
         paidBy: PayerType.TENANT,
-        description: 'Pago del Inquilino - Prima de Póliza',
+        description: 'Pago del Inquilino - Protección de Arrendamiento',
         includesTax: false,
       });
     }
@@ -769,7 +769,7 @@ class PaymentService extends BaseService {
         amount: breakdown.landlordAmount,
         type: PaymentType.LANDLORD_PORTION,
         paidBy: PayerType.LANDLORD,
-        description: 'Pago del Arrendador - Prima de Póliza',
+        description: 'Pago del Arrendador - Protección de Arrendamiento',
         includesTax: false,
       });
     }
