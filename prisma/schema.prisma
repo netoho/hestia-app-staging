@@ -198,8 +198,9 @@ model Policy {
   documents       PolicyDocument[]
   activities      PolicyActivity[]
   payments        Payment[]
-  investigation   Investigation?
-  contracts       Contract[]
+  investigation        Investigation?
+  actorInvestigations  ActorInvestigation[]
+  contracts            Contract[]
   incidents       Incident[]
   validationNotes ReviewNote[]
 
@@ -1029,6 +1030,66 @@ model Investigation {
   updatedAt DateTime @updatedAt
 }
 
+model ActorInvestigation {
+  id       String @id @default(cuid())
+  policyId String
+
+  // Actor reference (polymorphic)
+  actorType InvestigatedActorType
+  actorId   String
+
+  // Findings (filled by staff)
+  findings    String? @db.Text
+  verdict     InvestigationVerdict?
+  riskLevel   RiskLevel?
+  submittedBy String // staff userId
+  submittedAt DateTime?
+
+  // Documents
+  documents ActorInvestigationDocument[]
+
+  // Approval (broker or landlord)
+  status          ActorInvestigationStatus @default(PENDING)
+  approvedBy      String? // broker userId or landlord email
+  approvedByType  ApproverType?
+  approvedAt      DateTime?
+  approvalNotes   String?                  @db.Text
+  rejectionReason String?                  @db.Text
+
+  // Access tokens for approval pages
+  brokerToken   String?   @unique
+  landlordToken String?   @unique
+  tokenExpiry   DateTime?
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([policyId])
+  @@index([actorType, actorId])
+  @@index([brokerToken])
+  @@index([landlordToken])
+}
+
+model ActorInvestigationDocument {
+  id              String @id @default(cuid())
+  investigationId String
+
+  fileName     String
+  originalName String
+  fileSize     Int
+  mimeType     String
+  s3Key        String @unique
+  s3Bucket     String
+
+  investigation ActorInvestigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([investigationId])
+}
+
 model Contract {
   id       String @id @default(cuid())
   policyId String
@@ -1306,6 +1367,7 @@ enum DocumentCategory {
   UTILITY_BILL
   PAYROLL_RECEIPT // Recibo de nómina
   OTHER
+  INVESTIGATION_SUPPORT // Documentos de soporte para investigaciones
 }
 
 enum InvestigationVerdict {
@@ -1399,4 +1461,21 @@ enum RulesType {
 enum DocumentUploadStatus {
   PENDING
   COMPLETE
+}
+
+enum InvestigatedActorType {
+  TENANT
+  JOINT_OBLIGOR
+  AVAL
+}
+
+enum ActorInvestigationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApproverType {
+  BROKER
+  LANDLORD
 }
