@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
-import { passwordWithConfirmSchema } from '@/lib/validation/password';
+import { passwordWithConfirmSchema } from '@/lib/validations/password';
 import {
   ArrowLeft,
   Loader2,

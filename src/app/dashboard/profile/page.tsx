@@ -13,7 +13,7 @@ import { Loader2, Eye, EyeOff, Lock } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { AvatarUploader } from '@/components/user/AvatarUploader';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
-import { isPasswordValid } from '@/lib/validation/password';
+import { isPasswordValid } from '@/lib/validations/password';
 import { formatDate } from '@/lib/utils/formatting';
 
 export default function ProfilePage() {
