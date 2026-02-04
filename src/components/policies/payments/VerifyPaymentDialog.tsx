@@ -129,9 +129,9 @@ export function VerifyPaymentDialog({
           {/* Receipt download */}
           {payment.receiptFileName && (
             <div className="flex items-center justify-between p-3 rounded-md border">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 max-w-3xs">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{payment.receiptFileName}</span>
+                <span className="text-sm truncate text-ellipsis">{payment.receiptFileName}</span>
               </div>
               <Button
                 type="button"
