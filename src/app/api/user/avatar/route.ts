@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
+import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { validateInvitationToken } from '@/lib/services/userTokenService';
 import prisma from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
