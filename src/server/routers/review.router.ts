@@ -12,7 +12,7 @@ import { getPolicyById } from '@/lib/services/policyService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { checkAllActorsVerified } from '@/lib/services/policyWorkflowService';
 import { prisma } from '@/lib/prisma';
-import { getDocumentDownloadUrl } from '@/lib/services/fileUploadService';
+import { getDocumentDownloadUrl } from '@/lib/services/documentService';
 
 // Validation schemas
 const ValidateSectionSchema = z.object({

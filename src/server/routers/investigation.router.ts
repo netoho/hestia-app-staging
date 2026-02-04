@@ -6,16 +6,12 @@ import {
   RiskLevel,
   DocumentCategory,
 } from '@/prisma/generated/prisma-client/enums';
-import { getCategoryValidation } from '@/lib/constants/documentCategories';
-import { getFileExtension } from '@/lib/documentManagement/validation';
+import { randomBytes, timingSafeEqual } from 'crypto';
+import { documentService } from '@/lib/services/documentService';
 
 // These types will be generated after running prisma migrate
 // For now, define them locally to match schema.prisma
 type ApproverType = 'BROKER' | 'LANDLORD';
-import { randomBytes, timingSafeEqual } from 'crypto';
-import { S3StorageProvider } from '@/lib/storage/providers/s3';
-import { v4 as uuidv4 } from 'uuid';
-import { createSafeS3Key } from '@/lib/utils/filename';
 import {
   getInvestigationTokenExpiryDate,
   getVerdictLabel,
@@ -29,24 +25,6 @@ import {
   sendInvestigationResultEmail,
 } from '@/lib/services/emailService';
 import { formatFullName } from '@/lib/utils/names';
-
-// Initialize S3 provider
-const getS3Provider = () => {
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Storage provider not configured',
-    });
-  }
-  return new S3StorageProvider({
-    bucket: process.env.AWS_S3_BUCKET || 'hestia-files',
-    publicBucket: process.env.AWS_PUBLIC_S3_BUCKET || 'public-hestia-files',
-    region: process.env.AWS_REGION || 'us-east-1',
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    endpoint: process.env.AWS_S3_ENDPOINT,
-  });
-};
 
 // Generate token for approval links
 const generateToken = () => randomBytes(32).toString('hex');
@@ -346,10 +324,9 @@ export const investigationRouter = createTRPCRouter({
       await ctx.prisma.$transaction(async (tx) => {
         // Delete S3 files first
         if (investigation.documents.length > 0) {
-          const s3 = getS3Provider();
           for (const doc of investigation.documents) {
             try {
-              await s3.delete(doc.s3Key);
+              await documentService.deleteFile(doc.s3Key);
             } catch (error) {
               console.error(`Failed to delete S3 file ${doc.s3Key}:`, error);
               // Continue with other deletions
@@ -398,37 +375,6 @@ export const investigationRouter = createTRPCRouter({
       fileSize: z.number().positive('Tamaño de archivo inválido'),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Use centralized validation config
-      const validationConfig = getCategoryValidation(DocumentCategory.INVESTIGATION_SUPPORT);
-
-      // Validate file size
-      if (input.fileSize > validationConfig.maxSizeMB * 1024 * 1024) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `El archivo excede el tamaño máximo de ${validationConfig.maxSizeMB}MB`,
-        });
-      }
-
-      console.log(input, validationConfig);
-
-      // Validate MIME type
-      if (!validationConfig.allowedMimeTypes.includes(input.contentType)) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `Tipo de archivo no permitido. Use: ${validationConfig.formatsLabel}`,
-        });
-      }
-
-      // Validate file extension
-      const ext = getFileExtension(input.fileName)?.toLowerCase();
-      console.log(ext, validationConfig.allowedExtensions)
-      if (!ext || !validationConfig.allowedExtensions.includes(ext)) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `Extensión de archivo no permitida. Use: ${validationConfig.formatsLabel}`,
-        });
-      }
-
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.investigationId },
         include: {
@@ -440,45 +386,32 @@ export const investigationRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Investigation not found' });
       }
 
-      const s3 = getS3Provider();
-
-      // Generate S3 key
-      const uniqueId = uuidv4().slice(0, 8);
-      const safeFileName = createSafeS3Key(input.fileName);
-      const nameWithoutExt = safeFileName.lastIndexOf('.') > 0
-        ? safeFileName.substring(0, safeFileName.lastIndexOf('.'))
-        : safeFileName;
-      const fileNamePart = nameWithoutExt.substring(0, 50);
-
-      const s3Key = `policies/${investigation.policy.policyNumber}/investigations/${investigation.id}/${uniqueId}-${fileNamePart}${ext}`;
-
-      // Create pending document record
-      const document = await ctx.prisma.actorInvestigationDocument.create({
-        data: {
+      try {
+        const result = await documentService.generateInvestigationUploadUrl({
+          policyNumber: investigation.policy.policyNumber,
           investigationId: input.investigationId,
-          fileName: `${uniqueId}-${fileNamePart}${ext}`,
-          originalName: input.fileName,
+          fileName: input.fileName,
+          contentType: input.contentType,
           fileSize: input.fileSize,
-          mimeType: input.contentType,
-          s3Key,
-          s3Bucket: process.env.AWS_S3_BUCKET || 'hestia-files',
-        },
-      });
+          category: DocumentCategory.INVESTIGATION_SUPPORT,
+        });
 
-      // Generate presigned URL
-      const uploadUrl = await s3.getSignedUrl({
-        path: s3Key,
-        action: 'write',
-        expiresInSeconds: 300,
-      });
-
-      return {
-        success: true,
-        uploadUrl,
-        documentId: document.id,
-        s3Key,
-        expiresIn: 300,
-      };
+        return {
+          success: true,
+          uploadUrl: result.uploadUrl,
+          documentId: result.documentId,
+          s3Key: result.s3Key,
+          expiresIn: result.expiresIn,
+        };
+      } catch (error) {
+        if (error instanceof Error && error.message) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
+        throw error;
+      }
     }),
 
   /**
@@ -489,26 +422,18 @@ export const investigationRouter = createTRPCRouter({
       investigationId: z.string().cuid('ID de investigación inválido'),
       documentId: z.string().cuid('ID de documento inválido'),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const document = await ctx.prisma.actorInvestigationDocument.findUnique({
-        where: { id: input.documentId },
-      });
+    .mutation(async ({ input }) => {
+      const document = await documentService.getInvestigationDocument(input.documentId);
 
       if (!document || document.investigationId !== input.investigationId) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
       }
 
-      // Use transaction to ensure atomicity
-      await ctx.prisma.$transaction(async (tx) => {
-        // Delete from S3 first
-        const s3 = getS3Provider();
-        await s3.delete(document.s3Key);
+      const success = await documentService.deleteInvestigationDocument(input.documentId);
 
-        // Delete from database only if S3 deletion succeeds
-        await tx.actorInvestigationDocument.delete({
-          where: { id: input.documentId },
-        });
-      });
+      if (!success) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to delete document' });
+      }
 
       return { success: true };
     }),
@@ -518,23 +443,18 @@ export const investigationRouter = createTRPCRouter({
    */
   getDocumentDownloadUrl: adminProcedure
     .input(z.object({ documentId: z.string().cuid('ID de documento inválido') }))
-    .query(async ({ input, ctx }) => {
-      const document = await ctx.prisma.actorInvestigationDocument.findUnique({
-        where: { id: input.documentId },
-      });
+    .query(async ({ input }) => {
+      const document = await documentService.getInvestigationDocument(input.documentId);
 
       if (!document) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
       }
 
-      const s3 = getS3Provider();
-      const downloadUrl = await s3.getSignedUrl({
-        path: document.s3Key,
-        action: 'read',
-        expiresInSeconds: 300,
-        fileName: document.originalName,
-        responseDisposition: 'attachment',
-      });
+      const downloadUrl = await documentService.getDownloadUrl(
+        document.s3Key,
+        document.originalName,
+        300
+      );
 
       return {
         success: true,
@@ -918,22 +838,17 @@ export const investigationRouter = createTRPCRouter({
       }
 
       // Get document
-      const document = await ctx.prisma.actorInvestigationDocument.findUnique({
-        where: { id: input.documentId },
-      });
+      const document = await documentService.getInvestigationDocument(input.documentId);
 
       if (!document || document.investigationId !== investigation.id) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
       }
 
-      const s3 = getS3Provider();
-      const downloadUrl = await s3.getSignedUrl({
-        path: document.s3Key,
-        action: 'read',
-        expiresInSeconds: 300,
-        fileName: document.originalName,
-        responseDisposition: 'attachment',
-      });
+      const downloadUrl = await documentService.getDownloadUrl(
+        document.s3Key,
+        document.originalName,
+        300
+      );
 
       return {
         success: true,

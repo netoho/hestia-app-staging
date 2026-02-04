@@ -5,7 +5,7 @@ import {
 } from '@/server/trpc';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
+import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { v4 as uuidv4 } from 'uuid';
 import {
   throwNotFound,
