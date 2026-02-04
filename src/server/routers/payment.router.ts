@@ -166,6 +166,7 @@ export const paymentRouter = createTRPCRouter({
         PaymentType.LANDLORD_PORTION,
         PaymentType.PARTIAL_PAYMENT,
         PaymentType.INCIDENT_PAYMENT,
+        PaymentType.INVESTIGATION_FEE,
       ]),
       amount: z.number().positive(),
       paidBy: z.nativeEnum(PayerType),
