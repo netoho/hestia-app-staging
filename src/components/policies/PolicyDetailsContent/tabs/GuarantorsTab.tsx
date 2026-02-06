@@ -17,7 +17,7 @@ import { formatFullName } from '@/lib/utils/names';
 import { PolicyStatusType } from '@/lib/prisma-types';
 
 // Statuses that allow guarantor type change
-const CHANGEABLE_STATUSES: PolicyStatusType[] = ['DRAFT', 'COLLECTING_INFO', 'UNDER_INVESTIGATION', 'PENDING_APPROVAL'];
+const CHANGEABLE_STATUSES: PolicyStatusType[] = ['COLLECTING_INFO', 'PENDING_APPROVAL'];
 
 interface GuarantorsTabProps {
   guarantorType: string;

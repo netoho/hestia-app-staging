@@ -16,7 +16,7 @@ import { formatFullName } from '@/lib/utils/names';
 import { PolicyStatusType } from '@/lib/prisma-types';
 
 // Statuses that allow tenant replacement
-const REPLACEABLE_STATUSES: PolicyStatusType[] = ['DRAFT', 'COLLECTING_INFO', 'UNDER_INVESTIGATION', 'PENDING_APPROVAL'];
+const REPLACEABLE_STATUSES: PolicyStatusType[] = ['COLLECTING_INFO', 'PENDING_APPROVAL'];
 
 interface TenantTabProps {
   tenant: any;

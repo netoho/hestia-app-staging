@@ -146,7 +146,7 @@ export default function ApprovalWorkflow({
           </div>
 
           {/* Final Policy Approval */}
-          {allActorsApproved && canApprovePolicy && policy.status === 'UNDER_INVESTIGATION' && (
+          {allActorsApproved && canApprovePolicy && policy.status === 'PENDING_APPROVAL' && (
             <div className="pt-4 border-t">
               <Alert className="bg-blue-50 border-blue-200 mb-4">
                 <CheckCircle2 className="h-4 w-4 text-blue-600" />

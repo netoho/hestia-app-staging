@@ -1,37 +1,25 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
 import {
-  FileSearch,
   FileCheck,
-  FileX,
-  FileSignature,
-  FileBadge,
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
   Loader2,
-  FileText,
   RefreshCw,
   Ban
 } from 'lucide-react';
 import { PolicyStatusType } from '@/lib/prisma-types';
+import { getApprovedSubStatus } from '@/lib/utils/policy';
+import { t } from '@/lib/i18n';
 
 // Icon mapping for each status
 const STATUS_ICONS: Record<PolicyStatusType, React.ElementType> = {
-  DRAFT: FileText,
   COLLECTING_INFO: Clock,
-  UNDER_INVESTIGATION: FileSearch,
-  INVESTIGATION_REJECTED: FileX,
   PENDING_APPROVAL: FileCheck,
-  CONTRACT_PENDING: FileSignature,
-  CONTRACT_UPLOADED: FileBadge,
-  CONTRACT_SIGNED: FileCheck,
-  ACTIVE: CheckCircle,
-  EXPIRED: AlertCircle,
+  APPROVED: CheckCircle,
   CANCELLED: Ban
 };
 
@@ -42,29 +30,11 @@ const STATUS_COLORS: Record<PolicyStatusType, {
   border: string;
   icon: string;
 }> = {
-  DRAFT: {
-    bg: 'bg-gray-50',
-    text: 'text-gray-700',
-    border: 'border-gray-200',
-    icon: 'text-gray-500'
-  },
   COLLECTING_INFO: {
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     border: 'border-blue-200',
     icon: 'text-blue-500'
-  },
-  UNDER_INVESTIGATION: {
-    bg: 'bg-yellow-50',
-    text: 'text-yellow-700',
-    border: 'border-yellow-200',
-    icon: 'text-yellow-600'
-  },
-  INVESTIGATION_REJECTED: {
-    bg: 'bg-red-50',
-    text: 'text-red-700',
-    border: 'border-red-200',
-    icon: 'text-red-500'
   },
   PENDING_APPROVAL: {
     bg: 'bg-emerald-50',
@@ -72,35 +42,11 @@ const STATUS_COLORS: Record<PolicyStatusType, {
     border: 'border-emerald-200',
     icon: 'text-emerald-500'
   },
-  CONTRACT_PENDING: {
-    bg: 'bg-orange-50',
-    text: 'text-orange-700',
-    border: 'border-orange-200',
-    icon: 'text-orange-500'
-  },
-  CONTRACT_UPLOADED: {
-    bg: 'bg-purple-50',
-    text: 'text-purple-700',
-    border: 'border-purple-200',
-    icon: 'text-purple-500'
-  },
-  CONTRACT_SIGNED: {
-    bg: 'bg-indigo-50',
-    text: 'text-indigo-700',
-    border: 'border-indigo-200',
-    icon: 'text-indigo-500'
-  },
-  ACTIVE: {
+  APPROVED: {
     bg: 'bg-green-50',
     text: 'text-green-700',
     border: 'border-green-200',
     icon: 'text-green-500'
-  },
-  EXPIRED: {
-    bg: 'bg-gray-50',
-    text: 'text-gray-700',
-    border: 'border-gray-200',
-    icon: 'text-gray-500'
   },
   CANCELLED: {
     bg: 'bg-red-50',
@@ -110,22 +56,51 @@ const STATUS_COLORS: Record<PolicyStatusType, {
   }
 };
 
+// Sub-status colors for APPROVED policies
+const SUB_STATUS_COLORS: Record<string, {
+  bg: string;
+  text: string;
+  border: string;
+}> = {
+  active: {
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+    border: 'border-green-200',
+  },
+  expired: {
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    border: 'border-orange-200',
+  },
+  pending_activation: {
+    bg: 'bg-gray-50',
+    text: 'text-gray-600',
+    border: 'border-gray-200',
+  },
+};
+
 interface PolicyStatusBadgeProps {
   status: PolicyStatusType;
+  activatedAt?: Date | null;
+  expiresAt?: Date | null;
   showIcon?: boolean;
+  showSubStatus?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-export function PolicyStatusBadge({ 
-  status, 
-  showIcon = true, 
+export function PolicyStatusBadge({
+  status,
+  activatedAt,
+  expiresAt,
+  showIcon = true,
+  showSubStatus = true,
   size = 'md',
-  className 
+  className
 }: PolicyStatusBadgeProps) {
   const Icon = STATUS_ICONS[status];
   const colors = STATUS_COLORS[status];
-  
+
   const sizeClasses = {
     sm: 'text-xs px-2 py-0.5',
     md: 'text-sm px-2.5 py-1',
@@ -138,21 +113,40 @@ export function PolicyStatusBadge({
     lg: 'h-5 w-5'
   };
 
+  const subStatus = showSubStatus && status === 'APPROVED'
+    ? getApprovedSubStatus({ status, activatedAt: activatedAt ?? null, expiresAt: expiresAt ?? null })
+    : null;
+
   return (
-    <div
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border font-medium',
-        colors.bg,
-        colors.text,
-        colors.border,
-        sizeClasses[size],
-        className
+    <div className="inline-flex items-center gap-1.5">
+      <div
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-full border font-medium',
+          colors.bg,
+          colors.text,
+          colors.border,
+          sizeClasses[size],
+          className
+        )}
+      >
+        {showIcon && Icon && (
+          <Icon className={cn(iconSizes[size], colors.icon)} />
+        )}
+        <span>{getStatusDisplayText(status)}</span>
+      </div>
+      {subStatus && (
+        <div
+          className={cn(
+            'inline-flex items-center rounded-full border font-medium',
+            SUB_STATUS_COLORS[subStatus].bg,
+            SUB_STATUS_COLORS[subStatus].text,
+            SUB_STATUS_COLORS[subStatus].border,
+            sizeClasses[size],
+          )}
+        >
+          <span>{t.labels.policySubStatus[subStatus]}</span>
+        </div>
       )}
-    >
-      {showIcon && Icon && (
-        <Icon className={cn(iconSizes[size], colors.icon)} />
-      )}
-      <span>{getStatusDisplayText(status)}</span>
     </div>
   );
 }
@@ -167,35 +161,26 @@ interface PolicyProgressIndicatorProps {
 
 export function PolicyProgressIndicator({
   currentStep,
-  totalSteps = 7,
+  totalSteps = 3,
   status,
   showStepText = true,
   className
 }: PolicyProgressIndicatorProps) {
-  // Don't show progress for certain statuses
-  const hideProgressStatuses: PolicyStatusType[] = [
-    'ACTIVE',
-    'EXPIRED',
-    'CANCELLED',
-    'INVESTIGATION_REJECTED'
-  ];
-
-  if (hideProgressStatuses.includes(status)) {
+  if (status === 'CANCELLED') {
     return null;
   }
 
   const progressPercentage = (currentStep / totalSteps) * 100;
-  const isInProgress = status.includes('IN_PROGRESS') || status.includes('PENDING');
+  const isInProgress = status === 'PENDING_APPROVAL';
 
   return (
     <div className={cn('space-y-1', className)}>
-      <Progress 
-        value={progressPercentage} 
+      <Progress
+        value={progressPercentage}
         className="h-2"
         indicatorClassName={cn(
           isInProgress && 'animate-pulse',
           status === 'PENDING_APPROVAL' && 'bg-emerald-500',
-          status === 'CONTRACT_SIGNED' && 'bg-indigo-500'
         )}
       />
       {showStepText && (
@@ -277,20 +262,13 @@ export function PaymentStatusBadge({
 
 // Helper functions
 function getStatusDisplayText(status: PolicyStatusType): string {
-  const displayMap: Record<PolicyStatusType, string> = {
-    DRAFT: 'Borrador',
-    COLLECTING_INFO: 'Recolectando Información',
-    UNDER_INVESTIGATION: 'En Investigación',
-    INVESTIGATION_REJECTED: 'Rechazado',
+  const displayMap: Record<string, string> = {
+    COLLECTING_INFO: 'Recopilando Información',
     PENDING_APPROVAL: 'Pendiente de Aprobación',
-    CONTRACT_PENDING: 'Contrato Pendiente',
-    CONTRACT_UPLOADED: 'Contrato Cargado',
-    CONTRACT_SIGNED: 'Contrato Firmado',
-    ACTIVE: 'Activa',
-    EXPIRED: 'Expirada',
-    CANCELLED: 'Cancelada'
+    APPROVED: 'Aprobada',
+    CANCELLED: 'Cancelada',
   };
-  
+
   return displayMap[status] || status;
 }
 

@@ -48,8 +48,8 @@ export function PolicyContractInfo({
   onDownloadContract,
   onMarkSigned
 }: PolicyContractInfoProps) {
-  // Don't show contract info for early statuses
-  if (['DRAFT', 'COLLECTING_INFO', 'UNDER_INVESTIGATION'].includes(policyStatus)) {
+  // Only show contract info for approved policies
+  if (policyStatus !== 'APPROVED') {
     return null;
   }
 
@@ -141,7 +141,7 @@ export function PolicyContractInfo({
                   </Button>
                 )}
 
-                {!isSigned && onMarkSigned && policyStatus === 'CONTRACT_UPLOADED' && (
+                {!isSigned && onMarkSigned && (
                   <Button
                     size="sm"
                     onClick={onMarkSigned}
@@ -156,7 +156,7 @@ export function PolicyContractInfo({
         )}
 
         {/* Upload New Contract */}
-        {!hasContract && policyStatus === 'CONTRACT_PENDING' && (
+        {!hasContract && (
           <div className="text-center py-6 border-2 border-dashed border-muted-foreground/25 rounded-lg">
             <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">

@@ -119,7 +119,7 @@ export function PolicyHeader({
           {/* Approve Policy - Staff/Admin */}
           {permissions.canApprove &&
            allActorsApproved &&
-           (status === 'UNDER_INVESTIGATION' || status === 'PENDING_APPROVAL') && (
+           status === 'PENDING_APPROVAL' && (
             <DropdownMenuItem onClick={onApprove} className="text-green-600">
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {t.pages.policies.approvePolicy}
@@ -127,7 +127,7 @@ export function PolicyHeader({
           )}
 
           {/* Send Invitations */}
-          {permissions.canSendInvitations && (status === 'DRAFT' || status === 'COLLECTING_INFO') && (
+          {permissions.canSendInvitations && status === 'COLLECTING_INFO' && (
             <DropdownMenuItem
               onClick={onSendInvitations}
               disabled={sending === 'all'}
@@ -170,7 +170,7 @@ export function PolicyHeader({
           </DropdownMenuItem>
 
           {/* Cancel Policy - Staff/Admin only */}
-          {isStaffOrAdmin && status !== 'CANCELLED' && status !== 'EXPIRED' && (
+          {isStaffOrAdmin && status !== 'CANCELLED' && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
