@@ -37,7 +37,8 @@ export default function InvestigationsPage({ params }: InvestigationsPageProps) 
   } = trpc.investigation.getByPolicy.useQuery(
     {
       policyId,
-      status: status !== 'all' ? (status as 'PENDING' | 'APPROVED' | 'REJECTED') : undefined,
+      status: status !== 'all' ? (status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED') : undefined,
+      includeArchived: status === 'ARCHIVED' || status === 'all',
     },
     { enabled: !!policyId }
   );
