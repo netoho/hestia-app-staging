@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
 import { formatDateTimeLong } from '@/lib/utils/formatting';
 import { t } from '@/lib/i18n';
+import { getInvestigatedActorLabel, getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
 import type {
   PDFPolicyData,
   PDFAddress,
@@ -14,7 +15,7 @@ import type {
   PDFJointObligor,
   PDFAval,
   PDFProperty,
-  PDFInvestigation,
+  PDFActorInvestigation,
   PDFPayment,
   PDFDocument,
   PDFPersonalReference,
@@ -355,17 +356,24 @@ function transformProperty(prop: PolicyWithRelations['propertyDetails']): PDFPro
 }
 
 /**
- * Transform investigation data
+ * Transform actor investigations data
  */
-function transformInvestigation(inv: PolicyWithRelations['investigation']): PDFInvestigation | null {
-  if (!inv) return null;
+function transformActorInvestigations(investigations: PolicyWithRelations['actorInvestigations']): PDFActorInvestigation[] {
+  if (!investigations || investigations.length === 0) return [];
 
-  return {
-    verdict: inv.verdict || null,
-    verdictLabel: inv.verdict ? (t.investigationVerdict[inv.verdict] || inv.verdict) : null,
-    score: inv.score || null,
-    notes: inv.notes || null,
-  };
+  return investigations.map(inv => ({
+    actorName: inv.actorName || '-',
+    actorType: inv.actorType,
+    actorTypeLabel: getInvestigatedActorLabel(inv.actorType as 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL'),
+    findings: inv.findings || null,
+    status: inv.status,
+    statusLabel: getInvestigationStatusLabel(inv.status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED'),
+    approvedByType: inv.approvedByType || null,
+    approvedAt: formatDate(inv.approvedAt),
+    approvalNotes: inv.approvalNotes || null,
+    rejectionReason: inv.rejectionReason || null,
+    documentsCount: inv.documents?.length || 0,
+  }));
 }
 
 /**
@@ -487,7 +495,7 @@ export function transformPolicyForPDF(policy: PolicyWithRelations): PDFPolicyDat
     tenant: transformTenant(policy.tenant),
     jointObligors: policy.jointObligors?.map(transformJointObligor) || [],
     avals: policy.avals?.map(transformAval) || [],
-    investigation: transformInvestigation(policy.investigation),
+    actorInvestigations: transformActorInvestigations(policy.actorInvestigations),
     payments: transformPayments(policy.payments),
     documents: transformDocuments(policy.documents),
     activities: transformActivities(policy.activities),

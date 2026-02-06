@@ -457,11 +457,6 @@ export async function getPolicyById(id: string) {
           createdAt: 'desc'
         }
       },
-      investigation: {
-        select: {
-          verdict: true,
-        }
-      },
       payments: {
         select: {
           id: true,
@@ -655,7 +650,9 @@ export async function getPolicyForPDF(id: string) {
           createdAt: 'desc'
         }
       },
-      investigation: true,
+      actorInvestigations: {
+        include: { documents: true }
+      },
       payments: {
         orderBy: {
           createdAt: 'desc'

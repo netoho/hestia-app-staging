@@ -8,7 +8,7 @@ import { investigationRouter } from './investigation.router';
 import { contractRouter } from './contract.router';
 import { documentRouter } from './document.router';
 import { userRouter } from './user.router';
-import { reviewRouter } from './review.router';
+
 import { staffRouter } from './staff.router';
 import { onboardRouter } from './onboard.router';
 import { addressRouter } from './address.router';
@@ -27,7 +27,7 @@ export const appRouter = createTRPCRouter({
   contract: contractRouter,
   document: documentRouter,
   user: userRouter,
-  review: reviewRouter,
+
   staff: staffRouter,
   onboard: onboardRouter,
   address: addressRouter,

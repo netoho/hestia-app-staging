@@ -93,28 +93,6 @@ class PolicyWorkflowService extends BaseService {
         break;
 
       case 'APPROVED':
-        // Check if investigation exists and is approved
-        const investigation = await this.prisma.investigation.findUnique({
-          where: { policyId: policy.id }
-        });
-        if (!investigation) {
-          return {
-            valid: false,
-            error: 'No se encontró investigación para esta póliza. Contacte al administrador.'
-          };
-        }
-        if (investigation.verdict === null) {
-          return {
-            valid: false,
-            error: 'La investigación no tiene veredicto. Debe aprobar o rechazar la investigación primero.'
-          };
-        }
-        if (investigation.verdict !== 'APPROVED') {
-          return {
-            valid: false,
-            error: `La investigación tiene veredicto "${investigation.verdict}". Solo investigaciones aprobadas pueden continuar.`
-          };
-        }
         break;
 
       case 'CONTRACT_SIGNED':
@@ -169,8 +147,6 @@ class PolicyWorkflowService extends BaseService {
         break;
 
       case 'UNDER_INVESTIGATION':
-        // Investigation record is now created in the transaction above
-        // to ensure atomic operation (policy status + investigation creation)
         break;
 
       case 'APPROVED':
@@ -234,45 +210,20 @@ class PolicyWorkflowService extends BaseService {
       return { success: false, error: validation.error };
     }
 
-    // For UNDER_INVESTIGATION, we need to create the investigation record in the same transaction
-    // to prevent inconsistent state if the investigation creation fails
-    let updatedPolicy;
-    if (newStatus === 'UNDER_INVESTIGATION') {
-      updatedPolicy = await this.prisma.$transaction(async (tx) => {
-        const updated = await tx.policy.update({
-          where: { id: policyId },
-          data: {
-            status: newStatus,
-            ...(notes && { reviewNotes: notes }),
-            currentStep: 'investigation'
-          }
-        });
-
-        // Create investigation record in the same transaction
-        await tx.investigation.create({
-          data: {
-            policyId: policy.id,
-            createdAt: new Date()
-          }
-        });
-
-        return updated;
-      });
-    } else {
-      updatedPolicy = await this.prisma.policy.update({
-        where: { id: policyId },
-        data: {
-          status: newStatus,
-          ...(notes && { reviewNotes: notes }),
-          ...(reason && { rejectionReason: reason }),
-          ...(newStatus === 'APPROVED' && { approvedAt: new Date() }),
-          ...(newStatus === 'INVESTIGATION_REJECTED' && { rejectedAt: new Date() }),
-          ...(newStatus === 'ACTIVE' && { activatedAt: new Date() }),
-          ...(newStatus === 'COLLECTING_INFO' && { currentStep: 'actors' }),
-          ...(newStatus === 'CONTRACT_PENDING' && { currentStep: 'contract' })
-        }
-      });
-    }
+    const updatedPolicy = await this.prisma.policy.update({
+      where: { id: policyId },
+      data: {
+        status: newStatus,
+        ...(notes && { reviewNotes: notes }),
+        ...(reason && { rejectionReason: reason }),
+        ...(newStatus === 'APPROVED' && { approvedAt: new Date() }),
+        ...(newStatus === 'INVESTIGATION_REJECTED' && { rejectedAt: new Date() }),
+        ...(newStatus === 'ACTIVE' && { activatedAt: new Date() }),
+        ...(newStatus === 'COLLECTING_INFO' && { currentStep: 'actors' }),
+        ...(newStatus === 'UNDER_INVESTIGATION' && { currentStep: 'investigation' }),
+        ...(newStatus === 'CONTRACT_PENDING' && { currentStep: 'contract' })
+      }
+    });
 
     // Log activity
     await logPolicyActivity({
@@ -288,7 +239,7 @@ class PolicyWorkflowService extends BaseService {
       performedById: userId,
     });
 
-    // Trigger side effects based on status (except UNDER_INVESTIGATION which is handled above)
+    // Trigger side effects based on status
     await this.triggerStatusSideEffects(updatedPolicy, newStatus, userId);
 
     return { success: true, policy: updatedPolicy };
@@ -360,7 +311,6 @@ class PolicyWorkflowService extends BaseService {
         tenant: true,
         jointObligors: true,
         avals: true,
-        investigation: true,
         contracts: true,
         payments: true
       }

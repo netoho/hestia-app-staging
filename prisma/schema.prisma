@@ -198,7 +198,6 @@ model Policy {
   documents       PolicyDocument[]
   activities      PolicyActivity[]
   payments        Payment[]
-  investigation        Investigation?
   actorInvestigations  ActorInvestigation[]
   contracts            Contract[]
   incidents       Incident[]
@@ -275,8 +274,9 @@ model Landlord {
   curp             String?
 
   // Company Information (for companies)
-  companyName String? // Official company name
-  companyRfc  String?
+  companyName   String? // Official company name
+  companyRfc    String?
+  businessType  String?
 
   // Legal Representative Information (Mexican naming convention)
   legalRepFirstName        String? // Legal representative first name
@@ -285,6 +285,7 @@ model Landlord {
   legalRepMaternalLastName String? // Legal representative maternal last name
   legalRepPosition         String? // Legal representative position
   legalRepRfc              String?
+  legalRepCurp             String?
   legalRepPhone            String?
   legalRepEmail            String?
 
@@ -997,39 +998,6 @@ model PolicyActivity {
   @@index([policyId, createdAt])
 }
 
-model Investigation {
-  id       String @id @default(cuid())
-  policyId String @unique
-
-  // Investigation Results
-  verdict   InvestigationVerdict?
-  riskLevel RiskLevel?
-  score     Int?
-
-  // Details
-  notes    String? @db.Text
-  findings Json? // Structured findings
-
-  // Rejection Details
-  rejectedBy      String?
-  rejectionReason String?
-  rejectedAt      DateTime?
-
-  // Assignment
-  assignedToId   String?
-  assignedToName String?
-  completedBy    String?
-  completedAt    DateTime?
-
-  // SLA Tracking
-  responseTimeHours Int?
-
-  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model ActorInvestigation {
   id       String @id @default(cuid())
   policyId String
@@ -1040,8 +1008,6 @@ model ActorInvestigation {
 
   // Findings (filled by staff)
   findings    String? @db.Text
-  verdict     InvestigationVerdict?
-  riskLevel   RiskLevel?
   submittedBy String // staff userId
   submittedAt DateTime?
 
@@ -1376,20 +1342,6 @@ enum DocumentCategory {
   PAYROLL_RECEIPT // Recibo de nómina
   OTHER
   INVESTIGATION_SUPPORT // Documentos de soporte para investigaciones
-}
-
-enum InvestigationVerdict {
-  APPROVED
-  REJECTED
-  HIGH_RISK
-  CONDITIONAL
-}
-
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-  VERY_HIGH
 }
 
 enum PaymentStatus {

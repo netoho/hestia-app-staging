@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,9 +13,7 @@ import {
   ArrowLeft,
   Send,
   CheckCircle2,
-  Shield,
   RefreshCw,
-  Eye,
   Share2,
   XCircle,
   MoreVertical,
@@ -31,7 +28,6 @@ interface PolicyHeaderProps {
   policyNumber: string;
   propertyAddress: string;
   status: PolicyStatusType;
-  investigationVerdict?: string | null;
   policyId: string;
   permissions: {
     canEdit: boolean;
@@ -57,12 +53,10 @@ export function PolicyHeader({
   policyNumber,
   propertyAddress,
   status,
-  investigationVerdict,
   policyId,
   permissions,
   isStaffOrAdmin,
   allActorsApproved,
-  progressOverall,
   sending,
   downloadingPdf,
   isRefreshing,
@@ -74,12 +68,6 @@ export function PolicyHeader({
   onRefresh,
 }: PolicyHeaderProps) {
   const router = useRouter();
-
-  // Only show investigation badge when status is UNDER_INVESTIGATION
-  // to avoid double badge confusion when policy is APPROVED
-  const showInvestigationBadge =
-    investigationVerdict === 'APPROVED' &&
-    status === 'UNDER_INVESTIGATION';
 
   return (
     <div className="flex items-center justify-between gap-4">
@@ -98,12 +86,6 @@ export function PolicyHeader({
               Protección {policyNumber}
             </h1>
             <PolicyStatusBadge status={status} size="sm" />
-            {showInvestigationBadge && (
-              <Badge className="bg-blue-500 hover:bg-blue-600 shrink-0">
-                <Shield className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Investigación </span>Aprobada
-              </Badge>
-            )}
           </div>
           <p className="text-sm text-muted-foreground truncate mt-0.5">
             {propertyAddress}
@@ -134,23 +116,9 @@ export function PolicyHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {/* Review Information - Staff/Admin */}
-          {(permissions.canApprove || permissions.canVerifyDocuments) &&
-           status === 'UNDER_INVESTIGATION' &&
-           investigationVerdict !== 'APPROVED' && (
-            <DropdownMenuItem
-              onClick={() => router.push(`/dashboard/policies/${policyId}/review`)}
-              disabled={progressOverall !== undefined && progressOverall < 100}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              Revisar Información
-            </DropdownMenuItem>
-          )}
-
           {/* Approve Policy - Staff/Admin */}
           {permissions.canApprove &&
            allActorsApproved &&
-           investigationVerdict === 'APPROVED' &&
            (status === 'UNDER_INVESTIGATION' || status === 'PENDING_APPROVAL') && (
             <DropdownMenuItem onClick={onApprove} className="text-green-600">
               <CheckCircle2 className="mr-2 h-4 w-4" />

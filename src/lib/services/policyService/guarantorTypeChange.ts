@@ -106,9 +106,6 @@ export async function changeGuarantorType(
           guaranteePropertyAddressId: true,
         },
       },
-      investigation: {
-        select: { id: true },
-      },
     },
   });
 
@@ -344,14 +341,7 @@ export async function changeGuarantorType(
       data: { guarantorType: input.newGuarantorType },
     });
 
-    // 6. Delete investigation if exists
-    if (policy.investigation) {
-      await tx.investigation.delete({
-        where: { id: policy.investigation.id },
-      });
-    }
-
-    // 7. Revert policy status to COLLECTING_INFO if past that
+    // 6. Revert policy status to COLLECTING_INFO if past that
     if (policy.status !== 'DRAFT' && policy.status !== 'COLLECTING_INFO') {
       await tx.policy.update({
         where: { id: input.policyId },

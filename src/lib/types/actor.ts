@@ -95,6 +95,7 @@ export interface CompanyActorData extends BaseActorData {
   legalRepMaternalLastName: string;
   legalRepPosition: string;
   legalRepRfc?: string;
+  legalRepCurp?: string;
   legalRepPhone: string;
   legalRepEmail: string;
 

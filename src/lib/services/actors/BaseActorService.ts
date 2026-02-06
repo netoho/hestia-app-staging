@@ -345,6 +345,7 @@ export abstract class BaseActorService<
       if (companyData.legalRepMaternalLastName !== undefined) updateData.legalRepMaternalLastName = companyData.legalRepMaternalLastName || null;
       if (companyData.legalRepPosition !== undefined) updateData.legalRepPosition = companyData.legalRepPosition;
       if (companyData.legalRepRfc !== undefined) updateData.legalRepRfc = companyData.legalRepRfc || null;
+      if (companyData.legalRepCurp !== undefined) updateData.legalRepCurp = companyData.legalRepCurp || null;
       if (companyData.legalRepPhone !== undefined) updateData.legalRepPhone = companyData.legalRepPhone;
       if (companyData.legalRepEmail !== undefined) updateData.legalRepEmail = companyData.legalRepEmail;
       if (companyData.workEmail !== undefined) updateData.workEmail = companyData.workEmail || null;
@@ -427,6 +428,8 @@ export abstract class BaseActorService<
 
       // Get the Prisma delegate for this actor type
       const delegate = this.getPrismaDelegate(tx);
+
+      console.log(`Updating ${this.actorType} with ID ${actorId}. Partial: ${isPartial}. Update data:`, updateData);
 
       // Execute update using the proper delegate
       const result = await delegate.update({

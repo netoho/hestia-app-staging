@@ -253,21 +253,21 @@ export function getTenantTabSchema(
       default:
         throw new Error(`Invalid tab name for company tenant: ${tabName}`);
     }
-  } else {
-    switch (tabName) {
-      case 'personal':
-        return tenantPersonalTabIndividualSchema;
-      case 'employment':
-        return tenantEmploymentTabSchema;
-      case 'rental':
-        return tenantRentalHistoryTabSchema;
-      case 'references':
-        return tenantReferencesTabIndividualSchema;
-      case 'documents':
-        return tenantDocumentsTabSchema;
-      default:
-        throw new Error(`Invalid tab name for individual tenant: ${tabName}`);
-    }
+  }
+
+  switch (tabName) {
+    case 'personal':
+      return tenantPersonalTabIndividualSchema;
+    case 'employment':
+      return tenantEmploymentTabSchema;
+    case 'rental':
+      return tenantRentalHistoryTabSchema;
+    case 'references':
+      return tenantReferencesTabIndividualSchema;
+    case 'documents':
+      return tenantDocumentsTabSchema;
+    default:
+      throw new Error(`Invalid tab name for individual tenant: ${tabName}`);
   }
 }
 

@@ -198,7 +198,6 @@ export default function PolicyDetailsContent({
           policyNumber={policy.policyNumber}
           propertyAddress={policy.propertyAddress}
           status={policy.status}
-          investigationVerdict={policy.investigation?.verdict}
           policyId={policyId}
           permissions={permissions}
           isStaffOrAdmin={isStaffOrAdmin}

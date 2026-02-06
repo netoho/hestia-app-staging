@@ -107,12 +107,6 @@ policyStatus: {
         PENDING_VERIFICATION: 'Pendiente de Verificación',
     } as Record<string, string>,
 
-    investigationVerdict: {
-        APPROVED: 'Aprobado',
-        REJECTED: 'Rechazado',
-        HIGH_RISK: 'Alto Riesgo',
-        CONDITIONAL: 'Condicional',
-    } as Record<string, string>,
 
 
 

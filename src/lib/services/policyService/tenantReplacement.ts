@@ -123,9 +123,6 @@ export async function replaceTenantOnPolicy(
           guaranteePropertyAddressId: true,
         },
       },
-      investigation: {
-        select: { id: true },
-      },
     },
   });
 
@@ -452,14 +449,7 @@ export async function replaceTenantOnPolicy(
       });
     }
 
-    // 9. Delete investigation if exists
-    if (policy.investigation) {
-      await tx.investigation.delete({
-        where: { id: policy.investigation.id },
-      });
-    }
-
-    // 10. Handle TENANT payments
+    // 9. Handle TENANT payments
     // Get tenant name for historical payments
     const tenantName = currentTenant.tenantType === 'COMPANY'
       ? currentTenant.companyName || 'Empresa'

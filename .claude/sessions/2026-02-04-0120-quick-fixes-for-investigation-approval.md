@@ -209,3 +209,104 @@ bunx prisma migrate dev --name add_investigation_archive_fields
 
 **Verification**:
 - ✓ `bun run build` passes
+
+---
+
+### Update - 2026-02-06 ~morning
+
+**Summary**: Removed legacy Investigation model & entire review system. Replaced PDF investigation section with ActorInvestigation data.
+
+**Git Changes**:
+- Modified: 14 files (schema, router registry, i18n, generate-enums, workflow service, policy service, tenant replacement, guarantor type change, PolicyDetailsContent, PolicyHeader, PDF types, PDF transformer, InvestigationSection)
+- Deleted: 18 files (13 review components, review page route, 3 services, review router, PolicyInvestigationInfo)
+- Branch: `feat/investigation-vb` (commit: 46b73ca)
+- Migration created: `20260206061833_drop_old_investigation_feature`
+
+**Completed Tasks**:
+
+#### 1. Schema cleanup (`prisma/schema.prisma`)
+- Removed `Investigation` model
+- Removed `InvestigationVerdict` enum, `RiskLevel` enum
+- Removed `investigation` relation on Policy
+- Removed `verdict` and `riskLevel` fields from `ActorInvestigation`
+
+#### 2. Deleted entire review system (18 files)
+- 13 review components, review page route, 3 services, review router, PolicyInvestigationInfo
+
+#### 3. Workflow service simplified
+- Removed investigation gating from APPROVED validation
+- Removed `tx.investigation.create()` from UNDER_INVESTIGATION transition
+- Simplified to single `policy.update()` call
+
+#### 4. Policy service cleanup
+- Removed `investigation` includes from queries
+- Changed `getPolicyForPDF` to include `actorInvestigations` with documents
+- Removed investigation delete blocks from tenant replacement & guarantor type change
+
+#### 5. PDF updated to ActorInvestigation
+- Replaced `PDFInvestigation` with `PDFActorInvestigation[]`
+- New per-actor investigation cards
+
+#### 6. PolicyHeader cleaned up
+- Removed investigation verdict prop/badge/conditions
+- Removed "Revisar Información" menu item
+
+**Verification**:
+- ✓ `bun run build` passes
+- ✓ No stale references in src/
+- ✓ Migration created and applied
+
+---
+
+## Session End Summary - 2026-02-06
+
+**Duration:** 2026-02-04 01:20 → 2026-02-06 (multi-day session)
+
+### Git Summary
+- **Branch:** `feat/investigation-vb`
+- **Last commit:** `46b73ca feat: remove risk level`
+- **Commits during session:** 31
+- **Uncommitted changes:** 21 modified, 19 deleted, 3 new migrations
+- **Total files touched across session:** 50+
+
+### All Changed Files (uncommitted)
+**Modified (21):** prisma/schema.prisma, scripts/generate-enums.ts, src/components/actor/tenant/TenantPersonalInfoTab-RHF.tsx, PolicyDetailsContent.tsx, PolicyHeader.tsx, src/lib/i18n.ts, pdf/policyDataTransformer.ts, pdf/types.ts, schemas/landlord/index.ts, schemas/policy/wizard.ts, schemas/tenant/index.ts, services/actors/BaseActorService.ts, services/actors/LandlordService.ts, services/policyService/guarantorTypeChange.ts, services/policyService/index.ts, services/policyService/tenantReplacement.ts, services/policyWorkflowService.ts, src/lib/types/actor.ts, src/server/routers/_app.ts, src/templates/pdf/policy/sections/InvestigationSection.tsx
+
+**Deleted (19):** 13 review components, review page route, reviewService.ts, reviewService.types.ts, validationService.ts, review.router.ts, PolicyInvestigationInfo.tsx
+
+**New migrations:** add_business_type, add_rep_curp, drop_old_investigation_feature
+
+### Key Accomplishments
+
+1. **Investigation Feature Audit** — Full security audit, all issues verified secure
+2. **Archive Flow** — Replaced hard delete with archive (reason + comment). ARCHIVED status, `ArchiveInvestigationDialog`
+3. **Edit Mode** — Pre-populate investigation form from existing data via `?edit=true`
+4. **Duplicate Prevention** — Actor selection dialog blocks creating second investigation for same actor
+5. **Approval UX** — brandColors, "Ver Enlaces" button, approval page shows status on revisit
+6. **Query Invalidation** — All mutation callbacks properly invalidate stale queries
+7. **formatFullName Overload** — Unified function signature, removed duplicates
+8. **Legacy Investigation Removal** — Deleted entire old Investigation model, review system (18 files), all references
+9. **PDF Rewrite** — Investigation section now shows per-actor ActorInvestigation cards
+
+### Breaking Changes
+- `Investigation` model **dropped** — requires migration
+- `InvestigationVerdict` and `RiskLevel` enums **dropped**
+- `verdict` and `riskLevel` columns **dropped** from `ActorInvestigation`
+- `/dashboard/policies/[id]/review` route **removed**
+- `PolicyHeader` no longer accepts `investigationVerdict` prop
+- `reviewRouter` removed from tRPC app router
+
+### What Wasn't Completed
+- `UNDER_INVESTIGATION` / `INVESTIGATION_REJECTED` PolicyStatus values still exist (future cleanup)
+- Manual verification checklist items from Feb 4 (create, archive, edit flows) — need manual QA
+
+### Migrations Pending Commit
+- `20260206054152_add_business_type`
+- `20260206054527_add_rep_curp`
+- `20260206061833_drop_old_investigation_feature`
+
+### Tips for Future
+- The `ActorInvestigation` is now the **only** investigation model. No more 1:1 Policy→Investigation.
+- Policy approval flow no longer gates on investigation verdict — it just checks `allActorsApproved`
+- PDF investigation section uses `getInvestigatedActorLabel` and `getInvestigationStatusLabel` from `investigationConfig.ts`
+- Archive is soft-delete: tokens are nullified, `archivedAt`/`archiveReason` set, but row persists
