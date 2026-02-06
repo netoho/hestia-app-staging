@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { InvestigationForm } from '@/components/investigation/InvestigationForm';
 import { Loader2 } from 'lucide-react';
@@ -21,8 +21,12 @@ interface PageProps {
 export default function NewInvestigationPage({ params }: PageProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const resolvedParams = use(params);
   const { id: policyId, actorType: actorTypeParam, actorId } = resolvedParams;
+
+  // Check for edit mode
+  const editInvestigationId = searchParams.get('edit');
 
   // Convert actorType to enum
   const actorTypeMap: Record<string, InvestigatedActorType> = {
@@ -43,8 +47,16 @@ export default function NewInvestigationPage({ params }: PageProps) {
     { enabled: !!policyId && status === 'authenticated' }
   );
 
+  // Fetch existing investigation if in edit mode
+  const { data: existingInvestigation, isLoading: investigationLoading } = trpc.investigation.getById.useQuery(
+    { id: editInvestigationId! },
+    { enabled: !!editInvestigationId && status === 'authenticated' }
+  );
+
+  const isEditMode = !!editInvestigationId;
+
   // Check auth
-  if (status === 'loading' || policyLoading) {
+  if (status === 'loading' || policyLoading || (isEditMode && investigationLoading)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -161,6 +173,8 @@ export default function NewInvestigationPage({ params }: PageProps) {
           policyNumber: policy.policyNumber,
           propertyDetails: policy.propertyDetails,
         }}
+        existingInvestigation={existingInvestigation}
+        isEditMode={isEditMode}
       />
     </div>
   );
