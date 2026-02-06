@@ -7,3 +7,10 @@
 - When creating new components, prefer functional components with hooks over class components.
 - Always look for existing components or utilities before creating new ones.
 - We deploy on vercel so take than into account, for example avoid uploading large files directly to the server. Use the services (s3 presigned urls, etc) instead.
+
+
+## Utils, Constants and Internationalization
+- Use the utils module src/lib/utils/ there you will find many utils, for example for dates on src/lib/utils/formatting.ts
+- For constants use src/lib/constants/README.md
+- All of our translations should go in src/lib/i18n.ts
+
