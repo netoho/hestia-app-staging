@@ -557,40 +557,38 @@ export abstract class BaseActorService<
       }
 
       // Only transition if currently in COLLECTING_INFO status
-      if (policy.status !== 'COLLECTING_INFO' && policy.status !== 'DRAFT') {
+      if (policy.status !== 'COLLECTING_INFO') {
         return Result.ok({ transitioned: false });
       }
 
-      // Check if all actors are complete using the improved function
-      const { checkPolicyActorsComplete } = await import('@/lib/services/actorTokenService');
-      const actorsStatus = await checkPolicyActorsComplete(policyId);
+      // Check if all investigated actors have approved investigations
+      const { checkAllInvestigationsApproved } = await import('@/lib/services/policyWorkflowService');
+      const allApproved = await checkAllInvestigationsApproved(policyId);
 
-      // If all actors are complete, transition to UNDER_INVESTIGATION
-      if (actorsStatus.allComplete) {
+      // If all investigations approved, transition to PENDING_APPROVAL
+      if (allApproved) {
         const { transitionPolicyStatus } = await import('@/lib/services/policyWorkflowService');
 
         await transitionPolicyStatus(
           policyId,
-          'UNDER_INVESTIGATION',
+          'PENDING_APPROVAL',
           performedBy,
-          'All actor information completed'
+          'All actor investigations approved'
         );
 
-        this.log('info', 'Policy status transitioned to UNDER_INVESTIGATION', {
+        this.log('info', 'Policy status transitioned to PENDING_APPROVAL', {
           policyId,
           performedBy,
-          allActorsComplete: actorsStatus
         });
 
         return Result.ok({
           transitioned: true,
-          newStatus: 'UNDER_INVESTIGATION'
+          newStatus: 'PENDING_APPROVAL'
         });
       }
 
       return Result.ok({
         transitioned: false,
-        ...actorsStatus // Include completion details for debugging
       });
     } catch (error) {
       this.log('error', 'Failed to check and transition policy status', {

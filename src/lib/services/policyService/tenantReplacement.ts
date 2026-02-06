@@ -9,9 +9,7 @@ import {
 
 // Statuses that allow tenant replacement
 export const REPLACEABLE_STATUSES: PolicyStatus[] = [
-  'DRAFT',
   'COLLECTING_INFO',
-  'UNDER_INVESTIGATION',
   'PENDING_APPROVAL',
 ];
 
@@ -476,8 +474,8 @@ export async function replaceTenantOnPolicy(
       data: { status: 'CANCELLED' },
     });
 
-    // 11. Revert policy status to COLLECTING_INFO if past that
-    if (policy.status !== 'DRAFT' && policy.status !== 'COLLECTING_INFO') {
+    // Revert policy status to COLLECTING_INFO if past that (e.g., PENDING_APPROVAL)
+    if (policy.status !== 'COLLECTING_INFO') {
       await tx.policy.update({
         where: { id: input.policyId },
         data: { status: 'COLLECTING_INFO' },

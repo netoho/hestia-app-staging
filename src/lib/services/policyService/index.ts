@@ -41,7 +41,7 @@ export async function createPolicy(data: CreatePolicyData) {
       guarantorType: policyData.guarantorType || 'NONE',
       packageId: policyData.packageId,
       createdById: policyData.createdById,
-      status: 'DRAFT',
+      status: 'COLLECTING_INFO',
       // Create related actors
       landlords: {
         create: {
@@ -481,7 +481,6 @@ export async function updatePolicyStatus(
       managedById: userId,
       // reviewedAt: new Date(),
       ...(reviewNotes && { reviewNotes }),
-      ...(reviewReason && { rejectionReason: reviewReason }),
     },
     include: {
       createdBy: {
