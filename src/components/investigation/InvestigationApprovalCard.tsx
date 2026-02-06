@@ -23,6 +23,7 @@ import {
 import { formatFullName } from '@/lib/utils/names';
 import { formatDateTimeLong } from '@/lib/utils/formatting';
 import { formatFileSize } from '@/lib/documentManagement/validation';
+import { brandColors } from '@/lib/config/brand';
 import {
   getInvestigatedActorLabel,
   getVerdictLabel,
@@ -347,7 +348,8 @@ export function InvestigationApprovalCard({ investigation, token, onApproved, on
                 Rechazar
               </Button>
               <Button
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="flex-1 text-white"
+                style={{ backgroundColor: brandColors.success }}
                 onClick={() => setShowApproveDialog(true)}
                 disabled={approveMutation.isPending || rejectMutation.isPending}
               >
@@ -375,7 +377,8 @@ export function InvestigationApprovalCard({ investigation, token, onApproved, on
             <AlertDialogAction
               onClick={handleApprove}
               disabled={approveMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="text-white"
+              style={{ backgroundColor: brandColors.success }}
             >
               {approveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmar Aprobación
@@ -416,7 +419,8 @@ export function InvestigationApprovalCard({ investigation, token, onApproved, on
             <AlertDialogAction
               onClick={handleReject}
               disabled={rejectMutation.isPending || rejectionReason.trim().length < INVESTIGATION_FORM_LIMITS.rejectionReason.min}
-              className="bg-red-600 hover:bg-red-700"
+              className="text-white"
+              style={{ backgroundColor: brandColors.danger }}
             >
               {rejectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmar Rechazo
