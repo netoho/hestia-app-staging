@@ -84,19 +84,6 @@ export type PersonName = z.infer<typeof personNameSchema>;
 export type PersonWithNationality = z.infer<typeof personWithNationalitySchema>;
 export type Nationality = z.infer<typeof nationalitySchema>;
 
-/**
- * Helper to format full name
- */
-export function formatFullName(person: Partial<PersonName>): string {
-  const parts = [
-    person.firstName,
-    person.middleName,
-    person.paternalLastName,
-    person.maternalLastName,
-  ].filter(Boolean);
-
-  return parts.join(' ');
-}
 
 /**
  * Helper to check if person name is complete
