@@ -17,7 +17,6 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
   FileText,
   FileImage,
   File,
@@ -30,10 +29,6 @@ import { formatDateTimeLong } from '@/lib/utils/formatting';
 import { formatFileSize } from '@/lib/documentManagement/validation';
 import {
   getInvestigatedActorLabel,
-  getVerdictLabel,
-  getVerdictColorClasses,
-  getRiskLevelLabel,
-  getRiskLevelColorClasses,
   getApproverTypeLabel,
   getInvestigationStatusLabel,
 } from '@/lib/constants/investigationConfig';
@@ -302,46 +297,6 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Verdict & Risk Level */}
-          <div className="flex flex-wrap gap-4">
-            <div>
-              <Label className="text-muted-foreground">Veredicto</Label>
-              <div className="mt-1">
-                {investigation.verdict ? (
-                  <Badge className={getVerdictColorClasses(investigation.verdict as any)}>
-                    {getVerdictLabel(investigation.verdict as any)}
-                  </Badge>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Sin veredicto</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Nivel de Riesgo</Label>
-              <div className="mt-1">
-                {investigation.riskLevel ? (
-                  <Badge className={getRiskLevelColorClasses(investigation.riskLevel as any)}>
-                    {getRiskLevelLabel(investigation.riskLevel as any)}
-                  </Badge>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Sin nivel</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Warning for high risk */}
-          {(investigation.verdict === 'REJECTED' || investigation.verdict === 'HIGH_RISK') && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {investigation.verdict === 'REJECTED'
-                  ? 'Esta investigación ha resultado en un veredicto RECHAZADO.'
-                  : 'Esta investigación indica un nivel de ALTO RIESGO.'}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Findings */}
           <div>
             <Label className="text-muted-foreground">Comentarios</Label>

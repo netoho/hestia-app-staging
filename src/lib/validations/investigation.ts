@@ -1,8 +1,4 @@
 import { z } from 'zod';
-import {
-  InvestigationVerdict,
-  RiskLevel,
-} from '@/prisma/generated/prisma-client/enums';
 import { INVESTIGATION_FORM_LIMITS } from '@/lib/constants/investigationConfig';
 
 // This type will be generated after running prisma migrate
@@ -25,12 +21,6 @@ export const investigationFormSchema = z.object({
       `Los comentarios no pueden exceder ${INVESTIGATION_FORM_LIMITS.findings.max} caracteres`
     )
     .transform((val) => val.trim()),
-  verdict: z.nativeEnum(InvestigationVerdict, {
-    errorMap: () => ({ message: 'Selecciona un veredicto válido' }),
-  }),
-  riskLevel: z.nativeEnum(RiskLevel, {
-    errorMap: () => ({ message: 'Selecciona un nivel de riesgo válido' }),
-  }),
 });
 
 export type InvestigationFormData = z.infer<typeof investigationFormSchema>;
@@ -98,8 +88,6 @@ export const investigationUpdateSchema = z.object({
     .max(INVESTIGATION_FORM_LIMITS.findings.max)
     .transform((val) => val.trim())
     .optional(),
-  verdict: z.nativeEnum(InvestigationVerdict).optional(),
-  riskLevel: z.nativeEnum(RiskLevel).optional(),
 });
 
 export type InvestigationUpdateData = z.infer<typeof investigationUpdateSchema>;
@@ -118,8 +106,6 @@ export const investigationSubmitSchema = z.object({
     )
     .max(INVESTIGATION_FORM_LIMITS.findings.max)
     .transform((val) => val.trim()),
-  verdict: z.nativeEnum(InvestigationVerdict),
-  riskLevel: z.nativeEnum(RiskLevel),
 });
 
 export type InvestigationSubmitData = z.infer<typeof investigationSubmitSchema>;

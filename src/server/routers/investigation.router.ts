@@ -2,8 +2,6 @@ import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure, adminProcedure, publicProcedure } from '@/server/trpc';
 import { TRPCError } from '@trpc/server';
 import {
-  InvestigationVerdict,
-  RiskLevel,
   DocumentCategory,
 } from '@/prisma/generated/prisma-client/enums';
 import { randomBytes, timingSafeEqual } from 'crypto';
@@ -14,8 +12,6 @@ import { documentService } from '@/lib/services/documentService';
 type ApproverType = 'BROKER' | 'LANDLORD';
 import {
   getInvestigationTokenExpiryDate,
-  getVerdictLabel,
-  getRiskLevelLabel,
   getInvestigatedActorLabel,
   INVESTIGATION_FORM_LIMITS,
 } from '@/lib/constants/investigationConfig';
@@ -113,7 +109,7 @@ export const investigationRouter = createTRPCRouter({
           policyId: input.policyId,
           actorType: input.actorType,
           actorId: input.actorId,
-          status: { not: 'ARCHIVED' },
+          status: { notIn: ['ARCHIVED', 'REJECTED'] },
         },
       });
 
@@ -351,8 +347,6 @@ export const investigationRouter = createTRPCRouter({
     .input(z.object({
       id: z.string().cuid('ID de investigación inválido'),
       findings: z.string().max(INVESTIGATION_FORM_LIMITS.findings.max).optional(),
-      verdict: z.nativeEnum(InvestigationVerdict).optional(),
-      riskLevel: z.nativeEnum(RiskLevel).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
@@ -375,8 +369,6 @@ export const investigationRouter = createTRPCRouter({
         where: { id: input.id },
         data: {
           findings: input.findings,
-          verdict: input.verdict,
-          riskLevel: input.riskLevel,
         },
       });
 
@@ -558,8 +550,6 @@ export const investigationRouter = createTRPCRouter({
       findings: z.string()
         .min(INVESTIGATION_FORM_LIMITS.findings.min, `Los comentarios deben tener al menos ${INVESTIGATION_FORM_LIMITS.findings.min} caracteres`)
         .max(INVESTIGATION_FORM_LIMITS.findings.max),
-      verdict: z.nativeEnum(InvestigationVerdict),
-      riskLevel: z.nativeEnum(RiskLevel),
     }))
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
@@ -653,8 +643,6 @@ export const investigationRouter = createTRPCRouter({
           },
           data: {
             findings: input.findings.trim(),
-            verdict: input.verdict,
-            riskLevel: input.riskLevel,
             submittedAt: new Date(),
             brokerToken,
             landlordToken,
@@ -691,8 +679,6 @@ export const investigationRouter = createTRPCRouter({
             investigationId: input.id,
             actorType: investigation.actorType,
             actorId: investigation.actorId,
-            verdict: input.verdict,
-            riskLevel: input.riskLevel,
           },
         },
       });
@@ -701,8 +687,6 @@ export const investigationRouter = createTRPCRouter({
       const baseUrl = getBaseUrl();
       const actorName = getActorName(actor);
       const propertyAddress = investigation.policy.propertyDetails?.propertyAddressDetails?.formattedAddress || 'Dirección no disponible';
-      const verdictLabel = getVerdictLabel(input.verdict);
-      const riskLevelLabel = getRiskLevelLabel(input.riskLevel);
       const policyUrl = `${baseUrl}/dashboard/policies/${investigation.policyId}`;
 
       // Send email to broker
@@ -714,8 +698,6 @@ export const investigationRouter = createTRPCRouter({
         propertyAddress,
         actorType: investigation.actorType,
         actorName,
-        verdict: verdictLabel,
-        riskLevel: riskLevelLabel,
         approvalUrl: `${baseUrl}/investigation/approve/${brokerToken}`,
         expiryDate: tokenExpiry,
       });
@@ -736,8 +718,6 @@ export const investigationRouter = createTRPCRouter({
         propertyAddress,
         actorType: investigation.actorType,
         actorName,
-        verdict: verdictLabel,
-        riskLevel: riskLevelLabel,
         approvalUrl: `${baseUrl}/investigation/approve/${landlordToken}`,
         expiryDate: tokenExpiry,
       });
@@ -756,8 +736,6 @@ export const investigationRouter = createTRPCRouter({
             propertyAddress,
             actorType: investigation.actorType,
             actorName,
-            verdict: verdictLabel,
-            riskLevel: riskLevelLabel,
             submittedBy: submitter?.name || submitter?.email || 'Staff',
             submittedAt: new Date(),
             policyUrl,
@@ -882,8 +860,6 @@ export const investigationRouter = createTRPCRouter({
         actorType: investigation.actorType,
         actor,
         findings: investigation.findings,
-        verdict: investigation.verdict,
-        riskLevel: investigation.riskLevel,
         status: investigation.status,
         approvedAt: investigation.approvedAt,
         approvedByType: investigation.approvedByType,

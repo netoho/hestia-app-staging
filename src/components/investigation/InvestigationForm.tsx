@@ -9,10 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Upload, FileText, Trash2, AlertTriangle, Send, ArrowLeft, FileImage, File } from 'lucide-react';
+import { Loader2, Upload, FileText, Trash2, Send, ArrowLeft, FileImage, File } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -27,12 +25,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { formatFullName } from '@/lib/utils/names';
 import {
-  verdictConfig,
-  riskLevelConfig,
   INVESTIGATION_FORM_LIMITS,
   getInvestigatedActorLabel,
-  getVerdictLabel,
-  getRiskLevelLabel,
 } from '@/lib/constants/investigationConfig';
 import { getCategoryValidation } from '@/lib/constants/documentCategories';
 import { DocumentCategory } from '@/prisma/generated/prisma-client/enums';
@@ -52,8 +46,6 @@ const investigationSchema = z.object({
   findings: z.string()
     .min(INVESTIGATION_FORM_LIMITS.findings.min, `Los comentarios deben tener al menos ${INVESTIGATION_FORM_LIMITS.findings.min} caracteres`)
     .max(INVESTIGATION_FORM_LIMITS.findings.max, `Los comentarios no pueden exceder ${INVESTIGATION_FORM_LIMITS.findings.max} caracteres`),
-  verdict: z.enum(['APPROVED', 'REJECTED', 'HIGH_RISK', 'CONDITIONAL']),
-  riskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH']),
 });
 
 type InvestigationFormData = z.infer<typeof investigationSchema>;
@@ -61,8 +53,6 @@ type InvestigationFormData = z.infer<typeof investigationSchema>;
 interface ExistingInvestigation {
   id: string;
   findings?: string | null;
-  verdict?: string | null;
-  riskLevel?: string | null;
   documents: Array<{
     id: string;
     fileName: string;
@@ -208,13 +198,9 @@ export function InvestigationForm({
     resolver: zodResolver(investigationSchema),
     defaultValues: {
       findings: existingInvestigation?.findings || '',
-      verdict: (existingInvestigation?.verdict as any) || 'APPROVED',
-      riskLevel: (existingInvestigation?.riskLevel as any) || 'LOW',
     },
   });
 
-  const watchedVerdict = watch('verdict');
-  const watchedRiskLevel = watch('riskLevel');
   const watchedFindings = watch('findings');
 
   // Create investigation on first interaction
@@ -310,8 +296,6 @@ export function InvestigationForm({
     await updateMutation.mutateAsync({
       id: invId,
       findings: data.findings,
-      verdict: data.verdict,
-      riskLevel: data.riskLevel,
     });
   };
 
@@ -323,8 +307,6 @@ export function InvestigationForm({
     await submitMutation.mutateAsync({
       id: invId,
       findings: data.findings,
-      verdict: data.verdict,
-      riskLevel: data.riskLevel,
     });
   };
 
@@ -426,52 +408,6 @@ export function InvestigationForm({
               )}
             </div>
 
-            {/* Verdict & Risk Level */}
-            {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"> */}
-            {/*   <div className="space-y-2"> */}
-            {/*     <Label htmlFor="verdict-select">Veredicto *</Label> */}
-            {/*     <Select */}
-            {/*       value={watchedVerdict} */}
-            {/*       onValueChange={(value) => setValue('verdict', value as any)} */}
-            {/*     > */}
-            {/*       <SelectTrigger id="verdict-select" aria-label="Seleccionar veredicto"> */}
-            {/*         <SelectValue placeholder="Selecciona veredicto" /> */}
-            {/*       </SelectTrigger> */}
-            {/*       <SelectContent> */}
-            {/*         {Object.entries(verdictConfig).map(([value, config]) => ( */}
-            {/*           <SelectItem key={value} value={value}> */}
-            {/*             {config.label} */}
-            {/*           </SelectItem> */}
-            {/*         ))} */}
-            {/*       </SelectContent> */}
-            {/*     </Select> */}
-            {/*     {errors.verdict && ( */}
-            {/*       <p className="text-sm text-destructive" role="alert">{errors.verdict.message}</p> */}
-            {/*     )} */}
-            {/*   </div> */}
-            {/**/}
-            {/*   <div className="space-y-2"> */}
-            {/*     <Label htmlFor="risk-select">Nivel de Riesgo *</Label> */}
-            {/*     <Select */}
-            {/*       value={watchedRiskLevel} */}
-            {/*       onValueChange={(value) => setValue('riskLevel', value as any)} */}
-            {/*     > */}
-            {/*       <SelectTrigger id="risk-select" aria-label="Seleccionar nivel de riesgo"> */}
-            {/*         <SelectValue placeholder="Selecciona nivel" /> */}
-            {/*       </SelectTrigger> */}
-            {/*       <SelectContent> */}
-            {/*         {Object.entries(riskLevelConfig).map(([value, config]) => ( */}
-            {/*           <SelectItem key={value} value={value}> */}
-            {/*             {config.label} */}
-            {/*           </SelectItem> */}
-            {/*         ))} */}
-            {/*       </SelectContent> */}
-            {/*     </Select> */}
-            {/*     {errors.riskLevel && ( */}
-            {/*       <p className="text-sm text-destructive" role="alert">{errors.riskLevel.message}</p> */}
-            {/*     )} */}
-            {/*   </div> */}
-            {/* </div> */}
           </CardContent>
         </Card>
 
@@ -556,18 +492,6 @@ export function InvestigationForm({
           </CardContent>
         </Card>
 
-        {/* Warning for high risk */}
-        {(watchedVerdict === 'REJECTED' || watchedVerdict === 'HIGH_RISK') && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              {watchedVerdict === 'REJECTED'
-                ? 'Al enviar esta investigación con veredicto RECHAZADO, el broker y arrendador podrán decidir si continuar con la póliza.'
-                : 'Esta investigación está marcada como ALTO RIESGO. El broker y arrendador serán notificados para su revisión.'}
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-4">
           <Button
@@ -600,8 +524,6 @@ export function InvestigationForm({
                 <p>Se enviará la investigación al broker y arrendador para su aprobación.</p>
                 <div className="mt-4 space-y-1 text-sm">
                   <p><strong>Actor:</strong> {actorName} ({actorTypeLabel})</p>
-                  <p><strong>Veredicto:</strong> {getVerdictLabel(watchedVerdict as any)}</p>
-                  <p><strong>Nivel de Riesgo:</strong> {getRiskLevelLabel(watchedRiskLevel as any)}</p>
                   <p><strong>Documentos:</strong> {documents.length} archivo(s)</p>
                 </div>
               </div>

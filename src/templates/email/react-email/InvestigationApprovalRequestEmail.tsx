@@ -20,8 +20,6 @@ export interface InvestigationApprovalRequestEmailProps {
   propertyAddress: string;
   actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
   actorName: string;
-  verdict: string;
-  riskLevel: string;
   approvalUrl: string;
   expiryDate: Date;
 }
@@ -32,27 +30,6 @@ const actorTypeNames: Record<string, string> = {
   'AVAL': 'Aval'
 };
 
-const verdictNames: Record<string, string> = {
-  'APPROVED': 'Aprobado',
-  'REJECTED': 'Rechazado',
-  'HIGH_RISK': 'Alto Riesgo',
-  'CONDITIONAL': 'Condicional'
-};
-
-const riskLevelNames: Record<string, string> = {
-  'LOW': 'Bajo',
-  'MEDIUM': 'Medio',
-  'HIGH': 'Alto',
-  'VERY_HIGH': 'Muy Alto'
-};
-
-const verdictColors: Record<string, string> = {
-  'APPROVED': '#22c55e',
-  'REJECTED': '#ef4444',
-  'HIGH_RISK': '#f97316',
-  'CONDITIONAL': '#eab308'
-};
-
 export const InvestigationApprovalRequestEmail: React.FC<InvestigationApprovalRequestEmailProps> = ({
   email,
   recipientName,
@@ -61,15 +38,12 @@ export const InvestigationApprovalRequestEmail: React.FC<InvestigationApprovalRe
   propertyAddress,
   actorType,
   actorName,
-  verdict,
-  riskLevel,
   approvalUrl,
   expiryDate,
 }) => {
   const privacyUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.privacy}`;
   const termsUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.terms}`;
   const expiryDateFormatted = formatDateLong(expiryDate);
-  const verdictColor = verdictColors[verdict] || brandColors.textPrimary;
 
   return (
     <Html>
@@ -158,17 +132,8 @@ export const InvestigationApprovalRequestEmail: React.FC<InvestigationApprovalRe
               <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
                 <strong>Actor:</strong> {actorName}
               </Text>
-              <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
-                <strong>Tipo:</strong> {actorTypeNames[actorType]}
-              </Text>
-              <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
-                <strong>Veredicto:</strong>{' '}
-                <span style={{ color: verdictColor, fontWeight: '600' }}>
-                  {verdictNames[verdict] || verdict}
-                </span>
-              </Text>
               <Text style={{ margin: 0, color: brandColors.textPrimary }}>
-                <strong>Nivel de Riesgo:</strong> {riskLevelNames[riskLevel] || riskLevel}
+                <strong>Tipo:</strong> {actorTypeNames[actorType]}
               </Text>
             </Section>
 

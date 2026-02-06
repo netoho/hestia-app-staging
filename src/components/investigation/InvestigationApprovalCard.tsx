@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle2, XCircle, FileText, Download, AlertTriangle, FileImage, File } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, FileText, Download, FileImage, File } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -26,10 +26,6 @@ import { formatFileSize } from '@/lib/documentManagement/validation';
 import { brandColors } from '@/lib/config/brand';
 import {
   getInvestigatedActorLabel,
-  getVerdictLabel,
-  getVerdictColorClasses,
-  getRiskLevelLabel,
-  getRiskLevelColorClasses,
   getApproverTypeLabel,
   INVESTIGATION_FORM_LIMITS,
 } from '@/lib/constants/investigationConfig';
@@ -48,8 +44,6 @@ interface InvestigationData {
     phone: string;
   } | null;
   findings: string | null;
-  verdict: string | null;
-  riskLevel: string | null;
   status: string;
   approvedAt: Date | null;
   approvedByType: string | null;
@@ -259,18 +253,6 @@ export function InvestigationApprovalCard({ investigation, token, onApproved, on
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Warning for high risk */}
-          {(investigation.verdict === 'REJECTED' || investigation.verdict === 'HIGH_RISK') && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {investigation.verdict === 'REJECTED'
-                  ? 'Esta investigación ha resultado en un veredicto RECHAZADO. Revisa cuidadosamente los comentarios antes de tomar una decisión.'
-                  : 'Esta investigación indica un nivel de ALTO RIESGO. Se recomienda revisar detalladamente los comentarios.'}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Findings */}
           <div>
             <Label className="text-muted-foreground">Comentarios</Label>

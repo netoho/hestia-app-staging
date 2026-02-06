@@ -905,8 +905,6 @@ export interface InvestigationSubmittedData {
   propertyAddress: string;
   actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
   actorName: string;
-  verdict: string;
-  riskLevel: string;
   submittedBy: string;
   submittedAt: Date;
   policyUrl: string;
@@ -933,8 +931,6 @@ Se ha enviado una nueva investigación para aprobación:
 
 Actor: ${data.actorName} (${actorTypeNames[data.actorType]})
 Propiedad: ${data.propertyAddress}
-Veredicto: ${data.verdict}
-Nivel de Riesgo: ${data.riskLevel}
 Enviada por: ${data.submittedBy}
 Fecha: ${formatDateTimeLong(data.submittedAt)}
 
@@ -965,8 +961,6 @@ export interface InvestigationApprovalRequestData {
   propertyAddress: string;
   actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
   actorName: string;
-  verdict: string;
-  riskLevel: string;
   approvalUrl: string;
   expiryDate: Date;
 }
@@ -994,8 +988,6 @@ Se ha completado la investigación de ${data.actorName} (${actorTypeNames[data.a
 
 Póliza: ${data.policyNumber}
 Propiedad: ${data.propertyAddress}
-Veredicto: ${data.verdict}
-Nivel de Riesgo: ${data.riskLevel}
 
 Por favor revisa la investigación y decide si aprobar o rechazar:
 ${data.approvalUrl}

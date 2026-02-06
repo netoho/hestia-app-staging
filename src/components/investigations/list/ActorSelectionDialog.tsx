@@ -74,7 +74,7 @@ export default function ActorSelectionDialog({
   investigations?.forEach((inv) => {
     const key = `${inv.actorType}-${inv.actorId}`;
     // Only track non-archived investigations
-    if (inv.status !== 'ARCHIVED') {
+    if (inv.status !== 'ARCHIVED' && inv.status !== 'REJECTED') {
       actorInvestigationMap.set(key, { status: inv.status, id: inv.id });
     }
   });

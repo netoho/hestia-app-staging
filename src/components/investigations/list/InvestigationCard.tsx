@@ -10,10 +10,6 @@ import { es } from 'date-fns/locale';
 import { Eye, Pencil, Archive, FileText } from 'lucide-react';
 import {
   getInvestigatedActorLabel,
-  getVerdictLabel,
-  getVerdictColorClasses,
-  getRiskLevelLabel,
-  getRiskLevelColorClasses,
   getInvestigationStatusLabel,
 } from '@/lib/constants/investigationConfig';
 import type { InvestigationListItem } from './types';
@@ -67,26 +63,6 @@ export default function InvestigationCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Verdict & Risk */}
-        <div className="flex flex-wrap gap-2">
-          {inv.verdict && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Veredicto</p>
-              <Badge className={getVerdictColorClasses(inv.verdict)}>
-                {getVerdictLabel(inv.verdict)}
-              </Badge>
-            </div>
-          )}
-          {inv.riskLevel && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Riesgo</p>
-              <Badge className={getRiskLevelColorClasses(inv.riskLevel)}>
-                {getRiskLevelLabel(inv.riskLevel)}
-              </Badge>
-            </div>
-          )}
-        </div>
-
         {/* Date & Documents */}
         <div className="flex justify-between items-center text-sm text-muted-foreground">
           <span>

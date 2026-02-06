@@ -18,8 +18,6 @@ export interface InvestigationSubmittedEmailProps {
   propertyAddress: string;
   actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
   actorName: string;
-  verdict: string;
-  riskLevel: string;
   submittedBy: string;
   submittedAt: Date;
   policyUrl: string;
@@ -31,28 +29,12 @@ const actorTypeNames: Record<string, string> = {
   'AVAL': 'Aval'
 };
 
-const verdictNames: Record<string, string> = {
-  'APPROVED': 'Aprobado',
-  'REJECTED': 'Rechazado',
-  'HIGH_RISK': 'Alto Riesgo',
-  'CONDITIONAL': 'Condicional'
-};
-
-const riskLevelNames: Record<string, string> = {
-  'LOW': 'Bajo',
-  'MEDIUM': 'Medio',
-  'HIGH': 'Alto',
-  'VERY_HIGH': 'Muy Alto'
-};
-
 export const InvestigationSubmittedEmail: React.FC<InvestigationSubmittedEmailProps> = ({
   email,
   policyNumber,
   propertyAddress,
   actorType,
   actorName,
-  verdict,
-  riskLevel,
   submittedBy,
   submittedAt,
   policyUrl,
@@ -132,12 +114,6 @@ export const InvestigationSubmittedEmail: React.FC<InvestigationSubmittedEmailPr
               </Text>
               <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
                 <strong>Propiedad:</strong> {propertyAddress}
-              </Text>
-              <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
-                <strong>Veredicto:</strong> {verdictNames[verdict] || verdict}
-              </Text>
-              <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
-                <strong>Nivel de Riesgo:</strong> {riskLevelNames[riskLevel] || riskLevel}
               </Text>
               <Text style={{ margin: '0 0 10px 0', color: brandColors.textPrimary }}>
                 <strong>Enviada por:</strong> {submittedBy}
