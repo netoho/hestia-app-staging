@@ -250,13 +250,14 @@ export const userRouter = createTRPCRouter({
         prisma.policy.count({
           where: {
             createdById: ctx.userId,
-            status: { in: ['ACTIVE', 'CONTRACT_SIGNED'] },
+            status: 'APPROVED',
+            activatedAt: { not: null },
           },
         }),
         prisma.policy.count({
           where: {
             createdById: ctx.userId,
-            status: { in: ['COLLECTING_INFO', 'UNDER_INVESTIGATION', 'PENDING_APPROVAL'] },
+            status: { in: ['COLLECTING_INFO', 'PENDING_APPROVAL'] },
           },
         }),
       ]);
