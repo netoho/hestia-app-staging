@@ -160,20 +160,17 @@ model Policy {
   managedBy   User?   @relation("ManagedByUser", fields: [managedById], references: [id])
 
   // Status & Workflow
-  status        PolicyStatus   @default(DRAFT)
+  status        PolicyStatus   @default(COLLECTING_INFO)
   paymentStatus PaymentStatus? // Overall payment status (null = no payments, COMPLETED = all paid)
-  currentStep   String         @default("initial")
 
   // Important Dates
   submittedAt DateTime?
   approvedAt  DateTime?
-  rejectedAt  DateTime?
   activatedAt DateTime?
   expiresAt   DateTime?
 
-  // Rejection/Approval Details
-  reviewNotes     String? @db.Text
-  rejectionReason String? @db.Text
+  // Review Details
+  reviewNotes String? @db.Text
 
   // Cancellation Information
   cancelledAt         DateTime?
@@ -1297,16 +1294,9 @@ enum NationalityType {
 }
 
 enum PolicyStatus {
-  DRAFT
   COLLECTING_INFO
-  UNDER_INVESTIGATION
-  INVESTIGATION_REJECTED
   PENDING_APPROVAL
   APPROVED
-  CONTRACT_PENDING
-  CONTRACT_SIGNED
-  ACTIVE
-  EXPIRED
   CANCELLED
 }
 
