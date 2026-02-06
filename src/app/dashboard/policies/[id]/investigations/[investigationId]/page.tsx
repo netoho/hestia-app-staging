@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ChevronLeft,
   Pencil,
-  Trash2,
+  Archive,
   Download,
   Loader2,
   CheckCircle2,
@@ -21,6 +21,7 @@ import {
   FileText,
   FileImage,
   File,
+  Link2,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +37,8 @@ import {
   getApproverTypeLabel,
   getInvestigationStatusLabel,
 } from '@/lib/constants/investigationConfig';
-import DeleteInvestigationDialog from '@/components/investigations/list/DeleteInvestigationDialog';
+import ArchiveInvestigationDialog from '@/components/investigations/list/ArchiveInvestigationDialog';
+import { InvestigationSubmittedDialog } from '@/components/investigation/InvestigationSubmittedDialog';
 
 interface InvestigationDetailPageProps {
   params: Promise<{ id: string; investigationId: string }>;
@@ -59,7 +61,8 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
   const router = useRouter();
   const { toast } = useToast();
   const { data: session, status: sessionStatus } = useSession();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showLinksDialog, setShowLinksDialog] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
 
   const userLoading = sessionStatus === 'loading';
@@ -92,8 +95,15 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
   }
 
   const canEdit = user?.role === 'ADMIN' || user?.role === 'STAFF';
-  const canEditInvestigation = canEdit && investigation?.status === 'PENDING';
-  const canDeleteInvestigation = canEdit && investigation?.status === 'PENDING' && !investigation?.submittedAt;
+  const canEditInvestigation = canEdit && investigation?.status === 'PENDING' && !investigation?.submittedAt;
+  const canArchiveInvestigation = canEdit && investigation?.status !== 'ARCHIVED';
+  const canViewLinks = canEdit && investigation?.status === 'PENDING' && !!investigation?.submittedAt;
+
+  // Query for approval URLs (only enabled when dialog is open)
+  const { data: approvalUrls } = trpc.investigation.getApprovalUrls.useQuery(
+    { id: investigationId },
+    { enabled: canViewLinks && showLinksDialog }
+  );
 
   // Handle document download
   const handleDownload = async (documentId: string) => {
@@ -110,8 +120,8 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
     }
   };
 
-  // Handle delete success
-  const handleDeleteSuccess = () => {
+  // Handle archive success
+  const handleArchiveSuccess = () => {
     router.push(`/dashboard/policies/${policyId}/investigations`);
   };
 
@@ -179,14 +189,22 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
                 Editar
               </Button>
             )}
-            {canDeleteInvestigation && (
+            {canViewLinks && (
               <Button
                 variant="outline"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => setShowLinksDialog(true)}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Eliminar
+                <Link2 className="h-4 w-4 mr-2" />
+                Ver Enlaces
+              </Button>
+            )}
+            {canArchiveInvestigation && (
+              <Button
+                variant="outline"
+                onClick={() => setShowArchiveDialog(true)}
+              >
+                <Archive className="h-4 w-4 mr-2" />
+                Archivar
               </Button>
             )}
           </div>
@@ -373,17 +391,29 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
         </CardContent>
       </Card>
 
-      {/* Delete Dialog */}
-      <DeleteInvestigationDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
+      {/* Archive Dialog */}
+      <ArchiveInvestigationDialog
+        open={showArchiveDialog}
+        onOpenChange={setShowArchiveDialog}
         investigation={
           investigation
             ? { id: investigation.id, actorName, actorType: investigation.actorType }
             : null
         }
-        onSuccess={handleDeleteSuccess}
+        onSuccess={handleArchiveSuccess}
       />
+
+      {/* Approval Links Dialog */}
+      {approvalUrls && (
+        <InvestigationSubmittedDialog
+          isOpen={showLinksDialog}
+          onClose={() => setShowLinksDialog(false)}
+          policyId={policyId}
+          policyNumber={investigation.policy.policyNumber}
+          actorName={actorName}
+          approvalUrls={approvalUrls}
+        />
+      )}
     </div>
   );
 }
