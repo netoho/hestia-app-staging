@@ -107,6 +107,23 @@ export const investigationRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Actor not found in policy' });
       }
 
+      // Check for existing non-archived investigation for this actor
+      const existingInvestigation = await ctx.prisma.actorInvestigation.findFirst({
+        where: {
+          policyId: input.policyId,
+          actorType: input.actorType,
+          actorId: input.actorId,
+          status: { not: 'ARCHIVED' },
+        },
+      });
+
+      if (existingInvestigation) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Ya existe una investigación activa para este actor. Archívela primero para crear una nueva.',
+        });
+      }
+
       // Create investigation record
       const investigation = await ctx.prisma.actorInvestigation.create({
         data: {
@@ -167,6 +184,72 @@ export const investigationRouter = createTRPCRouter({
     }),
 
   /**
+   * Get approval URLs for a pending submitted investigation (Admin/Staff only)
+   */
+  getApprovalUrls: adminProcedure
+    .input(z.object({ id: z.string().cuid('ID de investigación inválido') }))
+    .query(async ({ input, ctx }) => {
+      const investigation = await ctx.prisma.actorInvestigation.findUnique({
+        where: { id: input.id },
+        include: {
+          policy: {
+            include: {
+              landlords: { where: { isPrimary: true } },
+              createdBy: { select: { id: true, email: true, name: true } },
+            },
+          },
+        },
+      });
+
+      if (!investigation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Investigation not found' });
+      }
+
+      // Only return URLs for pending+submitted investigations
+      if (investigation.status !== 'PENDING' || !investigation.submittedAt) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Approval URLs only available for pending submitted investigations',
+        });
+      }
+
+      if (!investigation.brokerToken || !investigation.landlordToken) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Approval tokens not found',
+        });
+      }
+
+      const broker = investigation.policy.createdBy;
+      const primaryLandlord = investigation.policy.landlords[0];
+
+      if (!broker || !primaryLandlord) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Broker or landlord not found',
+        });
+      }
+
+      const landlordName = primaryLandlord.companyName || formatFullName({
+        firstName: primaryLandlord.firstName,
+        middleName: primaryLandlord.middleName,
+        paternalLastName: primaryLandlord.paternalLastName,
+        maternalLastName: primaryLandlord.maternalLastName,
+      });
+
+      const baseUrl = getBaseUrl();
+
+      return {
+        broker: `${baseUrl}/investigation/approve/${investigation.brokerToken}`,
+        landlord: `${baseUrl}/investigation/approve/${investigation.landlordToken}`,
+        brokerName: broker.name || 'Broker',
+        landlordName,
+        landlordPhone: primaryLandlord?.phone || null,
+        tokenExpiry: investigation.tokenExpiry,
+      };
+    }),
+
+  /**
    * Get investigations by actor (Admin/Staff only)
    */
   getByActor: adminProcedure
@@ -196,7 +279,8 @@ export const investigationRouter = createTRPCRouter({
   getByPolicy: protectedProcedure
     .input(z.object({
       policyId: z.string().cuid('ID de póliza inválido'),
-      status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+      status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED']).optional(),
+      includeArchived: z.boolean().optional().default(false),
     }))
     .query(async ({ input, ctx }) => {
       // Verify access and get policy with actors for name resolution
@@ -228,7 +312,10 @@ export const investigationRouter = createTRPCRouter({
       const investigations = await ctx.prisma.actorInvestigation.findMany({
         where: {
           policyId: input.policyId,
-          ...(input.status && { status: input.status }),
+          ...(input.status
+            ? { status: input.status }
+            : !input.includeArchived && { status: { not: 'ARCHIVED' } }
+          ),
         },
         include: {
           documents: true,
@@ -297,66 +384,63 @@ export const investigationRouter = createTRPCRouter({
     }),
 
   /**
-   * Delete investigation (Admin/Staff only)
-   * Only allows deleting drafts (PENDING, not yet submitted)
+   * Archive investigation (Admin/Staff only)
+   * Soft-delete: sets status to ARCHIVED with reason
    */
-  delete: adminProcedure
-    .input(z.object({ id: z.string().cuid('ID de investigación inválido') }))
+  archive: adminProcedure
+    .input(z.object({
+      id: z.string().cuid('ID de investigación inválido'),
+      reason: z.enum(['OUTDATED', 'ERROR', 'SUPERSEDED', 'OTHER'], {
+        required_error: 'Razón de archivo requerida',
+      }),
+      comment: z.string().max(INVESTIGATION_FORM_LIMITS.archiveComment.max).optional(),
+    }))
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.id },
-        include: { documents: true },
       });
 
       if (!investigation) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Investigation not found' });
       }
 
-      // Only allow deleting drafts (PENDING and not submitted)
-      if (investigation.status !== 'PENDING' || investigation.submittedAt) {
+      // Cannot archive already archived investigations
+      if (investigation.status === 'ARCHIVED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Solo se pueden eliminar investigaciones en borrador',
+          message: 'Esta investigación ya está archivada',
         });
       }
 
-      // Delete documents from S3 and database in transaction
-      await ctx.prisma.$transaction(async (tx) => {
-        // Delete S3 files first
-        if (investigation.documents.length > 0) {
-          for (const doc of investigation.documents) {
-            try {
-              await documentService.deleteFile(doc.s3Key);
-            } catch (error) {
-              console.error(`Failed to delete S3 file ${doc.s3Key}:`, error);
-              // Continue with other deletions
-            }
-          }
-
-          // Delete document records
-          await tx.actorInvestigationDocument.deleteMany({
-            where: { investigationId: input.id },
-          });
-        }
-
-        // Delete investigation
-        await tx.actorInvestigation.delete({
-          where: { id: input.id },
-        });
+      // Archive the investigation
+      await ctx.prisma.actorInvestigation.update({
+        where: { id: input.id },
+        data: {
+          status: 'ARCHIVED',
+          archivedAt: new Date(),
+          archivedBy: ctx.userId,
+          archiveReason: input.reason,
+          archiveComment: input.comment?.trim() || null,
+          // Invalidate tokens if any
+          brokerToken: null,
+          landlordToken: null,
+        },
       });
 
       // Log activity
       await ctx.prisma.policyActivity.create({
         data: {
           policyId: investigation.policyId,
-          action: 'investigation_deleted',
-          description: 'Investigación eliminada',
+          action: 'investigation_archived',
+          description: 'Investigación archivada',
           performedById: ctx.userId,
           performedByType: 'user',
           details: {
             investigationId: input.id,
             actorType: investigation.actorType,
             actorId: investigation.actorId,
+            reason: input.reason,
+            comment: input.comment,
           },
         },
       });
@@ -929,9 +1013,7 @@ export const investigationRouter = createTRPCRouter({
             approvedByType: approverType,
             approvedAt: new Date(),
             approvalNotes: input.notes?.trim(),
-            // Invalidate both tokens
-            brokerToken: null,
-            landlordToken: null,
+            // Keep tokens for status lookup on revisit
           },
         });
 
@@ -1129,9 +1211,7 @@ export const investigationRouter = createTRPCRouter({
             approvedByType: approverType,
             approvedAt: new Date(),
             rejectionReason: input.reason.trim(),
-            // Invalidate both tokens
-            brokerToken: null,
-            landlordToken: null,
+            // Keep tokens for status lookup on revisit
           },
         });
 

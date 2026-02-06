@@ -58,6 +58,20 @@ const investigationSchema = z.object({
 
 type InvestigationFormData = z.infer<typeof investigationSchema>;
 
+interface ExistingInvestigation {
+  id: string;
+  findings?: string | null;
+  verdict?: string | null;
+  riskLevel?: string | null;
+  documents: Array<{
+    id: string;
+    fileName: string;
+    originalName: string;
+    fileSize: number;
+    mimeType: string;
+  }>;
+}
+
 interface InvestigationFormProps {
   policyId: string;
   actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
@@ -80,6 +94,8 @@ interface InvestigationFormProps {
       } | null;
     } | null;
   };
+  existingInvestigation?: ExistingInvestigation | null;
+  isEditMode?: boolean;
 }
 
 interface UploadedDocument {
@@ -104,11 +120,28 @@ const getFileIcon = (fileName: string) => {
 // Get validation config from centralized location
 const validationConfig = getCategoryValidation(DocumentCategory.INVESTIGATION_SUPPORT);
 
-export function InvestigationForm({ policyId, actorType, actorId, actor, policy }: InvestigationFormProps) {
+export function InvestigationForm({
+  policyId,
+  actorType,
+  actorId,
+  actor,
+  policy,
+  existingInvestigation,
+  isEditMode = false,
+}: InvestigationFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [investigationId, setInvestigationId] = useState<string | null>(null);
-  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [investigationId, setInvestigationId] = useState<string | null>(
+    existingInvestigation?.id || null
+  );
+  const [documents, setDocuments] = useState<UploadedDocument[]>(
+    existingInvestigation?.documents.map(d => ({
+      id: d.id,
+      fileName: d.originalName,
+      fileSize: d.fileSize,
+      mimeType: d.mimeType,
+    })) || []
+  );
   const [uploading, setUploading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSubmittedDialog, setShowSubmittedDialog] = useState(false);
@@ -119,6 +152,7 @@ export function InvestigationForm({ policyId, actorType, actorId, actor, policy 
   const createMutation = trpc.investigation.create.useMutation({
     onSuccess: (data) => {
       setInvestigationId(data.investigation.id);
+      utils.investigation.getByPolicy.invalidate({ policyId });
       toast({ title: 'Investigación creada' });
     },
     onError: (error) => {
@@ -128,6 +162,8 @@ export function InvestigationForm({ policyId, actorType, actorId, actor, policy 
 
   const updateMutation = trpc.investigation.update.useMutation({
     onSuccess: () => {
+      utils.investigation.getByPolicy.invalidate({ policyId });
+      if (investigationId) utils.investigation.getById.invalidate({ id: investigationId });
       toast({ title: 'Borrador guardado', description: 'Los cambios se han guardado correctamente' });
     },
     onError: (error) => {
@@ -137,6 +173,8 @@ export function InvestigationForm({ policyId, actorType, actorId, actor, policy 
 
   const submitMutation = trpc.investigation.submit.useMutation({
     onSuccess: (data) => {
+      utils.investigation.getByPolicy.invalidate({ policyId });
+      if (investigationId) utils.investigation.getById.invalidate({ id: investigationId });
       toast({ title: 'Investigación enviada', description: 'Se ha notificado al broker y arrendador para su aprobación' });
       if (data.approvalUrls) {
         setApprovalUrls(data.approvalUrls);
@@ -169,9 +207,9 @@ export function InvestigationForm({ policyId, actorType, actorId, actor, policy 
   } = useForm<InvestigationFormData>({
     resolver: zodResolver(investigationSchema),
     defaultValues: {
-      findings: '',
-      verdict: 'APPROVED',
-      riskLevel: 'LOW',
+      findings: existingInvestigation?.findings || '',
+      verdict: (existingInvestigation?.verdict as any) || 'APPROVED',
+      riskLevel: (existingInvestigation?.riskLevel as any) || 'LOW',
     },
   });
 
@@ -321,7 +359,9 @@ export function InvestigationForm({ policyId, actorType, actorId, actor, policy 
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Nueva Investigación</h1>
+          <h1 className="text-2xl font-bold">
+            {isEditMode ? 'Editar Investigación' : 'Nueva Investigación'}
+          </h1>
           <p className="text-muted-foreground">
             Póliza #{policy.policyNumber}
           </p>

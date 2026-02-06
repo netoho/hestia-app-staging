@@ -6,8 +6,9 @@ import {
 // These types will be generated after running prisma migrate
 // For now, define them locally to match schema.prisma
 type InvestigatedActorType = 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
-type ActorInvestigationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+type ActorInvestigationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
 type ApproverType = 'BROKER' | 'LANDLORD';
+export type InvestigationArchiveReason = 'OUTDATED' | 'ERROR' | 'SUPERSEDED' | 'OTHER';
 
 // ============================================
 // ACTOR TYPE CONFIGURATION
@@ -163,11 +164,53 @@ export const investigationStatusConfig: Record<ActorInvestigationStatus, StatusC
     label: 'Rechazada',
     description: 'Investigación rechazada',
   },
+  ARCHIVED: {
+    label: 'Archivada',
+    description: 'Investigación archivada',
+  },
 };
 
 export function getInvestigationStatusLabel(status: ActorInvestigationStatus): string {
   return investigationStatusConfig[status]?.label || status;
 }
+
+// ============================================
+// ARCHIVE REASON CONFIGURATION
+// ============================================
+
+export interface ArchiveReasonConfig {
+  label: string;
+  description: string;
+}
+
+export const archiveReasonConfig: Record<InvestigationArchiveReason, ArchiveReasonConfig> = {
+  OUTDATED: {
+    label: 'Desactualizada',
+    description: 'La investigación ya no es relevante',
+  },
+  ERROR: {
+    label: 'Error',
+    description: 'La investigación contiene errores',
+  },
+  SUPERSEDED: {
+    label: 'Reemplazada',
+    description: 'Reemplazada por una nueva investigación',
+  },
+  OTHER: {
+    label: 'Otro',
+    description: 'Otra razón',
+  },
+};
+
+export function getArchiveReasonLabel(reason: InvestigationArchiveReason): string {
+  return archiveReasonConfig[reason]?.label || reason;
+}
+
+export const ARCHIVE_REASONS = Object.entries(archiveReasonConfig).map(([value, config]) => ({
+  value: value as InvestigationArchiveReason,
+  label: config.label,
+  description: config.description,
+}));
 
 // ============================================
 // APPROVER TYPE CONFIGURATION
@@ -218,5 +261,8 @@ export const INVESTIGATION_FORM_LIMITS = {
   },
   approvalNotes: {
     max: 2000,
+  },
+  archiveComment: {
+    max: 1000,
   },
 } as const;
