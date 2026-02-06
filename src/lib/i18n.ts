@@ -57,17 +57,17 @@ policyStatus: {
 
     // Full policy status labels (matching Prisma schema)
     policyStatusFull: {
-        DRAFT: 'Borrador',
         COLLECTING_INFO: 'Recopilando Información',
-        UNDER_INVESTIGATION: 'En Investigación',
-        INVESTIGATION_REJECTED: 'Investigación Rechazada',
         PENDING_APPROVAL: 'Pendiente de Aprobación',
         APPROVED: 'Aprobada',
-        CONTRACT_PENDING: 'Contrato Pendiente',
-        CONTRACT_SIGNED: 'Contrato Firmado',
-        ACTIVE: 'Activa',
-        EXPIRED: 'Expirada',
         CANCELLED: 'Cancelada',
+    } as Record<string, string>,
+
+    // Sub-status labels for APPROVED policies (computed from dates)
+    policySubStatus: {
+        active: 'Activa',
+        expired: 'Expirada',
+        pending_activation: 'Pendiente Activación',
     } as Record<string, string>,
 
     guarantorType: {
