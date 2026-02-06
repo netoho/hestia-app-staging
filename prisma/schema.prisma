@@ -1056,6 +1056,12 @@ model ActorInvestigation {
   approvalNotes   String?                  @db.Text
   rejectionReason String?                  @db.Text
 
+  // Archive fields
+  archivedAt      DateTime?
+  archivedBy      String?
+  archiveReason   InvestigationArchiveReason?
+  archiveComment  String?                  @db.Text
+
   // Access tokens for approval pages
   brokerToken   String?   @unique
   landlordToken String?   @unique
@@ -1475,6 +1481,14 @@ enum ActorInvestigationStatus {
   PENDING
   APPROVED
   REJECTED
+  ARCHIVED
+}
+
+enum InvestigationArchiveReason {
+  OUTDATED
+  ERROR
+  SUPERSEDED
+  OTHER
 }
 
 enum ApproverType {
