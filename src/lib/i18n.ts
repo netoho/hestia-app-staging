@@ -114,13 +114,6 @@ policyStatus: {
         CONDITIONAL: 'Condicional',
     } as Record<string, string>,
 
-    riskLevel: {
-        LOW: 'Bajo',
-        MEDIUM: 'Medio',
-        HIGH: 'Alto',
-        VERY_HIGH: 'Muy Alto',
-    } as Record<string, string>,
-
 
 
 

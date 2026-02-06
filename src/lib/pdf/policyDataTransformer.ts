@@ -363,8 +363,6 @@ function transformInvestigation(inv: PolicyWithRelations['investigation']): PDFI
   return {
     verdict: inv.verdict || null,
     verdictLabel: inv.verdict ? (t.investigationVerdict[inv.verdict] || inv.verdict) : null,
-    riskLevel: inv.riskLevel || null,
-    riskLevelLabel: inv.riskLevel ? (t.riskLevel[inv.riskLevel] || inv.riskLevel) : null,
     score: inv.score || null,
     notes: inv.notes || null,
   };

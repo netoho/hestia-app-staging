@@ -154,8 +154,6 @@ export interface PDFProperty {
 export interface PDFInvestigation {
   verdict: string | null;
   verdictLabel: string | null;
-  riskLevel: string | null;
-  riskLevelLabel: string | null;
   score: number | null;
   notes: string | null;
 }

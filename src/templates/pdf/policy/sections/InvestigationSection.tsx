@@ -35,7 +35,6 @@ export function InvestigationSection({ data }: InvestigationSectionProps) {
           <View style={styles.twoColumn}>
             <View style={styles.column}>
               <DataRow label="Veredicto" value={investigation.verdictLabel} />
-              <DataRow label="Nivel de Riesgo" value={investigation.riskLevelLabel} />
             </View>
             <View style={styles.column}>
               <DataRow label="Puntuación" value={investigation.score ? String(investigation.score) : null} />

@@ -17,7 +17,6 @@ import { t } from '@/lib/i18n';
 interface Investigation {
   id: string;
   verdict?: 'APPROVED' | 'REJECTED' | 'HIGH_RISK' | null;
-  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
   rejectedBy?: string | null;
   rejectionReason?: string | null;
   rejectedAt?: Date | null;
@@ -74,19 +73,6 @@ export function PolicyInvestigationInfo({
     );
   };
 
-  const getRiskLevelBadge = (riskLevel: string | null | undefined) => {
-    if (!riskLevel) return null;
-    
-    const riskMap = {
-      'LOW': { label: 'Bajo', variant: 'default' as const },
-      'MEDIUM': { label: 'Medio', variant: 'secondary' as const },
-      'HIGH': { label: 'Alto', variant: 'destructive' as const }
-    };
-    
-    const config = riskMap[riskLevel as keyof typeof riskMap];
-    return config ? <Badge variant={config.variant}>{config.label}</Badge> : null;
-  };
-
   const formatResponseTime = (hours: number | null | undefined) => {
     if (!hours) return '-';
     if (hours < 24) return `${hours}h`;
@@ -134,7 +120,6 @@ export function PolicyInvestigationInfo({
             {/* Status and Verdict */}
             <div className="flex flex-wrap gap-2">
               {getVerdictBadge(investigation.verdict)}
-              {getRiskLevelBadge(investigation.riskLevel)}
               {investigation.landlordOverride && (
                 <Badge variant="outline" className="flex items-center gap-1">
                   <User className="h-3 w-3" />
