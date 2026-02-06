@@ -6,13 +6,13 @@ import type { InvestigationListItem } from './types';
 interface InvestigationsCardsProps {
   investigations: InvestigationListItem[];
   policyId: string;
-  onDelete: (investigation: InvestigationListItem) => void;
+  onArchive: (investigation: InvestigationListItem) => void;
 }
 
 export default function InvestigationsCards({
   investigations,
   policyId,
-  onDelete,
+  onArchive,
 }: InvestigationsCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
@@ -21,7 +21,7 @@ export default function InvestigationsCards({
           key={inv.id}
           investigation={inv}
           policyId={policyId}
-          onDelete={onDelete}
+          onArchive={onArchive}
         />
       ))}
     </div>

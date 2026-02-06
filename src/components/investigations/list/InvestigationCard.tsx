@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Eye, Pencil, Trash2, FileText } from 'lucide-react';
+import { Eye, Pencil, Archive, FileText } from 'lucide-react';
 import {
   getInvestigatedActorLabel,
   getVerdictLabel,
@@ -21,13 +21,13 @@ import type { InvestigationListItem } from './types';
 interface InvestigationCardProps {
   investigation: InvestigationListItem;
   policyId: string;
-  onDelete: (investigation: InvestigationListItem) => void;
+  onArchive: (investigation: InvestigationListItem) => void;
 }
 
 export default function InvestigationCard({
   investigation: inv,
   policyId,
-  onDelete,
+  onArchive,
 }: InvestigationCardProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -41,13 +41,15 @@ export default function InvestigationCard({
         return 'success';
       case 'REJECTED':
         return 'destructive';
+      case 'ARCHIVED':
+        return 'outline';
       default:
         return 'secondary';
     }
   };
 
-  const canEditInvestigation = canEdit && inv.status === 'PENDING';
-  const canDeleteInvestigation = canEdit && inv.status === 'PENDING' && !inv.submittedAt;
+  const canEditInvestigation = canEdit && inv.status === 'PENDING' && !inv.submittedAt;
+  const canArchiveInvestigation = canEdit && inv.status !== 'ARCHIVED';
 
   return (
     <Card className="overflow-hidden">
@@ -126,14 +128,14 @@ export default function InvestigationCard({
               <Pencil className="h-4 w-4" />
             </Button>
           )}
-          {canDeleteInvestigation && (
+          {canArchiveInvestigation && (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onDelete(inv)}
-              className="text-destructive hover:text-destructive"
+              onClick={() => onArchive(inv)}
+              title="Archivar"
             >
-              <Trash2 className="h-4 w-4" />
+              <Archive className="h-4 w-4" />
             </Button>
           )}
         </div>

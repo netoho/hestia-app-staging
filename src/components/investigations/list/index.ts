@@ -5,5 +5,5 @@ export { default as InvestigationsTable } from './InvestigationsTable';
 export { default as InvestigationsCards } from './InvestigationsCards';
 export { default as InvestigationCard } from './InvestigationCard';
 export { default as ActorSelectionDialog } from './ActorSelectionDialog';
-export { default as DeleteInvestigationDialog } from './DeleteInvestigationDialog';
+export { default as ArchiveInvestigationDialog } from './ArchiveInvestigationDialog';
 export type { InvestigationListItem } from './types';

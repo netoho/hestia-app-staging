@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Users, Shield } from 'lucide-react';
+import { User, Users, Shield, AlertCircle } from 'lucide-react';
 import { formatFullName } from '@/lib/utils/names';
-import { getInvestigatedActorLabel } from '@/lib/constants/investigationConfig';
+import { getInvestigatedActorLabel, getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
+import { trpc } from '@/lib/trpc/client';
 
 interface Actor {
   id: string;
@@ -62,6 +63,22 @@ export default function ActorSelectionDialog({
 }: ActorSelectionDialogProps) {
   const router = useRouter();
 
+  // Query existing investigations for this policy
+  const { data: investigations } = trpc.investigation.getByPolicy.useQuery(
+    { policyId: policy.id },
+    { enabled: open }
+  );
+
+  // Build a map of actors with active investigations
+  const actorInvestigationMap = new Map<string, { status: string; id: string }>();
+  investigations?.forEach((inv) => {
+    const key = `${inv.actorType}-${inv.actorId}`;
+    // Only track non-archived investigations
+    if (inv.status !== 'ARCHIVED') {
+      actorInvestigationMap.set(key, { status: inv.status, id: inv.id });
+    }
+  });
+
   // Build list of actors
   const actors: ActorOption[] = [];
 
@@ -93,9 +110,16 @@ export default function ActorSelectionDialog({
   });
 
   const handleSelect = (actor: ActorOption) => {
-    router.push(
-      `/dashboard/policies/${policy.id}/investigation/${actor.type}/${actor.id}/new`
-    );
+    const key = `${actor.type}-${actor.id}`;
+    const existingInv = actorInvestigationMap.get(key);
+    if (existingInv) {
+      // Navigate to existing investigation instead
+      router.push(`/dashboard/policies/${policy.id}/investigations/${existingInv.id}`);
+    } else {
+      router.push(
+        `/dashboard/policies/${policy.id}/investigation/${actor.type}/${actor.id}/new`
+      );
+    }
     onOpenChange(false);
   };
 
@@ -117,11 +141,15 @@ export default function ActorSelectionDialog({
           ) : (
             actors.map((actor) => {
               const Icon = actor.icon;
+              const key = `${actor.type}-${actor.id}`;
+              const existingInv = actorInvestigationMap.get(key);
+              const hasActiveInvestigation = !!existingInv;
+
               return (
                 <Button
-                  key={`${actor.type}-${actor.id}`}
+                  key={key}
                   variant="outline"
-                  className="w-full justify-start h-auto py-3"
+                  className={`w-full justify-start h-auto py-3 ${hasActiveInvestigation ? 'opacity-70' : ''}`}
                   onClick={() => handleSelect(actor)}
                 >
                   <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
@@ -129,9 +157,22 @@ export default function ActorSelectionDialog({
                     <span className="font-medium truncate w-full text-left">
                       {actor.name}
                     </span>
-                    <Badge variant="secondary" className="mt-1 text-xs">
-                      {getInvestigatedActorLabel(actor.type)}
-                    </Badge>
+                    <div className="flex gap-1 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {getInvestigatedActorLabel(actor.type)}
+                      </Badge>
+                      {hasActiveInvestigation && (
+                        <Badge variant="outline" className="text-xs flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {getInvestigationStatusLabel(existingInv.status as any)}
+                        </Badge>
+                      )}
+                    </div>
+                    {hasActiveInvestigation && (
+                      <span className="text-xs text-muted-foreground mt-1">
+                        Click para ver investigación existente
+                      </span>
+                    )}
                   </div>
                 </Button>
               );

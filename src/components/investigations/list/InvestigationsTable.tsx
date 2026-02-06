@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Pencil, Archive } from 'lucide-react';
 import {
   getInvestigatedActorLabel,
   getVerdictLabel,
@@ -35,13 +35,13 @@ import type { InvestigationListItem } from './types';
 interface InvestigationsTableProps {
   investigations: InvestigationListItem[];
   policyId: string;
-  onDelete: (investigation: InvestigationListItem) => void;
+  onArchive: (investigation: InvestigationListItem) => void;
 }
 
 export default function InvestigationsTable({
   investigations,
   policyId,
-  onDelete,
+  onArchive,
 }: InvestigationsTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -55,19 +55,21 @@ export default function InvestigationsTable({
         return 'success';
       case 'REJECTED':
         return 'destructive';
+      case 'ARCHIVED':
+        return 'outline';
       default:
         return 'secondary';
     }
   };
 
   const canEditInvestigation = (inv: InvestigationListItem) => {
-    // Can edit if not approved/rejected
-    return canEdit && inv.status === 'PENDING';
+    // Can edit if PENDING and not yet submitted
+    return canEdit && inv.status === 'PENDING' && !inv.submittedAt;
   };
 
-  const canDeleteInvestigation = (inv: InvestigationListItem) => {
-    // Can only delete drafts (PENDING and not submitted)
-    return canEdit && inv.status === 'PENDING' && !inv.submittedAt;
+  const canArchiveInvestigation = (inv: InvestigationListItem) => {
+    // Can archive any non-archived investigation
+    return canEdit && inv.status !== 'ARCHIVED';
   };
 
   return (
@@ -174,13 +176,10 @@ export default function InvestigationsTable({
                             Editar
                           </DropdownMenuItem>
                         )}
-                        {canDeleteInvestigation(inv) && (
-                          <DropdownMenuItem
-                            onClick={() => onDelete(inv)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
+                        {canArchiveInvestigation(inv) && (
+                          <DropdownMenuItem onClick={() => onArchive(inv)}>
+                            <Archive className="h-4 w-4 mr-2" />
+                            Archivar
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

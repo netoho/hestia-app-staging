@@ -5,7 +5,7 @@ import { Search } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import InvestigationsCards from './InvestigationsCards';
 import InvestigationsTable from './InvestigationsTable';
-import DeleteInvestigationDialog from './DeleteInvestigationDialog';
+import ArchiveInvestigationDialog from './ArchiveInvestigationDialog';
 import type { InvestigationListItem } from './types';
 
 interface InvestigationsListProps {
@@ -21,7 +21,7 @@ export default function InvestigationsList({
   loading,
   onRefresh,
 }: InvestigationsListProps) {
-  const [deleteTarget, setDeleteTarget] = useState<InvestigationListItem | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<InvestigationListItem | null>(null);
 
   // Loading state
   if (loading) {
@@ -43,8 +43,8 @@ export default function InvestigationsList({
     );
   }
 
-  const handleDeleteSuccess = () => {
-    setDeleteTarget(null);
+  const handleArchiveSuccess = () => {
+    setArchiveTarget(null);
     onRefresh();
   };
 
@@ -53,19 +53,19 @@ export default function InvestigationsList({
       <InvestigationsCards
         investigations={investigations}
         policyId={policyId}
-        onDelete={setDeleteTarget}
+        onArchive={setArchiveTarget}
       />
       <InvestigationsTable
         investigations={investigations}
         policyId={policyId}
-        onDelete={setDeleteTarget}
+        onArchive={setArchiveTarget}
       />
 
-      <DeleteInvestigationDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        investigation={deleteTarget}
-        onSuccess={handleDeleteSuccess}
+      <ArchiveInvestigationDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => !open && setArchiveTarget(null)}
+        investigation={archiveTarget}
+        onSuccess={handleArchiveSuccess}
       />
     </>
   );
