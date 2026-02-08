@@ -172,6 +172,8 @@ export default function LandlordFormWizardSimplified({
     }
   }, [token, updateMutation, savePropertyDetailsMutation, savePolicyFinancialMutation, wizard, toast]);
 
+  const isSaving = updateMutation.isPending || savePropertyDetailsMutation.isPending || savePolicyFinancialMutation.isPending;
+
   // Check if all tabs before documents are saved
   const allTabsSaved = tabs
     .filter((t: any) => t.id !== 'documents' && t.needsSave)
@@ -210,6 +212,7 @@ export default function LandlordFormWizardSimplified({
               initialData={landlords}
               onSave={(data) => handleTabSave('owner-info', data)}
               onDelete={handleDeleteLandlord}
+              disabled={isSaving}
             />
           )}
 
@@ -224,6 +227,7 @@ export default function LandlordFormWizardSimplified({
             <PropertyDetailsFormRHF
               initialData={initialData?.propertyDetails || {}}
               onSave={(data) => handleTabSave('property-info', data)}
+              disabled={isSaving}
             />
           )}
 
@@ -238,6 +242,7 @@ export default function LandlordFormWizardSimplified({
               token={token}
               landlordId={primaryLandlord?.id}
               isAdminEdit={isAdminEdit}
+              disabled={isSaving}
             />
           )}
 
@@ -290,9 +295,9 @@ export default function LandlordFormWizardSimplified({
               // Trigger form submission in the active tab
               document.querySelector('form')?.requestSubmit();
             }}
-            disabled={updateMutation.isPending || savePropertyDetailsMutation.isPending || savePolicyFinancialMutation.isPending}
+            disabled={isSaving}
           >
-            {(updateMutation.isPending || savePropertyDetailsMutation.isPending || savePolicyFinancialMutation.isPending) ? 'Guardando...' : 'Guardar y Continuar'}
+            {isSaving ? 'Guardando...' : wizard.activeTab === 'documents' ? 'Enviar Información' : 'Guardar y Continuar'}
           </Button>
         </div>
       </div>
