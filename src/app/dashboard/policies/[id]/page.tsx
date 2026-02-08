@@ -11,15 +11,18 @@ import { usePolicyPermissions, useIsStaffOrAdmin } from '@/lib/hooks/usePolicyPe
 import { trpc } from '@/lib/trpc/client';
 
 export default function PolicyDetailsPage({
-  params
+  params,
+  searchParams,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { data: session } = useSession();
   const router = useRouter();
 
   // Unwrap the params promise using React's use() hook
   const { id: policyId } = use(params);
+  const { tab: initialTab } = use(searchParams);
 
   // Use tRPC to fetch policy with progress
   const { data: policy, isLoading, error, refetch } = trpc.policy.getById.useQuery(
@@ -99,6 +102,7 @@ export default function PolicyDetailsPage({
         permissions={permissions}
         isStaffOrAdmin={isStaffOrAdmin}
         onRefresh={async () => { await refetch(); }}
+        initialTab={initialTab}
       />
     </ErrorBoundary>
   );
