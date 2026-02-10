@@ -350,6 +350,7 @@ export async function getPolicyById(id: string) {
       tenant: {
         include: {
           personalReferences: true,
+          commercialReferences: true,
           documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
@@ -359,6 +360,7 @@ export async function getPolicyById(id: string) {
       jointObligors: {
         include: {
           personalReferences: true,
+          commercialReferences: true,
           documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
@@ -368,6 +370,7 @@ export async function getPolicyById(id: string) {
       avals: {
         include: {
           personalReferences: true,
+          commercialReferences: true,
           documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
           addressDetails: true,
           employerAddressDetails: true,
@@ -428,6 +431,7 @@ export async function getPolicyById(id: string) {
       propertyDetails: {
         include: {
           propertyAddressDetails: true,
+          contractSigningAddressDetails: true,
         }
       },
       documents: {
