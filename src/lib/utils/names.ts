@@ -2,23 +2,29 @@
  * Utility functions for handling Mexican naming conventions
  */
 
+export interface PersonNameParts {
+  firstName?: string | null;
+  middleName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+}
+
 /**
- * Formats a full name from individual parts
+ * Formats a full name from individual parts or a person name object
  */
+export function formatFullName(person: PersonNameParts): string;
+export function formatFullName(firstName?: string, paternalLastName?: string, maternalLastName?: string, middleName?: string): string;
 export function formatFullName(
-  firstName?: string,
+  firstNameOrPerson?: string | PersonNameParts,
   paternalLastName?: string,
   maternalLastName?: string,
   middleName?: string
 ): string {
-  const parts = [
-    firstName,
-    middleName,
-    paternalLastName,
-    maternalLastName
-  ].filter(Boolean);
-
-  return parts.join(' ').trim();
+  if (typeof firstNameOrPerson === 'object' && firstNameOrPerson !== null) {
+    const p = firstNameOrPerson;
+    return [p.firstName, p.middleName, p.paternalLastName, p.maternalLastName].filter(Boolean).join(' ').trim();
+  }
+  return [firstNameOrPerson, middleName, paternalLastName, maternalLastName].filter(Boolean).join(' ').trim();
 }
 
 /**

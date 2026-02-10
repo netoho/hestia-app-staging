@@ -202,7 +202,7 @@ async function main() {
       totalPrice: 6000,
       guarantorType: 'JOINT_OBLIGOR',
       createdById: brokerUser.id,
-      status: 'DRAFT',
+      status: 'COLLECTING_INFO',
       // Create landlord with enhanced fields
       landlords: {
         create: {
@@ -345,7 +345,7 @@ async function main() {
       totalPrice: 14000,
       guarantorType: 'AVAL',
       createdById: brokerUser.id,
-      status: 'ACTIVE',
+      status: 'APPROVED',
       submittedAt: new Date('2024-01-15'),
       approvedAt: new Date('2024-01-20'),
       activatedAt: new Date('2024-02-01'),

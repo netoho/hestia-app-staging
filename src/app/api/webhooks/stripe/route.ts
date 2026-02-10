@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 import { verifyWebhookSignature, updatePaymentById } from '@/lib/services/paymentService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { sendPaymentCompletedEmail, sendAllPaymentsCompletedEmail } from '@/lib/services/emailService';
 import { getActiveAdmins } from '@/lib/services/userService';
 import prisma from '@/lib/prisma';
 import { PaymentStatus } from '@/prisma/generated/prisma-client/enums';
+
+// Lazy Stripe instance for webhook operations (expire sessions, etc.)
+let _stripeInstance: Stripe | null = null;
+async function getStripeForWebhook(): Promise<Stripe> {
+  if (!_stripeInstance) {
+    _stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-08-27.basil',
+    });
+  }
+  return _stripeInstance;
+}
 
 const PAYMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
   INVESTIGATION_FEE: 'Cuota de Investigación',
@@ -252,9 +264,196 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      // Note: payment_intent.succeeded and payment_intent.payment_failed are intentionally NOT handled.
-      // checkout.session.completed/expired already handle these cases and payment_intent events
-      // can cause race conditions (payment intent doesn't have paymentId in metadata).
+      // SPEI (Bank Transfer) events
+      case 'payment_intent.partially_funded': {
+        const intent = event.data.object as any;
+        const paymentId = intent.metadata?.paymentId;
+        const policyId = intent.metadata?.policyId;
+        const isSpei = intent.metadata?.isSpei === 'true';
+
+        if (!paymentId || !isSpei) {
+          console.log('Webhook: payment_intent.partially_funded - not a SPEI payment, skipping');
+          break;
+        }
+
+        const fundedAmount = (intent.amount_received || 0) / 100;
+        const totalAmount = (intent.amount || 0) / 100;
+
+        // Update funded amount on payment record
+        await prisma.payment.updateMany({
+          where: { id: paymentId, speiPaymentIntentId: intent.id },
+          data: { speiFundedAmount: fundedAmount },
+        });
+
+        if (policyId) {
+          await logPolicyActivity({
+            policyId,
+            action: 'spei_partial_payment',
+            description: `Transferencia parcial recibida: $${fundedAmount.toLocaleString()} de $${totalAmount.toLocaleString()} MXN`,
+            performedById: 'system',
+            details: {
+              paymentId,
+              fundedAmount,
+              totalAmount,
+              remaining: totalAmount - fundedAmount,
+            },
+          });
+        }
+
+        console.log(`Webhook: SPEI partial payment ${paymentId}: $${fundedAmount} of $${totalAmount}`);
+        break;
+      }
+
+      case 'payment_intent.succeeded': {
+        const intent = event.data.object as any;
+        const paymentId = intent.metadata?.paymentId;
+        const paymentType = intent.metadata?.paymentType;
+        const paidBy = intent.metadata?.paidBy;
+        const policyId = intent.metadata?.policyId;
+        const isSpei = intent.metadata?.isSpei === 'true';
+
+        if (!paymentId || !isSpei) {
+          // Not a SPEI payment — card payments are handled by checkout.session.completed
+          break;
+        }
+
+        // Verify this is actually a SPEI payment by checking speiPaymentIntentId
+        const speiPayment = await prisma.payment.findFirst({
+          where: { id: paymentId, speiPaymentIntentId: intent.id },
+          select: { id: true, status: true, stripeSessionId: true, amount: true },
+        });
+
+        if (!speiPayment) {
+          console.warn(`Webhook: SPEI payment_intent.succeeded but no matching payment for ${paymentId}`);
+          break;
+        }
+
+        // Atomic idempotency check: claim the payment
+        const claimResult = await prisma.payment.updateMany({
+          where: {
+            id: paymentId,
+            status: PaymentStatus.PENDING,
+          },
+          data: {
+            status: PaymentStatus.PROCESSING,
+          },
+        });
+
+        if (claimResult.count === 0) {
+          console.log(`Webhook SPEI idempotency: payment ${paymentId} already processed, skipping`);
+          break;
+        }
+
+        // Mark as COMPLETED
+        await updatePaymentById(
+          paymentId,
+          PaymentStatus.COMPLETED,
+          {
+            paidAt: new Date(),
+            method: 'bank_transfer',
+            stripeIntentId: intent.id,
+          }
+        );
+
+        // Update funded amount to full amount
+        await prisma.payment.update({
+          where: { id: paymentId },
+          data: { speiFundedAmount: speiPayment.amount },
+        });
+
+        // Try to expire the card checkout session if one exists
+        if (speiPayment.stripeSessionId) {
+          try {
+            const stripeInstance = await getStripeForWebhook();
+            await stripeInstance.checkout.sessions.expire(speiPayment.stripeSessionId);
+          } catch (error) {
+            console.warn('Failed to expire card checkout session after SPEI completion:', error);
+          }
+        }
+
+        if (policyId) {
+          const typeDescription = PAYMENT_TYPE_DESCRIPTIONS[paymentType] || paymentType || 'Pago';
+          const amount = (intent.amount || 0) / 100;
+
+          await logPolicyActivity({
+            policyId,
+            action: 'payment_completed',
+            description: `Pago completado por SPEI: ${typeDescription}`,
+            performedById: 'system',
+            details: {
+              amount,
+              currency: 'MXN',
+              paymentType,
+              paidBy,
+              paymentMethod: 'bank_transfer',
+              paymentId,
+            },
+          });
+
+          // Get policy info for email
+          const policy = await prisma.policy.findUnique({
+            where: { id: policyId },
+            select: {
+              policyNumber: true,
+              tenant: { select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
+              landlords: { where: { isPrimary: true }, select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
+            },
+          });
+
+          // Send payment confirmation email
+          if (policy) {
+            const payerEmail = paidBy === 'TENANT' ? policy.tenant?.email : policy.landlords?.[0]?.email;
+            const payerName = paidBy === 'TENANT'
+              ? `${policy.tenant?.firstName || ''} ${policy.tenant?.paternalLastName || ''} ${policy.tenant?.maternalLastName || ''}`.trim()
+              : policy.landlords?.[0] ? `${policy.landlords[0].firstName || ''} ${policy.landlords[0].paternalLastName || ''} ${policy.landlords[0].maternalLastName || ''}`.trim() : undefined;
+
+            if (payerEmail) {
+              await sendPaymentCompletedEmail({
+                email: payerEmail,
+                payerName: payerName || undefined,
+                policyNumber: policy.policyNumber,
+                paymentType: typeDescription,
+                amount,
+                paidAt: new Date(),
+              });
+            }
+          }
+
+          // Check if all payments are complete
+          const allPayments = await prisma.payment.findMany({
+            where: { policyId },
+          });
+
+          const allComplete = allPayments.length > 0 &&
+            allPayments.every(p => p.status === PaymentStatus.COMPLETED);
+
+          if (allComplete) {
+            await logPolicyActivity({
+              policyId,
+              action: 'all_payments_completed',
+              description: 'Todos los pagos de la póliza han sido completados',
+              performedById: 'system',
+              details: { totalPayments: allPayments.length },
+            });
+
+            const totalAmount = allPayments.reduce((sum, p) => sum + p.amount, 0);
+            const admins = await getActiveAdmins();
+
+            for (const admin of admins) {
+              if (!admin.email) continue;
+              await sendAllPaymentsCompletedEmail({
+                adminEmail: admin.email,
+                policyNumber: policy?.policyNumber || policyId,
+                totalPayments: allPayments.length,
+                totalAmount,
+              });
+            }
+          }
+        }
+
+        console.log(`Webhook: SPEI payment ${paymentId} completed`);
+        break;
+      }
 
       default:
         console.log(`Unhandled webhook event type: ${event.type}`);

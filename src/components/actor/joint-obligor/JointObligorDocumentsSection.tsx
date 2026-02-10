@@ -11,6 +11,7 @@ import { useDocumentOperations } from '@/hooks/useDocumentOperations';
 import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
 import { documentCategoryLabels } from '@/lib/constants/documentCategories';
+import { DocumentProgressBar } from '@/components/actor/shared/DocumentProgressBar';
 
 interface JointObligorDocumentsSectionProps {
   obligorId?: string;
@@ -181,27 +182,13 @@ export default function JointObligorDocumentsSection({
       </Alert>
 
       {/* Progress */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Progreso de Documentos</span>
-            <span className="text-sm text-muted-foreground">
-              {uploadedRequiredCount} de {requiredDocsCount} documentos de esta sección
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-green-500 h-2 rounded-full transition-all"
-              style={{ width: `${requiredDocsCount > 0 ? (uploadedRequiredCount / requiredDocsCount) * 100 : 0}%` }}
-            />
-          </div>
-          {guaranteeDocuments.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-2">
-              + {guaranteeDocuments.length} documento(s) de garantía previamente cargado(s)
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <DocumentProgressBar
+        uploadedCount={uploadedRequiredCount}
+        requiredCount={requiredDocsCount}
+        extraMessage={guaranteeDocuments.length > 0
+          ? `+ ${guaranteeDocuments.length} documento(s) de garantía previamente cargado(s)`
+          : undefined}
+      />
 
       {/* Previously Uploaded Guarantee Documents */}
       {guaranteeDocuments.length > 0 && (

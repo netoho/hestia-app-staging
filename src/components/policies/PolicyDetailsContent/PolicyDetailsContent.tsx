@@ -64,6 +64,8 @@ const PaymentsTab = dynamic(() => import('@/components/policies/payments/Payment
   ssr: false
 });
 
+const VALID_TABS = ['overview', 'landlord', 'tenant', 'guarantors', 'payments', 'documents', 'timeline'];
+
 interface PolicyDetailsContentProps {
   policy: any;
   policyId: string;
@@ -75,6 +77,7 @@ interface PolicyDetailsContentProps {
   };
   isStaffOrAdmin: boolean;
   onRefresh: () => Promise<void>;
+  initialTab?: string;
 }
 
 export default function PolicyDetailsContent({
@@ -82,9 +85,12 @@ export default function PolicyDetailsContent({
   policyId,
   permissions,
   isStaffOrAdmin,
-  onRefresh
+  onRefresh,
+  initialTab,
 }: PolicyDetailsContentProps) {
-  const [currentTab, setCurrentTab] = useState('overview');
+  const [currentTab, setCurrentTab] = useState(
+    initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'overview'
+  );
   const [tabLoading, setTabLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -146,10 +152,17 @@ export default function PolicyDetailsContent({
   ).length ?? 0;
   const totalPayments = policy.payments?.length ?? 0;
 
-  // Handle tab change with skeleton loading
+  // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {
     setTabLoading(true);
     setCurrentTab(value);
+    const url = new URL(window.location.href);
+    if (value === 'overview') {
+      url.searchParams.delete('tab');
+    } else {
+      url.searchParams.set('tab', value);
+    }
+    window.history.replaceState(null, '', url.toString());
     // Small delay to show skeleton transition
     setTimeout(() => setTabLoading(false), 150);
   };
@@ -167,13 +180,17 @@ export default function PolicyDetailsContent({
     }
   };
 
-  // Handle actor tabs refresh (policy + documents)
+  // Handle actor tabs refresh (policy + documents + actor caches)
   const handleActorRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Invalidate document queries for all actors
-      await utils.document.listDocuments.invalidate();
-      // Also refresh policy data
+      // Invalidate actor and document caches
+      await Promise.all([
+        utils.document.listDocuments.invalidate(),
+        utils.actor.listByPolicy.invalidate({ policyId }),
+        utils.actor.getById.invalidate(),
+      ]);
+      // Refresh policy data
       await onRefresh();
     } finally {
       setIsRefreshing(false);
@@ -198,7 +215,6 @@ export default function PolicyDetailsContent({
           policyNumber={policy.policyNumber}
           propertyAddress={policy.propertyAddress}
           status={policy.status}
-          investigationVerdict={policy.investigation?.verdict}
           policyId={policyId}
           permissions={permissions}
           isStaffOrAdmin={isStaffOrAdmin}

@@ -14,7 +14,7 @@ import { t } from '@/lib/i18n';
 import { trpc } from '@/lib/trpc/client';
 import { AvatarUploader } from '@/components/user/AvatarUploader';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
-import { isPasswordValid } from '@/lib/validation/password';
+import { isPasswordValid } from '@/lib/validations/password';
 
 export default function OnboardingPage() {
   const params = useParams();

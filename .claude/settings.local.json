@@ -82,7 +82,9 @@
       "Bash(bunx next lint:*)",
       "Skill(session-update)",
       "Bash(brew --prefix:*)",
-      "Bash(/opt/homebrew/bin/gh pr view:*)"
+      "Bash(/opt/homebrew/bin/gh pr view:*)",
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app log --oneline --all -- \"src/lib/services/fileUploadService.ts\")",
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app status --short)"
     ],
     "deny": [],
     "ask": []

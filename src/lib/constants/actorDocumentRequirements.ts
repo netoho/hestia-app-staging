@@ -45,7 +45,6 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.TAX_STATUS_CERTIFICATE, required: false },
       { category: DocumentCategory.PROPERTY_DEED, required: true },
       { category: DocumentCategory.PROPERTY_TAX_STATEMENT, required: true },
-      { category: DocumentCategory.BANK_STATEMENT, required: false },
     ],
     company: [
       { category: DocumentCategory.COMPANY_CONSTITUTION, required: true },
@@ -53,7 +52,6 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.TAX_STATUS_CERTIFICATE, required: true },
       { category: DocumentCategory.PROPERTY_DEED, required: true },
       { category: DocumentCategory.PROPERTY_TAX_STATEMENT, required: true },
-      { category: DocumentCategory.BANK_STATEMENT, required: false },
     ],
   },
   aval: {

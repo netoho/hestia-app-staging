@@ -20,8 +20,6 @@ const EXPECTED_ENUMS = [
   'NationalityType',
   'PolicyStatus',
   'DocumentCategory',
-  'InvestigationVerdict',
-  'RiskLevel',
   'PaymentStatus',
   'PaymentMethod',
   'PaymentType',

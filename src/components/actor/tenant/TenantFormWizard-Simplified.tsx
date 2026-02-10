@@ -140,6 +140,7 @@ export default function TenantFormWizardSimplified({
               tenantType={tenantType}
               initialData={initialData}
               onSave={(data) => handleTabSave('personal', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -147,6 +148,7 @@ export default function TenantFormWizardSimplified({
             <TenantEmploymentTabRHF
               initialData={initialData}
               onSave={(data) => handleTabSave('employment', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -154,6 +156,7 @@ export default function TenantFormWizardSimplified({
             <TenantRentalHistoryTabRHF
               initialData={initialData}
               onSave={(data) => handleTabSave('rental', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -162,6 +165,7 @@ export default function TenantFormWizardSimplified({
               tenantType={tenantType}
               initialData={initialData}
               onSave={(data) => handleTabSave('references', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -219,7 +223,7 @@ export default function TenantFormWizardSimplified({
             }}
             disabled={updateMutation.isPending}
           >
-            {updateMutation.isPending ? 'Guardando...' : 'Guardar y Continuar'}
+            {updateMutation.isPending ? 'Guardando...' : wizard.activeTab === 'documents' ? 'Enviar Información' : 'Guardar y Continuar'}
           </Button>
         </div>
       </div>

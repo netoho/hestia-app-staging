@@ -144,6 +144,7 @@ export default function JointObligorFormWizardSimplified({
               jointObligorType={jointObligorType}
               initialData={initialData}
               onSave={(data) => handleTabSave('personal', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -151,6 +152,7 @@ export default function JointObligorFormWizardSimplified({
             <JointObligorEmploymentTabRHF
               initialData={initialData}
               onSave={(data) => handleTabSave('employment', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -162,6 +164,7 @@ export default function JointObligorFormWizardSimplified({
               token={token}
               jointObligorId={initialData?.id}
               initialDocuments={initialData?.documents || []}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -170,6 +173,7 @@ export default function JointObligorFormWizardSimplified({
               jointObligorType={jointObligorType}
               initialData={initialData}
               onSave={(data) => handleTabSave('references', data)}
+              disabled={updateMutation.isPending}
             />
           )}
 
@@ -228,7 +232,7 @@ export default function JointObligorFormWizardSimplified({
             }}
             disabled={updateMutation.isPending}
           >
-            {updateMutation.isPending ? 'Guardando...' : 'Guardar y Continuar'}
+            {updateMutation.isPending ? 'Guardando...' : wizard.activeTab === 'documents' ? 'Enviar Información' : 'Guardar y Continuar'}
           </Button>
         </div>
       </div>

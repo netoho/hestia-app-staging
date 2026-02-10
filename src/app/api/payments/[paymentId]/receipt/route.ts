@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
 import prisma from '@/lib/prisma';
-import { getStorageProvider } from '@/lib/storage';
+import { documentService } from '@/lib/services/documentService';
 import { createSafeS3Key } from '@/lib/utils/filename';
 import { nanoid } from 'nanoid';
 
@@ -17,7 +17,7 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 /**
  * POST /api/payments/[paymentId]/receipt
- * Upload a receipt file for a payment (admin/staff only)
+ * Get presigned URL for uploading a receipt (admin/staff only)
  */
 export async function POST(
   request: NextRequest,
@@ -32,7 +32,17 @@ export async function POST(
 
     const { paymentId } = await params;
 
-    // 2. Get payment with policy info
+    // 2. Parse JSON body
+    const { fileName, contentType, fileSize } = await request.json();
+
+    if (!fileName || !contentType || !fileSize) {
+      return NextResponse.json(
+        { error: 'Missing required fields: fileName, contentType, fileSize' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Get payment with policy info
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
       include: { policy: { select: { policyNumber: true } } },
@@ -42,16 +52,8 @@ export async function POST(
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
     }
 
-    // 3. Parse FormData
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-
     // 4. Validate file type
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    if (!ALLOWED_MIME_TYPES.includes(contentType)) {
       return NextResponse.json(
         { error: 'Invalid file type. Allowed: PDF, PNG, JPG' },
         { status: 400 }
@@ -59,52 +61,95 @@ export async function POST(
     }
 
     // 5. Validate file size
-    if (file.size > MAX_FILE_SIZE) {
+    if (fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: 'File too large. Maximum size: 20MB' },
         { status: 400 }
       );
     }
 
-    // 6. Convert to Buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    // 7. Generate S3 path
+    // 6. Generate S3 path
     const uniqueId = nanoid(8);
-    const safeFileName = createSafeS3Key(file.name);
+    const safeFileName = createSafeS3Key(fileName);
     const s3Key = `payments/${payment.policy.policyNumber}/${paymentId}/${uniqueId}-${safeFileName}`;
 
-    // 8. Upload to S3
-    const storage = getStorageProvider();
-    await storage.privateUpload({
-      path: s3Key,
-      file: {
-        buffer,
-        originalName: file.name,
-        mimeType: file.type,
-        size: file.size,
-      },
+    // 7. Get presigned upload URL
+    const uploadUrl = await documentService.getUploadUrl(s3Key, 300);
+
+    return NextResponse.json({
+      uploadUrl,
+      s3Key,
+      fileName,
+      expiresIn: 300,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error getting upload URL';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * PUT /api/payments/[paymentId]/receipt
+ * Confirm receipt upload completed and update payment record (admin/staff only)
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ paymentId: string }> }
+) {
+  try {
+    // 1. Auth check (admin/staff only)
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !['ADMIN', 'STAFF'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { paymentId } = await params;
+
+    // 2. Parse JSON body
+    const { s3Key, fileName } = await request.json();
+
+    if (!s3Key || !fileName) {
+      return NextResponse.json(
+        { error: 'Missing required fields: s3Key, fileName' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Verify payment exists
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
     });
 
-    // 9. Update payment record
+    if (!payment) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+    }
+
+    // 4. Verify file exists in S3
+    const exists = await documentService.fileExists(s3Key);
+    if (!exists) {
+      return NextResponse.json(
+        { error: 'File not found in storage. Upload may have failed.' },
+        { status: 400 }
+      );
+    }
+
+    // 5. Update payment record
     await prisma.payment.update({
       where: { id: paymentId },
       data: {
         receiptS3Key: s3Key,
-        receiptFileName: file.name,
+        receiptFileName: fileName,
       },
     });
 
     return NextResponse.json({
       success: true,
       s3Key,
-      fileName: file.name,
+      fileName,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Error uploading receipt' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error confirming upload';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -171,24 +216,19 @@ export async function GET(
       }
     }
 
-    // 4. Generate signed URL
-    const storage = getStorageProvider();
-    const url = await storage.getSignedUrl({
-      path: payment.receiptS3Key,
-      action: 'read',
-      expiresInSeconds: 300,
-      responseDisposition: 'attachment',
-      fileName: payment.receiptFileName || undefined,
-    });
+    // 4. Generate signed URL using documentService
+    const url = await documentService.getDownloadUrl(
+      payment.receiptS3Key,
+      payment.receiptFileName || undefined,
+      300
+    );
 
     return NextResponse.json({
       url,
       fileName: payment.receiptFileName,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Error getting receipt' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error getting receipt';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

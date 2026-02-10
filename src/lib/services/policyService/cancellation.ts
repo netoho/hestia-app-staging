@@ -31,11 +31,11 @@ export async function cancelPolicy(
     return { success: false, error: 'Policy not found' };
   }
 
-  // Cannot cancel already cancelled or expired policies
-  if (policy.status === 'CANCELLED' || policy.status === 'EXPIRED') {
+  // Cannot cancel already cancelled policies
+  if (policy.status === 'CANCELLED') {
     return {
       success: false,
-      error: `Cannot cancel a policy with status ${policy.status}`,
+      error: 'Cannot cancel a policy that is already cancelled',
     };
   }
 
