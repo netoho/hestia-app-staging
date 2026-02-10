@@ -1168,6 +1168,12 @@ class PaymentService extends BaseService {
     iva: number | null;
     policyNumber: string;
     isManual: boolean;
+    hasSpei: boolean;
+    speiClabe: string | null;
+    speiBankName: string | null;
+    speiReference: string | null;
+    speiFundedAmount: number | null;
+    speiHostedUrl: string | null;
   } | null> {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
@@ -1191,6 +1197,188 @@ class PaymentService extends BaseService {
       iva: payment.iva,
       policyNumber: payment.policy.policyNumber,
       isManual: payment.isManual || false,
+      hasSpei: !!payment.speiPaymentIntentId,
+      speiClabe: payment.speiClabe,
+      speiBankName: payment.speiBankName,
+      speiReference: payment.speiReference,
+      speiFundedAmount: payment.speiFundedAmount,
+      speiHostedUrl: payment.speiHostedUrl,
+    };
+  }
+
+  // ============================================
+  // SPEI (Bank Transfer) METHODS
+  // ============================================
+
+  /**
+   * Create a SPEI (bank transfer) PaymentIntent for a payment.
+   * Creates a Stripe Customer, confirms a PaymentIntent with customer_balance,
+   * and extracts the virtual CLABE details for the payer.
+   */
+  async createSpeiPaymentIntent(paymentId: string): Promise<{
+    clabe: string;
+    bankName: string;
+    reference: string;
+    amount: number;
+    hostedUrl: string | null;
+  }> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        policy: {
+          select: { policyNumber: true, tenant: { select: { email: true, firstName: true } } },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Payment is not pending', 400, { status: payment.status });
+    }
+
+    if (payment.isManual) {
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'Cannot create SPEI for manual payments', 400);
+    }
+
+    if (payment.speiPaymentIntentId) {
+      // Already has SPEI — return existing details
+      if (payment.speiClabe && payment.speiBankName && payment.speiReference) {
+        return {
+          clabe: payment.speiClabe,
+          bankName: payment.speiBankName,
+          reference: payment.speiReference,
+          amount: payment.amount,
+          hostedUrl: payment.speiHostedUrl,
+        };
+      }
+      throw new ServiceError(ErrorCode.VALIDATION_ERROR, 'SPEI already created but details missing', 400);
+    }
+
+    const stripeInstance = await getStripe();
+
+    // Create Stripe Customer for this payment
+    const customer = await stripeInstance.customers.create({
+      email: payment.policy.tenant?.email || undefined,
+      name: payment.policy.tenant?.firstName || undefined,
+      metadata: {
+        paymentId: payment.id,
+        policyId: payment.policyId,
+        policyNumber: payment.policy.policyNumber,
+      },
+    });
+
+    // Create and confirm PaymentIntent with customer_balance (bank transfer)
+    const amountInCentavos = Math.round(payment.amount * 100);
+
+    const paymentIntent = await stripeInstance.paymentIntents.create({
+      amount: amountInCentavos,
+      currency: 'mxn',
+      customer: customer.id,
+      payment_method_types: ['customer_balance'],
+      payment_method_data: {
+        type: 'customer_balance',
+      } as any,
+      payment_method_options: {
+        customer_balance: {
+          funding_type: 'bank_transfer',
+          bank_transfer: {
+            type: 'mx_bank_transfer',
+          },
+        },
+      } as any,
+      confirm: true,
+      metadata: {
+        paymentId: payment.id,
+        policyId: payment.policyId,
+        paymentType: payment.type,
+        paidBy: payment.paidBy,
+        isSpei: 'true',
+      },
+    });
+
+    // Extract bank transfer instructions from next_action
+    const instructions = paymentIntent.next_action?.display_bank_transfer_instructions;
+    if (!instructions) {
+      throw new ServiceError(
+        ErrorCode.STRIPE_API_ERROR,
+        'Failed to get bank transfer instructions from Stripe',
+        500,
+        { paymentIntentId: paymentIntent.id, status: paymentIntent.status }
+      );
+    }
+
+    // Extract CLABE from financial_addresses
+    // Stripe structure: financial_addresses[0].spei.clabe / .bank_name
+    const financialAddress = instructions.financial_addresses?.[0];
+    const clabe = (financialAddress as any)?.spei?.clabe || '';
+    const bankName = (financialAddress as any)?.spei?.bank_name || 'Citibanamex';
+    const reference = instructions.reference || '';
+    const hostedUrl = instructions.hosted_instructions_url || null;
+
+    // Update payment record with SPEI details
+    await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        speiPaymentIntentId: paymentIntent.id,
+        stripeCustomerId: customer.id,
+        speiClabe: clabe,
+        speiBankName: bankName,
+        speiReference: reference,
+        speiHostedUrl: hostedUrl,
+        speiFundedAmount: 0,
+      },
+    });
+
+    return {
+      clabe,
+      bankName,
+      reference,
+      amount: payment.amount,
+      hostedUrl,
+    };
+  }
+
+  /**
+   * Get SPEI details for a payment (public-safe data)
+   */
+  async getSpeiDetails(paymentId: string): Promise<{
+    clabe: string;
+    bankName: string;
+    reference: string;
+    amount: number;
+    fundedAmount: number;
+    hostedUrl: string | null;
+    status: PaymentStatus;
+  } | null> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: {
+        speiClabe: true,
+        speiBankName: true,
+        speiReference: true,
+        speiHostedUrl: true,
+        speiFundedAmount: true,
+        amount: true,
+        status: true,
+        speiPaymentIntentId: true,
+      },
+    });
+
+    if (!payment || !payment.speiPaymentIntentId) {
+      return null;
+    }
+
+    return {
+      clabe: payment.speiClabe || '',
+      bankName: payment.speiBankName || '',
+      reference: payment.speiReference || '',
+      amount: payment.amount,
+      fundedAmount: payment.speiFundedAmount || 0,
+      hostedUrl: payment.speiHostedUrl,
+      status: payment.status,
     };
   }
 
@@ -1402,6 +1590,8 @@ export const getPaymentById = paymentService.getPaymentById.bind(paymentService)
 export const editPaymentAmount = paymentService.editPaymentAmount.bind(paymentService);
 export const getOrCreateCheckoutSession = paymentService.getOrCreateCheckoutSession.bind(paymentService);
 export const getPublicPaymentInfo = paymentService.getPublicPaymentInfo.bind(paymentService);
+export const createSpeiPaymentIntent = paymentService.createSpeiPaymentIntent.bind(paymentService);
+export const getSpeiDetails = paymentService.getSpeiDetails.bind(paymentService);
 
 // Re-export class for type usage
 export { PaymentService };
