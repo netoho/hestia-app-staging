@@ -1114,6 +1114,14 @@ model Payment {
   checkoutUrl       String? // Stripe checkout URL for payment link
   checkoutUrlExpiry DateTime? // Checkout URL expiration (24h from creation)
 
+  // SPEI (Bank Transfer) Fields
+  speiPaymentIntentId String?  @unique // Stripe PaymentIntent ID for SPEI
+  speiClabe           String?          // Virtual CLABE for bank transfers
+  speiBankName        String?          // Bank name (e.g. Citibanamex)
+  speiReference       String?          // Transfer reference number
+  speiFundedAmount    Float?           // Amount received so far (partial payments)
+  speiHostedUrl       String?          // Stripe-hosted instructions URL
+
   // Manual Payment Fields
   isManual        Boolean @default(false)
   reference       String?
