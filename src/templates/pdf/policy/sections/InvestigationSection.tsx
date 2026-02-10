@@ -1,20 +1,20 @@
 import { View, Text } from '@react-pdf/renderer';
-import { styles, pdfColors, SectionTitle, DataRow } from '../../components';
-import type { PDFPolicyData } from '@/lib/pdf/types';
+import { styles, SectionTitle, DataRow } from '../../components';
+import type { PDFPolicyData, PDFActorInvestigation } from '@/lib/pdf/types';
 
 interface InvestigationSectionProps {
   data: PDFPolicyData;
 }
 
 export function InvestigationSection({ data }: InvestigationSectionProps) {
-  const investigation = data.investigation;
+  const investigations = data.actorInvestigations;
 
-  if (!investigation || !investigation.verdict) {
+  if (!investigations || investigations.length === 0) {
     return (
       <View style={styles.section} break>
-        <SectionTitle title="Investigación" />
+        <SectionTitle title="Investigaciones" />
         <View style={styles.emptyState}>
-          <Text>Investigación pendiente</Text>
+          <Text>Sin investigaciones</Text>
         </View>
       </View>
     );
@@ -22,47 +22,75 @@ export function InvestigationSection({ data }: InvestigationSectionProps) {
 
   return (
     <View style={styles.section} break>
-      <SectionTitle title="Investigación" />
+      <SectionTitle title="Investigaciones" />
       <View style={styles.sectionContent}>
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Resultado de la Investigación</Text>
-            <View style={[styles.badge, getVerdictBadgeStyle(investigation.verdict)]}>
-              <Text>{investigation.verdictLabel}</Text>
-            </View>
-          </View>
-
-          <View style={styles.twoColumn}>
-            <View style={styles.column}>
-              <DataRow label="Veredicto" value={investigation.verdictLabel} />
-              <DataRow label="Nivel de Riesgo" value={investigation.riskLevelLabel} />
-            </View>
-            <View style={styles.column}>
-              <DataRow label="Puntuación" value={investigation.score ? String(investigation.score) : null} />
-            </View>
-          </View>
-
-          {investigation.notes && (
-            <View style={[styles.highlightBox, styles.mt10]}>
-              <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Notas</Text>
-              <Text style={{ fontSize: 8 }}>{investigation.notes}</Text>
-            </View>
-          )}
-        </View>
+        {investigations.map((inv, index) => (
+          <InvestigationCard key={index} investigation={inv} />
+        ))}
       </View>
     </View>
   );
 }
 
-function getVerdictBadgeStyle(verdict: string | null) {
-  switch (verdict) {
+function InvestigationCard({ investigation }: { investigation: PDFActorInvestigation }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>
+          {investigation.actorTypeLabel}: {investigation.actorName}
+        </Text>
+        <View style={[styles.badge, getStatusBadgeStyle(investigation.status)]}>
+          <Text>{investigation.statusLabel}</Text>
+        </View>
+      </View>
+
+      <View style={styles.twoColumn}>
+        <View style={styles.column}>
+          <DataRow label="Tipo de Actor" value={investigation.actorTypeLabel} />
+          <DataRow label="Estado" value={investigation.statusLabel} />
+          {investigation.approvedByType && (
+            <DataRow label="Aprobado por" value={investigation.approvedByType} />
+          )}
+        </View>
+        <View style={styles.column}>
+          {investigation.approvedAt && (
+            <DataRow label="Fecha de Aprobación" value={investigation.approvedAt} />
+          )}
+          <DataRow label="Documentos" value={String(investigation.documentsCount)} />
+        </View>
+      </View>
+
+      {investigation.findings && (
+        <View style={[styles.highlightBox, styles.mt10]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Hallazgos</Text>
+          <Text style={{ fontSize: 8 }}>{investigation.findings}</Text>
+        </View>
+      )}
+
+      {investigation.approvalNotes && (
+        <View style={[styles.highlightBox, styles.mt10]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Notas de Aprobación</Text>
+          <Text style={{ fontSize: 8 }}>{investigation.approvalNotes}</Text>
+        </View>
+      )}
+
+      {investigation.rejectionReason && (
+        <View style={[styles.highlightBox, styles.mt10]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Motivo de Rechazo</Text>
+          <Text style={{ fontSize: 8 }}>{investigation.rejectionReason}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function getStatusBadgeStyle(status: string) {
+  switch (status) {
     case 'APPROVED':
       return styles.badgeSuccess;
     case 'REJECTED':
       return styles.badgeDanger;
-    case 'HIGH_RISK':
-      return styles.badgeDanger;
-    case 'CONDITIONAL':
+    case 'ARCHIVED':
       return styles.badgeWarning;
     default:
       return styles.badgePrimary;

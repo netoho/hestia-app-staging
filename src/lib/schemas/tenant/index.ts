@@ -124,16 +124,16 @@ export const tenantRentalHistoryTabSchema = z.object({
 });
 
 /**
- * Tenant-specific reference arrays (1-5 references, dynamic)
+ * Tenant-specific reference arrays (3-5 references, dynamic)
  */
 export const tenantPersonalReferencesArraySchema = z
   .array(personalReferenceSchema)
-  .min(1, 'Al menos una referencia personal es requerida')
+  .min(3, 'Se requieren al menos 3 referencias personales')
   .max(5, 'Máximo 5 referencias personales permitidas');
 
 export const tenantCommercialReferencesArraySchema = z
   .array(commercialReferenceSchema)
-  .min(1, 'Al menos una referencia comercial es requerida')
+  .min(3, 'Se requieren al menos 3 referencias comerciales')
   .max(5, 'Máximo 5 referencias comerciales permitidas');
 
 /**
@@ -253,21 +253,21 @@ export function getTenantTabSchema(
       default:
         throw new Error(`Invalid tab name for company tenant: ${tabName}`);
     }
-  } else {
-    switch (tabName) {
-      case 'personal':
-        return tenantPersonalTabIndividualSchema;
-      case 'employment':
-        return tenantEmploymentTabSchema;
-      case 'rental':
-        return tenantRentalHistoryTabSchema;
-      case 'references':
-        return tenantReferencesTabIndividualSchema;
-      case 'documents':
-        return tenantDocumentsTabSchema;
-      default:
-        throw new Error(`Invalid tab name for individual tenant: ${tabName}`);
-    }
+  }
+
+  switch (tabName) {
+    case 'personal':
+      return tenantPersonalTabIndividualSchema;
+    case 'employment':
+      return tenantEmploymentTabSchema;
+    case 'rental':
+      return tenantRentalHistoryTabSchema;
+    case 'references':
+      return tenantReferencesTabIndividualSchema;
+    case 'documents':
+      return tenantDocumentsTabSchema;
+    default:
+      throw new Error(`Invalid tab name for individual tenant: ${tabName}`);
   }
 }
 

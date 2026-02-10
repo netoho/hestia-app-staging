@@ -4,6 +4,7 @@ import { use, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle2, AlertCircle, Home, DollarSign, Calendar } from 'lucide-react';
+import { formatAddress } from "@/lib/schemas/shared/address.schema";
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
 import JointObligorFormWizardSimplified from "@/components/actor/joint-obligor/JointObligorFormWizard-Simplified";
@@ -103,7 +104,7 @@ export default function JointObligorPortalPage({
                     <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Propiedad</p>
-                      <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                      <p className="text-sm font-medium" style={{ color: '#173459' }}>{formatAddress(policy?.propertyDetails?.propertyAddressDetails)}</p>
                     </div>
                   </div>
                 </div>
@@ -165,16 +166,7 @@ export default function JointObligorPortalPage({
                   <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Propiedad</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <DollarSign className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
-                      ${policy.rentAmount?.toLocaleString('es-MX')} MXN
-                    </p>
+                    <p className="text-sm font-medium" style={{ color: '#173459' }}>{formatAddress(policy?.propertyDetails?.propertyAddressDetails)}</p>
                   </div>
                 </div>
               </div>

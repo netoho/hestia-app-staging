@@ -151,13 +151,18 @@ export interface PDFProperty {
   contractSigningDate: string | null;
 }
 
-export interface PDFInvestigation {
-  verdict: string | null;
-  verdictLabel: string | null;
-  riskLevel: string | null;
-  riskLevelLabel: string | null;
-  score: number | null;
-  notes: string | null;
+export interface PDFActorInvestigation {
+  actorName: string;
+  actorType: string;
+  actorTypeLabel: string;
+  findings: string | null;
+  status: string;
+  statusLabel: string;
+  approvedByType: string | null;
+  approvedAt: string | null;
+  approvalNotes: string | null;
+  rejectionReason: string | null;
+  documentsCount: number;
 }
 
 export interface PDFPayment {
@@ -222,7 +227,7 @@ export interface PDFPolicyData {
   tenant: PDFTenant | null;
   jointObligors: PDFJointObligor[];
   avals: PDFAval[];
-  investigation: PDFInvestigation | null;
+  actorInvestigations: PDFActorInvestigation[];
   payments: PDFPayment[];
   documents: PDFDocument[];
   activities: PDFActivity[];

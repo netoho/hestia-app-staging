@@ -894,3 +894,185 @@ ${data.actionUrl ? `${data.actionText || 'Ver más'}: ${data.actionUrl}` : ''}
     return false;
   }
 };
+
+// ====================================
+// Investigation Emails
+// ====================================
+
+export interface InvestigationSubmittedData {
+  email: string;
+  policyNumber: string;
+  propertyAddress: string;
+  actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
+  actorName: string;
+  submittedBy: string;
+  submittedAt: Date;
+  policyUrl: string;
+}
+
+export const sendInvestigationSubmittedEmail = async (data: InvestigationSubmittedData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { InvestigationSubmittedEmail } = await import('../../templates/email/react-email/InvestigationSubmittedEmail');
+
+    const html = await render(await InvestigationSubmittedEmail(data));
+    const subject = emailSubject(`Nueva Investigación - ${data.policyNumber}`);
+
+    const actorTypeNames: Record<string, string> = {
+      'TENANT': 'Inquilino',
+      'JOINT_OBLIGOR': 'Obligado Solidario',
+      'AVAL': 'Aval'
+    };
+
+    const text = `
+Nueva Investigación Enviada
+
+Se ha enviado una nueva investigación para aprobación:
+
+Actor: ${data.actorName} (${actorTypeNames[data.actorType]})
+Propiedad: ${data.propertyAddress}
+Enviada por: ${data.submittedBy}
+Fecha: ${formatDateTimeLong(data.submittedAt)}
+
+Se ha notificado al broker y arrendador para su aprobación.
+
+Ver póliza: ${data.policyUrl}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text,
+    });
+  } catch (error) {
+    console.error('Failed to send investigation submitted email:', error);
+    return false;
+  }
+};
+
+export interface InvestigationApprovalRequestData {
+  email: string;
+  recipientName?: string;
+  recipientType: 'BROKER' | 'LANDLORD';
+  policyNumber: string;
+  propertyAddress: string;
+  actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
+  actorName: string;
+  approvalUrl: string;
+  expiryDate: Date;
+}
+
+export const sendInvestigationApprovalRequestEmail = async (data: InvestigationApprovalRequestData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { InvestigationApprovalRequestEmail } = await import('../../templates/email/react-email/InvestigationApprovalRequestEmail');
+
+    const html = await render(await InvestigationApprovalRequestEmail(data));
+    const subject = emailSubject(`Aprobación de Investigación - ${data.policyNumber}`);
+
+    const actorTypeNames: Record<string, string> = {
+      'TENANT': 'Inquilino',
+      'JOINT_OBLIGOR': 'Obligado Solidario',
+      'AVAL': 'Aval'
+    };
+
+    const text = `
+Aprobación de Investigación Requerida
+
+Hola${data.recipientName ? ` ${data.recipientName}` : ''},
+
+Se ha completado la investigación de ${data.actorName} (${actorTypeNames[data.actorType]}) y requiere tu aprobación.
+
+Póliza: ${data.policyNumber}
+Propiedad: ${data.propertyAddress}
+
+Por favor revisa la investigación y decide si aprobar o rechazar:
+${data.approvalUrl}
+
+Este enlace expira el ${formatDateLong(data.expiryDate)}.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text,
+    });
+  } catch (error) {
+    console.error('Failed to send investigation approval request email:', error);
+    return false;
+  }
+};
+
+export interface InvestigationResultData {
+  email: string;
+  recipientName?: string;
+  recipientType: 'ADMIN' | 'BROKER' | 'LANDLORD';
+  policyNumber: string;
+  propertyAddress: string;
+  actorType: 'TENANT' | 'JOINT_OBLIGOR' | 'AVAL';
+  actorName: string;
+  result: 'APPROVED' | 'REJECTED';
+  approvedBy: string;
+  approvedByType: 'BROKER' | 'LANDLORD';
+  approvedAt: Date;
+  notes?: string;
+  rejectionReason?: string;
+  policyUrl?: string;
+}
+
+export const sendInvestigationResultEmail = async (data: InvestigationResultData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { InvestigationResultEmail } = await import('../../templates/email/react-email/InvestigationResultEmail');
+
+    const html = await render(await InvestigationResultEmail(data));
+    const resultText = data.result === 'APPROVED' ? 'Aprobada' : 'Rechazada';
+    const subject = emailSubject(`Investigación ${resultText} - ${data.policyNumber}`);
+
+    const actorTypeNames: Record<string, string> = {
+      'TENANT': 'Inquilino',
+      'JOINT_OBLIGOR': 'Obligado Solidario',
+      'AVAL': 'Aval'
+    };
+
+    const approverTypeNames: Record<string, string> = {
+      'BROKER': 'el Broker',
+      'LANDLORD': 'el Arrendador'
+    };
+
+    const text = `
+Investigación ${resultText}
+
+Hola${data.recipientName ? ` ${data.recipientName}` : ''},
+
+La investigación de ${data.actorName} (${actorTypeNames[data.actorType]}) ha sido ${resultText.toLowerCase()} por ${approverTypeNames[data.approvedByType]}.
+
+Póliza: ${data.policyNumber}
+Propiedad: ${data.propertyAddress}
+Fecha: ${formatDateTimeLong(data.approvedAt)}
+
+${data.result === 'REJECTED' && data.rejectionReason ? `Motivo del rechazo: ${data.rejectionReason}` : ''}
+${data.result === 'APPROVED' && data.notes ? `Notas: ${data.notes}` : ''}
+
+${data.policyUrl ? `Ver póliza: ${data.policyUrl}` : ''}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text,
+    });
+  } catch (error) {
+    console.error('Failed to send investigation result email:', error);
+    return false;
+  }
+};

@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Mail, Phone, Edit, Send, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Mail, Phone, Edit, Send, RefreshCw, CheckCircle2, FileSearch } from 'lucide-react';
 import { CompletionBadge } from '@/components/shared/CompletionBadge';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -14,6 +14,8 @@ import { formatFullName } from '@/lib/utils/names';
 import { getActorTitle, getActorIcon, calculateActorProgress } from '@/lib/utils/actor';
 import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
 import { formatCurrency } from '@/lib/utils/currency';
+import { trpc } from '@/lib/trpc/client';
+import { getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
 
 interface ActorCardProps {
   actor: any;
@@ -62,6 +64,31 @@ export default function ActorCard({
   });
 
   const progress = calculateActorProgress(actor);
+
+  // Query for existing investigations (only for non-landlords)
+  const investigationActorType = useMemo(() => {
+    switch (actorType) {
+      case 'tenant': return 'TENANT';
+      case 'jointObligor': return 'JOINT_OBLIGOR';
+      case 'aval': return 'AVAL';
+      default: return null;
+    }
+  }, [actorType]);
+
+  const { data: investigations } = trpc.investigation.getByActor.useQuery(
+    { actorType: investigationActorType as any, actorId: actor?.id || '' },
+    { enabled: !!actor?.id && !!investigationActorType }
+  );
+
+  const latestInvestigation = investigations?.[0];
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'default' as const;
+      case 'REJECTED': return 'destructive' as const;
+      default: return 'secondary' as const;
+    }
+  };
 
   const ActorIcon = getActorIcon(actorType);
 
@@ -140,6 +167,11 @@ export default function ActorCard({
             <div className="flex items-center gap-2 flex-wrap">
               {getVerificationBadge && getVerificationBadge(actor.verificationStatus || 'PENDING')}
               <CompletionBadge isComplete={actor.informationComplete} showIcon />
+              {latestInvestigation && (
+                <Badge variant={getStatusBadgeVariant(latestInvestigation.status)}>
+                  {getInvestigationStatusLabel(latestInvestigation.status as any)}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {!actor.informationComplete && onSendInvitation && (
@@ -192,6 +224,17 @@ export default function ActorCard({
                 >
                   <Edit className="h-4 w-4 mr-1" />
                   <span className="hidden sm:inline">Editar</span>
+                </Button>
+              )}
+              {actor.informationComplete && isStaffOrAdmin && actorType !== 'landlord' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push(`/dashboard/policies/${policyId}/investigation/${actorType}/${actor.id}/new`)}
+                  className="transition-all hover:scale-105"
+                >
+                  <FileSearch className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Investigar</span>
                 </Button>
               )}
             </div>

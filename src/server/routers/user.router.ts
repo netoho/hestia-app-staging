@@ -5,7 +5,7 @@ import {
 } from '@/server/trpc';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
+import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { v4 as uuidv4 } from 'uuid';
 import {
   throwNotFound,
@@ -250,13 +250,14 @@ export const userRouter = createTRPCRouter({
         prisma.policy.count({
           where: {
             createdById: ctx.userId,
-            status: { in: ['ACTIVE', 'CONTRACT_SIGNED'] },
+            status: 'APPROVED',
+            activatedAt: { not: null },
           },
         }),
         prisma.policy.count({
           where: {
             createdById: ctx.userId,
-            status: { in: ['COLLECTING_INFO', 'UNDER_INVESTIGATION', 'PENDING_APPROVAL'] },
+            status: { in: ['COLLECTING_INFO', 'PENDING_APPROVAL'] },
           },
         }),
       ]);

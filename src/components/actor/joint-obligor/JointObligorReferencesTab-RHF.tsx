@@ -134,7 +134,7 @@ export default function JointObligorReferencesTabRHF({
                         name={`personalReferences.${index}.maternalLastName`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel required>Apellido Materno</FormLabel>
+                            <FormLabel optional>Apellido Materno</FormLabel>
                             <FormControl>
                               <Input {...field} value={field.value || ''} disabled={disabled} />
                             </FormControl>
