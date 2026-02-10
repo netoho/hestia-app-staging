@@ -12,6 +12,7 @@ import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { Document } from '@/types/documents';
 import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
 import { documentCategoryLabels } from '@/lib/constants/documentCategories';
+import { DocumentProgressBar } from '@/components/actor/shared/DocumentProgressBar';
 
 interface AvalDocumentsSectionProps {
   avalId?: string;
@@ -104,8 +105,16 @@ export default function AvalDocumentsSection({
     );
   }
 
+  const requiredDocsCount = documentRequirements.filter(d => d.required).length;
+  const uploadedRequiredCount = documentRequirements.filter(d => d.required && (documents[d.category]?.length ?? 0) > 0).length;
+
   return (
     <div className="space-y-4">
+      {/* Progress */}
+      <DocumentProgressBar
+        uploadedCount={uploadedRequiredCount}
+        requiredCount={requiredDocsCount}
+      />
 
       {/* Additional Info Card */}
       <Card>

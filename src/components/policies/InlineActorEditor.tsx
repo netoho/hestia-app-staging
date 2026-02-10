@@ -181,7 +181,7 @@ export default function InlineActorEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Editar {getActorTypeLabel(actorType)}</DialogTitle>
           <DialogDescription>
@@ -195,7 +195,7 @@ export default function InlineActorEditor({
           </div>
         ) : hasData ? (
           <>
-            <div className="mt-4">
+            <div className="flex-1 overflow-y-auto mt-4">
               {getFormWizard()}
             </div>
 

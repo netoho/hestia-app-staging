@@ -16,7 +16,7 @@ import { replaceTenantOnPolicy } from '@/lib/services/policyService/tenantReplac
 import { changeGuarantorType } from '@/lib/services/policyService/guarantorTypeChange';
 import { cancelPolicy } from '@/lib/services/policyService/cancellation';
 import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
-import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
+import { transitionPolicyStatus, activatePolicy, deactivatePolicy } from '@/lib/services/policyWorkflowService';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
 import { TRPCError } from '@trpc/server';
 import { sendIncompleteActorInfoNotification } from "@/lib/services/notificationService";
@@ -322,6 +322,54 @@ export const policyRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: result.error || 'Failed to update policy status',
+        });
+      }
+
+      return result;
+    }),
+
+  /**
+   * Activate a policy (set activatedAt and expiresAt)
+   */
+  activate: protectedProcedure
+    .input(z.object({ policyId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only staff and admins can activate policies',
+        });
+      }
+
+      const result = await activatePolicy(input.policyId, ctx.userId);
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to activate policy',
+        });
+      }
+
+      return result;
+    }),
+
+  /**
+   * Deactivate a policy (reset activatedAt)
+   */
+  deactivate: protectedProcedure
+    .input(z.object({ policyId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only staff and admins can deactivate policies',
+        });
+      }
+
+      const result = await deactivatePolicy(input.policyId, ctx.userId);
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Failed to deactivate policy',
         });
       }
 

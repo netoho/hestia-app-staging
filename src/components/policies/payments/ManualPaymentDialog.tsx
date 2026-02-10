@@ -25,6 +25,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
 import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { uploadToS3WithProgress } from '@/lib/documentManagement/upload';
 
 interface ManualPaymentDialogProps {
   open: boolean;
@@ -62,7 +63,6 @@ export function ManualPaymentDialog({
 
   const { toast } = useToast();
   const recordManualPayment = trpc.payment.recordManualPayment.useMutation();
-  const updatePaymentReceipt = trpc.payment.updatePaymentReceipt.useMutation();
   const cancelPayment = trpc.payment.cancelPayment.useMutation();
 
   const isSubmitting = recordManualPayment.isPending || isUploading;
@@ -124,30 +124,43 @@ export function ManualPaymentDialog({
         reference: reference || undefined,
       });
 
-      // 2. Upload the receipt file
+      // 2. Get presigned upload URL
       setIsUploading(true);
 
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('paymentId', payment.id);
-
-      const uploadResponse = await fetch(`/api/payments/${payment.id}/receipt`, {
+      const urlResponse = await fetch(`/api/payments/${payment.id}/receipt`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: selectedFile.name,
+          contentType: selectedFile.type,
+          fileSize: selectedFile.size,
+        }),
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error('Error al subir el comprobante');
+      if (!urlResponse.ok) {
+        const errorData = await urlResponse.json();
+        throw new Error(errorData.error || 'Error al obtener URL de carga');
       }
 
-      const { s3Key, fileName } = await uploadResponse.json();
+      const { uploadUrl, s3Key, fileName } = await urlResponse.json();
 
-      // 3. Update payment with receipt info
-      await updatePaymentReceipt.mutateAsync({
-        paymentId: payment.id,
-        receiptS3Key: s3Key,
-        receiptFileName: fileName,
+      // 3. Upload file directly to S3 via presigned URL
+      await uploadToS3WithProgress(
+        uploadUrl,
+        selectedFile,
+        selectedFile.type
+      );
+
+      // 4. Confirm upload completed
+      const confirmResponse = await fetch(`/api/payments/${payment.id}/receipt`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ s3Key, fileName }),
       });
+
+      if (!confirmResponse.ok) {
+        throw new Error('Error al confirmar la carga del comprobante');
+      }
 
       // Reset form
       setPaidBy(paymentType === PaymentType.LANDLORD_PORTION ? PayerType.LANDLORD : PayerType.TENANT);

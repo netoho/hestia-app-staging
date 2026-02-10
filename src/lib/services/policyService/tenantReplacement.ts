@@ -9,9 +9,7 @@ import {
 
 // Statuses that allow tenant replacement
 export const REPLACEABLE_STATUSES: PolicyStatus[] = [
-  'DRAFT',
   'COLLECTING_INFO',
-  'UNDER_INVESTIGATION',
   'PENDING_APPROVAL',
 ];
 
@@ -123,9 +121,6 @@ export async function replaceTenantOnPolicy(
           guaranteePropertyAddressId: true,
         },
       },
-      investigation: {
-        select: { id: true },
-      },
     },
   });
 
@@ -201,6 +196,23 @@ export async function replaceTenantOnPolicy(
     // 5. Delete ActorSectionValidation for tenant
     await tx.actorSectionValidation.deleteMany({
       where: { actorType: 'tenant', actorId: currentTenant.id },
+    });
+
+    // 5b. Archive tenant investigations (PENDING/APPROVED)
+    await tx.actorInvestigation.updateMany({
+      where: {
+        actorType: 'TENANT',
+        actorId: currentTenant.id,
+        status: { in: ['PENDING', 'APPROVED'] },
+      },
+      data: {
+        status: 'ARCHIVED',
+        archivedAt: new Date(),
+        archivedBy: input.performedById,
+        archiveReason: 'SUPERSEDED',
+        brokerToken: null,
+        landlordToken: null,
+      },
     });
 
     // 6. Delete PropertyAddress records
@@ -354,6 +366,23 @@ export async function replaceTenantOnPolicy(
           where: { actorType: 'jointObligor', actorId: jo.id },
         });
 
+        // Archive joint obligor investigations (PENDING/APPROVED)
+        await tx.actorInvestigation.updateMany({
+          where: {
+            actorType: 'JOINT_OBLIGOR',
+            actorId: jo.id,
+            status: { in: ['PENDING', 'APPROVED'] },
+          },
+          data: {
+            status: 'ARCHIVED',
+            archivedAt: new Date(),
+            archivedBy: input.performedById,
+            archiveReason: 'SUPERSEDED',
+            brokerToken: null,
+            landlordToken: null,
+          },
+        });
+
         // Delete PropertyAddress records
         const joAddressIds = [
           jo.addressId,
@@ -427,6 +456,23 @@ export async function replaceTenantOnPolicy(
           where: { actorType: 'aval', actorId: aval.id },
         });
 
+        // Archive aval investigations (PENDING/APPROVED)
+        await tx.actorInvestigation.updateMany({
+          where: {
+            actorType: 'AVAL',
+            actorId: aval.id,
+            status: { in: ['PENDING', 'APPROVED'] },
+          },
+          data: {
+            status: 'ARCHIVED',
+            archivedAt: new Date(),
+            archivedBy: input.performedById,
+            archiveReason: 'SUPERSEDED',
+            brokerToken: null,
+            landlordToken: null,
+          },
+        });
+
         // Delete PropertyAddress records
         const avalAddressIds = [
           aval.addressId,
@@ -452,14 +498,7 @@ export async function replaceTenantOnPolicy(
       });
     }
 
-    // 9. Delete investigation if exists
-    if (policy.investigation) {
-      await tx.investigation.delete({
-        where: { id: policy.investigation.id },
-      });
-    }
-
-    // 10. Handle TENANT payments
+    // 9. Handle TENANT payments
     // Get tenant name for historical payments
     const tenantName = currentTenant.tenantType === 'COMPANY'
       ? currentTenant.companyName || 'Empresa'
@@ -486,8 +525,8 @@ export async function replaceTenantOnPolicy(
       data: { status: 'CANCELLED' },
     });
 
-    // 11. Revert policy status to COLLECTING_INFO if past that
-    if (policy.status !== 'DRAFT' && policy.status !== 'COLLECTING_INFO') {
+    // Revert policy status to COLLECTING_INFO if past that (e.g., PENDING_APPROVAL)
+    if (policy.status !== 'COLLECTING_INFO') {
       await tx.policy.update({
         where: { id: input.policyId },
         data: { status: 'COLLECTING_INFO' },

@@ -44,7 +44,16 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       guaranteePropertyDetails: true,
       personalReferences: true,
       commercialReferences: true,
-      policy: true
+      policy: {
+        include: {
+          propertyDetails: {
+            include: {
+              propertyAddressDetails: true,
+              contractSigningAddressDetails: true,
+            }
+          }
+        }
+      },
     };
   }
 

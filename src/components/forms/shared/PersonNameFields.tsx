@@ -106,29 +106,3 @@ export function PersonNameFields({
   );
 }
 
-// Utility function to format full name
-export function formatFullName(
-  firstName: string,
-  paternalLastName: string,
-  maternalLastName: string,
-  middleName?: string
-): string {
-  const parts = [
-    firstName,
-    middleName,
-    paternalLastName,
-    maternalLastName
-  ].filter(Boolean);
-
-  return parts.join(' ').trim();
-}
-
-// Utility function to get initials
-export function getInitials(
-  firstName: string,
-  paternalLastName: string
-): string {
-  const firstInitial = firstName ? firstName[0] : '';
-  const lastInitial = paternalLastName ? paternalLastName[0] : '';
-  return `${firstInitial}${lastInitial}`.toUpperCase();
-}

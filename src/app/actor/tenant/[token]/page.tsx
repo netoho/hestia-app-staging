@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, CheckCircle2, Home, Calendar, DollarSign } from 'lucide-react';
+import { formatAddress } from "@/lib/schemas/shared/address.schema";
 import { useToast } from '@/hooks/use-toast';
 import { brandInfo } from '@/lib/config/brand';
 import { formatFullName } from '@/lib/utils/names';
@@ -122,7 +123,7 @@ export default function TenantPortalPage() {
                   <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Propiedad</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                    <p className="text-sm font-medium" style={{ color: '#173459' }}>{formatAddress(policy?.propertyDetails?.propertyAddressDetails)}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
@@ -202,7 +203,7 @@ export default function TenantPortalPage() {
                 <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Propiedad</p>
-                  <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                  <p className="text-sm font-medium" style={{ color: '#173459' }}>{formatAddress(policy?.propertyDetails?.propertyAddressDetails)}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">

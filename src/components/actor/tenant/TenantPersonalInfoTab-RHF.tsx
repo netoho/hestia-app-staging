@@ -248,7 +248,7 @@ export default function TenantPersonalInfoTabRHF({
                       name="legalRepRfc"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>RFC del Representante</FormLabel>
+                          <FormLabel required>RFC del Representante</FormLabel>
                           <FormControl>
                             <Input {...field} value={field.value || ''} disabled={disabled} maxLength={13} />
                           </FormControl>

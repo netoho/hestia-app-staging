@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { validateInvitationToken, clearInvitationToken } from '@/lib/services/userTokenService';
 import { hashPassword } from '@/lib/auth';
-import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/fileUploadService';
+import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { v4 as uuidv4 } from 'uuid';
 
 // Allowed MIME types for avatars

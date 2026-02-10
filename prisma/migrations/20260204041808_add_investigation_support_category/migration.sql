@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "DocumentCategory" ADD VALUE 'INVESTIGATION_SUPPORT';

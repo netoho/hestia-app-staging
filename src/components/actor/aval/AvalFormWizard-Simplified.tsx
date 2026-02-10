@@ -148,6 +148,7 @@ export default function AvalFormWizard({
             avalType={avalType}
             initialData={initialData}
             onSave={async (data) => { await handleTabSave('personal', data); }}
+            disabled={updateMutation.isPending}
           />
         )}
 
@@ -156,6 +157,7 @@ export default function AvalFormWizard({
             avalType={avalType}
             initialData={initialData}
             onSave={async (data) => { await handleTabSave('employment', data); }}
+            disabled={updateMutation.isPending}
           />
         )}
 
@@ -167,6 +169,7 @@ export default function AvalFormWizard({
             token={token}
             avalId={initialData?.id}
             initialDocuments={initialData?.documents || []}
+            disabled={updateMutation.isPending}
           />
         )}
 
@@ -175,6 +178,7 @@ export default function AvalFormWizard({
             avalType={avalType}
             initialData={initialData}
             onSave={async (data) => { await handleTabSave('references', data); }}
+            disabled={updateMutation.isPending}
           />
         )}
 
@@ -233,7 +237,7 @@ export default function AvalFormWizard({
             }}
             disabled={updateMutation.isPending}
           >
-            {updateMutation.isPending ? 'Guardando...' : 'Guardar y Continuar'}
+            {updateMutation.isPending ? 'Guardando...' : wizard.activeTab === 'documents' ? 'Enviar Información' : 'Guardar y Continuar'}
           </Button>
         </div>
       </div>

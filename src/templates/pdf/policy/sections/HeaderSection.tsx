@@ -37,15 +37,11 @@ export function HeaderSection({ data }: HeaderSectionProps) {
 
 function getStatusBadgeStyle(status: string) {
   switch (status) {
-    case 'ACTIVE':
     case 'APPROVED':
-    case 'CONTRACT_SIGNED':
       return styles.badgeSuccess;
     case 'CANCELLED':
-    case 'INVESTIGATION_REJECTED':
       return styles.badgeDanger;
-    case 'EXPIRED':
-    case 'UNDER_INVESTIGATION':
+    case 'PENDING_APPROVAL':
       return styles.badgeWarning;
     default:
       return styles.badgePrimary;
