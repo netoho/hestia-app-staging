@@ -160,20 +160,17 @@ model Policy {
   managedBy   User?   @relation("ManagedByUser", fields: [managedById], references: [id])
 
   // Status & Workflow
-  status        PolicyStatus   @default(DRAFT)
+  status        PolicyStatus   @default(COLLECTING_INFO)
   paymentStatus PaymentStatus? // Overall payment status (null = no payments, COMPLETED = all paid)
-  currentStep   String         @default("initial")
 
   // Important Dates
   submittedAt DateTime?
   approvedAt  DateTime?
-  rejectedAt  DateTime?
   activatedAt DateTime?
   expiresAt   DateTime?
 
-  // Rejection/Approval Details
-  reviewNotes     String? @db.Text
-  rejectionReason String? @db.Text
+  // Review Details
+  reviewNotes String? @db.Text
 
   // Cancellation Information
   cancelledAt         DateTime?
@@ -198,8 +195,8 @@ model Policy {
   documents       PolicyDocument[]
   activities      PolicyActivity[]
   payments        Payment[]
-  investigation   Investigation?
-  contracts       Contract[]
+  actorInvestigations  ActorInvestigation[]
+  contracts            Contract[]
   incidents       Incident[]
   validationNotes ReviewNote[]
 
@@ -274,8 +271,9 @@ model Landlord {
   curp             String?
 
   // Company Information (for companies)
-  companyName String? // Official company name
-  companyRfc  String?
+  companyName   String? // Official company name
+  companyRfc    String?
+  businessType  String?
 
   // Legal Representative Information (Mexican naming convention)
   legalRepFirstName        String? // Legal representative first name
@@ -284,6 +282,7 @@ model Landlord {
   legalRepMaternalLastName String? // Legal representative maternal last name
   legalRepPosition         String? // Legal representative position
   legalRepRfc              String?
+  legalRepCurp             String?
   legalRepPhone            String?
   legalRepEmail            String?
 
@@ -996,37 +995,70 @@ model PolicyActivity {
   @@index([policyId, createdAt])
 }
 
-model Investigation {
+model ActorInvestigation {
   id       String @id @default(cuid())
-  policyId String @unique
+  policyId String
 
-  // Investigation Results
-  verdict   InvestigationVerdict?
-  riskLevel RiskLevel?
-  score     Int?
+  // Actor reference (polymorphic)
+  actorType InvestigatedActorType
+  actorId   String
 
-  // Details
-  notes    String? @db.Text
-  findings Json? // Structured findings
+  // Findings (filled by staff)
+  findings    String? @db.Text
+  submittedBy String // staff userId
+  submittedAt DateTime?
 
-  // Rejection Details
-  rejectedBy      String?
-  rejectionReason String?
-  rejectedAt      DateTime?
+  // Documents
+  documents ActorInvestigationDocument[]
 
-  // Assignment
-  assignedToId   String?
-  assignedToName String?
-  completedBy    String?
-  completedAt    DateTime?
+  // Approval (broker or landlord)
+  status          ActorInvestigationStatus @default(PENDING)
+  approvedBy      String? // broker userId or landlord email
+  approvedByType  ApproverType?
+  approvedAt      DateTime?
+  approvalNotes   String?                  @db.Text
+  rejectionReason String?                  @db.Text
 
-  // SLA Tracking
-  responseTimeHours Int?
+  // Archive fields
+  archivedAt      DateTime?
+  archivedBy      String?
+  archiveReason   InvestigationArchiveReason?
+  archiveComment  String?                  @db.Text
+
+  // Access tokens for approval pages
+  brokerToken   String?   @unique
+  landlordToken String?   @unique
+  tokenExpiry   DateTime?
 
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([policyId])
+  @@index([actorType, actorId])
+  @@index([brokerToken])
+  @@index([landlordToken])
+}
+
+model ActorInvestigationDocument {
+  id              String @id @default(cuid())
+  investigationId String
+
+  fileName     String
+  originalName String
+  fileSize     Int
+  mimeType     String
+  s3Key        String @unique
+  s3Bucket     String
+
+  uploadStatus DocumentUploadStatus @default(PENDING)
+
+  investigation ActorInvestigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([investigationId])
 }
 
 model Contract {
@@ -1081,6 +1113,14 @@ model Payment {
   stripeCustomerId  String?
   checkoutUrl       String? // Stripe checkout URL for payment link
   checkoutUrlExpiry DateTime? // Checkout URL expiration (24h from creation)
+
+  // SPEI (Bank Transfer) Fields
+  speiPaymentIntentId String?  @unique // Stripe PaymentIntent ID for SPEI
+  speiClabe           String?          // Virtual CLABE for bank transfers
+  speiBankName        String?          // Bank name (e.g. Citibanamex)
+  speiReference       String?          // Transfer reference number
+  speiFundedAmount    Float?           // Amount received so far (partial payments)
+  speiHostedUrl       String?          // Stripe-hosted instructions URL
 
   // Manual Payment Fields
   isManual        Boolean @default(false)
@@ -1262,16 +1302,9 @@ enum NationalityType {
 }
 
 enum PolicyStatus {
-  DRAFT
   COLLECTING_INFO
-  UNDER_INVESTIGATION
-  INVESTIGATION_REJECTED
   PENDING_APPROVAL
   APPROVED
-  CONTRACT_PENDING
-  CONTRACT_SIGNED
-  ACTIVE
-  EXPIRED
   CANCELLED
 }
 
@@ -1306,20 +1339,7 @@ enum DocumentCategory {
   UTILITY_BILL
   PAYROLL_RECEIPT // Recibo de nómina
   OTHER
-}
-
-enum InvestigationVerdict {
-  APPROVED
-  REJECTED
-  HIGH_RISK
-  CONDITIONAL
-}
-
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-  VERY_HIGH
+  INVESTIGATION_SUPPORT // Documentos de soporte para investigaciones
 }
 
 enum PaymentStatus {
@@ -1399,4 +1419,29 @@ enum RulesType {
 enum DocumentUploadStatus {
   PENDING
   COMPLETE
+}
+
+enum InvestigatedActorType {
+  TENANT
+  JOINT_OBLIGOR
+  AVAL
+}
+
+enum ActorInvestigationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum InvestigationArchiveReason {
+  OUTDATED
+  ERROR
+  SUPERSEDED
+  OTHER
+}
+
+enum ApproverType {
+  BROKER
+  LANDLORD
 }

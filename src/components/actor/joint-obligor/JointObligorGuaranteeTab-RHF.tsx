@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CreditCard, Home, Info, Shield } from 'lucide-react';
+import { CreditCard, Home, Info, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Form,
   FormField,
@@ -68,13 +69,37 @@ export default function JointObligorGuaranteeTab({
   const showSpouseInfo = maritalStatus === 'married_joint' ||
                          maritalStatus === 'married_separate';
 
+  const { toast } = useToast();
+
   const { documents, uploadDocument, downloadDocument, deleteDocument, getCategoryOperations } = useDocumentOperations({
     token,
     actorType: 'joint-obligor',
     initialDocuments
   });
 
+  // Check if required guarantee documents are uploaded
+  const hasIncomeProof = (documents[DocumentCategory.INCOME_PROOF] || []).length > 0;
+  const hasPropertyDeed = (documents[DocumentCategory.PROPERTY_DEED] || []).length > 0;
+  const hasPropertyTax = (documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || []).length > 0;
+
+  const guaranteeDocsValid = isIncomeGuarantee
+    ? hasIncomeProof
+    : isPropertyGuarantee
+      ? hasPropertyDeed && hasPropertyTax
+      : false;
+
   const handleSubmit = async (data: any) => {
+    if (!guaranteeDocsValid) {
+      const missing = isIncomeGuarantee
+        ? 'Comprobante de Ingresos'
+        : [!hasPropertyDeed && 'Escritura de la Propiedad', !hasPropertyTax && 'Boleta Predial'].filter(Boolean).join(', ');
+      toast({
+        title: 'Documentos requeridos',
+        description: `Debe cargar: ${missing}`,
+        variant: 'destructive',
+      });
+      return;
+    }
     await onSave(data);
   };
 
@@ -258,16 +283,23 @@ export default function JointObligorGuaranteeTab({
             </Card>
 
             {/* Income Proof Documents */}
-            <Card>
+            <Card className={hasIncomeProof ? 'border-green-200' : 'border-orange-200'}>
               <CardHeader>
-                <CardTitle>Comprobante de Ingresos</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Comprobante de Ingresos
+                  {hasIncomeProof
+                    ? <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    : <AlertCircle className="h-5 w-5 text-orange-500" />}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <Alert className="border-blue-200 bg-blue-50">
-                    <Shield className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800">
-                      Debe cargar comprobantes de sus ingresos para validar su capacidad de pago.
+                  <Alert className={hasIncomeProof ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}>
+                    <Shield className={`h-4 w-4 ${hasIncomeProof ? 'text-green-600' : 'text-orange-600'}`} />
+                    <AlertDescription className={hasIncomeProof ? 'text-green-800' : 'text-orange-800'}>
+                      {hasIncomeProof
+                        ? 'Comprobante de ingresos cargado correctamente.'
+                        : 'Debe cargar comprobantes de sus ingresos para poder continuar.'}
                     </AlertDescription>
                   </Alert>
 
@@ -420,16 +452,23 @@ export default function JointObligorGuaranteeTab({
             </Card>
 
             {/* Property Documents */}
-            <Card>
+            <Card className={hasPropertyDeed && hasPropertyTax ? 'border-green-200' : 'border-orange-200'}>
               <CardHeader>
-                <CardTitle>Documentos de la Propiedad</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Documentos de la Propiedad
+                  {hasPropertyDeed && hasPropertyTax
+                    ? <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    : <AlertCircle className="h-5 w-5 text-orange-500" />}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <Alert className="border-blue-200 bg-blue-50">
-                    <Shield className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800">
-                      Los documentos de la propiedad son obligatorios para validar la garantía.
+                  <Alert className={hasPropertyDeed && hasPropertyTax ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}>
+                    <Shield className={`h-4 w-4 ${hasPropertyDeed && hasPropertyTax ? 'text-green-600' : 'text-orange-600'}`} />
+                    <AlertDescription className={hasPropertyDeed && hasPropertyTax ? 'text-green-800' : 'text-orange-800'}>
+                      {hasPropertyDeed && hasPropertyTax
+                        ? 'Documentos de la propiedad cargados correctamente.'
+                        : 'Los documentos de la propiedad son obligatorios para poder continuar.'}
                     </AlertDescription>
                   </Alert>
 

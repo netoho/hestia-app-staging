@@ -1,6 +1,6 @@
 'use client';
 
-import { passwordRequirements } from '@/lib/validation/password';
+import { passwordRequirements } from '@/lib/validations/password';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

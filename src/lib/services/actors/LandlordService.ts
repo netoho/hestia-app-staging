@@ -689,6 +689,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     skipValidation: boolean = false,
     tabName?: string
   ): AsyncResult<LandlordWithRelations> {
+
+    console.log('LandlordService.save called with data:', data);
     // Check if data is the complex LandlordSubmissionData structure
     if ('landlords' in data && Array.isArray((data as LandlordSubmissionData).landlords)) {
       // Complex multi-landlord submission with property/financial details

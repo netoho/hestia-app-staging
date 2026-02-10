@@ -94,7 +94,7 @@ const jointObligorEmploymentTabSchema = z.object({
     'RETIRED',
     'OTHER',
     ], { message: "Tiene que seleccionar una opción" }),
-  occupation: z.string().min(5, 'La ocupación es requerida'),
+  occupation: z.string().min(4, 'La ocupación es requerida'),
   employerName: z.string().optional().nullable(),
   employerAddressDetails: partialAddressSchema.optional(),
   position: z.string().optional().nullable(),

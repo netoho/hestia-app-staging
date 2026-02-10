@@ -130,9 +130,9 @@ export const landlordStepSchema = z.discriminatedUnion('isCompany', [
  */
 export const tenantStepSchema = z.object({
   tenantType: z.nativeEnum(TenantType).default(TenantType.INDIVIDUAL),
-  firstName: z.string().min(1, 'Nombre requerido'),
+  firstName: z.string().optional(),
   middleName: z.string().optional(),
-  paternalLastName: z.string().min(1, 'Apellido paterno requerido'),
+  paternalLastName: z.string().optional(),
   maternalLastName: z.string().optional(),
   companyName: z.string().optional(),
   email: emailSchema,

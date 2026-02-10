@@ -44,7 +44,16 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       guaranteePropertyDetails: true,
       personalReferences: true,
       commercialReferences: true,
-      policy: true
+      policy: {
+        include: {
+          propertyDetails: {
+            include: {
+              propertyAddressDetails: true,
+              contractSigningAddressDetails: true,
+            }
+          }
+        }
+      },
     };
   }
 

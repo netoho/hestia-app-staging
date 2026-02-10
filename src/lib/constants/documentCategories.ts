@@ -81,6 +81,10 @@ export const documentCategoryLabels: Record<DocumentCategory, { title: string; d
   [DocumentCategory.OTHER]: {
     title: 'Otro Documento',
     description: 'Documento adicional relevante'
+  },
+  [DocumentCategory.INVESTIGATION_SUPPORT]: {
+    title: 'Documento de Investigación',
+    description: 'Documentos de soporte para investigaciones de actores'
   }
 };
 
@@ -123,6 +127,7 @@ export const defaultValidationConfig: CategoryValidationConfig = {
  */
 export const categoryValidationOverrides: Partial<Record<DocumentCategory, Partial<CategoryValidationConfig>>> = {
   [DocumentCategory.PROPERTY_DEED]: { maxSizeMB: 35 },
+  [DocumentCategory.INVESTIGATION_SUPPORT]: { maxSizeMB: 40 },
 };
 
 /**

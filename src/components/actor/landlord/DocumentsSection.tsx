@@ -9,6 +9,7 @@ import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { Document } from '@/types/documents';
 import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
 import { documentCategoryLabels } from '@/lib/constants/documentCategories';
+import { DocumentProgressBar } from '@/components/actor/shared/DocumentProgressBar';
 
 interface DocumentsSectionProps {
   landlordId?: string;
@@ -88,8 +89,17 @@ export default function DocumentsSection({
     );
   }
 
+  const requiredDocsCount = documentRequirements.filter(d => d.required).length;
+  const uploadedRequiredCount = documentRequirements.filter(d => d.required && (documents[d.category]?.length ?? 0) > 0).length;
+
   return (
     <div className="space-y-4">
+      {/* Progress */}
+      <DocumentProgressBar
+        uploadedCount={uploadedRequiredCount}
+        requiredCount={requiredDocsCount}
+      />
+
       {documentRequirements.map(({ category, type, title, description, required }) => {
         const categoryDocs = documents[category] || [];
         const categoryOps = getCategoryOperations(category);

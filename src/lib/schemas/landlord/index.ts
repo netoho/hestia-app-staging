@@ -65,6 +65,7 @@ export const landlordOwnerInfoIndividualSchema = personNameSchema.extend({
 export const landlordOwnerInfoCompanySchema = z.object({
   // Company info
   companyName: z.string().min(1, 'Razón social requerida'),
+  businessType: z.string().optional().nullable(),
   companyRfc: rfcCompanySchema,
 
   // Legal representative - prefix fields with legalRep
@@ -74,7 +75,7 @@ export const landlordOwnerInfoCompanySchema = z.object({
   legalRepMaternalLastName: z.string().optional().nullable(),
   legalRepPosition: z.string().min(1, 'Cargo del representante requerido'),
   legalRepRfc: rfcPersonSchema,
-  // legalRepCurp removed - field does not exist in Prisma Landlord model
+  legalRepCurp: curpSchema,
   legalRepPhone: phoneSchema,
   legalRepEmail: emailSchema,
 

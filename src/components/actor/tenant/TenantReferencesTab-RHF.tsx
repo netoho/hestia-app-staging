@@ -19,7 +19,7 @@ import { getTenantTabSchema, type TenantType } from '@/lib/schemas/tenant';
 
 // Constants for reference limits
 const REFERENCE_LIMITS = {
-  MIN: 1,
+  MIN: 3,
   MAX: 5,
 } as const;
 
@@ -68,14 +68,14 @@ export default function TenantReferencesTabRHF({
     mode: 'onChange',
     defaultValues: isCompany
       ? {
-          commercialReferences: initialData?.commercialReferences?.length > 0
+          commercialReferences: initialData?.commercialReferences?.length >= REFERENCE_LIMITS.MIN
             ? initialData.commercialReferences
-            : [createEmptyCommercialReference()],
+            : Array.from({ length: REFERENCE_LIMITS.MIN }, (_, i) => initialData?.commercialReferences?.[i] || createEmptyCommercialReference()),
         }
       : {
-          personalReferences: initialData?.personalReferences?.length > 0
+          personalReferences: initialData?.personalReferences?.length >= REFERENCE_LIMITS.MIN
             ? initialData.personalReferences
-            : [createEmptyPersonalReference()],
+            : Array.from({ length: REFERENCE_LIMITS.MIN }, (_, i) => initialData?.personalReferences?.[i] || createEmptyPersonalReference()),
         },
   });
 
@@ -113,7 +113,7 @@ export default function TenantReferencesTabRHF({
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <Alert>
             <AlertDescription>
-              Proporcione al menos 1 referencia personal (máximo 5).
+              Proporcione al menos 3 referencias personales (máximo 5).
               No pueden ser familiares directos ni del obligado/aval.
             </AlertDescription>
           </Alert>
@@ -315,7 +315,7 @@ export default function TenantReferencesTabRHF({
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <Alert>
           <AlertDescription>
-            Proporcione al menos 1 referencia comercial (máximo 5).
+            Proporcione al menos 3 referencias comerciales (máximo 5).
             Pueden ser proveedores, clientes o instituciones financieras.
           </AlertDescription>
         </Alert>

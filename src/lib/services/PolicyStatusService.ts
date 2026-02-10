@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
-import { transitionPolicyStatus } from './policyWorkflowService';
+import { transitionPolicyStatus, checkAllInvestigationsApproved } from './policyWorkflowService';
 import { logPolicyActivity } from './policyService';
 import { ServiceError, ErrorCode } from './types/errors';
 
@@ -33,7 +33,6 @@ export class PolicyStatusService {
     const pendingActors: string[] = [];
     const completedActors: string[] = [];
 
-    // Check tenant
     if (policy.tenant) {
       const name = policy.tenant.companyName || policy.tenant.firstName || 'Tenant';
       if (policy.tenant.informationComplete) {
@@ -43,7 +42,6 @@ export class PolicyStatusService {
       }
     }
 
-    // Check landlords
     for (const landlord of policy.landlords) {
       const name = landlord.companyName || landlord.firstName || 'Landlord';
       if (landlord.informationComplete) {
@@ -53,7 +51,6 @@ export class PolicyStatusService {
       }
     }
 
-    // Check joint obligors
     for (const jo of policy.jointObligors) {
       const name = jo.companyName || jo.firstName || 'Joint Obligor';
       if (jo.informationComplete) {
@@ -63,7 +60,6 @@ export class PolicyStatusService {
       }
     }
 
-    // Check avals
     for (const aval of policy.avals) {
       const name = aval.companyName || aval.firstName || 'Aval';
       if (aval.informationComplete) {
@@ -81,54 +77,53 @@ export class PolicyStatusService {
   }
 
   /**
-   * Check and transition policy status if all actors are complete
+   * Check if all investigations are approved and auto-transition to PENDING_APPROVAL
    */
   async checkAndTransition(
     policyId: string,
     performedBy: string = 'system',
     performedById?: string
   ): Promise<boolean> {
-    const status = await this.checkAllActorsComplete(policyId);
+    const policy = await prisma.policy.findUnique({
+      where: { id: policyId },
+      select: { status: true }
+    });
 
-    if (status.allComplete) {
-      // Get current policy status
-      const policy = await prisma.policy.findUnique({
-        where: { id: policyId },
-        select: { status: true }
-      });
-
-      if (!policy) {
-        throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
-      }
-
-      // Only transition if currently in COLLECTING_INFO status
-      if (policy.status === PolicyStatus.COLLECTING_INFO) {
-        await transitionPolicyStatus(
-          policyId,
-          PolicyStatus.UNDER_INVESTIGATION,
-          performedBy,
-          'All actor information completed'
-        );
-
-        await logPolicyActivity({
-          policyId,
-          action: 'status_transition',
-          description: 'Policy transitioned to investigation phase',
-          details: {
-            fromStatus: PolicyStatus.COLLECTING_INFO,
-            toStatus: PolicyStatus.UNDER_INVESTIGATION,
-            reason: 'All actors completed their information',
-            completedActors: status.completedActors
-          },
-          performedByType: performedBy,
-          performedById
-        });
-
-        return true;
-      }
+    if (!policy) {
+      throw new ServiceError(ErrorCode.POLICY_NOT_FOUND, 'Policy not found', 404, { policyId });
     }
 
-    return false;
+    // Only transition if currently in COLLECTING_INFO
+    if (policy.status !== PolicyStatus.COLLECTING_INFO) {
+      return false;
+    }
+
+    const allApproved = await checkAllInvestigationsApproved(policyId);
+    if (!allApproved) {
+      return false;
+    }
+
+    await transitionPolicyStatus(
+      policyId,
+      PolicyStatus.PENDING_APPROVAL,
+      performedBy,
+      'All actor investigations approved',
+    );
+
+    await logPolicyActivity({
+      policyId,
+      action: 'status_transition',
+      description: 'Policy transitioned to pending approval',
+      details: {
+        fromStatus: PolicyStatus.COLLECTING_INFO,
+        toStatus: PolicyStatus.PENDING_APPROVAL,
+        reason: 'All actor investigations approved',
+      },
+      performedByType: performedBy,
+      performedById,
+    });
+
+    return true;
   }
 
   /**
@@ -142,7 +137,6 @@ export class PolicyStatusService {
         landlords: true,
         jointObligors: true,
         avals: true,
-        documents: { select: { id: true, type: true } }
       }
     });
 
@@ -151,50 +145,18 @@ export class PolicyStatusService {
     }
 
     const actorStatus = await this.checkAllActorsComplete(policyId);
-
-    // Count documents per actor
-    const tenantDocs = await prisma.document.count({
-      where: { tenantId: policy.tenant?.id }
-    });
-
-    const landlordDocs = await Promise.all(
-      policy.landlords.map(l =>
-        prisma.document.count({ where: { landlordId: l.id } })
-      )
-    );
-
-    const joDocs = await Promise.all(
-      policy.jointObligors.map(jo =>
-        prisma.document.count({ where: { jointObligorId: jo.id } })
-      )
-    );
-
-    const avalDocs = await Promise.all(
-      policy.avals.map(a =>
-        prisma.document.count({ where: { avalId: a.id } })
-      )
-    );
+    const allInvestigationsApproved = await checkAllInvestigationsApproved(policyId);
 
     return {
       status: policy.status,
       actorsComplete: actorStatus.allComplete,
       pendingActors: actorStatus.pendingActors,
       completedActors: actorStatus.completedActors,
-      documents: {
-        tenant: tenantDocs,
-        landlords: landlordDocs,
-        jointObligors: joDocs,
-        avals: avalDocs,
-        total: tenantDocs + landlordDocs.reduce((a, b) => a + b, 0) +
-               joDocs.reduce((a, b) => a + b, 0) + avalDocs.reduce((a, b) => a + b, 0)
-      },
+      allInvestigationsApproved,
       progress: {
         collectingInfo: actorStatus.allComplete ? 100 :
           Math.round((actorStatus.completedActors.length /
           (actorStatus.completedActors.length + actorStatus.pendingActors.length)) * 100),
-        investigation: policy.status === PolicyStatus.UNDER_INVESTIGATION ? 'in_progress' :
-                      policy.status === PolicyStatus.APPROVED ||
-                      policy.status === PolicyStatus.REJECTED ? 100 : 0
       }
     };
   }
