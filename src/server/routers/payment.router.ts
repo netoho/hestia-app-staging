@@ -501,4 +501,25 @@ export const paymentRouter = createTRPCRouter({
         expiresAt: result.expiresAt,
       };
     }),
+
+  /**
+   * Create a SPEI (bank transfer) session for a pending payment
+   * No auth required - used by /payments/[id] page
+   */
+  createSpeiSession: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const result = await paymentService.createSpeiPaymentIntent(input.paymentId);
+      return result;
+    }),
+
+  /**
+   * Get SPEI details for a payment (public endpoint)
+   */
+  getSpeiDetails: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .query(async ({ input }) => {
+      const result = await paymentService.getSpeiDetails(input.paymentId);
+      return result;
+    }),
 });
