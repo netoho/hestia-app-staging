@@ -198,6 +198,23 @@ export async function replaceTenantOnPolicy(
       where: { actorType: 'tenant', actorId: currentTenant.id },
     });
 
+    // 5b. Archive tenant investigations (PENDING/APPROVED)
+    await tx.actorInvestigation.updateMany({
+      where: {
+        actorType: 'TENANT',
+        actorId: currentTenant.id,
+        status: { in: ['PENDING', 'APPROVED'] },
+      },
+      data: {
+        status: 'ARCHIVED',
+        archivedAt: new Date(),
+        archivedBy: input.performedById,
+        archiveReason: 'SUPERSEDED',
+        brokerToken: null,
+        landlordToken: null,
+      },
+    });
+
     // 6. Delete PropertyAddress records
     const addressIds = [
       currentTenant.addressId,
@@ -349,6 +366,23 @@ export async function replaceTenantOnPolicy(
           where: { actorType: 'jointObligor', actorId: jo.id },
         });
 
+        // Archive joint obligor investigations (PENDING/APPROVED)
+        await tx.actorInvestigation.updateMany({
+          where: {
+            actorType: 'JOINT_OBLIGOR',
+            actorId: jo.id,
+            status: { in: ['PENDING', 'APPROVED'] },
+          },
+          data: {
+            status: 'ARCHIVED',
+            archivedAt: new Date(),
+            archivedBy: input.performedById,
+            archiveReason: 'SUPERSEDED',
+            brokerToken: null,
+            landlordToken: null,
+          },
+        });
+
         // Delete PropertyAddress records
         const joAddressIds = [
           jo.addressId,
@@ -420,6 +454,23 @@ export async function replaceTenantOnPolicy(
         // Delete ActorSectionValidation
         await tx.actorSectionValidation.deleteMany({
           where: { actorType: 'aval', actorId: aval.id },
+        });
+
+        // Archive aval investigations (PENDING/APPROVED)
+        await tx.actorInvestigation.updateMany({
+          where: {
+            actorType: 'AVAL',
+            actorId: aval.id,
+            status: { in: ['PENDING', 'APPROVED'] },
+          },
+          data: {
+            status: 'ARCHIVED',
+            archivedAt: new Date(),
+            archivedBy: input.performedById,
+            archiveReason: 'SUPERSEDED',
+            brokerToken: null,
+            landlordToken: null,
+          },
         });
 
         // Delete PropertyAddress records

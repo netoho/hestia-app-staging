@@ -201,6 +201,23 @@ export async function changeGuarantorType(
         where: { actorType: 'jointObligor', actorId: jo.id },
       });
 
+      // Archive joint obligor investigations (PENDING/APPROVED)
+      await tx.actorInvestigation.updateMany({
+        where: {
+          actorType: 'JOINT_OBLIGOR',
+          actorId: jo.id,
+          status: { in: ['PENDING', 'APPROVED'] },
+        },
+        data: {
+          status: 'ARCHIVED',
+          archivedAt: new Date(),
+          archivedBy: input.performedById,
+          archiveReason: 'SUPERSEDED',
+          brokerToken: null,
+          landlordToken: null,
+        },
+      });
+
       // Delete PropertyAddress records
       const joAddressIds = [
         jo.addressId,
@@ -275,6 +292,23 @@ export async function changeGuarantorType(
       // Delete ActorSectionValidation
       await tx.actorSectionValidation.deleteMany({
         where: { actorType: 'aval', actorId: aval.id },
+      });
+
+      // Archive aval investigations (PENDING/APPROVED)
+      await tx.actorInvestigation.updateMany({
+        where: {
+          actorType: 'AVAL',
+          actorId: aval.id,
+          status: { in: ['PENDING', 'APPROVED'] },
+        },
+        data: {
+          status: 'ARCHIVED',
+          archivedAt: new Date(),
+          archivedBy: input.performedById,
+          archiveReason: 'SUPERSEDED',
+          brokerToken: null,
+          landlordToken: null,
+        },
       });
 
       // Delete PropertyAddress records
