@@ -107,26 +107,28 @@ export function PaymentCard({
 }: PaymentCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingStripeReceipt, setIsDownloadingStripeReceipt] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isCopiedCard, setIsCopiedCard] = useState(false);
+  const [isCopiedSpei, setIsCopiedSpei] = useState(false);
   const cancelDialog = useDialogState();
   const { toast } = useToast();
   const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
 
-  // Get the public payment URL
-  const getPaymentUrl = () => {
+  const getPaymentUrl = (type: 'card' | 'spei') => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${baseUrl}/payments/${payment.id}`;
+    const base = `${baseUrl}/payments/${payment.id}`;
+    return type === 'spei' ? `${base}/spei` : base;
   };
 
-  const handleCopyUrl = async () => {
+  const handleCopyUrl = async (type: 'card' | 'spei') => {
     try {
-      await navigator.clipboard.writeText(getPaymentUrl());
-      setIsCopied(true);
+      await navigator.clipboard.writeText(getPaymentUrl(type));
+      const setter = type === 'card' ? setIsCopiedCard : setIsCopiedSpei;
+      setter(true);
       toast({
         title: 'URL copiada',
-        description: 'El link de pago ha sido copiado al portapapeles',
+        description: `El link de pago por ${type === 'card' ? 'tarjeta' : 'SPEI'} ha sido copiado al portapapeles`,
       });
-      setTimeout(() => setIsCopied(false), 2000);
+      setTimeout(() => setter(false), 2000);
     } catch (error) {
       toast({
         title: 'Error',
@@ -303,36 +305,40 @@ export function PaymentCard({
         {/* Actions (hidden for historical payments) */}
         {!isHistorical && (
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-2">
-          {/* Primary: Pay with Stripe button - full width on mobile */}
+          {/* Copy payment URL buttons */}
           {isPending && !payment.isManual && (
-            <Button
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => window.open(getPaymentUrl(), '_blank')}
-            >
-              <CreditCard className="h-4 w-4 mr-1" />
-              Pagar con Stripe
-            </Button>
-          )}
-
-          {/* Secondary actions - row */}
-          <div className="flex flex-wrap gap-2">
-            {/* Copy URL button */}
-            {isPending && !payment.isManual && (
+            <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleCopyUrl}
-                disabled={isCopied}
+                onClick={() => handleCopyUrl('card')}
+                disabled={isCopiedCard}
               >
-                {isCopied ? (
+                {isCopiedCard ? (
+                  <Check className="h-4 w-4 mr-1" />
+                ) : (
+                  <CreditCard className="h-4 w-4 mr-1" />
+                )}
+                {isCopiedCard ? 'Copiado' : 'Copiar Tarjeta'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCopyUrl('spei')}
+                disabled={isCopiedSpei}
+              >
+                {isCopiedSpei ? (
                   <Check className="h-4 w-4 mr-1" />
                 ) : (
                   <Copy className="h-4 w-4 mr-1" />
                 )}
-                {isCopied ? 'Copiado' : 'Copiar Link'}
+                {isCopiedSpei ? 'Copiado' : 'Copiar SPEI'}
               </Button>
-            )}
+            </div>
+          )}
+
+          {/* Secondary actions - row */}
+          <div className="flex flex-wrap gap-2">
 
             {/* Edit amount button (admin, pending) */}
             {isPending && isStaffOrAdmin && onEdit && (
