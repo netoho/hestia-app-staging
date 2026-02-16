@@ -1121,6 +1121,7 @@ model Payment {
   speiReference       String?          // Transfer reference number
   speiFundedAmount    Float?           // Amount received so far (partial payments)
   speiHostedUrl       String?          // Stripe-hosted instructions URL
+  overpaymentAmount   Float?           // Excess amount deposited via SPEI (sits in Stripe customer balance)
 
   // Manual Payment Fields
   isManual        Boolean @default(false)
