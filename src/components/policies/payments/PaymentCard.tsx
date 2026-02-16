@@ -239,6 +239,12 @@ export function PaymentCard({
                     )}
                   </>
                 )}
+                {payment.overpaymentAmount != null && payment.overpaymentAmount > 0 && (
+                  <div className="flex justify-between text-orange-600 font-medium">
+                    <span>Sobrepago</span>
+                    <span>{formatCurrency(payment.overpaymentAmount)}</span>
+                  </div>
+                )}
               </div>
             );
           })()}

@@ -224,6 +224,17 @@ export default function SpeiPaymentPage() {
                 <TransfersList transfers={payment.transfers} />
               )}
 
+              {payment.overpaymentAmount != null && payment.overpaymentAmount > 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-1">
+                  <p className="text-sm font-medium text-orange-700">
+                    Sobrepago detectado: {formatCurrency(payment.overpaymentAmount)}
+                  </p>
+                  <p className="text-xs text-orange-600">
+                    Contactanos a {brandInfo.supportEmail} para procesar tu reembolso.
+                  </p>
+                </div>
+              )}
+
               <Button
                 variant="outline"
                 className="w-full"

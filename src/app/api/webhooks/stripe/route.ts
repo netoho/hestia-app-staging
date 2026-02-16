@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
         // Verify this is actually a SPEI payment by checking speiPaymentIntentId
         const speiPayment = await prisma.payment.findFirst({
           where: { id: paymentId, speiPaymentIntentId: intent.id },
-          select: { id: true, status: true, stripeSessionId: true, amount: true, speiFundedAmount: true },
+          select: { id: true, status: true, stripeSessionId: true, amount: true, speiFundedAmount: true, stripeCustomerId: true },
         });
 
         if (!speiPayment) {
@@ -417,6 +417,39 @@ export async function POST(request: NextRequest) {
           where: { id: paymentId },
           data: { speiFundedAmount: speiPayment.amount },
         });
+
+        // Check for overpayment via customer cash balance
+        if (speiPayment.stripeCustomerId) {
+          try {
+            const stripeInstance = await getStripeForWebhook();
+            const customer = await stripeInstance.customers.retrieve(
+              speiPayment.stripeCustomerId,
+              { expand: ['cash_balance'] }
+            ) as Stripe.Customer;
+
+            const excessBalance = (customer.cash_balance?.available?.mxn || 0) / 100;
+            if (excessBalance > 0) {
+              await prisma.payment.update({
+                where: { id: paymentId },
+                data: { overpaymentAmount: excessBalance },
+              });
+
+              if (policyId) {
+                await logPolicyActivity({
+                  policyId,
+                  action: 'spei_overpayment_detected',
+                  description: `Sobrepago detectado: $${excessBalance.toLocaleString()} MXN`,
+                  performedById: 'system',
+                  details: { paymentId, overpaymentAmount: excessBalance, customerId: speiPayment.stripeCustomerId },
+                });
+              }
+
+              console.log(`Webhook: SPEI overpayment detected for ${paymentId}: $${excessBalance} MXN`);
+            }
+          } catch (error) {
+            console.warn('Failed to check customer balance for overpayment:', error);
+          }
+        }
 
         // Try to expire the card checkout session if one exists
         if (speiPayment.stripeSessionId) {
