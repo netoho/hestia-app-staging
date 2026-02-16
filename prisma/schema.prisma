@@ -1147,7 +1147,8 @@ model Payment {
   refundedAt   DateTime?
   refundAmount Float?
 
-  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  policy    Policy            @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  transfers PaymentTransfer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1155,6 +1156,24 @@ model Payment {
   @@index([policyId])
   @@index([status])
   @@index([type])
+}
+
+model PaymentTransfer {
+  id        String @id @default(cuid())
+  paymentId String
+
+  amount           Float  // Individual transfer amount (delta)
+  cumulativeAmount Float  // Running total after this transfer
+  currency         String @default("MXN")
+
+  stripeEventId String   @unique // Idempotency — prevents duplicates on Stripe retries
+  receivedAt    DateTime // When Stripe received the funds (event.created)
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
 }
 
 // ============================================

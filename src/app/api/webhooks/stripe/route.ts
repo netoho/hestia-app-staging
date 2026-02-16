@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
 
     // Verify webhook signature and get event
     const event = await verifyWebhookSignature(body, signature);
+    console.log(`Received Stripe webhook: ${event.type}`);
+    console.log('Event data:', JSON.stringify(event.data.object));
     eventType = event.type;
 
     // Handle different event types
@@ -276,31 +278,63 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        const fundedAmount = (intent.amount_received || 0) / 100;
         const totalAmount = (intent.amount || 0) / 100;
+        const amountRemaining = (intent.next_action?.display_bank_transfer_instructions?.amount_remaining ?? intent.amount) / 100;
+        const newCumulativeAmount = totalAmount - amountRemaining;
 
-        // Update funded amount on payment record
-        await prisma.payment.updateMany({
-          where: { id: paymentId, speiPaymentIntentId: intent.id },
-          data: { speiFundedAmount: fundedAmount },
-        });
+        // Atomic: read previous funded amount, create transfer record, update funded amount
+        try {
+          await prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.findUnique({
+              where: { id: paymentId },
+              select: { speiFundedAmount: true, speiPaymentIntentId: true },
+            });
+
+            if (!payment || payment.speiPaymentIntentId !== intent.id) return;
+
+            const previousAmount = payment.speiFundedAmount || 0;
+            const deltaAmount = newCumulativeAmount - previousAmount;
+
+            if (deltaAmount <= 0) return; // Already processed or no new funds
+
+            // Create transfer record (stripeEventId unique = idempotency)
+            await tx.paymentTransfer.create({
+              data: {
+                paymentId,
+                amount: deltaAmount,
+                cumulativeAmount: newCumulativeAmount,
+                stripeEventId: event.id,
+                receivedAt: new Date(event.created * 1000),
+              },
+            });
+
+            await tx.payment.update({
+              where: { id: paymentId },
+              data: { speiFundedAmount: newCumulativeAmount },
+            });
+          });
+        } catch (e: any) {
+          // Ignore unique constraint violation on stripeEventId (Stripe retry)
+          if (e.code !== 'P2002') throw e;
+          console.log(`Webhook: Duplicate partially_funded event ${event.id}, skipping`);
+        }
 
         if (policyId) {
           await logPolicyActivity({
             policyId,
             action: 'spei_partial_payment',
-            description: `Transferencia parcial recibida: $${fundedAmount.toLocaleString()} de $${totalAmount.toLocaleString()} MXN`,
+            description: `Transferencia parcial recibida: $${newCumulativeAmount.toLocaleString()} de $${totalAmount.toLocaleString()} MXN`,
             performedById: 'system',
             details: {
               paymentId,
-              fundedAmount,
+              fundedAmount: newCumulativeAmount,
               totalAmount,
-              remaining: totalAmount - fundedAmount,
+              remaining: totalAmount - newCumulativeAmount,
             },
           });
         }
 
-        console.log(`Webhook: SPEI partial payment ${paymentId}: $${fundedAmount} of $${totalAmount}`);
+        console.log(`Webhook: SPEI partial payment ${paymentId}: $${newCumulativeAmount} of $${totalAmount}`);
         break;
       }
 
@@ -320,7 +354,7 @@ export async function POST(request: NextRequest) {
         // Verify this is actually a SPEI payment by checking speiPaymentIntentId
         const speiPayment = await prisma.payment.findFirst({
           where: { id: paymentId, speiPaymentIntentId: intent.id },
-          select: { id: true, status: true, stripeSessionId: true, amount: true },
+          select: { id: true, status: true, stripeSessionId: true, amount: true, speiFundedAmount: true },
         });
 
         if (!speiPayment) {
@@ -342,6 +376,29 @@ export async function POST(request: NextRequest) {
         if (claimResult.count === 0) {
           console.log(`Webhook SPEI idempotency: payment ${paymentId} already processed, skipping`);
           break;
+        }
+
+        // Create transfer record for final (or single full) transfer
+        const speiAmountRemaining = (intent.next_action?.display_bank_transfer_instructions?.amount_remaining ?? 0) / 100;
+        const finalAmount = ((intent.amount || 0) / 100) - speiAmountRemaining;
+        const previousFunded = speiPayment.speiFundedAmount || 0;
+        const deltaAmount = finalAmount - previousFunded;
+
+        if (deltaAmount > 0) {
+          try {
+            await prisma.paymentTransfer.create({
+              data: {
+                paymentId,
+                amount: deltaAmount,
+                cumulativeAmount: finalAmount,
+                stripeEventId: event.id,
+                receivedAt: new Date(event.created * 1000),
+              },
+            });
+          } catch (e: any) {
+            // Ignore unique constraint violation on stripeEventId (Stripe retry)
+            if (e.code !== 'P2002') throw e;
+          }
         }
 
         // Mark as COMPLETED
