@@ -157,7 +157,7 @@ export default function ActorCard({
               <p className="text-sm text-gray-600">{actor.email || 'Sin email'}</p>
               {actor.phone && (
                 <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
-                  <Phone className="h-3 w-3" />
+                  <Phone className="h-4 w-4" />
                   {actor.phone}
                 </p>
               )}
@@ -249,7 +249,7 @@ export default function ActorCard({
               <span className="font-medium">Progreso de Información</span>
               <span className="font-bold">{progress}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-3" />
           </div>
         )}
 
@@ -257,23 +257,23 @@ export default function ActorCard({
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-purple-600">{actor.documents?.length || 0}</div>
-            <div className="text-[10px] sm:text-xs text-gray-600">Documentos</div>
+            <div className="text-xs sm:text-sm text-gray-600">Documentos</div>
           </div>
           <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-green-600">
               {(actor.references?.length || 0) + (actor.commercialReferences?.length || 0)}
             </div>
-            <div className="text-[10px] sm:text-xs text-gray-600">Referencias</div>
+            <div className="text-xs sm:text-sm text-gray-600">Referencias</div>
           </div>
           <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-blue-600">{progress}%</div>
-            <div className="text-[10px] sm:text-xs text-gray-600">Completo</div>
+            <div className="text-xs sm:text-sm text-gray-600">Completo</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
+            <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider">
               Información Personal
             </h3>
             {(actor.tenantType || actor.isCompany) && (
@@ -340,7 +340,7 @@ export default function ActorCard({
             {/* Employment Information */}
             {(actor.employmentStatus || actor.occupation || actor.companyName || actor.monthlyIncome) && (
               <>
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
+                <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider">
                   Información Laboral
                 </h3>
                 {actor.employmentStatus && (
@@ -373,7 +373,7 @@ export default function ActorCard({
             {/* Banking Information (for landlords) */}
             {(actor.bankName || actor.clabe) && (
               <>
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
+                <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider">
                   Información Bancaria
                 </h3>
                 {actor.bankName && (
@@ -400,7 +400,7 @@ export default function ActorCard({
             {/* Property Information (for avals) */}
             {actorType === 'aval' && (actor.propertyAddress || actor.propertyValue || actor.propertyDeedNumber) && (
               <>
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
+                <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider">
                   Propiedad en Garantía
                 </h3>
                 {actor.propertyAddress && (
@@ -429,7 +429,7 @@ export default function ActorCard({
         {/* Additional Information */}
         {actor.additionalInfo && (
           <div className="mt-6">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
+            <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider mb-3">
               Información Adicional
             </h3>
             <div>
@@ -441,16 +441,16 @@ export default function ActorCard({
         {/* References */}
         {actor.references && actor.references.length > 0 && (
           <div className="mt-6">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
+            <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider mb-3">
               Referencias Personales
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {actor.references.map((ref: any, index: number) => (
                 <Card key={index} className="p-3">
-                  <p className="font-medium text-sm">{ref.name}</p>
-                  <p className="text-xs text-gray-600">{ref.relationship}</p>
-                  <p className="text-xs text-gray-600">{ref.phone}</p>
-                  {ref.email && <p className="text-xs text-gray-600 truncate">{ref.email}</p>}
+                  <p className="font-medium text-base">{ref.name}</p>
+                  <p className="text-sm text-gray-600">{ref.relationship}</p>
+                  <p className="text-sm text-gray-600">{ref.phone}</p>
+                  {ref.email && <p className="text-sm text-gray-600 truncate">{ref.email}</p>}
                 </Card>
               ))}
             </div>
@@ -460,7 +460,7 @@ export default function ActorCard({
         {/* Documents Section - Using InlineDocumentManager */}
         {actor.documents && actor.documents.length > 0 && (
           <div className="mt-6">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
+            <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider mb-3">
               Documentos
             </h3>
             <div className="space-y-3">

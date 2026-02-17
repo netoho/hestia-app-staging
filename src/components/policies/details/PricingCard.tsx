@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { DollarSign, Edit } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface PricingCardProps {
   package?: {
@@ -29,9 +30,6 @@ export default function PricingCard({
   const { data: session } = useSession();
   const router = useRouter();
   const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString('es-MX')}`;
-  };
 
   const getGuarantorTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -83,11 +81,11 @@ export default function PricingCard({
             </div>
             <div className="flex gap-1 mt-2">
               <div
-                className="h-2 bg-blue-500 rounded-l"
+                className="h-3 bg-blue-500 rounded-l"
                 style={{ width: `${tenantPercentage}%` }}
               />
               <div
-                className="h-2 bg-green-500 rounded-r"
+                className="h-3 bg-green-500 rounded-r"
                 style={{ width: `${landlordPercentage}%` }}
               />
             </div>
