@@ -122,7 +122,7 @@ export function TenantTab({
       {tenantHistory && tenantHistory.length > 0 && (
         <Card className="mt-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
               <History className="h-4 w-4" />
               Historial de reemplazos ({tenantHistory.length})
             </CardTitle>
@@ -142,10 +142,10 @@ export function TenantTab({
                         )}
                   </p>
                   <p className="text-sm text-muted-foreground">{prev.email}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Reemplazado: {format(new Date(prev.replacedAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
                   </p>
-                  <p className="text-xs text-muted-foreground italic">
+                  <p className="text-sm text-muted-foreground italic">
                     Razón: {prev.replacementReason}
                   </p>
                 </div>

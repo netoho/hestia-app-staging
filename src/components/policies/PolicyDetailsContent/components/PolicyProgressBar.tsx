@@ -31,7 +31,7 @@ function ProgressIndicator({ label, current, total, icon: Icon, onClick }: Progr
         {hasData ? `${current}/${total}` : '—'}
       </span>
       {hasData && (
-        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={cn(
               'h-full rounded-full transition-all duration-500',

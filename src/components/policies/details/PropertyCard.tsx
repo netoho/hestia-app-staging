@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Home, Edit } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface PropertyDetailsData {
   parkingSpaces?: number | null;
@@ -59,9 +60,6 @@ export default function PropertyCard({
   const { data: session } = useSession();
   const router = useRouter();
   const isStaffOrAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'STAFF';
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString('es-MX')}`;
-  };
 
   return (
     <Card>
