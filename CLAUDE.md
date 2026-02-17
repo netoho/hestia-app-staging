@@ -10,7 +10,8 @@
 
 
 ## Utils, Constants and Internationalization
-- Use the utils module src/lib/utils/ there you will find many utils, for example for dates on src/lib/utils/formatting.ts
-- For constants use src/lib/constants/README.md
-- All of our translations should go in src/lib/i18n.ts
+- Use the utils module @src/lib/utils/ there you will find many utils, for example for dates on @src/lib/utils/formatting.ts
+- Before creating any formatting function check if there is already one that you can reuse on @src/lib/utils/formatting.ts
+- For constants use @src/lib/constants/README.md
+- All of our translations should go in @src/lib/i18n.ts
 

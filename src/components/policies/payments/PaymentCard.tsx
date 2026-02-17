@@ -30,7 +30,10 @@ import {
   Check,
   Pencil,
   RefreshCw,
+  ChevronDown,
+  Building2,
 } from 'lucide-react';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
 import { PaymentStatus, PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
@@ -222,6 +225,26 @@ export function PaymentCard({
                   <span>Total</span>
                   <span>{formatCurrency(payment.amount)}</span>
                 </div>
+                {payment.speiFundedAmount != null && payment.speiFundedAmount > 0 && (
+                  <>
+                    <div className="flex justify-between text-green-700">
+                      <span>Pagado</span>
+                      <span>{formatCurrency(payment.speiFundedAmount)}</span>
+                    </div>
+                    {!isCompleted && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Restante</span>
+                        <span>{formatCurrency(payment.amount - payment.speiFundedAmount)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {payment.overpaymentAmount != null && payment.overpaymentAmount > 0 && (
+                  <div className="flex justify-between text-orange-600 font-medium">
+                    <span>Sobrepago</span>
+                    <span>{formatCurrency(payment.overpaymentAmount)}</span>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -300,6 +323,35 @@ export function PaymentCard({
               )}
             </Button>
           </div>
+        )}
+
+        {/* SPEI Transfers history */}
+        {payment.transfers && payment.transfers.length > 0 && (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground px-0 h-7">
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {payment.transfers.length} transferencia{payment.transfers.length > 1 ? 's' : ''} SPEI
+                </span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-1 pt-1">
+                {payment.transfers.map((transfer) => (
+                  <div key={transfer.id} className="flex justify-between text-xs py-1 border-b border-gray-100 last:border-0">
+                    <span className="text-muted-foreground">
+                      {formatDateTime(transfer.receivedAt)}
+                    </span>
+                    <span className="font-medium text-green-700">
+                      +{formatCurrency(transfer.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Actions (hidden for historical payments) */}
