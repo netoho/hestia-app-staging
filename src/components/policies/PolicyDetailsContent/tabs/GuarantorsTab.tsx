@@ -109,7 +109,7 @@ export function GuarantorsTab({
     return (
       <Card className="mt-4">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
             <History className="h-4 w-4" />
             Historial de cambios ({(jointObligorHistory?.length || 0) + (avalHistory?.length || 0)})
           </CardTitle>
@@ -119,7 +119,7 @@ export function GuarantorsTab({
             {/* Joint Obligor History */}
             {jointObligorHistory && jointObligorHistory.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Obligados Solidarios Archivados</p>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Obligados Solidarios Archivados</p>
                 <div className="space-y-3">
                   {jointObligorHistory.map((prev: any) => (
                     <div key={prev.id} className="border-l-2 border-muted pl-4 py-2">
@@ -134,10 +134,10 @@ export function GuarantorsTab({
                             )}
                       </p>
                       <p className="text-sm text-muted-foreground">{prev.email}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Archivado: {format(new Date(prev.replacedAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
                       </p>
-                      <p className="text-xs text-muted-foreground italic">
+                      <p className="text-sm text-muted-foreground italic">
                         Razón: {prev.replacementReason}
                       </p>
                     </div>
@@ -149,7 +149,7 @@ export function GuarantorsTab({
             {/* Aval History */}
             {avalHistory && avalHistory.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Avales Archivados</p>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Avales Archivados</p>
                 <div className="space-y-3">
                   {avalHistory.map((prev: any) => (
                     <div key={prev.id} className="border-l-2 border-muted pl-4 py-2">
@@ -164,10 +164,10 @@ export function GuarantorsTab({
                             )}
                       </p>
                       <p className="text-sm text-muted-foreground">{prev.email}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Archivado: {format(new Date(prev.replacedAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
                       </p>
-                      <p className="text-xs text-muted-foreground italic">
+                      <p className="text-sm text-muted-foreground italic">
                         Razón: {prev.replacementReason}
                       </p>
                     </div>
