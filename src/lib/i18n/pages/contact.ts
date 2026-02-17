@@ -1,0 +1,38 @@
+export const contact = {
+    title: "Ponte en Contacto",
+    subtitle: "Estamos aquí para ayudar. Contáctanos con cualquier pregunta o consulta.",
+    contactInfo: "Información de Contacto",
+    contactInfoSubtitle: "No dudes en contactarnos a través de cualquiera de los siguientes canales. Nuestro equipo está listo para ayudarte.",
+    emailUs: "Escríbenos",
+    emailUsDesc: "Para consultas generales, soporte u oportunidades de asociación.",
+    callUs: "Llámanos",
+    callUsDesc: "Habla directamente con un miembro de nuestro equipo en horario de oficina.",
+    visitUs: "Visítanos",
+    visitUsDesc: "Nuestra oficina se encuentra en:",
+    address: "Calle 5 de febrero 637, Torre 4, interior 6, colonia Álamos, código postal 03400, Benito Juárez, Ciudad de México",
+    sendMessage: "Envíanos un Mensaje",
+    form: {
+        name: "Nombre Completo",
+        namePlaceholder: "Juan Pérez",
+        email: "Correo Electrónico",
+        emailPlaceholder: "tu@ejemplo.com",
+        subject: "Asunto",
+        subjectPlaceholder: "Consulta sobre servicios",
+        message: "Mensaje",
+        messagePlaceholder: "Tu mensaje...",
+        button: "Enviar Mensaje",
+    },
+    formState: {
+        successTitle: "¡Mensaje Enviado!",
+        errorTitle: "Error",
+        invalidData: "Datos del formulario inválidos.",
+        submitError: "Hubo un error al enviar tu mensaje. Por favor, inténtalo de nuevo.",
+        successMessage: "¡Gracias por tu mensaje! Nos pondremos en contacto contigo pronto.",
+    },
+    validation: {
+        nameMin: "El nombre debe tener al menos 2 caracteres.",
+        emailInvalid: "Dirección de correo electrónico inválida.",
+        subjectMin: "El asunto debe tener al menos 5 caracteres.",
+        messageMin: "El mensaje debe tener al menos 10 caracteres.",
+    }
+};
