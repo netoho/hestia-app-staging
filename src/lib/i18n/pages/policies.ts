@@ -1,0 +1,211 @@
+export const policies = {
+    title: "Solicitudes de Protección",
+    subtitle: "Gestiona las solicitudes de protección de los inquilinos y sigue su progreso.",
+    errorFetching: "Error al obtener las protecciones",
+    errorLoading: "No se pudieron cargar las protecciones",
+    progressComplete: "Completo",
+    progressStep: (step: number) => `Paso ${step}/4`,
+    viewProgress: "Ver Progreso",
+    sendInvitations: "Enviar Invitaciones",
+    approvePolicy: "Aprobar Protección",
+    actorVerification: {
+        title: "Verificación de Actores",
+        subtitle: "Revisa y aprueba la información de cada actor",
+        approve: "Aprobar",
+        reject: "Rechazar",
+        approved: "Aprobado",
+        rejected: "Rechazado",
+        pending: "Pendiente",
+        inReview: "En Revisión",
+        rejectionReason: "Razón de rechazo",
+        rejectionReasonPlaceholder: "Describe por qué rechazas esta información...",
+        confirmReject: "Confirmar Rechazo",
+        cancelReject: "Cancelar",
+        rejectDialogTitle: "Rechazar Información",
+        rejectDialogDescription: "Proporciona una razón clara para que el actor pueda corregir la información.",
+        verifiedBy: "Verificado por",
+        verifiedAt: "Verificado el",
+        rejectedBy: "Rechazado por",
+        rejectedAt: "Rechazado el",
+        viewDocuments: "Ver Documentos",
+        allActorsApproved: "Todos los actores han sido aprobados",
+        pendingActorApprovals: "Algunos actores aún requieren aprobación",
+    },
+    initiateDialog: {
+        trigger: "Iniciar Protección",
+        title: "Iniciar Nueva Solicitud de Protección",
+        description: "Crea una nueva solicitud de protección y envía un correo de invitación al inquilino.",
+        form: {
+            tenantEmailLabel: "Email del Inquilino",
+            tenantEmailPlaceholder: "inquilino@ejemplo.com",
+            tenantPhoneLabel: "Teléfono del Inquilino",
+            tenantPhonePlaceholder: "+52 55 1234 5678",
+            tenantNameLabel: "Nombre del Inquilino",
+            tenantNamePlaceholder: "Nombre completo (opcional)",
+            propertyInfoTitle: "Información de la Propiedad (Opcional)",
+            propertyIdLabel: "ID de la Propiedad",
+            propertyIdPlaceholder: "Referencia interna de la propiedad",
+            propertyAddressLabel: "Dirección de la Propiedad",
+            propertyAddressPlaceholder: "Calle Principal 123, Ciudad, Estado, CP",
+            paymentInfoTitle: "Información de Pago",
+            packageLabel: "Paquete",
+            loadingPackages: "Cargando paquetes...",
+            selectPackagePlaceholder: "Selecciona un paquete",
+            packageDescription: "Selecciona el paquete de garantía para esta protección",
+            priceLabel: "Precio (MXN)",
+            pricePlaceholder: "0.00",
+            priceDescription: "Puedes ajustar el precio si fue negociado",
+            createButton: "Crear y Enviar Invitación",
+            creatingButton: "Creando...",
+        },
+        success: {
+            title: "Protección Iniciada Exitosamente",
+            descriptionSent: (email: string) => `Invitación enviada a ${email}`,
+            descriptionFailed: "Protección creada pero el envío de correo falló. Por favor, reenvía manualmente.",
+        },
+        errors: {
+            failedToInitiate: "No se pudo iniciar la protección",
+            failedToLoadPackages: "Error al cargar los paquetes",
+        }
+    },
+    table: {
+        title: "Solicitudes de Protección",
+        description: "Gestiona y da seguimiento a las solicitudes de protección de los inquilinos",
+        searchPlaceholder: "Buscar por email del inquilino...",
+        filterPlaceholder: "Filtrar por estado",
+        paymentFilterPlaceholder: "Filtrar por pago",
+        allStatuses: "Todos los Estados",
+        allPaymentStatuses: "Todos los Pagos",
+        loading: "Cargando protecciones...",
+        noPoliciesFound: "No se encontraron protecciones",
+        paymentStatus: {
+            pending: "Pendiente",
+            processing: "Procesando",
+            completed: "Pagado",
+            failed: "Fallido",
+            refunded: "Reembolsado",
+        },
+        headers: {
+            tenant: "Inquilino",
+            status: "Estado",
+            payment: "Pago",
+            progress: "Progreso",
+            initiatedBy: "Iniciada Por",
+            created: "Creada",
+            documents: "Documentos",
+        },
+        actions: {
+            viewDetails: "Ver Detalles",
+            resend: "Reenviar Invitación",
+        },
+        pagination: {
+            showing: (start: number, end: number, total: number) => `Mostrando ${start} a ${end} de ${total} protecciones`,
+            previous: "Anterior",
+            next: "Siguiente",
+        }
+    },
+    details: {
+        title: "Detalles de Protección",
+        subtitle: "Gestiona y revisa los detalles de la solicitud de protección",
+        backToPolicies: "Volver a Protecciones",
+        loading: "Cargando detalles de la protección...",
+        errorLoading: "Error Cargando Protección",
+        policyNotFound: "Protección No Encontrada",
+        policyNotFoundDesc: "La protección solicitada no se pudo encontrar.",
+        quickInfo: {
+            tenantEmail: "Email del Inquilino",
+            created: "Creada",
+            documents: "Documentos",
+            files: "archivos"
+        },
+        reviewActions: {
+            title: "Acciones de Revisión",
+            description: "Cambia el estado de esta solicitud de protección",
+            approve: "Aprobar",
+            deny: "Denegar",
+            markUnderReview: "Marcar En Revisión"
+        },
+        downloadPDF: "Descargar PDF",
+        tabs: {
+            details: "Datos de Solicitud",
+            activity: "Registro de Actividad"
+        },
+        sections: {
+            personalInfo: "Información Personal",
+            employmentInfo: "Información de Empleo",
+            references: "Referencias",
+            uploadedDocuments: "Documentos Subidos"
+        },
+        fields: {
+            nationality: "Nacionalidad",
+            mexican: "Mexicana",
+            foreign: "Extranjera",
+            curp: "CURP",
+            passport: "Pasaporte",
+            employmentStatus: "Estado de Empleo",
+            industry: "Industria",
+            company: "Empresa",
+            position: "Puesto",
+            monthlyIncome: "Ingreso Mensual",
+            creditCheckConsent: "Consentimiento de Revisión Crediticia",
+            yes: "Sí",
+            no: "No"
+        },
+        references: {
+            personalReference: "Referencia Personal",
+            workReference: "Referencia Laboral",
+            landlordReference: "Referencia de Propietario",
+            name: "Nombre",
+            phone: "Teléfono"
+        },
+        documents: {
+            category: {
+                identification: "Identificación",
+                income: "Ingresos",
+                optional: "Opcional"
+            },
+            uploaded: "Subido"
+        },
+        activity: {
+            title: "Línea de Tiempo de Actividad",
+            description: "Historial completo de acciones tomadas en esta solicitud de protección",
+            performedBy: {
+                tenant: "Realizado por inquilino",
+                staff: "Realizado por staff",
+                system: "Acción del sistema"
+            }
+        },
+        payment: {
+            title: "Información de Pago",
+            package: "Paquete",
+            price: "Precio",
+            paymentStatus: "Estado de Pago",
+            oneTimePayment: "Pago único",
+            noPackageSelected: "Sin paquete seleccionado",
+            noPaymentStatus: "Sin estado de pago",
+            status: {
+                pending: "Pendiente",
+                processing: "Procesando",
+                completed: "Completado",
+                failed: "Fallido",
+                refunded: "Reembolsado"
+            }
+        },
+        toast: {
+            statusUpdated: "Estado Actualizado",
+            statusChangedTo: (status: string) => `Estado de protección cambiado a ${status}`,
+            error: "Error",
+            failedToUpdate: "Error al actualizar el estado",
+            downloadStarted: "Descarga Iniciada",
+            downloadFailed: "Descarga Falló",
+            isBeingDownloaded: (fileName: string) => `${fileName} se está descargando`,
+            authFailed: "Autenticación falló - por favor actualiza la página",
+            noPermission: "No tienes permiso para descargar este archivo",
+            documentNotFound: "Documento no encontrado",
+            failedToGenerate: "Error al generar enlace de descarga",
+            failedToDownload: "Error al descargar archivo",
+            pdfGenerated: "Documento Generado",
+            pdfGeneratedDesc: "El documento de protección se ha descargado exitosamente. Puede imprimirlo o convertirlo a PDF."
+        }
+    },
+};
