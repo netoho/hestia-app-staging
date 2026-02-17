@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
     // Verify webhook signature and get event
     const event = await verifyWebhookSignature(body, signature);
     console.log(`Received Stripe webhook: ${event.type}`);
-    console.log('Event data:', JSON.stringify(event.data.object));
     eventType = event.type;
 
     // Handle different event types
