@@ -1,0 +1,30 @@
+import { Zap, Handshake, BarChart3, MessageSquare } from 'lucide-react';
+
+export const realEstateAdvisors = {
+    title: "Potencie su Negocio Inmobiliario",
+    subtitle: "Asóciese con Hestia para ofrecer seguridad mejorada y agilizar los procesos de arrendamiento para sus clientes.",
+    becomePartner: "Conviértase en Socio",
+    imageAlt: "Asesores inmobiliarios colaborando",
+    whyChooseTitle: "Por Qué los Asesores Eligen Hestia",
+    videoId: "v2Rz_QA5y1M",
+    whyChooseText: "El éxito de un asesor inmobiliario se basa en la confianza y el tiempo de cierre de sus operaciones. Hestia proporciona las herramientas y la seguridad para mejorar su oferta de servicios, convirtiéndolo en un socio indispensable tanto para propietarios como para inquilinos. ",
+    benefitsList: [
+      { icon: Zap, text: "Tratos Más Rápidos: Nuestro proceso agiliza y da certeza a tus cierres." },
+      { icon: Handshake, text: "Mayor Confianza del Cliente: Protección total para tu arrendamiento." },
+      { icon: BarChart3, text: "Ventaja Competitiva: Costos asequibles." },
+      { icon: MessageSquare, text: "Soporte Dedicado: Acceso a nuestro equipo para asistencia rápida y personalizada." },
+    ],
+    clientBenefitsTitle: "Beneficios para sus Clientes",
+    clientBenefitsSubtitle: "Cómo Hestia le ayuda a servir mejor a propietarios e inquilinos.",
+    forOwnersTitle: "Para Propietarios",
+    forOwnersText1: "Ayude a los propietarios a minimizar los períodos de vacancia atrayendo a un grupo más amplio de inquilinos calificados.",
+    forOwnersText2: "Proporcione seguridad en el pago de la renta y protección de la propiedad, reduciendo el estrés del propietario.",
+    forOwnersText3: "Simplifique el proceso de arrendamiento con nuestro marco de protecciones estandarizado y seguro.",
+    forRentersTitle: "Para Inquilinos",
+    forRentersText1: "Aumente las posibilidades de los inquilinos de asegurar la propiedad deseada.",
+    forRentersText2: "Ofrezca una protección de arrendamiento clara y comprensible que proteja sus intereses.",
+    forRentersText3: "Proporcione una experiencia de mudanza más fluida con menos carga financiera inicial en algunos casos.",
+    ctaTitle: "¿Listo para Elevar sus Servicios?",
+    ctaText: "Únase a la creciente red de asesores inmobiliarios que se asocian con Hestia. Trabajemos juntos para crear un mercado de arrendamiento más seguro y eficiente.",
+    registerAsAdvisor: "Registrarse como Asesor Socio",
+};

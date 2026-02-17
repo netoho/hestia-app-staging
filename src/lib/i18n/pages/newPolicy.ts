@@ -1,0 +1,140 @@
+export const newPolicy = {
+    title: "Crear Nueva Protección",
+    subtitle: "Sigue los pasos para registrar una nueva protección de arrendamiento.",
+    steps: {
+        profile: "Perfil",
+        employment: "Situación Laboral",
+        references: "Referencias",
+        documents: "Documentos",
+        payment: "Pago",
+    },
+    profile: {
+        title: "Perfil del Solicitante",
+        description: "Los datos deben coincidir con los documentos oficiales, ya que así aparecerán en el contrato.",
+        nationality: "¿Eres mexicano?",
+        isMexican: "Sí",
+        isForeign: "No",
+        curpLabel: "CURP (18 caracteres)",
+        curpDescription: "Para completar tus datos, escribe tu CURP y da click en \"Confirmar CURP\"",
+        curpPlaceholder: "Escribe el CURP aquí...",
+        dontKnowCurp: "No conozco mi CURP",
+        passportLabel: "Número de Pasaporte",
+        passportPlaceholder: "Escribe el número de pasaporte...",
+        validation: {
+            idRequired: "Se requiere un número de identificación (CURP o Pasaporte).",
+        }
+    },
+    employment: {
+        title: "Situación Laboral",
+        description: "Completa los campos solicitados.",
+        statusLabel: "¿Cuál es tu situación laboral?",
+        statusPlaceholder: "Selecciona una opción",
+        statusOptions: {
+            employed: "Empleado(a)",
+            selfEmployed: "Autoempleado(a)/Freelance",
+            student: "Estudiante",
+            other: "Otro",
+        },
+        industryLabel: "Tipo de Industria",
+        industryPlaceholder: "Selecciona tu industria",
+        industryOptions: {
+            tech: "Tecnología y comunicación",
+            finance: "Finanzas y seguros",
+            health: "Salud y asistencia social",
+            retail: "Comercio al por menor",
+            education: "Educación",
+            construction: "Construcción",
+            other: "Otra",
+        },
+        occupationLabel: "¿Cuál es tu ocupación?",
+        occupationPlaceholder: "ej. Desarrollador de Software",
+        companyNameLabel: "Nombre de la empresa",
+        companyNamePlaceholder: "ej. Hestia S.A. de C.V.",
+        positionLabel: "Puesto actual",
+        positionPlaceholder: "ej. Gerente de Producto",
+        companyWebsiteLabel: "Página web de la empresa (opcional)",
+        companyWebsitePlaceholder: "ej. www.hestiaplp.com.mx",
+        workAddressLabel: "Dirección actual de tu sitio de trabajo (opcional)",
+        workAddressPlaceholder: "ej. Av. Siempre Viva 742",
+        incomeSourceLabel: "Fuente de ingresos",
+        incomeSourcePlaceholder: "Selecciona tu fuente de ingresos",
+        incomeSourceOptions: {
+            mixed: "Mixto (nómina + otros ingresos)",
+            payroll: "Solo Nómina",
+            freelance: "Solo Honorarios/Freelance",
+        },
+        monthlyIncomeLabel: "Ingreso mensual neto en pesos MXN",
+        monthlyIncomePlaceholder: "25000",
+        creditCheckLabel: "Autoriza la consulta de tu buró de crédito",
+        creditCheckText: (companyName: string) => `Autorizo expresamente a ${companyName}, para que lleve a cabo investigaciones sobre mi comportamiento crediticio en las Sociedades de Información Crediticia (SIC) que estime convenientes. Conozco la naturaleza y alcance.`,
+        creditCheckLink: "Ver más",
+        validation: {
+            statusRequired: "La situación laboral es requerida.",
+            industryRequired: "La industria es requerida.",
+            occupationRequired: "La ocupación es requerida.",
+            companyNameRequired: "El nombre de la empresa es requerido.",
+            positionRequired: "El puesto es requerido.",
+            incomeSourceRequired: "La fuente de ingresos es requerida.",
+            monthlyIncomeRequired: "El ingreso mensual es requerido.",
+            monthlyIncomeInvalid: "Debe ser un número válido.",
+            creditCheckRequired: "Debes autorizar la consulta de buró de crédito.",
+            websiteInvalid: "Por favor, introduce una URL válida.",
+        }
+    },
+    references: {
+        title: "Referencias",
+        description: "Proporciona referencias para completar tu perfil.",
+        personalTitle: "Referencia Personal",
+        personalAlert: "Recuerda no colocar a tu obligado solidario o inquilinos adicionales que vivirán contigo como tu referencia personal.",
+        personalNameLabel: "Nombre completo de tu referencia personal",
+        phoneLabel: "Teléfono de contacto",
+        namePlaceholder: "ej. Israel Bahena",
+        phonePlaceholder: "10 dígitos",
+        optionalTitle: "Referencias Opcionales",
+        optionalAlert: "Las referencias opcionales te ayudan a mejorar tu perfil.",
+        workTitle: "Laboral",
+        workNameLabel: "Nombre completo de tu referencia laboral",
+        workPhoneLabel: "Teléfono de contacto para validar tus datos",
+        landlordTitle: "Casero",
+        landlordNameLabel: "Nombre completo de tu casero actual",
+        landlordPhoneLabel: "Teléfono de contacto",
+        validation: {
+            nameRequired: "El nombre es requerido.",
+            phoneRequired: "El teléfono debe tener al menos 10 dígitos.",
+        },
+    },
+    documents: {
+        title: "Documentos",
+        description: "Carga los documentos que se te piden para poder avanzar en el proceso.",
+        id: {
+            title: "Identificación",
+            description: "Sube aquí las fotos o documento del frente y vuelta de alguna identificación oficial vigente. Ej. INE o Pasaporte."
+        },
+        income: {
+            title: "Comprobantes de Ingresos",
+            description: "Carga los comprobantes necesarios para validar tus ingresos de los últimos 3 meses.",
+            passwordQuestion: "¿Los documentos tienen contraseña?",
+            passwordYes: "Sí",
+            passwordNo: "No",
+        },
+        optional: {
+            title: "Opcionales",
+            description: "Puedes subir documentos que te ayuden a mejorar tu perfil. Ej. Cartas de empleado, comprobantes de liquidación de deuda, etc."
+        },
+        dropzone: {
+            dragAndDrop: (count: number) => `Carga o arrastra hasta ${count} archivos aquí`,
+            maxSize: (size: number) => `de máximo ${size}MB cada uno`
+        },
+        validation: {
+            idRequired: "Se requiere al menos un documento de identificación.",
+            incomeRequired: "Se requiere al menos un comprobante de ingresos.",
+            passwordQuestionRequired: "Por favor, especifica si tus documentos tienen contraseña."
+        },
+        summary: {
+            title: "Resumen de documentos",
+            description: "Asegúrate de que subiste todos los documentos solicitados.",
+            submit: "Enviar",
+            uploadMore: "Subir más documentos",
+        }
+    }
+};
