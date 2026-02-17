@@ -355,12 +355,6 @@ export default function SpeiPaymentPage() {
             <Button className="w-full" variant="outline" onClick={() => createSpeiSession.reset()}>
               Reintentar
             </Button>
-            <Button className="w-full" variant="ghost" asChild>
-              <Link href={`/payments/${paymentId}`}>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pagar con tarjeta
-              </Link>
-            </Button>
           </CardContent>
         </Card>
       </div>
