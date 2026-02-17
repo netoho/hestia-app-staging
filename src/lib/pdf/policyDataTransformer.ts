@@ -4,7 +4,7 @@
 
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
-import { formatDateTimeLong } from '@/lib/utils/formatting';
+import { formatDateTimeLong, formatAddress } from '@/lib/utils/formatting';
 import { t } from '@/lib/i18n';
 import { getInvestigatedActorLabel, getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
 import type {
@@ -77,17 +77,7 @@ function transformAddress(addr: {
 } | null | undefined): PDFAddress | null {
   if (!addr) return null;
 
-  const parts = [
-    addr.street,
-    addr.exteriorNumber ? `#${addr.exteriorNumber}` : null,
-    addr.interiorNumber ? `Int. ${addr.interiorNumber}` : null,
-  ].filter(Boolean);
-
-  const line1 = parts.join(' ');
-  const line2 = [addr.neighborhood, addr.postalCode ? `C.P. ${addr.postalCode}` : null].filter(Boolean).join(', ');
-  const line3 = [addr.municipality, addr.city, addr.state].filter(Boolean).join(', ');
-
-  const formatted = addr.formattedAddress || [line1, line2, line3].filter(Boolean).join(', ');
+  const formatted = formatAddress(addr);
 
   return {
     street: addr.street || '',
@@ -99,7 +89,7 @@ function transformAddress(addr: {
     city: addr.city || '',
     state: addr.state || '',
     country: addr.country || 'México',
-    formatted,
+    formatted: formatted === '-' ? '' : formatted,
   };
 }
 
