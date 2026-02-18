@@ -18,6 +18,15 @@ import { trpc } from '@/lib/trpc/client';
 import { getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
 import { TenantSections, LandlordSections, JointObligorSections, AvalSections } from './ActorInfoSections';
 
+function getIsCompany(actorType: string, actor: any): boolean {
+  switch (actorType) {
+    case 'tenant': return actor.tenantType === 'COMPANY';
+    case 'jointObligor': return actor.jointObligorType === 'COMPANY';
+    case 'aval': return actor.avalType === 'COMPANY';
+    default: return !!actor.isCompany;
+  }
+}
+
 interface ActorCardProps {
   actor: any;
   actorType: 'tenant' | 'landlord' | 'jointObligor' | 'aval';
@@ -141,13 +150,7 @@ export default function ActorCard({
 
   // Compute all document categories to display (required + already uploaded)
   const allDocumentCategories = useMemo(() => {
-    const isCompany = actorType === 'tenant'
-      ? actor.tenantType === 'COMPANY'
-      : actorType === 'jointObligor'
-        ? actor.jointObligorType === 'COMPANY'
-        : actorType === 'aval'
-          ? actor.avalType === 'COMPANY'
-          : !!actor.isCompany;
+    const isCompany = getIsCompany(actorType, actor);
 
     const options: { nationality?: 'MEXICAN' | 'FOREIGN'; guaranteeMethod?: 'property' | 'income' } = {};
     if (actor.nationality) options.nationality = actor.nationality;
