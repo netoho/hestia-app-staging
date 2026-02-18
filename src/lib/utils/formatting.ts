@@ -78,7 +78,7 @@ export interface AddressFields {
 
 /**
  * Format a structured address into a readable string.
- * Example: "Av. Reforma #123 Int. 4, Juárez, C.P. 06600, Cuauhtémoc, CDMX, CDMX"
+ * Example: "Av. Reforma #123 Int. 4, Juárez, C.P. 06600, Cuauhtémoc, Ciudad de México, CDMX"
  */
 export function formatAddress(addr: AddressFields | null | undefined): string {
   if (!addr) return '-';
@@ -96,7 +96,8 @@ export function formatAddress(addr: AddressFields | null | undefined): string {
     addr.postalCode ? `C.P. ${addr.postalCode}` : null,
   ].filter(Boolean).join(', ');
 
-  const line3 = [addr.municipality, addr.city, addr.state].filter(Boolean).join(', ');
+  const line3Parts = [addr.municipality, addr.city, addr.state].filter(Boolean);
+  const line3 = line3Parts.filter((v, i) => v !== line3Parts[i - 1]).join(', ');
 
   const formatted = [line1, line2, line3].filter(Boolean).join(', ');
   return formatted || '-';
