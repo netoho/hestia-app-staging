@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatDate, formatFileSize } from '@/lib/utils/formatting';
+import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 
 interface Document {
@@ -19,10 +19,6 @@ interface DocumentsListProps {
 
 export default function DocumentsList({ documents }: DocumentsListProps) {
   const { downloadDocument, downloading } = useDocumentDownload();
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
-  };
 
   return (
     <Card>
@@ -45,7 +41,7 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
                   <div>
                     <p className="font-medium">{doc.originalName}</p>
                     <p className="text-sm text-gray-500">
-                      {doc.category} • {(doc.fileSize / 1024).toFixed(2)} KB •{' '}
+                      {getDocumentCategoryLabel(doc.category as any)} • {formatFileSize(doc.fileSize)} •{' '}
                       {formatDate(doc.createdAt)}
                     </p>
                   </div>
