@@ -43,6 +43,11 @@ export function PropertySection({ data }: PropertySectionProps) {
               <DataRow label="Fecha de Entrega" value={property.deliveryDate} />
               <DataRow label="Fecha de Firma" value={property.contractSigningDate} />
             </View>
+            {property.contractSigningAddress && (
+              <View style={styles.mt10}>
+                <AddressBlock address={property.contractSigningAddress} showLabel label="Lugar de Firma" />
+              </View>
+            )}
           </View>
         </View>
 

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
-import { formatDate } from '@/lib/utils/formatting';
+import { formatDate, formatFileSize } from '@/lib/utils/formatting';
 import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
 import { useDocumentDownload } from '@/hooks/useDocumentDownload';
 
@@ -15,12 +15,6 @@ interface Document {
 
 interface DocumentsListProps {
   documents?: Document[];
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function DocumentsList({ documents }: DocumentsListProps) {
