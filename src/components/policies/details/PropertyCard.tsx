@@ -4,6 +4,7 @@ import { Home, Edit } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils/currency';
+import { formatDateLong } from '@/lib/utils/formatting';
 
 interface PropertyDetailsData {
   parkingSpaces?: number | null;
@@ -147,6 +148,23 @@ export default function PropertyCard({
                   {propertyDetails.hasCableTV && <p className="text-sm">✓ Cable TV</p>}
                   {propertyDetails.hasPhone && <p className="text-sm">✓ Teléfono</p>}
                 </div>
+              </div>
+            )}
+
+            {/* Dates */}
+            {(propertyDetails.propertyDeliveryDate || propertyDetails.contractSigningDate) && (
+              <div className="pt-3 border-t">
+                <p className="text-sm font-semibold mb-2">Fechas</p>
+                {propertyDetails.contractSigningDate && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Firma de contrato:</span> {formatDateLong(propertyDetails.contractSigningDate)}
+                  </p>
+                )}
+                {propertyDetails.propertyDeliveryDate && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Entrega del inmueble:</span> {formatDateLong(propertyDetails.propertyDeliveryDate)}
+                  </p>
+                )}
               </div>
             )}
 
