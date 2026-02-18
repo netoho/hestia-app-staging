@@ -35,7 +35,7 @@ export const wizard = {
         submitted: "¡Solicitud enviada exitosamente! Revisaremos tu información y te contactaremos pronto.",
         underReview: "Tu solicitud está actualmente bajo revisión. Te notificaremos de nuestra decisión pronto.",
         approved: "¡Felicidades! Tu solicitud ha sido aprobada.",
-        denied: "Tu solicitud ha sido revisada. Contactanos para más información.",
+        denied: "Tu solicitud ha sido revisada. Contáctanos para más información.",
         unknown: "Estado de solicitud desconocido.",
         submittedTitle: "¡Solicitud Enviada Exitosamente!",
         submittedDescription: "Tu solicitud de protección ha sido enviada y está siendo procesada por nuestro equipo.",
