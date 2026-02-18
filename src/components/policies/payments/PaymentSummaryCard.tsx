@@ -34,7 +34,7 @@ export function PaymentSummaryCard({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Resumen de Pagos</CardTitle>
+          <CardTitle className="text-xl">Resumen de Pagos</CardTitle>
           <Badge variant={statusConfig.variant} className={statusConfig.className}>
             {statusConfig.label}
           </Badge>
@@ -42,7 +42,7 @@ export function PaymentSummaryCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Breakdown */}
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-base">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
             <span>{formatCurrency(breakdown.subtotal)}</span>
@@ -51,7 +51,7 @@ export function PaymentSummaryCard({
             <span className="text-muted-foreground">IVA (16%)</span>
             <span>{formatCurrency(breakdown.iva)}</span>
           </div>
-          <div className="flex justify-between font-medium pt-1 border-t">
+          <div className="flex justify-between text-lg font-semibold pt-1 border-t">
             <span>Total con IVA</span>
             <span>{formatCurrency(breakdown.totalWithIva)}</span>
           </div>
@@ -59,7 +59,7 @@ export function PaymentSummaryCard({
 
         {/* Distribution info */}
         {(breakdown.tenantPercentage > 0 || breakdown.landlordPercentage > 0) && (
-          <div className="space-y-1 text-sm text-muted-foreground border-t pt-3">
+          <div className="space-y-1 text-base text-muted-foreground border-t pt-3">
             {breakdown.tenantPercentage > 0 && (
               <div className="flex justify-between">
                 <span>Inquilino ({breakdown.tenantPercentage}%)</span>
@@ -73,7 +73,7 @@ export function PaymentSummaryCard({
               </div>
             )}
             {breakdown.includesInvestigationFee && breakdown.investigationFee > 0 && (
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between text-sm">
                 <span>Cuota de investigación (deducida del inquilino)</span>
                 <span>{formatCurrency(breakdown.investigationFee)}</span>
               </div>
@@ -83,8 +83,8 @@ export function PaymentSummaryCard({
 
         {/* Progress */}
         <div className="space-y-2 pt-2">
-          <Progress value={progressPercentage} className="h-2" />
-          <div className="flex justify-between text-sm">
+          <Progress value={progressPercentage} className="h-3" />
+          <div className="flex justify-between text-base">
             <span className="text-muted-foreground">
               Pagado: <span className="text-green-600 font-medium">{formatCurrency(totalPaid)}</span>
             </span>

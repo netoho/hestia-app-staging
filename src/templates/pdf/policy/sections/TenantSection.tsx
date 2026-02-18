@@ -52,6 +52,9 @@ export function TenantSection({ data }: TenantSectionProps) {
               )}
               <DataRow label="Email" value={tenant.email} />
               <DataRow label="Teléfono" value={tenant.phone} />
+              {tenant.workPhone && (
+                <DataRow label="Tel. Trabajo" value={tenant.workPhone} />
+              )}
             </View>
 
             {/* Right column - Address */}
@@ -60,6 +63,24 @@ export function TenantSection({ data }: TenantSectionProps) {
             </View>
           </View>
         </View>
+
+        {/* Legal Representative (company only) */}
+        {tenant.isCompany && tenant.legalRepName && (
+          <View style={styles.subsection} wrap={false}>
+            <SubsectionTitle title="Representante Legal" />
+            <View style={styles.twoColumn}>
+              <View style={styles.column}>
+                <DataRow label="Nombre" value={tenant.legalRepName} />
+                <DataRow label="Cargo" value={tenant.legalRepPosition} />
+                <DataRow label="RFC" value={tenant.legalRepRfc} />
+              </View>
+              <View style={styles.column}>
+                <DataRow label="Teléfono" value={tenant.legalRepPhone} />
+                <DataRow label="Email" value={tenant.legalRepEmail} />
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Employment Info */}
         <View style={styles.subsection}>
@@ -71,9 +92,26 @@ export function TenantSection({ data }: TenantSectionProps) {
               <DataRow label="Empresa" value={tenant.employerName} />
               <DataRow label="Puesto" value={tenant.position} />
               <DataRow label="Ingreso Mensual" value={tenant.monthlyIncome} />
+              {tenant.incomeSource && (
+                <DataRow label="Fuente de Ingresos" value={tenant.incomeSource} />
+              )}
+              {tenant.yearsAtJob !== null && tenant.yearsAtJob !== undefined && (
+                <DataRow label="Años en Empleo" value={String(tenant.yearsAtJob)} />
+              )}
             </View>
             <View style={styles.column}>
               <AddressBlock address={tenant.employerAddress} showLabel label="Dirección del Empleador" />
+              {(tenant.additionalIncomeAmount || tenant.additionalIncomeSource) && (
+                <View style={styles.mt10}>
+                  <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Ingresos Adicionales</Text>
+                  {tenant.additionalIncomeAmount && (
+                    <DataRow label="Monto" value={tenant.additionalIncomeAmount} />
+                  )}
+                  {tenant.additionalIncomeSource && (
+                    <DataRow label="Fuente" value={tenant.additionalIncomeSource} />
+                  )}
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -85,7 +123,16 @@ export function TenantSection({ data }: TenantSectionProps) {
             <View style={styles.column}>
               <DataRow label="Arrendador Anterior" value={tenant.previousLandlordName} />
               <DataRow label="Teléfono" value={tenant.previousLandlordPhone} />
+              {tenant.previousLandlordEmail && (
+                <DataRow label="Email" value={tenant.previousLandlordEmail} />
+              )}
               <DataRow label="Renta Anterior" value={tenant.previousRentAmount} />
+              {tenant.rentalHistoryYears !== null && tenant.rentalHistoryYears !== undefined && (
+                <DataRow label="Años Rentando" value={String(tenant.rentalHistoryYears)} />
+              )}
+              {tenant.reasonForMoving && (
+                <DataRow label="Motivo de Cambio" value={tenant.reasonForMoving} />
+              )}
             </View>
             <View style={styles.column}>
               <AddressBlock address={tenant.previousRentalAddress} showLabel label="Dirección Anterior" />
@@ -113,13 +160,31 @@ export function TenantSection({ data }: TenantSectionProps) {
           <View style={styles.subsection} wrap={false}>
             <SubsectionTitle title="Referencias Personales" />
             <SimpleTable
-              headers={['Nombre', 'Teléfono', 'Relación']}
+              headers={['Nombre', 'Teléfono', 'Email', 'Relación']}
               rows={tenant.personalReferences.map(ref => [
                 ref.name,
                 ref.phone,
+                ref.email,
                 ref.relationship,
               ])}
-              widths={['40%', '30%', '30%']}
+              widths={['30%', '20%', '25%', '25%']}
+            />
+          </View>
+        )}
+
+        {/* Commercial References */}
+        {tenant.commercialReferences.length > 0 && (
+          <View style={styles.subsection} wrap={false}>
+            <SubsectionTitle title="Referencias Comerciales" />
+            <SimpleTable
+              headers={['Empresa', 'Contacto', 'Teléfono', 'Relación']}
+              rows={tenant.commercialReferences.map(ref => [
+                ref.companyName,
+                ref.contactName,
+                ref.phone,
+                ref.relationship,
+              ])}
+              widths={['30%', '25%', '20%', '25%']}
             />
           </View>
         )}

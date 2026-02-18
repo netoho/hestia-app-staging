@@ -70,10 +70,21 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
           )}
           <DataRow label="Email" value={jointObligor.email} />
           <DataRow label="Teléfono" value={jointObligor.phone} />
+          {jointObligor.workPhone && (
+            <DataRow label="Tel. Trabajo" value={jointObligor.workPhone} />
+          )}
           <DataRow label="Relación con Inquilino" value={jointObligor.relationshipToTenant} />
           <DataRow label="Estado Civil" value={jointObligor.maritalStatus} />
           {jointObligor.spouseName && (
-            <DataRow label="Cónyuge" value={jointObligor.spouseName} />
+            <>
+              <DataRow label="Cónyuge" value={jointObligor.spouseName} />
+              {jointObligor.spouseRfc && (
+                <DataRow label="RFC Cónyuge" value={jointObligor.spouseRfc} />
+              )}
+              {jointObligor.spouseCurp && (
+                <DataRow label="CURP Cónyuge" value={jointObligor.spouseCurp} />
+              )}
+            </>
           )}
         </View>
 
@@ -82,6 +93,24 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
           <AddressBlock address={jointObligor.address} showLabel label="Dirección" />
         </View>
       </View>
+
+      {/* Legal Representative (company only) */}
+      {jointObligor.isCompany && jointObligor.legalRepName && (
+        <View style={[styles.highlightBox, styles.mt5]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Representante Legal</Text>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
+              <DataRow label="Nombre" value={jointObligor.legalRepName} />
+              <DataRow label="Cargo" value={jointObligor.legalRepPosition} />
+              <DataRow label="RFC" value={jointObligor.legalRepRfc} />
+            </View>
+            <View style={styles.column}>
+              <DataRow label="Teléfono" value={jointObligor.legalRepPhone} />
+              <DataRow label="Email" value={jointObligor.legalRepEmail} />
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Employment */}
       <View style={[styles.highlightBox, styles.mt5]}>
@@ -97,7 +126,27 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
             <DataRow label="Ingreso Mensual" value={jointObligor.monthlyIncome} />
           </View>
         </View>
+        {jointObligor.employerAddress && (
+          <View style={styles.mt5}>
+            <AddressBlock address={jointObligor.employerAddress} showLabel label="Dirección del Empleador" />
+          </View>
+        )}
       </View>
+
+      {/* Income Guarantee - banking info */}
+      {jointObligor.guaranteeMethod === 'income' && (jointObligor.bankName || jointObligor.accountHolder) && (
+        <View style={[styles.highlightBox, styles.mt5]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Garantía por Ingresos</Text>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
+              <DataRow label="Banco" value={jointObligor.bankName} />
+            </View>
+            <View style={styles.column}>
+              <DataRow label="Titular" value={jointObligor.accountHolder} />
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Property Guarantee */}
       {jointObligor.hasPropertyGuarantee && (
@@ -107,6 +156,12 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
             <View style={styles.column}>
               <DataRow label="Valor del Inmueble" value={jointObligor.propertyValue} />
               <DataRow label="No. Escritura" value={jointObligor.propertyDeedNumber} />
+              {jointObligor.propertyRegistry && (
+                <DataRow label="Registro Público" value={jointObligor.propertyRegistry} />
+              )}
+              {jointObligor.propertyTaxAccount && (
+                <DataRow label="Cuenta Predial" value={jointObligor.propertyTaxAccount} />
+              )}
             </View>
             <View style={styles.column}>
               <AddressBlock address={jointObligor.propertyAddress} showLabel label="Ubicación" />
@@ -115,14 +170,26 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
         </View>
       )}
 
-      {/* References */}
+      {/* Personal References */}
       {jointObligor.personalReferences.length > 0 && (
         <View style={styles.mt5} wrap={false}>
-          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias</Text>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias Personales</Text>
           <SimpleTable
-            headers={['Nombre', 'Teléfono', 'Relación']}
-            rows={jointObligor.personalReferences.map(ref => [ref.name, ref.phone, ref.relationship])}
-            widths={['40%', '30%', '30%']}
+            headers={['Nombre', 'Teléfono', 'Email', 'Relación']}
+            rows={jointObligor.personalReferences.map(ref => [ref.name, ref.phone, ref.email, ref.relationship])}
+            widths={['30%', '20%', '25%', '25%']}
+          />
+        </View>
+      )}
+
+      {/* Commercial References */}
+      {jointObligor.commercialReferences.length > 0 && (
+        <View style={styles.mt5} wrap={false}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias Comerciales</Text>
+          <SimpleTable
+            headers={['Empresa', 'Contacto', 'Teléfono', 'Relación']}
+            rows={jointObligor.commercialReferences.map(ref => [ref.companyName, ref.contactName, ref.phone, ref.relationship])}
+            widths={['30%', '25%', '20%', '25%']}
           />
         </View>
       )}
@@ -159,10 +226,21 @@ function AvalCard({ aval, index }: AvalCardProps) {
           )}
           <DataRow label="Email" value={aval.email} />
           <DataRow label="Teléfono" value={aval.phone} />
+          {aval.workPhone && (
+            <DataRow label="Tel. Trabajo" value={aval.workPhone} />
+          )}
           <DataRow label="Relación con Inquilino" value={aval.relationshipToTenant} />
           <DataRow label="Estado Civil" value={aval.maritalStatus} />
           {aval.spouseName && (
-            <DataRow label="Cónyuge" value={aval.spouseName} />
+            <>
+              <DataRow label="Cónyuge" value={aval.spouseName} />
+              {aval.spouseRfc && (
+                <DataRow label="RFC Cónyuge" value={aval.spouseRfc} />
+              )}
+              {aval.spouseCurp && (
+                <DataRow label="CURP Cónyuge" value={aval.spouseCurp} />
+              )}
+            </>
           )}
         </View>
 
@@ -172,6 +250,24 @@ function AvalCard({ aval, index }: AvalCardProps) {
         </View>
       </View>
 
+      {/* Legal Representative (company only) */}
+      {aval.isCompany && aval.legalRepName && (
+        <View style={[styles.highlightBox, styles.mt5]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Representante Legal</Text>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
+              <DataRow label="Nombre" value={aval.legalRepName} />
+              <DataRow label="Cargo" value={aval.legalRepPosition} />
+              <DataRow label="RFC" value={aval.legalRepRfc} />
+            </View>
+            <View style={styles.column}>
+              <DataRow label="Teléfono" value={aval.legalRepPhone} />
+              <DataRow label="Email" value={aval.legalRepEmail} />
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Employment */}
       <View style={[styles.highlightBox, styles.mt5]}>
         <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Información Laboral</Text>
@@ -179,11 +275,22 @@ function AvalCard({ aval, index }: AvalCardProps) {
           <View style={styles.column}>
             <DataRow label="Situación Laboral" value={aval.employmentStatus} />
             <DataRow label="Ocupación" value={aval.occupation} />
+            {aval.employerName && (
+              <DataRow label="Empresa" value={aval.employerName} />
+            )}
           </View>
           <View style={styles.column}>
+            {aval.position && (
+              <DataRow label="Puesto" value={aval.position} />
+            )}
             <DataRow label="Ingreso Mensual" value={aval.monthlyIncome} />
           </View>
         </View>
+        {aval.employerAddress && (
+          <View style={styles.mt5}>
+            <AddressBlock address={aval.employerAddress} showLabel label="Dirección del Empleador" />
+          </View>
+        )}
       </View>
 
       {/* Property Guarantee - Always shown for Aval */}
@@ -194,6 +301,12 @@ function AvalCard({ aval, index }: AvalCardProps) {
             <View style={styles.column}>
               <DataRow label="Valor del Inmueble" value={aval.propertyValue} />
               <DataRow label="No. Escritura" value={aval.propertyDeedNumber} />
+              {aval.propertyRegistry && (
+                <DataRow label="Registro Público" value={aval.propertyRegistry} />
+              )}
+              {aval.propertyTaxAccount && (
+                <DataRow label="Cuenta Predial" value={aval.propertyTaxAccount} />
+              )}
             </View>
             <View style={styles.column}>
               <AddressBlock address={aval.propertyAddress} showLabel label="Ubicación" />
@@ -202,14 +315,26 @@ function AvalCard({ aval, index }: AvalCardProps) {
         </View>
       )}
 
-      {/* References */}
+      {/* Personal References */}
       {aval.personalReferences.length > 0 && (
         <View style={styles.mt5} wrap={false}>
-          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias</Text>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias Personales</Text>
           <SimpleTable
-            headers={['Nombre', 'Teléfono', 'Relación']}
-            rows={aval.personalReferences.map(ref => [ref.name, ref.phone, ref.relationship])}
-            widths={['40%', '30%', '30%']}
+            headers={['Nombre', 'Teléfono', 'Email', 'Relación']}
+            rows={aval.personalReferences.map(ref => [ref.name, ref.phone, ref.email, ref.relationship])}
+            widths={['30%', '20%', '25%', '25%']}
+          />
+        </View>
+      )}
+
+      {/* Commercial References */}
+      {aval.commercialReferences.length > 0 && (
+        <View style={styles.mt5} wrap={false}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Referencias Comerciales</Text>
+          <SimpleTable
+            headers={['Empresa', 'Contacto', 'Teléfono', 'Relación']}
+            rows={aval.commercialReferences.map(ref => [ref.companyName, ref.contactName, ref.phone, ref.relationship])}
+            widths={['30%', '25%', '20%', '25%']}
           />
         </View>
       )}

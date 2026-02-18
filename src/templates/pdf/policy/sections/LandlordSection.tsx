@@ -1,5 +1,5 @@
 import { View, Text } from '@react-pdf/renderer';
-import { styles, pdfColors, SectionTitle, DataRow, AddressBlock, DocumentList } from '../../components';
+import { styles, pdfColors, SectionTitle, SubsectionTitle, DataRow, AddressBlock, DocumentList } from '../../components';
 import type { PDFPolicyData, PDFLandlord } from '@/lib/pdf/types';
 
 interface LandlordSectionProps {
@@ -57,12 +57,18 @@ function LandlordCard({ landlord, index }: LandlordCardProps) {
           {landlord.companyName && (
             <DataRow label="Razón Social" value={landlord.companyName} />
           )}
+          {landlord.businessType && (
+            <DataRow label="Giro" value={landlord.businessType} />
+          )}
           <DataRow label="RFC" value={landlord.rfc} />
           {!landlord.isCompany && (
             <DataRow label="CURP" value={landlord.curp} />
           )}
           <DataRow label="Email" value={landlord.email} />
           <DataRow label="Teléfono" value={landlord.phone} />
+          {landlord.workPhone && (
+            <DataRow label="Tel. Trabajo" value={landlord.workPhone} />
+          )}
           {landlord.occupation && (
             <DataRow label="Ocupación" value={landlord.occupation} />
           )}
@@ -86,6 +92,43 @@ function LandlordCard({ landlord, index }: LandlordCardProps) {
           )}
         </View>
       </View>
+
+      {/* Property info */}
+      {(landlord.propertyDeedNumber || landlord.propertyRegistryFolio) && (
+        <View style={[styles.highlightBox, styles.mt5]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Datos de Propiedad</Text>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
+              {landlord.propertyDeedNumber && (
+                <DataRow label="No. Escritura" value={landlord.propertyDeedNumber} />
+              )}
+            </View>
+            <View style={styles.column}>
+              {landlord.propertyRegistryFolio && (
+                <DataRow label="Folio de Registro" value={landlord.propertyRegistryFolio} />
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Legal Representative (company only) */}
+      {landlord.isCompany && landlord.legalRepName && (
+        <View style={[styles.highlightBox, styles.mt5]}>
+          <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Representante Legal</Text>
+          <View style={styles.twoColumn}>
+            <View style={styles.column}>
+              <DataRow label="Nombre" value={landlord.legalRepName} />
+              <DataRow label="Cargo" value={landlord.legalRepPosition} />
+              <DataRow label="RFC" value={landlord.legalRepRfc} />
+            </View>
+            <View style={styles.column}>
+              <DataRow label="Teléfono" value={landlord.legalRepPhone} />
+              <DataRow label="Email" value={landlord.legalRepEmail} />
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Documents list */}
       <DocumentList documents={landlord.documents} />

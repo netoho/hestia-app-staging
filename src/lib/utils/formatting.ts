@@ -1,5 +1,5 @@
 /**
- * Date formatting utilities
+ * Formatting utilities
  */
 
 /**
@@ -58,4 +58,58 @@ export function formatDateTimeLong(date: Date | string | null | undefined): stri
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/**
+ * Address fields used by formatAddress
+ */
+export interface AddressFields {
+  street?: string | null;
+  exteriorNumber?: string | null;
+  interiorNumber?: string | null;
+  neighborhood?: string | null;
+  postalCode?: string | null;
+  municipality?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  formattedAddress?: string | null;
+}
+
+/**
+ * Format a structured address into a readable string.
+ * Example: "Av. Reforma #123 Int. 4, Juárez, C.P. 06600, Cuauhtémoc, Ciudad de México, CDMX"
+ */
+export function formatAddress(addr: AddressFields | null | undefined): string {
+  if (!addr) return '-';
+
+  if (addr.formattedAddress) return addr.formattedAddress;
+
+  const line1 = [
+    addr.street,
+    addr.exteriorNumber ? `#${addr.exteriorNumber}` : null,
+    addr.interiorNumber ? `Int. ${addr.interiorNumber}` : null,
+  ].filter(Boolean).join(' ');
+
+  const line2 = [
+    addr.neighborhood,
+    addr.postalCode ? `C.P. ${addr.postalCode}` : null,
+  ].filter(Boolean).join(', ');
+
+  const line3Parts = [addr.municipality, addr.city, addr.state].filter(Boolean);
+  const line3 = line3Parts.filter((v, i) => v !== line3Parts[i - 1]).join(', ');
+
+  const formatted = [line1, line2, line3].filter(Boolean).join(', ');
+  return formatted || '-';
+}
+
+/**
+ * Format file size in human readable format
+ * Example: 1024 → "1.0 KB", 1048576 → "1.0 MB"
+ */
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return '-';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

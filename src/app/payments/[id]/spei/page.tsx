@@ -2,24 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Loader2, CheckCircle2, XCircle, Clock, AlertCircle,
-  Building2, CreditCard, Copy, Check, RefreshCw, Download,
+  Building2, Copy, Check, RefreshCw, Download,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { PaymentStatus, PaymentType } from '@/prisma/generated/prisma-client/enums';
 import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
 import { brandInfo } from '@/lib/config/brand';
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
+import { formatDateTime } from '@/lib/utils/formatting';
+import { formatCurrency } from '@/lib/utils/currency';
 
 function CopyableField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -39,6 +33,26 @@ function CopyableField({ label, value }: { label: string; value: string }) {
       <Button variant="ghost" size="sm" onClick={handleCopy} className="ml-2 shrink-0">
         {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
       </Button>
+    </div>
+  );
+}
+
+function TransfersList({ transfers }: { transfers: Array<{ id: string; amount: number; cumulativeAmount: number; receivedAt: Date | string }> }) {
+  if (transfers.length === 0) return null;
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+      <p className="text-xs font-medium text-gray-700">Transferencias recibidas</p>
+      {transfers.map((transfer) => (
+        <div key={transfer.id} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
+          <span className="text-muted-foreground">
+            {formatDateTime(transfer.receivedAt)}
+          </span>
+          <span className="font-medium text-green-700">
+            +{formatCurrency(transfer.amount)}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -200,6 +214,21 @@ export default function SpeiPaymentPage() {
                 </div>
               </div>
 
+              {payment.transfers && payment.transfers.length > 0 && (
+                <TransfersList transfers={payment.transfers} />
+              )}
+
+              {payment.overpaymentAmount != null && payment.overpaymentAmount > 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-1">
+                  <p className="text-sm font-medium text-orange-700">
+                    Sobrepago detectado: {formatCurrency(payment.overpaymentAmount)}
+                  </p>
+                  <p className="text-xs text-orange-600">
+                    Contáctanos a {brandInfo.supportEmail} para procesar tu reembolso.
+                  </p>
+                </div>
+              )}
+
               <Button
                 variant="outline"
                 className="w-full"
@@ -320,12 +349,6 @@ export default function SpeiPaymentPage() {
             <Button className="w-full" variant="outline" onClick={() => createSpeiSession.reset()}>
               Reintentar
             </Button>
-            <Button className="w-full" variant="ghost" asChild>
-              <Link href={`/payments/${paymentId}`}>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pagar con tarjeta
-              </Link>
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -341,6 +364,7 @@ export default function SpeiPaymentPage() {
     fundedAmount: payment.speiFundedAmount || 0,
     hostedUrl: payment.speiHostedUrl,
     status: payment.status,
+    transfers: payment.transfers || [],
   } : null);
 
   if (details) {
@@ -369,8 +393,18 @@ export default function SpeiPaymentPage() {
                 <CopyableField label="Banco" value={details.bankName} />
                 <CopyableField label="Referencia" value={details.reference} />
                 <div className="pt-2">
-                  <p className="text-xs text-muted-foreground">Monto a transferir</p>
-                  <p className="font-bold text-lg">{formatCurrency(details.amount)}</p>
+                  {hasPartialPayment ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">Monto restante</p>
+                      <p className="font-bold text-lg">{formatCurrency(details.amount - details.fundedAmount)}</p>
+                      <p className="text-xs text-muted-foreground">Total original: {formatCurrency(details.amount)}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">Monto a transferir</p>
+                      <p className="font-bold text-lg">{formatCurrency(details.amount)}</p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -392,6 +426,11 @@ export default function SpeiPaymentPage() {
                     <span>Falta: {formatCurrency(details.amount - details.fundedAmount)}</span>
                   </div>
                 </div>
+              )}
+
+              {/* Individual transfers */}
+              {details.transfers && details.transfers.length > 0 && (
+                <TransfersList transfers={details.transfers} />
               )}
 
               {/* Info text */}
@@ -418,16 +457,6 @@ export default function SpeiPaymentPage() {
                 )}
                 Verificar estado del pago
               </Button>
-
-              {/* Alternative: pay by card */}
-              <div className="pt-2 border-t">
-                <Button variant="ghost" className="w-full" asChild>
-                  <Link href={`/payments/${paymentId}`}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Pagar con tarjeta en su lugar
-                  </Link>
-                </Button>
-              </div>
 
               {/* Stripe hosted instructions fallback */}
               {details.hostedUrl && (

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { ArrowLeft, Save, CheckCircle2, DollarSign, Package } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface PricingData {
   packageId?: string;
@@ -138,14 +139,6 @@ export default function PricingEditPage({
       landlordPercentage: formData.landlordPercentage,
       guarantorType: formData.guarantorType,
     });
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 0,
-    }).format(value);
   };
 
   const getGuarantorTypeLabel = (type: string) => {

@@ -23,14 +23,16 @@ import {
   Eye,
   CreditCard,
   FileText,
-  AlertTriangle,
   Ban,
   Download,
   Copy,
   Check,
   Pencil,
   RefreshCw,
+  ChevronDown,
+  Building2,
 } from 'lucide-react';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
 import { PaymentStatus, PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
@@ -64,36 +66,6 @@ const PAYMENT_STATUS_CONFIG: Record<
   [PaymentStatus.PARTIAL]: { label: 'Parcial', variant: 'default', className: 'bg-yellow-500 hover:bg-yellow-600', icon: Clock },
   [PaymentStatus.PENDING_VERIFICATION]: { label: 'Por Verificar', variant: 'default', className: 'bg-orange-500 hover:bg-orange-600', icon: Eye },
 };
-
-function getExpiryInfo(expiryDate: Date | string | null | undefined): { text: string; isExpired: boolean; isWarning: boolean } {
-  if (!expiryDate) return { text: '', isExpired: false, isWarning: false };
-
-  const expiry = new Date(expiryDate);
-  const now = new Date();
-  const msRemaining = expiry.getTime() - now.getTime();
-  const hoursRemaining = msRemaining / (1000 * 60 * 60);
-  const minutesRemaining = msRemaining / (1000 * 60);
-
-  if (hoursRemaining <= 0) {
-    return { text: 'Link expirado', isExpired: true, isWarning: false };
-  }
-
-  if (hoursRemaining < 1) {
-    return { text: `Expira en ${Math.ceil(minutesRemaining)} min`, isExpired: false, isWarning: true };
-  }
-
-  if (hoursRemaining <= 6) {
-    const hours = Math.floor(hoursRemaining);
-    const mins = Math.ceil((hoursRemaining - hours) * 60);
-    return { text: `Expira en ${hours}h ${mins}m`, isExpired: false, isWarning: true };
-  }
-
-  if (hoursRemaining <= 24) {
-    return { text: `Expira en ${Math.ceil(hoursRemaining)} horas`, isExpired: false, isWarning: false };
-  }
-
-  return { text: `Expira: ${formatDateTime(expiryDate)}`, isExpired: false, isWarning: false };
-}
 
 export function PaymentCard({
   payment,
@@ -184,7 +156,6 @@ export function PaymentCard({
   const typeLabel = PAYMENT_TYPE_LABELS[payment.type as PaymentType] || payment.type;
   const payerLabel = PAYER_TYPE_LABELS[payment.paidBy as PayerType] || payment.paidBy;
 
-  const expiryInfo = getExpiryInfo(payment.checkoutUrlExpiry);
   const isPending = payment.status === PaymentStatus.PENDING;
   const isPendingVerification = payment.status === PaymentStatus.PENDING_VERIFICATION;
   const isCompleted = payment.status === PaymentStatus.COMPLETED;
@@ -193,16 +164,16 @@ export function PaymentCard({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-medium">{typeLabel}</CardTitle>
+          <CardTitle className="text-lg font-medium">{typeLabel}</CardTitle>
           <Badge variant={statusConfig.variant} className={statusConfig.className}>
-            <StatusIcon className={`h-3 w-3 mr-1 ${payment.status === PaymentStatus.PROCESSING ? 'animate-spin' : ''}`} />
+            <StatusIcon className={`h-3.5 w-3.5 mr-1 ${payment.status === PaymentStatus.PROCESSING ? 'animate-spin' : ''}`} />
             {statusConfig.label}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Amount breakdown and payer */}
-        <div className="space-y-1 text-sm">
+        <div className="space-y-1 text-base">
           {/* IVA Breakdown - use stored values with fallback for legacy payments */}
           {(() => {
             // Use stored subtotal/iva if available, otherwise calculate (legacy payments)
@@ -218,10 +189,30 @@ export function PaymentCard({
                   <span>IVA (16%)</span>
                   <span>{formatCurrency(iva)}</span>
                 </div>
-                <div className="flex justify-between font-medium">
+                <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
                   <span>{formatCurrency(payment.amount)}</span>
                 </div>
+                {payment.speiFundedAmount != null && payment.speiFundedAmount > 0 && (
+                  <>
+                    <div className="flex justify-between text-green-700 font-semibold">
+                      <span>Pagado</span>
+                      <span>{formatCurrency(payment.speiFundedAmount)}</span>
+                    </div>
+                    {!isCompleted && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Restante</span>
+                        <span>{formatCurrency(payment.amount - payment.speiFundedAmount)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {payment.overpaymentAmount != null && payment.overpaymentAmount > 0 && (
+                  <div className="flex justify-between text-orange-600 font-semibold">
+                    <span>Sobrepago</span>
+                    <span>{formatCurrency(payment.overpaymentAmount)}</span>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -232,7 +223,7 @@ export function PaymentCard({
           {payment.reference && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Referencia</span>
-              <span className="font-mono text-xs">{payment.reference}</span>
+              <span className="font-mono text-sm">{payment.reference}</span>
             </div>
           )}
           {isCompleted && payment.paidAt && (
@@ -243,33 +234,25 @@ export function PaymentCard({
           )}
         </div>
 
-        {/* Expiry warning */}
-        {isPending && payment.checkoutUrl && (
-          <div className={`flex items-center gap-2 text-xs ${expiryInfo.isExpired ? 'text-red-600' : expiryInfo.isWarning ? 'text-orange-600' : 'text-muted-foreground'}`}>
-            {(expiryInfo.isExpired || expiryInfo.isWarning) && <AlertTriangle className="h-3 w-3" />}
-            {expiryInfo.text}
-          </div>
-        )}
-
         {/* Receipt info (manual payments) */}
         {payment.receiptFileName && (
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <FileText className="h-3 w-3" />
+              <FileText className="h-4 w-4" />
               <span>Comprobante: {payment.receiptFileName}</span>
             </div>
             {payment.receiptS3Key && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 px-2"
+                className="h-7 px-2"
                 onClick={handleDownloadReceipt}
                 disabled={isDownloading}
               >
                 {isDownloading ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Download className="h-3 w-3" />
+                  <Download className="h-4 w-4" />
                 )}
               </Button>
             )}
@@ -278,28 +261,57 @@ export function PaymentCard({
 
         {/* Stripe receipt download (for completed Stripe payments without manual receipt) */}
         {isCompleted && payment.stripeIntentId && !payment.receiptS3Key && (
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-3 w-3" />
+              <CreditCard className="h-4 w-4" />
               <span>Pago con tarjeta</span>
             </div>
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-2"
+              className="h-7 px-2"
               onClick={handleDownloadStripeReceipt}
               disabled={isDownloadingStripeReceipt}
             >
               {isDownloadingStripeReceipt ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <Download className="h-3 w-3 mr-1" />
+                  <Download className="h-4 w-4 mr-1" />
                   <span>Comprobante</span>
                 </>
               )}
             </Button>
           </div>
+        )}
+
+        {/* SPEI Transfers history */}
+        {payment.transfers && payment.transfers.length > 0 && (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between text-sm text-muted-foreground px-0 h-8">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="h-4 w-4" />
+                  {payment.transfers.length} transferencia{payment.transfers.length > 1 ? 's' : ''} SPEI
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-1 pt-1">
+                {payment.transfers.map((transfer) => (
+                  <div key={transfer.id} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
+                    <span className="text-muted-foreground">
+                      {formatDateTime(transfer.receivedAt)}
+                    </span>
+                    <span className="font-medium text-green-700">
+                      +{formatCurrency(transfer.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Actions (hidden for historical payments) */}
