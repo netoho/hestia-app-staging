@@ -4,7 +4,7 @@
 
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
-import { formatDateTimeLong } from '@/lib/utils/formatting';
+import { formatDateTimeLong, formatAddress, formatFileSize } from '@/lib/utils/formatting';
 import { t } from '@/lib/i18n';
 import { getInvestigatedActorLabel, getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
 import type {
@@ -19,6 +19,7 @@ import type {
   PDFPayment,
   PDFDocument,
   PDFPersonalReference,
+  PDFCommercialReference,
   PDFActivity,
 } from './types';
 
@@ -51,16 +52,6 @@ function formatDate(date: Date | string | null | undefined): string | null {
 }
 
 /**
- * Format file size in human readable format
- */
-function formatFileSize(bytes: number | null | undefined): string {
-  if (!bytes) return '-';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
  * Transform PropertyAddress to PDFAddress
  */
 function transformAddress(addr: {
@@ -77,17 +68,7 @@ function transformAddress(addr: {
 } | null | undefined): PDFAddress | null {
   if (!addr) return null;
 
-  const parts = [
-    addr.street,
-    addr.exteriorNumber ? `#${addr.exteriorNumber}` : null,
-    addr.interiorNumber ? `Int. ${addr.interiorNumber}` : null,
-  ].filter(Boolean);
-
-  const line1 = parts.join(' ');
-  const line2 = [addr.neighborhood, addr.postalCode ? `C.P. ${addr.postalCode}` : null].filter(Boolean).join(', ');
-  const line3 = [addr.municipality, addr.city, addr.state].filter(Boolean).join(', ');
-
-  const formatted = addr.formattedAddress || [line1, line2, line3].filter(Boolean).join(', ');
+  const formatted = formatAddress(addr);
 
   return {
     street: addr.street || '',
@@ -99,7 +80,7 @@ function transformAddress(addr: {
     city: addr.city || '',
     state: addr.state || '',
     country: addr.country || 'México',
-    formatted,
+    formatted: formatted === '-' ? '' : formatted,
   };
 }
 
@@ -113,12 +94,44 @@ function transformPersonalReferences(refs: Array<{
   maternalLastName?: string | null;
   phone?: string | null;
   cellPhone?: string | null;
+  email?: string | null;
+  occupation?: string | null;
   relationship?: string | null;
 }> | null | undefined): PDFPersonalReference[] {
   if (!refs || refs.length === 0) return [];
   return refs.map(ref => ({
     name: formatFullName(ref.firstName || '', ref.paternalLastName || '', ref.maternalLastName || '', ref.middleName || ''),
     phone: ref.cellPhone || ref.phone || '-',
+    email: ref.email || null,
+    occupation: ref.occupation || null,
+    relationship: ref.relationship || null,
+  }));
+}
+
+/**
+ * Transform commercial references
+ */
+function transformCommercialReferences(refs: Array<{
+  companyName?: string | null;
+  contactFirstName?: string | null;
+  contactMiddleName?: string | null;
+  contactPaternalLastName?: string | null;
+  contactMaternalLastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  relationship?: string | null;
+}> | null | undefined): PDFCommercialReference[] {
+  if (!refs || refs.length === 0) return [];
+  return refs.map(ref => ({
+    companyName: ref.companyName || '-',
+    contactName: formatFullName(
+      ref.contactFirstName || '',
+      ref.contactPaternalLastName || '',
+      ref.contactMaternalLastName || '',
+      ref.contactMiddleName || ''
+    ),
+    phone: ref.phone || '-',
+    email: ref.email || null,
     relationship: ref.relationship || null,
   }));
 }
@@ -172,6 +185,24 @@ function getDocumentCategoryLabel(category: string): string {
 }
 
 /**
+ * Build legal rep full name from individual name parts
+ */
+function buildLegalRepName(actor: {
+  legalRepFirstName?: string | null;
+  legalRepMiddleName?: string | null;
+  legalRepPaternalLastName?: string | null;
+  legalRepMaternalLastName?: string | null;
+}): string | null {
+  const name = formatFullName(
+    actor.legalRepFirstName || '',
+    actor.legalRepPaternalLastName || '',
+    actor.legalRepMaternalLastName || '',
+    actor.legalRepMiddleName || ''
+  );
+  return name || null;
+}
+
+/**
  * Transform landlord data
  */
 function transformLandlord(landlord: PolicyWithRelations['landlords'][0]): PDFLandlord {
@@ -194,6 +225,7 @@ function transformLandlord(landlord: PolicyWithRelations['landlords'][0]): PDFLa
     curp: landlord.curp || null,
     email: landlord.email || null,
     phone: landlord.phone || null,
+    workPhone: landlord.workPhone || null,
     address: transformAddress(landlord.addressDetails),
     bankName: landlord.bankName || null,
     accountNumber: landlord.accountNumber ? `****${landlord.accountNumber.slice(-4)}` : null,
@@ -201,6 +233,14 @@ function transformLandlord(landlord: PolicyWithRelations['landlords'][0]): PDFLa
     accountHolder: landlord.accountHolder || null,
     occupation: landlord.occupation || null,
     monthlyIncome: landlord.monthlyIncome ? formatCurrency(landlord.monthlyIncome) : null,
+    propertyDeedNumber: landlord.propertyDeedNumber || null,
+    propertyRegistryFolio: landlord.propertyRegistryFolio || null,
+    businessType: landlord.businessType || null,
+    legalRepName: buildLegalRepName(landlord),
+    legalRepPosition: landlord.legalRepPosition || null,
+    legalRepRfc: landlord.legalRepRfc || null,
+    legalRepPhone: landlord.legalRepPhone || null,
+    legalRepEmail: landlord.legalRepEmail || null,
     documents: transformDocuments(landlord.documents),
   };
 }
@@ -231,21 +271,35 @@ function transformTenant(tenant: PolicyWithRelations['tenant']): PDFTenant | nul
     nationality: tenant.nationality === 'FOREIGN' ? 'Extranjero' : 'Mexicano',
     email: tenant.email || null,
     phone: tenant.phone || null,
+    workPhone: tenant.workPhone || null,
     address: transformAddress(tenant.addressDetails),
     employmentStatus: tenant.employmentStatus ? (t.employmentStatus[tenant.employmentStatus] || tenant.employmentStatus) : null,
     occupation: tenant.occupation || null,
     employerName: tenant.employerName || null,
     position: tenant.position || null,
     monthlyIncome: tenant.monthlyIncome ? formatCurrency(tenant.monthlyIncome) : null,
+    incomeSource: tenant.incomeSource || null,
+    yearsAtJob: tenant.yearsAtJob || null,
+    additionalIncomeAmount: tenant.additionalIncomeAmount ? formatCurrency(tenant.additionalIncomeAmount) : null,
+    additionalIncomeSource: tenant.additionalIncomeSource || null,
     employerAddress: transformAddress(tenant.employerAddressDetails),
     previousLandlordName: tenant.previousLandlordName || null,
     previousLandlordPhone: tenant.previousLandlordPhone || null,
+    previousLandlordEmail: tenant.previousLandlordEmail || null,
     previousRentAmount: tenant.previousRentAmount ? formatCurrency(tenant.previousRentAmount) : null,
     previousRentalAddress: transformAddress(tenant.previousRentalAddressDetails),
+    rentalHistoryYears: tenant.rentalHistoryYears || null,
+    reasonForMoving: tenant.reasonForMoving || null,
     numberOfOccupants: tenant.numberOfOccupants || null,
     hasPets: tenant.hasPets || false,
     petDescription: tenant.petDescription || null,
+    legalRepName: buildLegalRepName(tenant),
+    legalRepPosition: tenant.legalRepPosition || null,
+    legalRepRfc: tenant.legalRepRfc || null,
+    legalRepPhone: tenant.legalRepPhone || null,
+    legalRepEmail: tenant.legalRepEmail || null,
     personalReferences: transformPersonalReferences(tenant.personalReferences),
+    commercialReferences: transformCommercialReferences(tenant.commercialReferences),
     documents: transformDocuments(tenant.documents),
   };
 }
@@ -272,6 +326,7 @@ function transformJointObligor(jo: PolicyWithRelations['jointObligors'][0]): PDF
     curp: jo.curp || null,
     email: jo.email || null,
     phone: jo.phone || null,
+    workPhone: jo.workPhone || null,
     address: transformAddress(jo.addressDetails),
     relationshipToTenant: jo.relationshipToTenant || null,
     employmentStatus: jo.employmentStatus ? (t.employmentStatus[jo.employmentStatus] || jo.employmentStatus) : null,
@@ -285,9 +340,21 @@ function transformJointObligor(jo: PolicyWithRelations['jointObligors'][0]): PDF
     propertyAddress: transformAddress(jo.guaranteePropertyDetails),
     propertyValue: jo.propertyValue ? formatCurrency(jo.propertyValue) : null,
     propertyDeedNumber: jo.propertyDeedNumber || null,
+    propertyRegistry: jo.propertyRegistry || null,
+    propertyTaxAccount: jo.propertyTaxAccount || null,
     maritalStatus: jo.maritalStatus || null,
     spouseName: jo.spouseName || null,
+    spouseRfc: jo.spouseRfc || null,
+    spouseCurp: jo.spouseCurp || null,
+    bankName: jo.bankName || null,
+    accountHolder: jo.accountHolder || null,
+    legalRepName: buildLegalRepName(jo),
+    legalRepPosition: jo.legalRepPosition || null,
+    legalRepRfc: jo.legalRepRfc || null,
+    legalRepPhone: jo.legalRepPhone || null,
+    legalRepEmail: jo.legalRepEmail || null,
     personalReferences: transformPersonalReferences(jo.personalReferences),
+    commercialReferences: transformCommercialReferences(jo.commercialReferences),
     documents: transformDocuments(jo.documents),
   };
 }
@@ -314,18 +381,32 @@ function transformAval(aval: PolicyWithRelations['avals'][0]): PDFAval {
     curp: aval.curp || null,
     email: aval.email || null,
     phone: aval.phone || null,
+    workPhone: aval.workPhone || null,
     address: transformAddress(aval.addressDetails),
     relationshipToTenant: aval.relationshipToTenant || null,
     employmentStatus: aval.employmentStatus ? (t.employmentStatus[aval.employmentStatus] || aval.employmentStatus) : null,
     occupation: aval.occupation || null,
+    employerName: aval.employerName || null,
+    position: aval.position || null,
+    employerAddress: transformAddress(aval.employerAddressDetails),
     monthlyIncome: aval.monthlyIncome ? formatCurrency(aval.monthlyIncome) : null,
     hasPropertyGuarantee: aval.hasPropertyGuarantee || false,
     propertyAddress: transformAddress(aval.guaranteePropertyDetails),
     propertyValue: aval.propertyValue ? formatCurrency(aval.propertyValue) : null,
     propertyDeedNumber: aval.propertyDeedNumber || null,
+    propertyRegistry: aval.propertyRegistry || null,
+    propertyTaxAccount: aval.propertyTaxAccount || null,
     maritalStatus: aval.maritalStatus || null,
     spouseName: aval.spouseName || null,
+    spouseRfc: aval.spouseRfc || null,
+    spouseCurp: aval.spouseCurp || null,
+    legalRepName: buildLegalRepName(aval),
+    legalRepPosition: aval.legalRepPosition || null,
+    legalRepRfc: aval.legalRepRfc || null,
+    legalRepPhone: aval.legalRepPhone || null,
+    legalRepEmail: aval.legalRepEmail || null,
     personalReferences: transformPersonalReferences(aval.personalReferences),
+    commercialReferences: transformCommercialReferences(aval.commercialReferences),
     documents: transformDocuments(aval.documents),
   };
 }
@@ -352,6 +433,7 @@ function transformProperty(prop: PolicyWithRelations['propertyDetails']): PDFPro
     petsAllowed: prop.petsAllowed || false,
     deliveryDate: formatDate(prop.propertyDeliveryDate),
     contractSigningDate: formatDate(prop.contractSigningDate),
+    contractSigningAddress: transformAddress(prop.contractSigningAddressDetails),
   };
 }
 

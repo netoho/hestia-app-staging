@@ -17,6 +17,13 @@ interface OverviewTabProps {
     tenantPercentage?: number;
     landlordPercentage?: number;
     guarantorType?: string;
+    hasIVA?: boolean;
+    issuesTaxReceipts?: boolean;
+    securityDeposit?: number | null;
+    maintenanceFee?: number | null;
+    maintenanceIncludedInRent?: boolean;
+    rentIncreasePercentage?: number | null;
+    paymentMethod?: string | null;
     createdAt: string;
     submittedAt?: string;
     approvedAt?: string;
@@ -36,6 +43,15 @@ export function OverviewTab({ policy, policyId }: OverviewTabProps) {
           rentAmount={policy.rentAmount}
           contractLength={policy.contractLength}
           propertyDetails={policy.propertyDetails}
+          policyFinancialData={{
+            hasIVA: policy.hasIVA,
+            issuesTaxReceipts: policy.issuesTaxReceipts,
+            securityDeposit: policy.securityDeposit,
+            maintenanceFee: policy.maintenanceFee,
+            maintenanceIncludedInRent: policy.maintenanceIncludedInRent,
+            rentIncreasePercentage: policy.rentIncreasePercentage,
+            paymentMethod: policy.paymentMethod,
+          }}
           policyId={policyId}
         />
         <PricingCard

@@ -60,4 +60,20 @@ export const statuses = {
         PARTIAL: 'Parcial',
         PENDING_VERIFICATION: 'Pendiente de Verificación',
     } as Record<string, string>,
+
+    maritalStatus: {
+        single: 'Soltero(a)',
+        married_joint: 'Casado(a) — Bienes Mancomunados',
+        married_separate: 'Casado(a) — Bienes Separados',
+    } as Record<string, string>,
+
+    guaranteeMethod: {
+        property: 'Propiedad',
+        income: 'Ingreso',
+    } as Record<string, string>,
+
+    nationality: {
+        MEXICAN: 'Mexicana',
+        FOREIGN: 'Extranjera',
+    } as Record<string, string>,
 };

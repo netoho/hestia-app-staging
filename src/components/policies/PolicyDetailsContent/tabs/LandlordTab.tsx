@@ -55,11 +55,15 @@ export function LandlordTab({
       )}
 
       {landlords && landlords.length > 0 ? (
-        landlords.map((landlord: any, index: number) => (
+        landlords.map((landlord: any, index: number) => {
+          const coOwnerNumber = landlord.isPrimary
+            ? 0
+            : landlords.slice(0, index).filter((l: any) => !l.isPrimary).length + 1;
+          return (
           <div key={landlord.id} className="space-y-4">
             {index > 0 && <hr className="my-6" />}
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              {landlord.isPrimary ? 'Arrendador Principal' : `Co-propietario ${index}`}
+              {landlord.isPrimary ? 'Arrendador Principal' : `Co-propietario ${coOwnerNumber}`}
               {landlord.isPrimary && <Badge variant="outline" className="ml-2">Principal</Badge>}
             </h3>
             {view === 'info' ? (
@@ -90,7 +94,8 @@ export function LandlordTab({
               />
             )}
           </div>
-        ))
+          );
+        })
       ) : (
         <EmptyState title="No se ha registrado información del arrendador" />
       )}

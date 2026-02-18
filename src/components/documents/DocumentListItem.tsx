@@ -2,9 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import { FileText, Image, Download, Trash2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Document } from '@/types/documents';
+import { formatDate, formatFileSize } from '@/lib/utils/formatting';
 import { DocumentOperation } from '@/lib/documentManagement/types';
 import { DocumentProgress } from './DocumentProgress';
 
@@ -27,24 +26,6 @@ export function DocumentListItem({
   downloading = false,
   operation,
 }: DocumentListItemProps) {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return format(new Date(dateString), 'dd/MM/yyyy', { locale: es });
-    } catch (error) {
-      console.error('Invalid date:', dateString);
-      return 'Invalid date';
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
-
   const getFileIcon = () => {
     if (document.mimeType?.startsWith('image/')) {
       return <Image className="h-5 w-5 text-blue-500" />;

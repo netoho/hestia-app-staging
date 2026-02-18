@@ -13,13 +13,7 @@ import { PaymentStatus, PaymentType } from '@/prisma/generated/prisma-client/enu
 import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
 import { brandInfo } from '@/lib/config/brand';
 import { formatDateTime } from '@/lib/utils/formatting';
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
+import { formatCurrency } from '@/lib/utils/currency';
 
 function CopyableField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
