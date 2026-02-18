@@ -104,8 +104,16 @@ export interface PolicyPaymentSessionsResult {
   landlordPayment: PaymentSessionResult | null;
 }
 
+export interface PaymentTransferInfo {
+  id: string;
+  amount: number;
+  cumulativeAmount: number;
+  receivedAt: Date;
+}
+
 export interface PaymentWithStatus extends Payment {
   isExpired?: boolean;
+  transfers?: PaymentTransferInfo[];
 }
 
 export interface PaymentSummary {
@@ -801,12 +809,18 @@ class PaymentService extends BaseService {
       this.prisma.payment.findMany({
         where: { policyId },
         orderBy: { createdAt: 'desc' },
+        include: {
+          transfers: {
+            select: { id: true, amount: true, cumulativeAmount: true, receivedAt: true },
+            orderBy: { receivedAt: 'asc' },
+          },
+        },
       }),
     ]);
 
     // Add expiration status to payments
     const now = new Date();
-    const paymentsWithStatus: PaymentWithStatus[] = payments.map((payment: Payment) => ({
+    const paymentsWithStatus: PaymentWithStatus[] = payments.map((payment) => ({
       ...payment,
       isExpired: payment.checkoutUrlExpiry ? payment.checkoutUrlExpiry < now : false,
     }));
@@ -1174,12 +1188,18 @@ class PaymentService extends BaseService {
     speiReference: string | null;
     speiFundedAmount: number | null;
     speiHostedUrl: string | null;
+    overpaymentAmount: number | null;
+    transfers: PaymentTransferInfo[];
   } | null> {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
         policy: {
           select: { policyNumber: true },
+        },
+        transfers: {
+          select: { id: true, amount: true, cumulativeAmount: true, receivedAt: true },
+          orderBy: { receivedAt: 'asc' },
         },
       },
     });
@@ -1203,6 +1223,8 @@ class PaymentService extends BaseService {
       speiReference: payment.speiReference,
       speiFundedAmount: payment.speiFundedAmount,
       speiHostedUrl: payment.speiHostedUrl,
+      overpaymentAmount: payment.overpaymentAmount,
+      transfers: payment.transfers,
     };
   }
 
@@ -1352,6 +1374,8 @@ class PaymentService extends BaseService {
     fundedAmount: number;
     hostedUrl: string | null;
     status: PaymentStatus;
+    overpaymentAmount: number | null;
+    transfers: PaymentTransferInfo[];
   } | null> {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
@@ -1361,9 +1385,14 @@ class PaymentService extends BaseService {
         speiReference: true,
         speiHostedUrl: true,
         speiFundedAmount: true,
+        overpaymentAmount: true,
         amount: true,
         status: true,
         speiPaymentIntentId: true,
+        transfers: {
+          select: { id: true, amount: true, cumulativeAmount: true, receivedAt: true },
+          orderBy: { receivedAt: 'asc' },
+        },
       },
     });
 
@@ -1379,6 +1408,8 @@ class PaymentService extends BaseService {
       fundedAmount: payment.speiFundedAmount || 0,
       hostedUrl: payment.speiHostedUrl,
       status: payment.status,
+      overpaymentAmount: payment.overpaymentAmount,
+      transfers: payment.transfers,
     };
   }
 

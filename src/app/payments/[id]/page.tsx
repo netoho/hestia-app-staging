@@ -12,13 +12,7 @@ import { trpc } from '@/lib/trpc/client';
 import { PaymentStatus, PaymentType } from '@/prisma/generated/prisma-client/enums';
 import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
 import { brandInfo } from '@/lib/config/brand';
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
+import { formatCurrency } from '@/lib/utils/currency';
 
 function PaymentSummary({ payment, typeLabel }: {
   payment: { amount: number; subtotal: number | null; iva: number | null; policyNumber: string };

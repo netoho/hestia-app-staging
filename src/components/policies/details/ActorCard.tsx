@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Mail, Phone, Edit, Send, RefreshCw, CheckCircle2, FileSearch } from 'lucide-react';
+import { Phone, Edit, Send, RefreshCw, CheckCircle2, FileSearch } from 'lucide-react';
 import { CompletionBadge } from '@/components/shared/CompletionBadge';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -13,9 +13,19 @@ import { useMemo } from 'react';
 import { formatFullName } from '@/lib/utils/names';
 import { getActorTitle, getActorIcon, calculateActorProgress } from '@/lib/utils/actor';
 import { getDocumentCategoryLabel } from '@/lib/constants/documentCategories';
-import { formatCurrency } from '@/lib/utils/currency';
+import { getDocumentRequirements } from '@/lib/constants/actorDocumentRequirements';
 import { trpc } from '@/lib/trpc/client';
 import { getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
+import { TenantSections, LandlordSections, JointObligorSections, AvalSections } from './ActorInfoSections';
+
+function getIsCompany(actorType: string, actor: any): boolean {
+  switch (actorType) {
+    case 'tenant': return actor.tenantType === 'COMPANY';
+    case 'jointObligor': return actor.jointObligorType === 'COMPANY';
+    case 'aval': return actor.avalType === 'COMPANY';
+    default: return !!actor.isCompany;
+  }
+}
 
 interface ActorCardProps {
   actor: any;
@@ -126,21 +136,41 @@ export default function ActorCard({
       actor.maternalLastName || '',
       actor.middleName || undefined
     ) : 'Sin nombre');
-  const isCompany = actor.tenantType === 'COMPANY' || actor.isCompany;
 
   // Group documents by category
   const documentsByCategory = useMemo(() => {
     const grouped: Record<string, any[]> = {};
-
-    // Group all documents from the hook
     Object.entries(documents).forEach(([category, docs]) => {
       if (docs && docs.length > 0) {
         grouped[category] = docs;
       }
     });
-
     return grouped;
   }, [documents]);
+
+  // Compute all document categories to display (required + already uploaded)
+  const allDocumentCategories = useMemo(() => {
+    const isCompany = getIsCompany(actorType, actor);
+
+    const options: { nationality?: 'MEXICAN' | 'FOREIGN'; guaranteeMethod?: 'property' | 'income' } = {};
+    if (actor.nationality) options.nationality = actor.nationality;
+    if (actor.guaranteeMethod) options.guaranteeMethod = actor.guaranteeMethod;
+
+    const requirements = getDocumentRequirements(actorType, isCompany, options);
+    const requiredCategories = requirements.map(r => r.category as string);
+    const uploadedCategories = Object.keys(documentsByCategory);
+
+    // Union: required first (in order), then any uploaded categories not in requirements
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const cat of requiredCategories) {
+      if (!seen.has(cat)) { seen.add(cat); result.push(cat); }
+    }
+    for (const cat of uploadedCategories) {
+      if (!seen.has(cat)) { seen.add(cat); result.push(cat); }
+    }
+    return result;
+  }, [actor, actorType, documentsByCategory]);
 
   return (
     <Card>
@@ -157,7 +187,7 @@ export default function ActorCard({
               <p className="text-sm text-gray-600">{actor.email || 'Sin email'}</p>
               {actor.phone && (
                 <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
-                  <Phone className="h-3 w-3" />
+                  <Phone className="h-4 w-4" />
                   {actor.phone}
                 </p>
               )}
@@ -249,7 +279,7 @@ export default function ActorCard({
               <span className="font-medium">Progreso de Información</span>
               <span className="font-bold">{progress}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-3" />
           </div>
         )}
 
@@ -257,236 +287,57 @@ export default function ActorCard({
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-purple-600">{actor.documents?.length || 0}</div>
-            <div className="text-[10px] sm:text-xs text-gray-600">Documentos</div>
+            <div className="text-xs sm:text-sm text-gray-600">Documentos</div>
           </div>
           <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-green-600">
-              {(actor.references?.length || 0) + (actor.commercialReferences?.length || 0)}
+              {(actor.personalReferences?.length || 0) + (actor.commercialReferences?.length || 0)}
             </div>
-            <div className="text-[10px] sm:text-xs text-gray-600">Referencias</div>
+            <div className="text-xs sm:text-sm text-gray-600">Referencias</div>
           </div>
           <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-blue-600">{progress}%</div>
-            <div className="text-[10px] sm:text-xs text-gray-600">Completo</div>
+            <div className="text-xs sm:text-sm text-gray-600">Completo</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-              Información Personal
-            </h3>
-            {(actor.tenantType || actor.isCompany) && (
-              <div>
-                <p className="text-sm text-gray-600">Tipo</p>
-                <Badge variant="outline">
-                  {isCompany ? 'Empresa' : 'Persona Física'}
-                </Badge>
-              </div>
-            )}
-            <div>
-              <p className="text-sm text-gray-600">Nombre</p>
-              <p className="font-medium">{displayName}</p>
-            </div>
-            {actor.rfc && (
-              <div>
-                <p className="text-sm text-gray-600">RFC</p>
-                <p className="font-medium">{actor.rfc}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-sm text-gray-600">Email</p>
-              <p className="font-medium flex items-center gap-1">
-                <Mail className="h-4 w-4" />
-                {actor.email}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Teléfono</p>
-              <p className="font-medium flex items-center gap-1">
-                <Phone className="h-4 w-4" />
-                {actor.phone}
-              </p>
-            </div>
-            {actor.nationality && (
-              <div>
-                <p className="text-sm text-gray-600">Nacionalidad</p>
-                <p className="font-medium">
-                  {actor.nationality === 'MEXICAN' ? 'Mexicana' : 'Extranjera'}
-                </p>
-              </div>
-            )}
-            {actor.curp && (
-              <div>
-                <p className="text-sm text-gray-600">CURP</p>
-                <p className="font-medium font-mono">{actor.curp}</p>
-              </div>
-            )}
-            {actor.passport && (
-              <div>
-                <p className="text-sm text-gray-600">Pasaporte</p>
-                <p className="font-medium">{actor.passport}</p>
-              </div>
-            )}
-            {actor.address && (
-              <div>
-                <p className="text-sm text-gray-600">Dirección</p>
-                <p className="font-medium">{actor.address}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            {/* Employment Information */}
-            {(actor.employmentStatus || actor.occupation || actor.companyName || actor.monthlyIncome) && (
-              <>
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                  Información Laboral
-                </h3>
-                {actor.employmentStatus && (
-                  <div>
-                    <p className="text-sm text-gray-600">Situación Laboral</p>
-                    <p className="font-medium">{actor.employmentStatus}</p>
-                  </div>
-                )}
-                {actor.occupation && (
-                  <div>
-                    <p className="text-sm text-gray-600">Ocupación</p>
-                    <p className="font-medium">{actor.occupation}</p>
-                  </div>
-                )}
-                {actor.companyName && !isCompany && (
-                  <div>
-                    <p className="text-sm text-gray-600">Empresa</p>
-                    <p className="font-medium">{actor.companyName}</p>
-                  </div>
-                )}
-                {actor.monthlyIncome && (
-                  <div>
-                    <p className="text-sm text-gray-600">Ingreso Mensual</p>
-                    <p className="font-medium">{formatCurrency(actor.monthlyIncome)}</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Banking Information (for landlords) */}
-            {(actor.bankName || actor.clabe) && (
-              <>
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                  Información Bancaria
-                </h3>
-                {actor.bankName && (
-                  <div>
-                    <p className="text-sm text-gray-600">Banco</p>
-                    <p className="font-medium">{actor.bankName}</p>
-                  </div>
-                )}
-                {actor.accountNumber && (
-                  <div>
-                    <p className="text-sm text-gray-600">Número de Cuenta</p>
-                    <p className="font-medium">{actor.accountNumber}</p>
-                  </div>
-                )}
-                {actor.clabe && (
-                  <div>
-                    <p className="text-sm text-gray-600">CLABE</p>
-                    <p className="font-medium font-mono">{actor.clabe}</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Property Information (for avals) */}
-            {actorType === 'aval' && (actor.propertyAddress || actor.propertyValue || actor.propertyDeedNumber) && (
-              <>
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                  Propiedad en Garantía
-                </h3>
-                {actor.propertyAddress && (
-                  <div>
-                    <p className="text-sm text-gray-600">Dirección</p>
-                    <p className="font-medium">{actor.propertyAddress}</p>
-                  </div>
-                )}
-                {actor.propertyValue && (
-                  <div>
-                    <p className="text-sm text-gray-600">Valor</p>
-                    <p className="font-medium">{formatCurrency(actor.propertyValue)}</p>
-                  </div>
-                )}
-                {actor.propertyDeedNumber && (
-                  <div>
-                    <p className="text-sm text-gray-600">Número de Escritura</p>
-                    <p className="font-medium">{actor.propertyDeedNumber}</p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+        {/* Actor-specific sectioned information */}
+        <div className="mb-6">
+          {actorType === 'tenant' && <TenantSections actor={actor} />}
+          {actorType === 'landlord' && <LandlordSections actor={actor} />}
+          {actorType === 'jointObligor' && <JointObligorSections actor={actor} />}
+          {actorType === 'aval' && <AvalSections actor={actor} />}
         </div>
-
-        {/* Additional Information */}
-        {actor.additionalInfo && (
-          <div className="mt-6">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
-              Información Adicional
-            </h3>
-            <div>
-              <p className="text-sm text-gray-600">{actor.additionalInfo}</p>
-            </div>
-          </div>
-        )}
-
-        {/* References */}
-        {actor.references && actor.references.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
-              Referencias Personales
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {actor.references.map((ref: any, index: number) => (
-                <Card key={index} className="p-3">
-                  <p className="font-medium text-sm">{ref.name}</p>
-                  <p className="text-xs text-gray-600">{ref.relationship}</p>
-                  <p className="text-xs text-gray-600">{ref.phone}</p>
-                  {ref.email && <p className="text-xs text-gray-600 truncate">{ref.email}</p>}
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Documents Section - Using InlineDocumentManager */}
-        {actor.documents && actor.documents.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
-              Documentos
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(documentsByCategory).map(([category, docs]) => {
-                const categoryOperations = Object.values(operations).filter(op =>
-                  op.category === category ||
-                  docs.some((doc: any) => doc.id === op.documentId)
-                );
+        <div className="mt-6">
+          <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider mb-3">
+            Documentos
+          </h3>
+          <div className="space-y-3">
+            {allDocumentCategories.map((category) => {
+              const docs = documentsByCategory[category] || [];
+              const categoryOperations = Object.values(operations).filter(op =>
+                op.category === category ||
+                docs.some((doc: any) => doc.id === op.documentId)
+              );
 
-                return (
-                  <InlineDocumentManager
-                    key={category}
-                    label={getDocumentCategoryLabel(category as DocumentCategory)}
-                    documentType={category}
-                    documents={docs}
-                    readOnly={true}
-                    onDownload={(docId, fileName) => downloadDocument(docId, fileName)}
-                    operations={categoryOperations}
-                    onUpload={() => {}} // Read-only, no upload
-                    allowMultiple={false}
-                  />
-                );
-              })}
-            </div>
+              return (
+                <InlineDocumentManager
+                  key={category}
+                  label={getDocumentCategoryLabel(category as DocumentCategory)}
+                  documentType={category}
+                  documents={docs}
+                  readOnly={true}
+                  onDownload={(docId, fileName) => downloadDocument(docId, fileName)}
+                  operations={categoryOperations}
+                  onUpload={() => {}}
+                  allowMultiple={false}
+                />
+              );
+            })}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

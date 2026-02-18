@@ -249,12 +249,12 @@ export default function PolicyDetailsContent({
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
         <div className="relative">
           <div ref={tabsContainerRef} className="overflow-x-auto pb-2">
-            <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max min-w-full md:w-full md:grid md:grid-cols-7">
+            <TabsList className={`inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max min-w-full md:w-full md:grid ${isStaffOrAdmin ? 'md:grid-cols-7' : 'md:grid-cols-6'}`}>
               <TabsTrigger value="overview" className="whitespace-nowrap">General</TabsTrigger>
               <TabsTrigger value="landlord" className="whitespace-nowrap">Arrendador</TabsTrigger>
               <TabsTrigger value="tenant" className="whitespace-nowrap">Inquilino</TabsTrigger>
               <TabsTrigger value="guarantors" className="whitespace-nowrap">Obligado S. / Aval</TabsTrigger>
-              <TabsTrigger value="payments" className="whitespace-nowrap">Pagos</TabsTrigger>
+              {isStaffOrAdmin && <TabsTrigger value="payments" className="whitespace-nowrap">Pagos</TabsTrigger>}
               <TabsTrigger value="documents" className="whitespace-nowrap">Documentos</TabsTrigger>
               <TabsTrigger value="timeline" className="whitespace-nowrap">Actividad</TabsTrigger>
             </TabsList>
@@ -339,11 +339,13 @@ export default function PolicyDetailsContent({
           )}
         </TabsContent>
 
-        {/* Payments Tab */}
-        <TabsContent value="payments" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <SectionHeader title="Pagos" onRefresh={handlePaymentRefresh} isRefreshing={isRefreshing} />
-          <PaymentsTab policyId={policyId} isStaffOrAdmin={isStaffOrAdmin} />
-        </TabsContent>
+        {/* Payments Tab - staff/admin only */}
+        {isStaffOrAdmin && (
+          <TabsContent value="payments" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <SectionHeader title="Pagos" onRefresh={handlePaymentRefresh} isRefreshing={isRefreshing} />
+            <PaymentsTab policyId={policyId} isStaffOrAdmin={isStaffOrAdmin} />
+          </TabsContent>
+        )}
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">

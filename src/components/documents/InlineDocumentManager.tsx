@@ -90,22 +90,16 @@ export function InlineDocumentManager({
       )}
 
       {/* Document List */}
-      {hasDocuments && (
+      {(hasDocuments || readOnly) && (
         <DocumentList
           documents={documents}
           readOnly={readOnly}
           onDownload={onDownload}
           onDelete={onDelete}
           operations={operations}
-          showEmptyState={false}
+          showEmptyState={readOnly}
+          label={readOnly ? label : undefined}
         />
-      )}
-
-      {/* Read-only mode with no documents */}
-      {readOnly && !hasDocuments && (
-        <div className="p-4 border rounded-lg bg-gray-50 text-sm text-gray-500 text-center">
-          No se ha cargado ningún documento
-        </div>
       )}
     </div>
   );

@@ -84,7 +84,19 @@
       "Bash(brew --prefix:*)",
       "Bash(/opt/homebrew/bin/gh pr view:*)",
       "Bash(git -C /Users/neto/Development/hestia/hestia-app log --oneline --all -- \"src/lib/services/fileUploadService.ts\")",
-      "Bash(git -C /Users/neto/Development/hestia/hestia-app status --short)"
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app status --short)",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:stripe.com)",
+      "WebFetch(domain:www.feecalculator.io)",
+      "WebFetch(domain:tradly.app)",
+      "WebFetch(domain:github.com)",
+      "Bash(git diff:*)",
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app status)",
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app diff)",
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app log --oneline -5)",
+      "Bash(git -C /Users/neto/Development/hestia/hestia-app add prisma/schema.prisma prisma/migrations/20260216174633_add_payment_transfer/ src/app/api/webhooks/stripe/route.ts src/app/payments/[id]/spei/page.tsx src/components/policies/payments/PaymentCard.tsx src/lib/services/paymentService.ts CLAUDE.md)",
+      "Bash(git -C:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
