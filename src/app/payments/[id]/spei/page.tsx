@@ -224,7 +224,7 @@ export default function SpeiPaymentPage() {
                     Sobrepago detectado: {formatCurrency(payment.overpaymentAmount)}
                   </p>
                   <p className="text-xs text-orange-600">
-                    Contactanos a {brandInfo.supportEmail} para procesar tu reembolso.
+                    Contáctanos a {brandInfo.supportEmail} para procesar tu reembolso.
                   </p>
                 </div>
               )}
