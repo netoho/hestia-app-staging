@@ -4,7 +4,7 @@
 
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
-import { formatDateTimeLong, formatAddress } from '@/lib/utils/formatting';
+import { formatDateTimeLong, formatAddress, formatFileSize } from '@/lib/utils/formatting';
 import { t } from '@/lib/i18n';
 import { getInvestigatedActorLabel, getInvestigationStatusLabel } from '@/lib/constants/investigationConfig';
 import type {
@@ -49,16 +49,6 @@ function formatDate(date: Date | string | null | undefined): string | null {
     month: 'long',
     year: 'numeric',
   });
-}
-
-/**
- * Format file size in human readable format
- */
-function formatFileSize(bytes: number | null | undefined): string {
-  if (!bytes) return '-';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /**
@@ -443,6 +433,7 @@ function transformProperty(prop: PolicyWithRelations['propertyDetails']): PDFPro
     petsAllowed: prop.petsAllowed || false,
     deliveryDate: formatDate(prop.propertyDeliveryDate),
     contractSigningDate: formatDate(prop.contractSigningDate),
+    contractSigningAddress: transformAddress(prop.contractSigningAddressDetails),
   };
 }
 

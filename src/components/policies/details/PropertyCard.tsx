@@ -132,7 +132,27 @@ export default function PropertyCard({
                     <span className="text-gray-600">Mascotas:</span> {propertyDetails.petsAllowed ? 'Sí' : 'No'}
                   </p>
                 )}
+                {propertyDetails.parkingNumbers && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">No. Cajones:</span> {propertyDetails.parkingNumbers}
+                  </p>
+                )}
+                {propertyDetails.hasInventory !== undefined && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Inventario:</span> {propertyDetails.hasInventory ? 'Sí' : 'No'}
+                  </p>
+                )}
+                {propertyDetails.hasRules !== undefined && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Reglamento:</span> {propertyDetails.hasRules ? 'Sí' : 'No'}
+                  </p>
+                )}
               </div>
+              {propertyDetails.otherServices && (
+                <p className="text-sm mt-2">
+                  <span className="text-gray-600">Otros servicios:</span> {propertyDetails.otherServices}
+                </p>
+              )}
             </div>
 
             {/* Services */}
@@ -152,12 +172,17 @@ export default function PropertyCard({
             )}
 
             {/* Dates */}
-            {(propertyDetails.propertyDeliveryDate || propertyDetails.contractSigningDate) && (
+            {(propertyDetails.propertyDeliveryDate || propertyDetails.contractSigningDate || propertyDetails.contractSigningLocation) && (
               <div className="pt-3 border-t">
-                <p className="text-sm font-semibold mb-2">Fechas</p>
+                <p className="text-sm font-semibold mb-2">Fechas y Firma</p>
                 {propertyDetails.contractSigningDate && (
                   <p className="text-sm">
                     <span className="text-gray-600">Firma de contrato:</span> {formatDateLong(propertyDetails.contractSigningDate)}
+                  </p>
+                )}
+                {propertyDetails.contractSigningLocation && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Lugar de firma:</span> {propertyDetails.contractSigningLocation}
                   </p>
                 )}
                 {propertyDetails.propertyDeliveryDate && (
@@ -169,7 +194,7 @@ export default function PropertyCard({
             )}
 
             {/* Financial Details - Now from policyFinancialData */}
-            {policyFinancialData && (policyFinancialData.securityDeposit || policyFinancialData.maintenanceFee) && (
+            {policyFinancialData && (policyFinancialData.securityDeposit || policyFinancialData.maintenanceFee || policyFinancialData.rentIncreasePercentage || policyFinancialData.paymentMethod) && (
               <div className="pt-3 border-t">
                 <p className="text-sm font-semibold mb-2">Detalles Financieros</p>
                 {policyFinancialData.securityDeposit !== undefined && policyFinancialData.securityDeposit !== null && (
@@ -181,6 +206,16 @@ export default function PropertyCard({
                   <p className="text-sm">
                     <span className="text-gray-600">Mantenimiento:</span> {formatCurrency(policyFinancialData.maintenanceFee)}
                     {policyFinancialData.maintenanceIncludedInRent && ' (incluido en renta)'}
+                  </p>
+                )}
+                {policyFinancialData.rentIncreasePercentage !== undefined && policyFinancialData.rentIncreasePercentage !== null && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Incremento anual:</span> {policyFinancialData.rentIncreasePercentage}%
+                  </p>
+                )}
+                {policyFinancialData.paymentMethod && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">Método de pago:</span> {policyFinancialData.paymentMethod}
                   </p>
                 )}
               </div>

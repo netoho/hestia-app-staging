@@ -92,27 +92,22 @@ function CommercialReferenceCard({ data }: { data: any }) {
 
 function translateNationality(val: string | null | undefined) {
   if (!val) return '-';
-  return val === 'MEXICAN' ? 'Mexicana' : 'Extranjera';
+  return t.nationality[val] || val;
 }
 
 function translateEmploymentStatus(val: string | null | undefined) {
   if (!val) return '-';
-  return (t.employmentStatus as Record<string, string>)[val] || val;
+  return t.employmentStatus[val] || val;
 }
 
 function translateMaritalStatus(val: string | null | undefined) {
   if (!val) return '-';
-  const map: Record<string, string> = {
-    single: 'Soltero(a)',
-    married_joint: 'Casado(a) — Bienes Mancomunados',
-    married_separate: 'Casado(a) — Bienes Separados',
-  };
-  return map[val] || val;
+  return t.maritalStatus[val] || val;
 }
 
 function translateGuaranteeMethod(val: string | null | undefined) {
   if (!val) return '-';
-  return val === 'property' ? 'Propiedad' : val === 'income' ? 'Ingreso' : val;
+  return t.guaranteeMethod[val] || val;
 }
 
 // ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ import {
   X,
   RefreshCw,
   AlertCircle,
+  XCircle,
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
 

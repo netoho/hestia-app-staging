@@ -206,6 +206,7 @@ export interface PDFProperty {
   petsAllowed: boolean;
   deliveryDate: string | null;
   contractSigningDate: string | null;
+  contractSigningAddress: PDFAddress | null;
 }
 
 export interface PDFActorInvestigation {

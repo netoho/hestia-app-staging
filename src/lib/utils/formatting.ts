@@ -1,5 +1,5 @@
 /**
- * Date formatting utilities
+ * Formatting utilities
  */
 
 /**
@@ -100,4 +100,15 @@ export function formatAddress(addr: AddressFields | null | undefined): string {
 
   const formatted = [line1, line2, line3].filter(Boolean).join(', ');
   return formatted || '-';
+}
+
+/**
+ * Format file size in human readable format
+ * Example: 1024 → "1.0 KB", 1048576 → "1.0 MB"
+ */
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return '-';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
