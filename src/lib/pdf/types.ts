@@ -18,6 +18,8 @@ export interface PDFAddress {
 export interface PDFPersonalReference {
   name: string;
   phone: string;
+  email: string | null;
+  occupation: string | null;
   relationship: string | null;
 }
 
@@ -25,6 +27,7 @@ export interface PDFCommercialReference {
   companyName: string;
   contactName: string;
   phone: string;
+  email: string | null;
   relationship: string | null;
 }
 
@@ -45,6 +48,7 @@ export interface PDFLandlord {
   curp: string | null;
   email: string | null;
   phone: string | null;
+  workPhone: string | null;
   address: PDFAddress | null;
   bankName: string | null;
   accountNumber: string | null;
@@ -52,6 +56,15 @@ export interface PDFLandlord {
   accountHolder: string | null;
   occupation: string | null;
   monthlyIncome: string | null;
+  propertyDeedNumber: string | null;
+  propertyRegistryFolio: string | null;
+  // Company fields
+  businessType: string | null;
+  legalRepName: string | null;
+  legalRepPosition: string | null;
+  legalRepRfc: string | null;
+  legalRepPhone: string | null;
+  legalRepEmail: string | null;
   documents: PDFDocument[];
 }
 
@@ -65,21 +78,36 @@ export interface PDFTenant {
   nationality: string;
   email: string | null;
   phone: string | null;
+  workPhone: string | null;
   address: PDFAddress | null;
   employmentStatus: string | null;
   occupation: string | null;
   employerName: string | null;
   position: string | null;
   monthlyIncome: string | null;
+  incomeSource: string | null;
+  yearsAtJob: number | null;
+  additionalIncomeAmount: string | null;
+  additionalIncomeSource: string | null;
   employerAddress: PDFAddress | null;
   previousLandlordName: string | null;
   previousLandlordPhone: string | null;
+  previousLandlordEmail: string | null;
   previousRentAmount: string | null;
   previousRentalAddress: PDFAddress | null;
+  rentalHistoryYears: number | null;
+  reasonForMoving: string | null;
   numberOfOccupants: number | null;
   hasPets: boolean;
   petDescription: string | null;
+  // Company fields
+  legalRepName: string | null;
+  legalRepPosition: string | null;
+  legalRepRfc: string | null;
+  legalRepPhone: string | null;
+  legalRepEmail: string | null;
   personalReferences: PDFPersonalReference[];
+  commercialReferences: PDFCommercialReference[];
   documents: PDFDocument[];
 }
 
@@ -91,6 +119,7 @@ export interface PDFJointObligor {
   curp: string | null;
   email: string | null;
   phone: string | null;
+  workPhone: string | null;
   address: PDFAddress | null;
   relationshipToTenant: string | null;
   employmentStatus: string | null;
@@ -104,9 +133,22 @@ export interface PDFJointObligor {
   propertyAddress: PDFAddress | null;
   propertyValue: string | null;
   propertyDeedNumber: string | null;
+  propertyRegistry: string | null;
+  propertyTaxAccount: string | null;
   maritalStatus: string | null;
   spouseName: string | null;
+  spouseRfc: string | null;
+  spouseCurp: string | null;
+  bankName: string | null;
+  accountHolder: string | null;
+  // Company fields
+  legalRepName: string | null;
+  legalRepPosition: string | null;
+  legalRepRfc: string | null;
+  legalRepPhone: string | null;
+  legalRepEmail: string | null;
   personalReferences: PDFPersonalReference[];
+  commercialReferences: PDFCommercialReference[];
   documents: PDFDocument[];
 }
 
@@ -118,18 +160,33 @@ export interface PDFAval {
   curp: string | null;
   email: string | null;
   phone: string | null;
+  workPhone: string | null;
   address: PDFAddress | null;
   relationshipToTenant: string | null;
   employmentStatus: string | null;
   occupation: string | null;
+  employerName: string | null;
+  position: string | null;
+  employerAddress: PDFAddress | null;
   monthlyIncome: string | null;
   hasPropertyGuarantee: boolean;
   propertyAddress: PDFAddress | null;
   propertyValue: string | null;
   propertyDeedNumber: string | null;
+  propertyRegistry: string | null;
+  propertyTaxAccount: string | null;
   maritalStatus: string | null;
   spouseName: string | null;
+  spouseRfc: string | null;
+  spouseCurp: string | null;
+  // Company fields
+  legalRepName: string | null;
+  legalRepPosition: string | null;
+  legalRepRfc: string | null;
+  legalRepPhone: string | null;
+  legalRepEmail: string | null;
   personalReferences: PDFPersonalReference[];
+  commercialReferences: PDFCommercialReference[];
   documents: PDFDocument[];
 }
 
