@@ -185,7 +185,7 @@ export function PolicyProgressIndicator({
       />
       {showStepText && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Step {currentStep} of {totalSteps}</span>
+          <span>{t.pages.policies.stepOf(currentStep, totalSteps)}</span>
           <span>{Math.round(progressPercentage)}%</span>
         </div>
       )}

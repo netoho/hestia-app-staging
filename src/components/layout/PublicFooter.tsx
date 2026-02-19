@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import { t } from '@/lib/i18n';
-import { Mail, Phone, MapPin } from 'lucide-react';
-import NewsletterForm from './NewsletterForm';
+import { Mail, Phone } from 'lucide-react';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -21,7 +20,6 @@ export default function PublicFooter() {
             <div className="space-y-2 text-sm">
               <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {t.contactEmail}</p>
               <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> {t.contactPhone}</p>
-              {/* <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> {t.layout.publicFooter.address}</p> */}
             </div>
           </div>
 
@@ -48,19 +46,9 @@ export default function PublicFooter() {
                   </Link>
                 </li>
               ))}
-               {/* <li> */}
-               {/*    <Link href="/sitemap.xml" className="text-sm hover:text-primary transition-colors"> */}
-               {/*      {t.layout.publicFooter.sitemap} */}
-               {/*    </Link> */}
-               {/* </li> */}
             </ul>
           </div>
           
-          {/* <div> */}
-          {/*   <h3 className="text-2xl font-headline font-bold text-foreground mb-4">{t.layout.publicFooter.newsletter}</h3> */}
-          {/*   <p className="text-sm mb-3">{t.layout.publicFooter.newsletterDescription}</p> */}
-          {/*   <NewsletterForm /> */}
-          {/* </div> */}
         </div>
 
         <div className="border-t border-border pt-8 text-center md:flex md:justify-between">
