@@ -134,7 +134,7 @@ export function PolicyHeader({
           {isStaffOrAdmin && status === 'APPROVED' && !activatedAt && (
             <DropdownMenuItem onClick={onActivate} className="text-green-600">
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Activar Protección
+              {t.pages.policies.activatePolicy}
             </DropdownMenuItem>
           )}
 
@@ -142,7 +142,7 @@ export function PolicyHeader({
           {isStaffOrAdmin && status === 'APPROVED' && !!activatedAt && (
             <DropdownMenuItem onClick={onDeactivate} className="text-orange-600">
               <XCircle className="mr-2 h-4 w-4" />
-              Desactivar Protección
+              {t.pages.policies.deactivatePolicy}
             </DropdownMenuItem>
           )}
 
@@ -165,7 +165,7 @@ export function PolicyHeader({
           {permissions.canSendInvitations && (
             <DropdownMenuItem onClick={onShareClick}>
               <Share2 className="mr-2 h-4 w-4" />
-              Compartir Enlaces
+              {t.pages.policies.shareLinks}
             </DropdownMenuItem>
           )}
 
@@ -208,7 +208,7 @@ export function PolicyHeader({
                 className="text-destructive focus:text-destructive"
               >
                 <XCircle className="mr-2 h-4 w-4" />
-                Cancelar Protección
+                {t.pages.policies.cancelPolicy}
               </DropdownMenuItem>
             </>
           )}

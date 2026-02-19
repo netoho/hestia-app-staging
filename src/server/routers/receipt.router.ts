@@ -64,7 +64,10 @@ export const receiptRouter = createTRPCRouter({
       const tenants = await prisma.tenant.findMany({
         where: {
           email: { equals: input.email, mode: 'insensitive' },
-          policy: { status: PolicyStatus.APPROVED },
+          policy: {
+            status: PolicyStatus.APPROVED,
+            activatedAt: { not: null },
+          },
         },
         select: {
           id: true,
@@ -113,7 +116,10 @@ export const receiptRouter = createTRPCRouter({
       const allTenants = await prisma.tenant.findMany({
         where: {
           email: { equals: email, mode: 'insensitive' },
-          policy: { status: PolicyStatus.APPROVED },
+          policy: {
+            status: PolicyStatus.APPROVED,
+            activatedAt: { not: null },
+          },
         },
         include: {
           policy: {
@@ -158,8 +164,6 @@ export const receiptRouter = createTRPCRouter({
             maintenanceIncludedInRent: t.policy.maintenanceIncludedInRent,
           }
         );
-
-      console.log(pd)
 
         return {
           policyId: t.policy.id,
@@ -496,6 +500,10 @@ export const receiptRouter = createTRPCRouter({
 
       if (!policy) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
+      }
+
+      if (policy.status !== 'APPROVED') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Los comprobantes solo están disponibles para protecciones aprobadas' });
       }
 
       const receipts = await receiptService.getReceiptsByPolicy(input.policyId);
