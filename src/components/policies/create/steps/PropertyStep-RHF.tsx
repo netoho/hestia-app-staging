@@ -19,6 +19,7 @@ import { PropertyType } from "@/prisma/generated/prisma-client/enums";
 import { propertyStepSchema, type PropertyStepData } from '@/lib/schemas/policy/wizard';
 import { generatePolicyNumber } from '@/lib/utils/policy';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
+import { t } from '@/lib/i18n';
 
 interface PropertyStepRHFProps {
   initialData: Partial<PropertyStepData>;
@@ -74,8 +75,8 @@ export default function PropertyStepRHF({
       <form onSubmit={form.handleSubmit(handleSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Información de la Propiedad</CardTitle>
-            <CardDescription>Ingrese los detalles de la propiedad a asegurar</CardDescription>
+            <CardTitle>{t.pages.createPolicy.steps.property.title}</CardTitle>
+            <CardDescription>{t.pages.createPolicy.steps.property.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Policy Number */}
@@ -84,7 +85,7 @@ export default function PropertyStepRHF({
               name="policyNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Número de Póliza</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.steps.property.policyNumber}</FormLabel>
                   <div className="flex gap-2">
                     <FormControl>
                       <Input
@@ -101,7 +102,7 @@ export default function PropertyStepRHF({
                       size="icon"
                       onClick={handleGeneratePolicyNumber}
                       disabled={disabled}
-                      title="Generar nuevo número"
+                      title={t.pages.createPolicy.steps.property.generateNewNumber}
                     >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
@@ -120,12 +121,12 @@ export default function PropertyStepRHF({
               name="internalCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel optional>Código Interno</FormLabel>
+                  <FormLabel optional>{t.pages.createPolicy.steps.property.internalCode}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       value={field.value || ''}
-                      placeholder="INV1, CONT 1, etc."
+                      placeholder={t.pages.createPolicy.steps.property.internalCodePlaceholder}
                       disabled={disabled}
                     />
                   </FormControl>
@@ -140,7 +141,7 @@ export default function PropertyStepRHF({
               name="propertyAddressDetails"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Dirección de la Propiedad</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.steps.property.propertyAddress}</FormLabel>
                   <FormControl>
                     <AddressAutocomplete
                       label=""
@@ -163,7 +164,7 @@ export default function PropertyStepRHF({
               name="propertyType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tipo de Propiedad</FormLabel>
+                  <FormLabel>{t.pages.createPolicy.steps.property.propertyType}</FormLabel>
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
@@ -175,12 +176,12 @@ export default function PropertyStepRHF({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={PropertyType.HOUSE}>Casa</SelectItem>
-                      <SelectItem value={PropertyType.APARTMENT}>Departamento</SelectItem>
-                      <SelectItem value={PropertyType.COMMERCIAL}>Local Comercial</SelectItem>
-                      <SelectItem value={PropertyType.OFFICE}>Oficina</SelectItem>
-                      <SelectItem value={PropertyType.WAREHOUSE}>Bodega</SelectItem>
-                      <SelectItem value={PropertyType.OTHER}>Otro</SelectItem>
+                      <SelectItem value={PropertyType.HOUSE}>{t.pages.createPolicy.steps.property.propertyTypes.house}</SelectItem>
+                      <SelectItem value={PropertyType.APARTMENT}>{t.pages.createPolicy.steps.property.propertyTypes.apartment}</SelectItem>
+                      <SelectItem value={PropertyType.COMMERCIAL}>{t.pages.createPolicy.steps.property.propertyTypes.commercial}</SelectItem>
+                      <SelectItem value={PropertyType.OFFICE}>{t.pages.createPolicy.steps.property.propertyTypes.office}</SelectItem>
+                      <SelectItem value={PropertyType.WAREHOUSE}>{t.pages.createPolicy.steps.property.propertyTypes.warehouse}</SelectItem>
+                      <SelectItem value={PropertyType.OTHER}>{t.pages.createPolicy.steps.property.propertyTypes.other}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -195,7 +196,7 @@ export default function PropertyStepRHF({
                 name="rentAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Renta Mensual</FormLabel>
+                    <FormLabel required>{t.pages.createPolicy.steps.property.monthlyRent}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -214,7 +215,7 @@ export default function PropertyStepRHF({
                 name="depositAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel optional>Depósito</FormLabel>
+                    <FormLabel optional>{t.pages.createPolicy.steps.property.deposit}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -237,7 +238,7 @@ export default function PropertyStepRHF({
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Fecha de Inicio</FormLabel>
+                    <FormLabel required>{t.pages.createPolicy.steps.property.startDate}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -255,7 +256,7 @@ export default function PropertyStepRHF({
                 name="endDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Fecha de Término</FormLabel>
+                    <FormLabel required>{t.pages.createPolicy.steps.property.endDate}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -275,7 +276,7 @@ export default function PropertyStepRHF({
               name="contractLength"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel optional>Duración del Contrato (meses)</FormLabel>
+                  <FormLabel optional>{t.pages.createPolicy.steps.property.contractDuration}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}

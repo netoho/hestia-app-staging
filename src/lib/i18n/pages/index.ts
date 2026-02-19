@@ -14,6 +14,7 @@ import { propertyOwners } from './propertyOwners';
 import { realEstateAdvisors } from './realEstateAdvisors';
 import { joinUs } from './joinUs';
 import { onboard } from './onboard';
+import { createPolicy } from './createPolicy';
 
 export const pages = {
     home,
@@ -23,6 +24,7 @@ export const pages = {
     policies,
     users,
     newPolicy,
+    createPolicy,
     profile,
     settings,
     faq,

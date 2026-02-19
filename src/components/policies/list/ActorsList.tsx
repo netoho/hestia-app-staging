@@ -3,6 +3,7 @@
 import { Home, User, Users, CheckSquare, Square } from 'lucide-react';
 import { formatFullName } from '@/lib/utils/names';
 import { ReactNode } from 'react';
+import { t } from '@/lib/i18n';
 
 interface Actor {
   firstName?: string;
@@ -45,21 +46,21 @@ export default function ActorsList({
     return (
       <div className="mb-3 last:mb-0">
         <div className="flex items-start gap-2">
-          <div className="mt-0.5 text-gray-600">{icon}</div>
+          <div className="mt-0.5 text-muted-foreground">{icon}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-medium truncate">{name}</span>
               <CompletionIcon
                 className={`h-3.5 w-3.5 flex-shrink-0 ${
-                  actor.informationComplete ? 'text-green-600' : 'text-gray-400'
+                  actor.informationComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/60'
                 }`}
               />
             </div>
             {actor.email && (
-              <div className="text-xs text-gray-600 truncate">{actor.email}</div>
+              <div className="text-xs text-muted-foreground truncate">{actor.email}</div>
             )}
             {actor.phone && (
-              <div className="text-xs text-gray-500">{actor.phone}</div>
+              <div className="text-xs text-muted-foreground">{actor.phone}</div>
             )}
           </div>
         </div>
@@ -106,7 +107,7 @@ export default function ActorsList({
 
       {/* Empty state */}
       {landlords.length === 0 && !tenant && (
-        <span className="text-gray-400 text-sm">Sin actores</span>
+        <span className="text-muted-foreground text-sm">{t.pages.createPolicy.list.noActors}</span>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { t } from '@/lib/i18n';
 
 interface Tab {
   id: string;
@@ -105,14 +106,14 @@ export function useFormWizardTabs({
           // Show first error in toast
           const firstError = Object.values(validationErrors)[0];
           toast({
-            title: "Error de validación",
+            title: t.pages.createPolicy.messages.validationError,
             description: firstError,
             variant: "destructive"
           });
         } else {
           toast({
-            title: "Error de validación",
-            description: "Por favor revisa los campos requeridos",
+            title: t.pages.createPolicy.messages.validationError,
+            description: t.pages.createPolicy.messages.validationErrorDesc,
             variant: "destructive"
           });
         }
@@ -133,8 +134,8 @@ export function useFormWizardTabs({
     } catch (error: any) {
       console.error(`Error saving ${tabName}:`, error);
       toast({
-        title: "Error",
-        description: error.message || "Ocurrió un error al guardar",
+        title: t.pages.createPolicy.messages.error,
+        description: error.message || t.pages.createPolicy.messages.savingError,
         variant: "destructive"
       });
       return false;
