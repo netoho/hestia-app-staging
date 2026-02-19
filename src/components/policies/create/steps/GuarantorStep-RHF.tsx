@@ -18,6 +18,7 @@ import {
 import { GuarantorType } from "@/prisma/generated/prisma-client/enums";
 import { guarantorStepSchema, type GuarantorStepData } from '@/lib/schemas/policy/wizard';
 import { Plus, Trash2 } from 'lucide-react';
+import { t } from '@/lib/i18n';
 
 interface GuarantorStepRHFProps {
   initialData: Partial<GuarantorStepData>;
@@ -99,7 +100,7 @@ export default function GuarantorStepRHF({
             variant="destructive"
             onClick={() => fieldArray.remove(index)}
             disabled={disabled || fieldArray.fields.length === 1}
-            title={fieldArray.fields.length === 1 ? `Debe haber al menos un ${label.toLowerCase()}` : 'Eliminar'}
+            title={fieldArray.fields.length === 1 ? t.pages.createPolicy.steps.guarantors.mustHaveAtLeastOne(label) : 'Eliminar'}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -111,12 +112,12 @@ export default function GuarantorStepRHF({
             name={`${type}.${index}.firstName` as any}
             render={({ field }) => (
               <FormItem>
-                <FormLabel optional>Nombre</FormLabel>
+                <FormLabel optional>{t.pages.createPolicy.fields.name}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     value={field.value || ''}
-                    placeholder="Nombre"
+                    placeholder={t.pages.createPolicy.fields.namePlaceholder}
                     disabled={disabled}
                   />
                 </FormControl>
@@ -130,12 +131,12 @@ export default function GuarantorStepRHF({
             name={`${type}.${index}.middleName` as any}
             render={({ field }) => (
               <FormItem>
-                <FormLabel optional>Segundo Nombre</FormLabel>
+                <FormLabel optional>{t.pages.createPolicy.fields.middleName}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     value={field.value || ''}
-                    placeholder="Segundo nombre"
+                    placeholder={t.pages.createPolicy.fields.middleNamePlaceholder}
                     disabled={disabled}
                   />
                 </FormControl>
@@ -151,12 +152,12 @@ export default function GuarantorStepRHF({
             name={`${type}.${index}.paternalLastName` as any}
             render={({ field }) => (
               <FormItem>
-                <FormLabel optional>Apellido Paterno</FormLabel>
+                <FormLabel optional>{t.pages.createPolicy.fields.paternalLastName}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     value={field.value || ''}
-                    placeholder="Apellido paterno"
+                    placeholder={t.pages.createPolicy.fields.paternalLastNamePlaceholder}
                     disabled={disabled}
                   />
                 </FormControl>
@@ -170,12 +171,12 @@ export default function GuarantorStepRHF({
             name={`${type}.${index}.maternalLastName` as any}
             render={({ field }) => (
               <FormItem>
-                <FormLabel optional>Apellido Materno</FormLabel>
+                <FormLabel optional>{t.pages.createPolicy.fields.maternalLastName}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     value={field.value || ''}
-                    placeholder="Apellido materno"
+                    placeholder={t.pages.createPolicy.fields.maternalLastNamePlaceholder}
                     disabled={disabled}
                   />
                 </FormControl>
@@ -190,12 +191,12 @@ export default function GuarantorStepRHF({
           name={`${type}.${index}.email` as any}
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Email</FormLabel>
+              <FormLabel required>{t.pages.createPolicy.fields.email}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   type="email"
-                  placeholder="correo@ejemplo.com"
+                  placeholder={t.pages.createPolicy.fields.emailPlaceholder}
                   disabled={disabled}
                 />
               </FormControl>
@@ -209,12 +210,12 @@ export default function GuarantorStepRHF({
           name={`${type}.${index}.phone` as any}
           render={({ field }) => (
             <FormItem>
-              <FormLabel optional>Teléfono</FormLabel>
+              <FormLabel optional>{t.pages.createPolicy.fields.phone}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   value={field.value || ''}
-                  placeholder="10 dígitos"
+                  placeholder={t.pages.createPolicy.fields.phonePlaceholder}
                   disabled={disabled}
                 />
               </FormControl>
@@ -231,8 +232,8 @@ export default function GuarantorStepRHF({
       <form onSubmit={form.handleSubmit(handleSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Obligado Solidario / Aval</CardTitle>
-            <CardDescription>Configure las garantías para la protección</CardDescription>
+            <CardTitle>{t.pages.createPolicy.steps.guarantors.title}</CardTitle>
+            <CardDescription>{t.pages.createPolicy.steps.guarantors.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Guarantor Type Selector */}
@@ -241,7 +242,7 @@ export default function GuarantorStepRHF({
               name="guarantorType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Tipo de Garantía</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.steps.guarantors.guaranteeType}</FormLabel>
                   <Select
                     value={field.value}
                     onValueChange={(value) => handleGuarantorTypeChange(value as GuarantorType)}
@@ -249,14 +250,14 @@ export default function GuarantorStepRHF({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccione el tipo de garantía" />
+                        <SelectValue placeholder={t.pages.createPolicy.steps.guarantors.selectGuaranteeType} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={GuarantorType.NONE}>Sin Garantía</SelectItem>
-                      <SelectItem value={GuarantorType.JOINT_OBLIGOR}>Obligado Solidario</SelectItem>
-                      <SelectItem value={GuarantorType.AVAL}>Aval</SelectItem>
-                      <SelectItem value={GuarantorType.BOTH}>Ambos</SelectItem>
+                      <SelectItem value={GuarantorType.NONE}>{t.pages.createPolicy.steps.guarantors.types.none}</SelectItem>
+                      <SelectItem value={GuarantorType.JOINT_OBLIGOR}>{t.pages.createPolicy.steps.guarantors.types.jointObligor}</SelectItem>
+                      <SelectItem value={GuarantorType.AVAL}>{t.pages.createPolicy.steps.guarantors.types.aval}</SelectItem>
+                      <SelectItem value={GuarantorType.BOTH}>{t.pages.createPolicy.steps.guarantors.types.both}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -268,7 +269,7 @@ export default function GuarantorStepRHF({
             {(guarantorType === GuarantorType.JOINT_OBLIGOR || guarantorType === GuarantorType.BOTH) && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-medium">Obligados Solidarios</h3>
+                  <h3 className="font-medium">{t.pages.createPolicy.steps.guarantors.jointObligors}</h3>
                   <Button
                     type="button"
                     size="sm"
@@ -276,20 +277,20 @@ export default function GuarantorStepRHF({
                     disabled={disabled}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Agregar Obligado Solidario
+                    {t.pages.createPolicy.steps.guarantors.addJointObligor}
                   </Button>
                 </div>
 
                 {jointObligorsArray.fields.length === 0 ? (
                   <Alert>
                     <AlertDescription>
-                      Debe agregar al menos un obligado solidario. Haga clic en "Agregar Obligado Solidario" para continuar.
+                      {t.pages.createPolicy.steps.guarantors.mustAddJointObligor}
                     </AlertDescription>
                   </Alert>
                 ) : (
                   <div className="space-y-4">
                     {jointObligorsArray.fields.map((field, index) =>
-                      renderActorForm('jointObligors', index, jointObligorsArray, 'Obligado Solidario')
+                      renderActorForm('jointObligors', index, jointObligorsArray, t.pages.createPolicy.steps.guarantors.types.jointObligor)
                     )}
                   </div>
                 )}
@@ -300,7 +301,7 @@ export default function GuarantorStepRHF({
             {(guarantorType === GuarantorType.AVAL || guarantorType === GuarantorType.BOTH) && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-medium">Avales</h3>
+                  <h3 className="font-medium">{t.pages.createPolicy.steps.guarantors.avals}</h3>
                   <Button
                     type="button"
                     size="sm"
@@ -308,20 +309,20 @@ export default function GuarantorStepRHF({
                     disabled={disabled}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Agregar Aval
+                    {t.pages.createPolicy.steps.guarantors.addAval}
                   </Button>
                 </div>
 
                 {avalsArray.fields.length === 0 ? (
                   <Alert>
                     <AlertDescription>
-                      Debe agregar al menos un aval. Haga clic en "Agregar Aval" para continuar.
+                      {t.pages.createPolicy.steps.guarantors.mustAddAval}
                     </AlertDescription>
                   </Alert>
                 ) : (
                   <div className="space-y-4">
                     {avalsArray.fields.map((field, index) =>
-                      renderActorForm('avals', index, avalsArray, 'Aval')
+                      renderActorForm('avals', index, avalsArray, t.pages.createPolicy.steps.guarantors.types.aval)
                     )}
                   </div>
                 )}
@@ -332,8 +333,7 @@ export default function GuarantorStepRHF({
             {guarantorType === GuarantorType.NONE && (
               <Alert>
                 <AlertDescription>
-                  No se ha configurado ninguna garantía para esta protección.
-                  Puede continuar sin garantías o seleccionar un tipo de garantía arriba.
+                  {t.pages.createPolicy.steps.guarantors.noGuarantee}
                 </AlertDescription>
               </Alert>
             )}

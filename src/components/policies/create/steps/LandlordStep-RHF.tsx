@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { landlordStepSchema, type LandlordStepData } from '@/lib/schemas/policy/wizard';
+import { t } from '@/lib/i18n';
 
 interface LandlordStepRHFProps {
   initialData: Partial<LandlordStepData>;
@@ -82,8 +83,8 @@ export default function LandlordStepRHF({
       <form onSubmit={form.handleSubmit(handleSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Información del Arrendador</CardTitle>
-            <CardDescription>Ingrese los datos del propietario</CardDescription>
+            <CardTitle>{t.pages.createPolicy.steps.landlord.title}</CardTitle>
+            <CardDescription>{t.pages.createPolicy.steps.landlord.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Company Toggle */}
@@ -102,7 +103,7 @@ export default function LandlordStepRHF({
                       disabled={disabled}
                     />
                   </FormControl>
-                  <FormLabel className="font-normal">El arrendador es una empresa</FormLabel>
+                  <FormLabel className="font-normal">{t.pages.createPolicy.steps.landlord.isCompany}</FormLabel>
                 </FormItem>
               )}
             />
@@ -115,12 +116,12 @@ export default function LandlordStepRHF({
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>Razón Social</FormLabel>
+                      <FormLabel required>{t.pages.createPolicy.steps.landlord.companyName}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           value={field.value || ''}
-                          placeholder="Nombre de la empresa"
+                          placeholder={t.pages.createPolicy.steps.landlord.companyNamePlaceholder}
                           disabled={disabled}
                         />
                       </FormControl>
@@ -134,13 +135,13 @@ export default function LandlordStepRHF({
                   name="companyRfc"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel optional>RFC de la Empresa</FormLabel>
+                      <FormLabel optional>{t.pages.createPolicy.steps.landlord.companyRfc}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           value={field.value || ''}
                           onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                          placeholder="AAA123456XXX"
+                          placeholder={t.pages.createPolicy.fields.rfcCompanyPlaceholder}
                           maxLength={12}
                           disabled={disabled}
                         />
@@ -152,19 +153,19 @@ export default function LandlordStepRHF({
 
                 {/* Legal Representative Section */}
                 <div className="border-l-2 border-blue-200 pl-4 space-y-4">
-                  <h4 className="font-medium text-sm text-gray-700">Representante Legal</h4>
+                  <h4 className="font-medium text-sm text-gray-700">{t.pages.createPolicy.steps.landlord.legalRepresentative}</h4>
 
                   <FormField
                     control={form.control}
                     name="legalRepName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Nombre del Representante</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.steps.landlord.repName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Nombre completo"
+                            placeholder={t.pages.createPolicy.steps.landlord.repNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -178,12 +179,12 @@ export default function LandlordStepRHF({
                     name="legalRepPosition"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Cargo</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.steps.landlord.repPosition}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Ej: Director General"
+                            placeholder={t.pages.createPolicy.steps.landlord.repPositionPlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -198,13 +199,13 @@ export default function LandlordStepRHF({
                       name="legalRepRfc"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>RFC del Representante</FormLabel>
+                          <FormLabel optional>{t.pages.createPolicy.steps.landlord.repRfc}</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               value={field.value || ''}
                               onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                              placeholder="AAAA123456XXX"
+                              placeholder={t.pages.createPolicy.fields.rfcPlaceholder}
                               maxLength={13}
                               disabled={disabled}
                             />
@@ -219,12 +220,12 @@ export default function LandlordStepRHF({
                       name="legalRepPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>Teléfono del Representante</FormLabel>
+                          <FormLabel optional>{t.pages.createPolicy.steps.landlord.repPhone}</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               value={field.value || ''}
-                              placeholder="10 dígitos"
+                              placeholder={t.pages.createPolicy.fields.phonePlaceholder}
                               disabled={disabled}
                             />
                           </FormControl>
@@ -239,13 +240,13 @@ export default function LandlordStepRHF({
                     name="legalRepEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Email del Representante</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.steps.landlord.repEmail}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             type="email"
                             value={field.value || ''}
-                            placeholder="correo@ejemplo.com"
+                            placeholder={t.pages.createPolicy.fields.emailPlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -264,12 +265,12 @@ export default function LandlordStepRHF({
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Nombre</FormLabel>
+                        <FormLabel required>{t.pages.createPolicy.fields.name}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Nombre"
+                            placeholder={t.pages.createPolicy.fields.namePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -283,12 +284,12 @@ export default function LandlordStepRHF({
                     name="middleName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Segundo Nombre</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.middleName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Segundo nombre"
+                            placeholder={t.pages.createPolicy.fields.middleNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -304,12 +305,12 @@ export default function LandlordStepRHF({
                     name="paternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Apellido Paterno</FormLabel>
+                        <FormLabel required>{t.pages.createPolicy.fields.paternalLastName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Apellido paterno"
+                            placeholder={t.pages.createPolicy.fields.paternalLastNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -323,12 +324,12 @@ export default function LandlordStepRHF({
                     name="maternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Apellido Materno</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.maternalLastName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Apellido materno"
+                            placeholder={t.pages.createPolicy.fields.maternalLastNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -343,13 +344,13 @@ export default function LandlordStepRHF({
                   name="rfc"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel optional>RFC</FormLabel>
+                      <FormLabel optional>{t.pages.createPolicy.fields.rfc}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           value={field.value || ''}
                           onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                          placeholder="AAAA123456XXX"
+                          placeholder={t.pages.createPolicy.fields.rfcPlaceholder}
                           maxLength={13}
                           disabled={disabled}
                         />
@@ -367,12 +368,12 @@ export default function LandlordStepRHF({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Email de Contacto</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.fields.contactEmail}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="email"
-                      placeholder="correo@ejemplo.com"
+                      placeholder={t.pages.createPolicy.fields.emailPlaceholder}
                       disabled={disabled}
                     />
                   </FormControl>
@@ -386,12 +387,12 @@ export default function LandlordStepRHF({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel optional>Teléfono Celular de Contacto</FormLabel>
+                  <FormLabel optional>{t.pages.createPolicy.fields.contactPhone}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       value={field.value || ''}
-                      placeholder="10 dígitos"
+                      placeholder={t.pages.createPolicy.fields.phonePlaceholder}
                       disabled={disabled}
                     />
                   </FormControl>

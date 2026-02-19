@@ -31,7 +31,7 @@ export function EmptyState({
         <div className="flex flex-col items-center text-center gap-4">
           {Icon && <Icon className="h-12 w-12 text-muted-foreground" />}
           <div>
-            <p className="font-medium text-gray-600">{title}</p>
+            <p className="font-medium text-muted-foreground">{title}</p>
             {description && (
               <p className="text-sm text-muted-foreground mt-1">{description}</p>
             )}

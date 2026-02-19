@@ -21,6 +21,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { pricingStepSchema, type PricingStepData } from '@/lib/schemas/policy/wizard';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/i18n';
 
 interface PricingStepRHFProps {
   initialData: Partial<PricingStepData>;
@@ -120,8 +121,8 @@ export default function PricingStepRHF({
       <form onSubmit={form.handleSubmit(handleSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Configuración de Precio</CardTitle>
-            <CardDescription>Seleccione el paquete y configure la distribución del costo</CardDescription>
+            <CardTitle>{t.pages.createPolicy.steps.pricing.title}</CardTitle>
+            <CardDescription>{t.pages.createPolicy.steps.pricing.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Package Selection */}
@@ -130,11 +131,11 @@ export default function PricingStepRHF({
               name="packageId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Paquete de Protección</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.steps.pricing.package}</FormLabel>
                   {packagesLoading ? (
                     <div className="flex items-center justify-center p-4 border rounded-md">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-                      <span className="ml-2">Cargando paquetes...</span>
+                      <span className="ml-2">{t.pages.createPolicy.steps.pricing.loadingPackages}</span>
                     </div>
                   ) : packages.length > 0 ? (
                     <>
@@ -145,14 +146,14 @@ export default function PricingStepRHF({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un paquete" />
+                            <SelectValue placeholder={t.pages.createPolicy.steps.pricing.selectPackage} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {packages.sort((a, b) => b.price - a.price).map((pkg) => (
                             <SelectItem key={pkg.id} value={pkg.id}>
                               {pkg.name}
-                              {pkg.percentage && ` - ${pkg.percentage}% de la renta`}
+                              {pkg.percentage && ` - ${pkg.percentage}% ${t.pages.createPolicy.steps.pricing.ofRent}`}
                               {pkg.price && !pkg.percentage && ` - ${formatCurrency(pkg.price)}`}
                             </SelectItem>
                           ))}
@@ -167,7 +168,7 @@ export default function PricingStepRHF({
                   ) : (
                     <Alert>
                       <AlertDescription>
-                        No hay paquetes disponibles. Por favor, contacta al administrador.
+                        {t.pages.createPolicy.steps.pricing.noPackages}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -180,14 +181,14 @@ export default function PricingStepRHF({
             {isCalculating && (
               <div className="flex items-center justify-center p-4 bg-blue-50 rounded-lg">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-600 mr-2" />
-                <span className="text-blue-600">Calculando precio...</span>
+                <span className="text-blue-600">{t.pages.createPolicy.steps.pricing.calculatingPrice}</span>
               </div>
             )}
 
             {!rentAmount && watchedPackageId && (
               <Alert>
                 <AlertDescription>
-                  Regrese al paso anterior para ingresar el monto de renta
+                  {t.pages.createPolicy.steps.pricing.goBackForRent}
                 </AlertDescription>
               </Alert>
             )}
@@ -197,34 +198,34 @@ export default function PricingStepRHF({
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <Calculator className="h-4 w-4" />
-                  Resumen de Costos
+                  {t.pages.createPolicy.steps.pricing.costSummary}
                 </h4>
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Precio del Paquete:</span>
+                    <span>{t.pages.createPolicy.steps.pricing.packagePrice}</span>
                     <span className="font-medium">{formatCurrency(pricingResult.packagePrice)}</span>
                   </div>
 
                   {pricingResult.investigationFee && (
                     <div className="flex justify-between">
-                      <span>Cuota de Investigación:</span>
+                      <span>{t.pages.createPolicy.steps.pricing.investigationFee}</span>
                       <span className="font-medium">{formatCurrency(pricingResult.investigationFee)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between">
-                    <span>Subtotal:</span>
+                    <span>{t.pages.createPolicy.steps.pricing.subtotal}</span>
                     <span className="font-medium">{formatCurrency(pricingResult.subtotal)}</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span>IVA (16%):</span>
+                    <span>{t.pages.createPolicy.steps.pricing.iva}</span>
                     <span className="font-medium">{formatCurrency(pricingResult.iva)}</span>
                   </div>
 
                   <div className="flex justify-between pt-2 border-t">
-                    <span className="font-medium">Total con IVA:</span>
+                    <span className="font-medium">{t.pages.createPolicy.steps.pricing.totalWithIva}</span>
                     <span className="font-bold">{formatCurrency(pricingResult.totalWithIva)}</span>
                   </div>
                 </div>
@@ -233,7 +234,7 @@ export default function PricingStepRHF({
 
             {/* Cost Distribution */}
             <div className="space-y-4">
-              <FormLabel>Distribución del Costo</FormLabel>
+              <FormLabel>{t.pages.createPolicy.steps.pricing.costDistribution}</FormLabel>
               <div className="p-4 border rounded-lg space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -241,7 +242,7 @@ export default function PricingStepRHF({
                     name="tenantPercentage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Porcentaje Inquilino</FormLabel>
+                        <FormLabel>{t.pages.createPolicy.steps.pricing.tenantPercentage}</FormLabel>
                         <div className="flex items-center gap-2">
                           <FormControl>
                             <Input
@@ -266,7 +267,7 @@ export default function PricingStepRHF({
                     name="landlordPercentage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Porcentaje Arrendador</FormLabel>
+                        <FormLabel>{t.pages.createPolicy.steps.pricing.landlordPercentage}</FormLabel>
                         <div className="flex items-center gap-2">
                           <FormControl>
                             <Input
@@ -290,7 +291,7 @@ export default function PricingStepRHF({
                 {percentageError && (
                   <Alert variant="destructive">
                     <AlertDescription>
-                      Los porcentajes deben sumar 100%. Actualmente suman {percentageSum}%
+                      {t.pages.createPolicy.steps.pricing.percentageSumError(percentageSum)}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -298,13 +299,13 @@ export default function PricingStepRHF({
                 {pricingResult && (
                   <div className="space-y-1 pt-2 border-t">
                     <div className="flex justify-between text-blue-600">
-                      <span>Pago Inquilino ({watchedTenantPercentage}%):</span>
+                      <span>{t.pages.createPolicy.steps.pricing.tenantPayment(watchedTenantPercentage)}</span>
                       <span className="font-medium">
                         {formatCurrency(pricingResult.totalWithIva * watchedTenantPercentage / 100)}
                       </span>
                     </div>
                     <div className="flex justify-between text-green-600">
-                      <span>Pago Arrendador ({watchedLandlordPercentage}%):</span>
+                      <span>{t.pages.createPolicy.steps.pricing.landlordPayment(watchedLandlordPercentage)}</span>
                       <span className="font-medium">
                         {formatCurrency(pricingResult.totalWithIva * watchedLandlordPercentage / 100)}
                       </span>
@@ -328,7 +329,7 @@ export default function PricingStepRHF({
                         disabled={disabled}
                       />
                     </FormControl>
-                    <FormLabel className="font-normal">Ajuste manual de precio</FormLabel>
+                    <FormLabel className="font-normal">{t.pages.createPolicy.steps.pricing.manualPriceAdjust}</FormLabel>
                   </FormItem>
                 )}
               />
@@ -340,7 +341,7 @@ export default function PricingStepRHF({
                     name="manualPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Precio Base (sin IVA)</FormLabel>
+                        <FormLabel>{t.pages.createPolicy.steps.pricing.basePriceNoIva}</FormLabel>
                         <div className="flex gap-2">
                           <FormControl>
                             <Input
@@ -357,7 +358,7 @@ export default function PricingStepRHF({
                               variant="outline"
                               size="icon"
                               onClick={resetToCalculatedPrice}
-                              title="Restablecer al precio calculado"
+                              title={t.pages.createPolicy.steps.pricing.resetToCalculated}
                               disabled={disabled}
                             >
                               <RefreshCw className="h-4 w-4" />
@@ -366,7 +367,7 @@ export default function PricingStepRHF({
                         </div>
                         {watchedManualPrice && (
                           <p className="text-sm text-gray-600 mt-2">
-                            Total con IVA: {formatCurrency((watchedManualPrice || 0) * (1 + TAX_CONFIG.IVA_RATE))}
+                            {t.pages.createPolicy.steps.pricing.totalWithIvaValue(formatCurrency((watchedManualPrice || 0) * (1 + TAX_CONFIG.IVA_RATE)))}
                           </p>
                         )}
                         <FormMessage />

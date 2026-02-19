@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { TenantType } from "@/prisma/generated/prisma-client/enums";
+import { t } from '@/lib/i18n';
 import { tenantStepSchema, type TenantStepData } from '@/lib/schemas/policy/wizard';
 
 interface TenantStepRHFProps {
@@ -56,8 +57,8 @@ export default function TenantStepRHF({
       <form onSubmit={form.handleSubmit(handleSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Información del Inquilino</CardTitle>
-            <CardDescription>Ingrese los datos del inquilino</CardDescription>
+            <CardTitle>{t.pages.createPolicy.steps.tenant.title}</CardTitle>
+            <CardDescription>{t.pages.createPolicy.steps.tenant.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Tenant Type Selector */}
@@ -66,7 +67,7 @@ export default function TenantStepRHF({
               name="tenantType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Tipo de Inquilino</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.steps.tenant.tenantType}</FormLabel>
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
@@ -74,12 +75,12 @@ export default function TenantStepRHF({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccione el tipo" />
+                        <SelectValue placeholder={t.pages.createPolicy.steps.tenant.selectType} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={TenantType.INDIVIDUAL}>Persona Física</SelectItem>
-                      <SelectItem value={TenantType.COMPANY}>Persona Moral (Empresa)</SelectItem>
+                      <SelectItem value={TenantType.INDIVIDUAL}>{t.pages.createPolicy.steps.tenant.individual}</SelectItem>
+                      <SelectItem value={TenantType.COMPANY}>{t.pages.createPolicy.steps.tenant.company}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -94,12 +95,12 @@ export default function TenantStepRHF({
                 name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Razón Social</FormLabel>
+                    <FormLabel required>{t.pages.createPolicy.steps.tenant.companyName}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value || ''}
-                        placeholder="Nombre de la empresa"
+                        placeholder={t.pages.createPolicy.steps.tenant.companyNamePlaceholder}
                         disabled={disabled}
                       />
                     </FormControl>
@@ -118,12 +119,12 @@ export default function TenantStepRHF({
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Nombre</FormLabel>
+                        <FormLabel required>{t.pages.createPolicy.fields.name}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Nombre"
+                            placeholder={t.pages.createPolicy.fields.namePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -137,12 +138,12 @@ export default function TenantStepRHF({
                     name="middleName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Segundo Nombre</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.middleName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Segundo nombre"
+                            placeholder={t.pages.createPolicy.fields.middleNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -158,12 +159,12 @@ export default function TenantStepRHF({
                     name="paternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Apellido Paterno</FormLabel>
+                        <FormLabel required>{t.pages.createPolicy.fields.paternalLastName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Apellido paterno"
+                            placeholder={t.pages.createPolicy.fields.paternalLastNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -177,12 +178,12 @@ export default function TenantStepRHF({
                     name="maternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Apellido Materno</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.maternalLastName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Apellido materno"
+                            placeholder={t.pages.createPolicy.fields.maternalLastNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -198,7 +199,7 @@ export default function TenantStepRHF({
             {isCompany && (
               <div className="border-l-2 border-blue-200 pl-4 space-y-4">
                 <h4 className="font-medium text-sm text-gray-700">
-                  Representante Legal (Opcional)
+                  {t.pages.createPolicy.steps.tenant.legalRepresentative}
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -206,12 +207,12 @@ export default function TenantStepRHF({
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Nombre</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.name}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Nombre"
+                            placeholder={t.pages.createPolicy.fields.namePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -225,12 +226,12 @@ export default function TenantStepRHF({
                     name="middleName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Segundo Nombre</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.middleName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Segundo nombre"
+                            placeholder={t.pages.createPolicy.fields.middleNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -246,12 +247,12 @@ export default function TenantStepRHF({
                     name="paternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Apellido Paterno</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.paternalLastName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Apellido paterno"
+                            placeholder={t.pages.createPolicy.fields.paternalLastNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -265,12 +266,12 @@ export default function TenantStepRHF({
                     name="maternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel optional>Apellido Materno</FormLabel>
+                        <FormLabel optional>{t.pages.createPolicy.fields.maternalLastName}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             value={field.value || ''}
-                            placeholder="Apellido materno"
+                            placeholder={t.pages.createPolicy.fields.maternalLastNamePlaceholder}
                             disabled={disabled}
                           />
                         </FormControl>
@@ -288,12 +289,12 @@ export default function TenantStepRHF({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Email</FormLabel>
+                  <FormLabel required>{t.pages.createPolicy.fields.email}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="email"
-                      placeholder="correo@ejemplo.com"
+                      placeholder={t.pages.createPolicy.fields.emailPlaceholder}
                       disabled={disabled}
                     />
                   </FormControl>
@@ -308,12 +309,12 @@ export default function TenantStepRHF({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel optional>Teléfono Celular de Contacto</FormLabel>
+                    <FormLabel optional>{t.pages.createPolicy.fields.contactPhone}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value || ''}
-                        placeholder="10 dígitos"
+                        placeholder={t.pages.createPolicy.fields.phonePlaceholder}
                         disabled={disabled}
                       />
                     </FormControl>
@@ -328,14 +329,14 @@ export default function TenantStepRHF({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel optional>
-                      {isCompany ? 'RFC' : 'RFC/CURP'}
+                      {isCompany ? t.pages.createPolicy.fields.rfc : t.pages.createPolicy.steps.tenant.rfcCurp}
                     </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value || ''}
                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                        placeholder={isCompany ? 'RFC de la empresa' : 'RFC o CURP'}
+                        placeholder={isCompany ? t.pages.createPolicy.steps.tenant.rfcCompanyPlaceholder : t.pages.createPolicy.steps.tenant.rfcOrCurpPlaceholder}
                         maxLength={isCompany ? 12 : 18}
                         disabled={disabled}
                       />
