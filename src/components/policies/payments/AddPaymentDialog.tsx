@@ -131,7 +131,7 @@ export function AddPaymentDialog({
           <DialogDescription>
             {showConfirmation
               ? 'Se creará un nuevo link de pago con Stripe.'
-              : 'Cree un nuevo pago con link de Stripe para esta póliza.'}
+              : 'Cree un nuevo pago con link de Stripe para esta protección.'}
           </DialogDescription>
         </DialogHeader>
 

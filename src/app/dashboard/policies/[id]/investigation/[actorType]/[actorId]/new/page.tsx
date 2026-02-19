@@ -110,7 +110,7 @@ export default function NewInvestigationPage({ params }: PageProps) {
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            {policyError.message || 'No se pudo cargar la póliza'}
+            {policyError.message || 'No se pudo cargar la protección'}
           </AlertDescription>
         </Alert>
         <Button className="mt-4" onClick={() => router.back()}>
@@ -124,13 +124,13 @@ export default function NewInvestigationPage({ params }: PageProps) {
     return (
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
-          <AlertTitle>Póliza no encontrada</AlertTitle>
+          <AlertTitle>Protección no encontrada</AlertTitle>
           <AlertDescription>
-            La póliza especificada no existe.
+            La protección especificada no existe.
           </AlertDescription>
         </Alert>
         <Button className="mt-4" onClick={() => router.push('/dashboard/policies')}>
-          Volver a pólizas
+          Volver a protecciones
         </Button>
       </div>
     );
@@ -152,7 +152,7 @@ export default function NewInvestigationPage({ params }: PageProps) {
         <Alert variant="destructive">
           <AlertTitle>Actor no encontrado</AlertTitle>
           <AlertDescription>
-            El actor especificado no existe en esta póliza.
+            El actor especificado no existe en esta protección.
           </AlertDescription>
         </Alert>
         <Button className="mt-4" onClick={() => router.back()}>

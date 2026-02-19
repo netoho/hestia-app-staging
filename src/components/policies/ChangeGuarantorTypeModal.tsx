@@ -74,7 +74,7 @@ export default function ChangeGuarantorTypeModal({
     onSuccess: () => {
       toast({
         title: 'Tipo de Garantía Cambiado',
-        description: `El tipo de garantía de la póliza ${policyNumber} ha sido actualizado exitosamente`,
+        description: `El tipo de garantía de la protección ${policyNumber} ha sido actualizado exitosamente`,
       });
       onSuccess();
       handleClose();
@@ -256,7 +256,7 @@ export default function ChangeGuarantorTypeModal({
             Cambiar Tipo de Garantía
           </DialogTitle>
           <DialogDescription>
-            Cambiar el tipo de garantía en la póliza {policyNumber}.
+            Cambiar el tipo de garantía en la protección {policyNumber}.
             Tipo actual: <strong>{GUARANTOR_TYPE_LABELS[currentGuarantorType]}</strong>
           </DialogDescription>
         </DialogHeader>

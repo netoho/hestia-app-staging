@@ -34,7 +34,7 @@ export default function PropertyStep({
         {/* Policy Number */}
         <div>
           <Label htmlFor="policyNumber" required>
-            Número de Póliza
+            Número de Protección
           </Label>
           <div className="flex gap-2">
             <Input

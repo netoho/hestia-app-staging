@@ -714,7 +714,7 @@ export async function GET(
   } catch (error: any) {
     console.error('[Policy GET Error]', error);
     return NextResponse.json(
-      { error: 'Error al obtener la póliza' },
+      { error: 'Error al obtener la protección' },
       { status: 500 }
     );
   }

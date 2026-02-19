@@ -70,7 +70,7 @@ export default function InvestigationsPage({ params }: InvestigationsPageProps) 
     return (
       <div className="container mx-auto w-full">
         <p className="text-center text-muted-foreground py-8">
-          Póliza no encontrada
+          Protección no encontrada
         </p>
       </div>
     );

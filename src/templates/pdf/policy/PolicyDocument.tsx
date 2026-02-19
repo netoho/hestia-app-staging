@@ -22,9 +22,9 @@ interface PolicyDocumentProps {
 export function PolicyDocument({ data }: PolicyDocumentProps) {
   return (
     <Document
-      title={`Póliza ${data.policyNumber}`}
+      title={`Protección ${data.policyNumber}`}
       author={brandInfo.companyName}
-      subject="Documento de Póliza de Arrendamiento"
+      subject="Documento de Protección de Arrendamiento"
       creator={brandInfo.companyName}
     >
       <Page size="LETTER" style={styles.page}>

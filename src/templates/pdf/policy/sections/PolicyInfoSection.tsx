@@ -9,7 +9,7 @@ interface PolicyInfoSectionProps {
 export function PolicyInfoSection({ data }: PolicyInfoSectionProps) {
   return (
     <View style={styles.section}>
-      <SectionTitle title="Información de la Póliza" />
+      <SectionTitle title="Información de la Protección" />
       <View style={styles.sectionContent}>
         <View style={styles.twoColumn}>
           {/* Left column - Core info */}

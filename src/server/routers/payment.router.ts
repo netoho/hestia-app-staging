@@ -145,7 +145,7 @@ export const paymentRouter = createTRPCRouter({
         if (error instanceof Error && error.message.includes('already has pending payments')) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: 'Esta póliza ya tiene pagos pendientes. Use regenerar link para actualizar URLs expiradas.',
+            message: 'Esta protección ya tiene pagos pendientes. Use regenerar link para actualizar URLs expiradas.',
           });
         }
         throw error;
@@ -183,7 +183,7 @@ export const paymentRouter = createTRPCRouter({
         if (error instanceof Error && error.message.includes('already completed')) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: `Ya existe un pago completado de tipo ${input.type} para esta póliza`,
+            message: `Ya existe un pago completado de tipo ${input.type} para esta protección`,
           });
         }
         throw error;
@@ -411,7 +411,7 @@ export const paymentRouter = createTRPCRouter({
       if (!policy) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Póliza no encontrada',
+          message: 'Protección no encontrada',
         });
       }
 

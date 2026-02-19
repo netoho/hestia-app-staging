@@ -660,7 +660,7 @@ class PaymentService extends BaseService {
               currency: 'mxn',
               product_data: {
                 name: description,
-                description: `Póliza ${policy.policyNumber}`,
+                description: `Protección ${policy.policyNumber}`,
               },
               unit_amount: subtotalForStripe,
             },
@@ -1114,8 +1114,8 @@ class PaymentService extends BaseService {
           price_data: {
             currency: 'mxn',
             product_data: {
-              name: payment.description || 'Pago de Póliza',
-              description: `Póliza ${payment.policy.policyNumber}`,
+              name: payment.description || 'Pago de Protección',
+              description: `Protección ${payment.policy.policyNumber}`,
             },
             unit_amount: subtotalForStripe,
           },
@@ -1491,8 +1491,8 @@ class PaymentService extends BaseService {
           price_data: {
             currency: 'mxn',
             product_data: {
-              name: payment.description || 'Pago de Póliza',
-              description: `Póliza ${payment.policy.policyNumber}`,
+              name: payment.description || 'Pago de Protección',
+              description: `Protección ${payment.policy.policyNumber}`,
             },
             unit_amount: subtotalForStripe,
           },

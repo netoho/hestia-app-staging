@@ -573,7 +573,7 @@ export async function validatePolicyNumber(policyNumber: string): Promise<{
   if (!isUnique) {
     return {
       isValid: false,
-      error: 'Este número de póliza ya existe',
+      error: 'Este número de protección ya existe',
     };
   }
 

@@ -245,7 +245,7 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <CardTitle>Póliza #{investigation.policy.policyNumber}</CardTitle>
+              <CardTitle>Protección #{investigation.policy.policyNumber}</CardTitle>
               <CardDescription>{propertyAddress}</CardDescription>
             </div>
             <Badge variant={isProcessed ? (investigation.status === 'APPROVED' ? 'success' : 'destructive') : 'secondary'}>
