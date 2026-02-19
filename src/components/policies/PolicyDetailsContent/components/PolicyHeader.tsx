@@ -19,6 +19,7 @@ import {
   MoreVertical,
   Download,
   FileSearch,
+  Receipt,
 } from 'lucide-react';
 import { PolicyStatusBadge } from '@/components/shared/PolicyStatusIndicators';
 import { PolicyStatusType } from '@/lib/prisma-types';
@@ -36,13 +37,15 @@ interface PolicyHeaderProps {
     canVerifyDocuments: boolean;
   };
   isStaffOrAdmin: boolean;
-  allActorsApproved: boolean;
   progressOverall?: number;
   sending: string | null;
   downloadingPdf: boolean;
   isRefreshing?: boolean;
+  activatedAt?: Date | string | null;
   onSendInvitations: () => void;
   onApprove: () => void;
+  onActivate: () => void;
+  onDeactivate: () => void;
   onShareClick: () => void;
   onCancelClick: () => void;
   onDownloadPdf: () => void;
@@ -56,12 +59,14 @@ export function PolicyHeader({
   policyId,
   permissions,
   isStaffOrAdmin,
-  allActorsApproved,
   sending,
   downloadingPdf,
   isRefreshing,
+  activatedAt,
   onSendInvitations,
   onApprove,
+  onActivate,
+  onDeactivate,
   onShareClick,
   onCancelClick,
   onDownloadPdf,
@@ -118,11 +123,26 @@ export function PolicyHeader({
         <DropdownMenuContent align="end" className="w-56">
           {/* Approve Policy - Staff/Admin */}
           {permissions.canApprove &&
-           allActorsApproved &&
            status === 'PENDING_APPROVAL' && (
             <DropdownMenuItem onClick={onApprove} className="text-green-600">
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {t.pages.policies.approvePolicy}
+            </DropdownMenuItem>
+          )}
+
+          {/* Activate Policy - Staff/Admin, APPROVED + not yet activated */}
+          {isStaffOrAdmin && status === 'APPROVED' && !activatedAt && (
+            <DropdownMenuItem onClick={onActivate} className="text-green-600">
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Activar Protección
+            </DropdownMenuItem>
+          )}
+
+          {/* Deactivate Policy - Staff/Admin, APPROVED + currently activated */}
+          {isStaffOrAdmin && status === 'APPROVED' && !!activatedAt && (
+            <DropdownMenuItem onClick={onDeactivate} className="text-orange-600">
+              <XCircle className="mr-2 h-4 w-4" />
+              Desactivar Protección
             </DropdownMenuItem>
           )}
 
@@ -156,6 +176,16 @@ export function PolicyHeader({
             >
               <FileSearch className="mr-2 h-4 w-4" />
               Investigaciones
+            </DropdownMenuItem>
+          )}
+
+          {/* Receipts */}
+          {isStaffOrAdmin && status === 'APPROVED' && (
+            <DropdownMenuItem
+              onClick={() => router.push(`/dashboard/policies/${policyId}/receipts`)}
+            >
+              <Receipt className="mr-2 h-4 w-4" />
+              Comprobantes
             </DropdownMenuItem>
           )}
 
