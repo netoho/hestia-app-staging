@@ -175,6 +175,14 @@ export interface PropertyDetails {
   otherServices?: string;
   utilitiesInLandlordName?: boolean;
 
+  // Included in rent
+  electricityIncludedInRent?: boolean;
+  waterIncludedInRent?: boolean;
+  gasIncludedInRent?: boolean;
+  internetIncludedInRent?: boolean;
+  cableTVIncludedInRent?: boolean;
+  phoneIncludedInRent?: boolean;
+
   // Rules and inventory
   hasInventory?: boolean;
   hasRules?: boolean;
