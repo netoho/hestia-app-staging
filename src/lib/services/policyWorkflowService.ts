@@ -2,6 +2,7 @@ import { BaseService } from './base/BaseService';
 import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from './policyService';
 import { sendPolicyStatusUpdate } from './emailService';
+import { sendPolicyPendingApprovalNotification } from './notificationService';
 import { ServiceError, ErrorCode } from './types/errors';
 
 /**
@@ -178,6 +179,12 @@ class PolicyWorkflowService extends BaseService {
         status: 'approved',
         reviewerName: reviewer?.name ?? 'Equipo Hestia',
       }).catch((err) => console.error('Failed to send approval email:', err));
+    }
+
+    // Notify admins when policy reaches PENDING_APPROVAL
+    if (newStatus === 'PENDING_APPROVAL') {
+      sendPolicyPendingApprovalNotification(policyId)
+        .catch((err) => console.error('Failed to send pending approval notification:', err));
     }
 
     return { success: true, policy: updatedPolicy };

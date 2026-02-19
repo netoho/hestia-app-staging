@@ -119,6 +119,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
         title: 'Protección activada',
         description: 'La protección ha sido activada exitosamente',
       });
+      utils.policy.getById.invalidate({ id: policyId });
       onRefresh();
     },
     onError: (error) => {
@@ -138,6 +139,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
         title: 'Protección desactivada',
         description: 'La protección ha sido desactivada exitosamente',
       });
+      utils.policy.getById.invalidate({ id: policyId });
       onRefresh();
     },
     onError: (error) => {

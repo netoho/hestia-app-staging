@@ -5,7 +5,7 @@ import {
   generateTenantToken
 } from '@/lib/services/actorTokenService';
 import prisma from "@/lib/prisma";
-import { sendActorInvitation, sendPolicyCancellationEmail } from "@/lib/services/emailService";
+import { sendActorInvitation, sendPolicyCancellationEmail, sendSimpleNotificationEmail } from "@/lib/services/emailService";
 import { getActiveAdmins } from "@/lib/services/userService";
 import { formatFullName } from "@/lib/utils/names";
 import {AvalType, JointObligorType, TenantType} from "@/prisma/generated/prisma-client/enums";
@@ -314,5 +314,31 @@ export const sendPolicyCancellationNotification = async (policyId: string): Prom
       cancelledAt: policy.cancelledAt || new Date(),
       policyLink,
     });
+  }
+}
+
+// Send notification to admins when policy reaches PENDING_APPROVAL
+export const sendPolicyPendingApprovalNotification = async (policyId: string): Promise<void> => {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: { policyNumber: true },
+  });
+
+  if (!policy) return;
+
+  const admins = await getActiveAdmins();
+  const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
+
+  for (const admin of admins) {
+    if (!admin.email) continue;
+
+    await sendSimpleNotificationEmail({
+      to: admin.email,
+      recipientName: admin.name || undefined,
+      subject: `Protección Pendiente de Aprobación - ${policy.policyNumber}`,
+      message: `La protección ${policy.policyNumber} ha completado todas las investigaciones y está lista para aprobación final.`,
+      actionUrl: policyLink,
+      actionText: 'Ver protección',
+    }).catch((err) => console.error('Failed to send pending approval notification to:', admin.email, err));
   }
 }

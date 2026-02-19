@@ -35,7 +35,10 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
   try {
     // Find all APPROVED policies with tenants
     const policies = await prisma.policy.findMany({
-      where: { status: PolicyStatus.APPROVED },
+      where: {
+        status: PolicyStatus.APPROVED,
+        activatedAt: { not: null },
+      },
       include: {
         tenant: {
           select: {

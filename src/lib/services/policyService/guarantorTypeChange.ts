@@ -377,7 +377,11 @@ export async function changeGuarantorType(
     if (policy.status !== 'COLLECTING_INFO') {
       await tx.policy.update({
         where: { id: input.policyId },
-        data: { status: 'COLLECTING_INFO' },
+        data: {
+          status: 'COLLECTING_INFO',
+          activatedAt: null,
+          expiresAt: null,
+        },
       });
     }
   });

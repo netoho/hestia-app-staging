@@ -9,6 +9,10 @@ export const policies = {
     viewProgress: "Ver Progreso",
     sendInvitations: "Enviar Invitaciones",
     approvePolicy: "Aprobar Protección",
+    activatePolicy: "Activar Protección",
+    deactivatePolicy: "Desactivar Protección",
+    shareLinks: "Compartir Enlaces",
+    cancelPolicy: "Cancelar Protección",
     actorVerification: {
         title: "Verificación de Actores",
         subtitle: "Revisa y aprueba la información de cada actor",
