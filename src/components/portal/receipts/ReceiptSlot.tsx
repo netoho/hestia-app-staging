@@ -43,7 +43,7 @@ interface ReceiptSlotProps {
   onUpload?: (file: File) => void;
   onDelete?: (receiptId: string) => void;
   onDownload?: (receiptId: string) => void;
-  onMarkNA?: () => void;
+  onMarkNA?: (note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
 }
 
@@ -133,7 +133,7 @@ export default function ReceiptSlot({
               receiptTypeLabel={typeLabel}
               monthLabel={monthLabel}
               onConfirm={(note) => {
-                onMarkNA?.();
+                onMarkNA?.(note);
                 setShowNAModal(false);
               }}
               loading={isMarkingNA}

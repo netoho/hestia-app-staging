@@ -210,7 +210,7 @@ export default function ReceiptDashboard({
               onUpload={(file, type) => ops.uploadReceipt(file, currentYear, currentMonth, type)}
               onDelete={ops.deleteReceipt}
               onDownload={ops.downloadReceipt}
-              onMarkNA={(type) => ops.markNotApplicable(currentYear, currentMonth, type)}
+              onMarkNA={(type, note) => ops.markNotApplicable(currentYear, currentMonth, type, note)}
               onUndoNA={ops.undoNotApplicable}
               getSlotOperation={(type) => ops.getSlotOperation(currentYear, currentMonth, type)}
             />
@@ -230,7 +230,7 @@ export default function ReceiptDashboard({
               onUpload={(file, year, month, type) => ops.uploadReceipt(file, year, month, type)}
               onDelete={ops.deleteReceipt}
               onDownload={ops.downloadReceipt}
-              onMarkNA={(year, month, type) => ops.markNotApplicable(year, month, type)}
+              onMarkNA={(year, month, type, note) => ops.markNotApplicable(year, month, type, note)}
               onUndoNA={ops.undoNotApplicable}
               getSlotOperation={(year, month, type) => ops.getSlotOperation(year, month, type)}
             />
