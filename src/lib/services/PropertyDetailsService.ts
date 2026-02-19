@@ -30,6 +30,14 @@ export interface PropertyDetailsInput {
   otherServices?: string | null;
   utilitiesInLandlordName?: boolean;
 
+  // Included in rent flags
+  electricityIncludedInRent?: boolean;
+  waterIncludedInRent?: boolean;
+  gasIncludedInRent?: boolean;
+  internetIncludedInRent?: boolean;
+  cableTVIncludedInRent?: boolean;
+  phoneIncludedInRent?: boolean;
+
   // Additional Property Info
   hasInventory?: boolean;
   hasRules?: boolean;
@@ -132,6 +140,12 @@ export class PropertyDetailsService extends BaseService {
           hasInternet: data.hasInternet ?? false,
           otherServices: data.otherServices,
           utilitiesInLandlordName: data.utilitiesInLandlordName ?? false,
+          electricityIncludedInRent: data.electricityIncludedInRent ?? false,
+          waterIncludedInRent: data.waterIncludedInRent ?? false,
+          gasIncludedInRent: data.gasIncludedInRent ?? false,
+          internetIncludedInRent: data.internetIncludedInRent ?? false,
+          cableTVIncludedInRent: data.cableTVIncludedInRent ?? false,
+          phoneIncludedInRent: data.phoneIncludedInRent ?? false,
           hasInventory: data.hasInventory ?? false,
           hasRules: data.hasRules ?? false,
           rulesType: data.rulesType,
@@ -239,6 +253,12 @@ export class PropertyDetailsService extends BaseService {
       if (data.hasInternet !== undefined) updateData.hasInternet = data.hasInternet;
       if (data.otherServices !== undefined) updateData.otherServices = data.otherServices;
       if (data.utilitiesInLandlordName !== undefined) updateData.utilitiesInLandlordName = data.utilitiesInLandlordName;
+      if (data.electricityIncludedInRent !== undefined) updateData.electricityIncludedInRent = data.electricityIncludedInRent;
+      if (data.waterIncludedInRent !== undefined) updateData.waterIncludedInRent = data.waterIncludedInRent;
+      if (data.gasIncludedInRent !== undefined) updateData.gasIncludedInRent = data.gasIncludedInRent;
+      if (data.internetIncludedInRent !== undefined) updateData.internetIncludedInRent = data.internetIncludedInRent;
+      if (data.cableTVIncludedInRent !== undefined) updateData.cableTVIncludedInRent = data.cableTVIncludedInRent;
+      if (data.phoneIncludedInRent !== undefined) updateData.phoneIncludedInRent = data.phoneIncludedInRent;
       if (data.hasInventory !== undefined) updateData.hasInventory = data.hasInventory;
       if (data.hasRules !== undefined) updateData.hasRules = data.hasRules;
       if (data.rulesType !== undefined) updateData.rulesType = data.rulesType;
