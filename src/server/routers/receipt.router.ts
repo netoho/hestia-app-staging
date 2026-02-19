@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { createTRPCRouter, publicProcedure, protectedProcedure } from '@/server/trpc';
+import { createTRPCRouter, publicProcedure, adminProcedure } from '@/server/trpc';
 import { ReceiptType, ReceiptStatus, PolicyStatus, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { receiptService } from '@/lib/services/receiptService';
 import { documentService } from '@/lib/services/documentService';
@@ -41,6 +41,57 @@ async function validateReceiptToken(token: string) {
   }
 
   return tenant;
+}
+
+/**
+ * Validate token and ensure tenant has access to the given policy (supports multi-policy via email).
+ * Returns the tenant record that belongs to `policyId`.
+ */
+async function validateTenantPolicyAccess(token: string, policyId: string) {
+  const tenant = await validateReceiptToken(token);
+  if (tenant.policyId === policyId) return tenant;
+  // Token tenant doesn't match — check if same email has a tenant on this policy
+  const matchingTenant = await prisma.tenant.findFirst({
+    where: {
+      email: { equals: tenant.email, mode: 'insensitive' },
+      policyId,
+      policy: { status: PolicyStatus.APPROVED, activatedAt: { not: null } },
+    },
+    include: {
+      policy: {
+        include: {
+          propertyDetails: { include: { propertyAddressDetails: true } },
+        },
+      },
+    },
+  });
+  if (!matchingTenant) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'No tienes acceso a esta protección' });
+  }
+  return matchingTenant;
+}
+
+/**
+ * Validate token and ensure tenant has access to the receipt (supports multi-policy via email).
+ * Returns { tenant, receipt }.
+ */
+async function validateTenantReceiptAccess(token: string, receiptId: string) {
+  const tokenTenant = await validateReceiptToken(token);
+  const receipt = await prisma.tenantReceipt.findUnique({
+    where: { id: receiptId },
+    include: { tenant: { select: { email: true } } },
+  });
+  if (!receipt) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
+  }
+  // Direct match or email match
+  if (receipt.tenantId !== tokenTenant.id) {
+    const emailMatch = receipt.tenant.email?.toLowerCase() === tokenTenant.email?.toLowerCase();
+    if (!emailMatch) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
+    }
+  }
+  return { tenant: tokenTenant, receipt };
 }
 
 const ReceiptTypeSchema = z.nativeEnum(ReceiptType);
@@ -203,12 +254,7 @@ export const receiptRouter = createTRPCRouter({
       fileSize: z.number().int().positive(),
     }))
     .mutation(async ({ input }) => {
-      const tenant = await validateReceiptToken(input.token);
-
-      // Verify tenant belongs to this policy
-      if (tenant.policyId !== input.policyId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'No tienes acceso a esta protección' });
-      }
+      const tenant = await validateTenantPolicyAccess(input.token, input.policyId);
 
       // Validate file
       const validation = getCategoryValidation();
@@ -301,15 +347,7 @@ export const receiptRouter = createTRPCRouter({
       receiptId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const tenant = await validateReceiptToken(input.token);
-
-      const receipt = await prisma.tenantReceipt.findUnique({
-        where: { id: input.receiptId },
-      });
-
-      if (!receipt || receipt.tenantId !== tenant.id) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
-      }
+      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
 
       // Verify file exists in S3
       if (receipt.s3Key) {
@@ -343,11 +381,7 @@ export const receiptRouter = createTRPCRouter({
       note: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const tenant = await validateReceiptToken(input.token);
-
-      if (tenant.policyId !== input.policyId) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'No tienes acceso a esta protección' });
-      }
+      const tenant = await validateTenantPolicyAccess(input.token, input.policyId);
 
       const receipt = await prisma.tenantReceipt.upsert({
         where: {
@@ -396,15 +430,7 @@ export const receiptRouter = createTRPCRouter({
       receiptId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const tenant = await validateReceiptToken(input.token);
-
-      const receipt = await prisma.tenantReceipt.findUnique({
-        where: { id: input.receiptId },
-      });
-
-      if (!receipt || receipt.tenantId !== tenant.id) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Registro no encontrado' });
-      }
+      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
 
       if (receipt.status !== ReceiptStatus.NOT_APPLICABLE) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Solo se puede deshacer el estado "No aplica"' });
@@ -426,15 +452,7 @@ export const receiptRouter = createTRPCRouter({
       receiptId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const tenant = await validateReceiptToken(input.token);
-
-      const receipt = await prisma.tenantReceipt.findUnique({
-        where: { id: input.receiptId },
-      });
-
-      if (!receipt || receipt.tenantId !== tenant.id) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
-      }
+      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
 
       // Delete from S3 if file exists
       if (receipt.s3Key) {
@@ -457,15 +475,7 @@ export const receiptRouter = createTRPCRouter({
       receiptId: z.string(),
     }))
     .query(async ({ input }) => {
-      const tenant = await validateReceiptToken(input.token);
-
-      const receipt = await prisma.tenantReceipt.findUnique({
-        where: { id: input.receiptId },
-      });
-
-      if (!receipt || receipt.tenantId !== tenant.id) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
-      }
+      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
 
       if (!receipt.s3Key || receipt.uploadStatus !== DocumentUploadStatus.COMPLETE) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'El archivo no está disponible' });
@@ -485,7 +495,7 @@ export const receiptRouter = createTRPCRouter({
   /**
    * List all receipts for a policy (admin)
    */
-  listByPolicy: protectedProcedure
+  listByPolicy: adminProcedure
     .input(z.object({
       policyId: z.string(),
     }))
@@ -540,7 +550,7 @@ export const receiptRouter = createTRPCRouter({
   /**
    * Download a receipt (admin)
    */
-  getDownloadUrlAdmin: protectedProcedure
+  getDownloadUrlAdmin: adminProcedure
     .input(z.object({
       receiptId: z.string(),
     }))

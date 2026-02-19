@@ -29,7 +29,7 @@ interface MonthReceiptCardProps {
   onUpload?: (file: File, receiptType: ReceiptType) => void;
   onDelete?: (receiptId: string) => void;
   onDownload?: (receiptId: string) => void;
-  onMarkNA?: (receiptType: ReceiptType) => void;
+  onMarkNA?: (receiptType: ReceiptType, note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
   getSlotOperation?: (receiptType: ReceiptType) => ReceiptOperation | undefined;
 }
@@ -95,7 +95,7 @@ export default function MonthReceiptCard({
               onUpload={file => onUpload?.(file, type)}
               onDelete={onDelete}
               onDownload={onDownload}
-              onMarkNA={() => onMarkNA?.(type)}
+              onMarkNA={(note) => onMarkNA?.(type, note)}
               onUndoNA={onUndoNA}
             />
           ))}

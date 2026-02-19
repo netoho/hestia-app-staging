@@ -37,7 +37,7 @@ interface ReceiptHistoryListProps {
   onUpload?: (file: File, year: number, month: number, receiptType: ReceiptType) => void;
   onDelete?: (receiptId: string) => void;
   onDownload?: (receiptId: string) => void;
-  onMarkNA?: (year: number, month: number, receiptType: ReceiptType) => void;
+  onMarkNA?: (year: number, month: number, receiptType: ReceiptType, note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
   getSlotOperation?: (year: number, month: number, receiptType: ReceiptType) => ReceiptOperation | undefined;
 }
@@ -135,7 +135,7 @@ export default function ReceiptHistoryList({
                   onUpload={(file, type) => onUpload?.(file, year, month, type)}
                   onDelete={onDelete}
                   onDownload={onDownload}
-                  onMarkNA={(type) => onMarkNA?.(year, month, type)}
+                  onMarkNA={(type, note) => onMarkNA?.(year, month, type, note)}
                   onUndoNA={onUndoNA}
                   getSlotOperation={(type) => getSlotOperation?.(year, month, type)}
                 />

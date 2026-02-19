@@ -20,7 +20,7 @@ export default function ReceiptPortalLayout({
         </div>
       </header>
 
-      {children}
+      <main id="main-content">{children}</main>
 
       <footer className="border-t mt-12" style={{ borderColor: '#d4dae1', backgroundColor: 'white' }}>
         <div className="container mx-auto px-4 py-8">
