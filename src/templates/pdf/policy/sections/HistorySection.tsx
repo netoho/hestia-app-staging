@@ -12,7 +12,7 @@ export function HistorySection({ data }: HistorySectionProps) {
   if (!activities || activities.length === 0) {
     return (
       <View style={styles.section} break>
-        <SectionTitle title="Historial de la Póliza" />
+        <SectionTitle title="Historial de la Protección" />
         <View style={styles.emptyState}>
           <Text>No hay eventos registrados</Text>
         </View>
@@ -22,7 +22,7 @@ export function HistorySection({ data }: HistorySectionProps) {
 
   return (
     <View style={styles.section} break>
-      <SectionTitle title="Historial de la Póliza" />
+      <SectionTitle title="Historial de la Protección" />
       <View style={styles.sectionContent}>
         {activities.map((activity, index) => (
           <View

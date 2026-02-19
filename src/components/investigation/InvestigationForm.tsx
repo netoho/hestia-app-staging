@@ -345,7 +345,7 @@ export function InvestigationForm({
             {isEditMode ? 'Editar Investigación' : 'Nueva Investigación'}
           </h1>
           <p className="text-muted-foreground">
-            Póliza #{policy.policyNumber}
+            Protección #{policy.policyNumber}
           </p>
         </div>
       </div>

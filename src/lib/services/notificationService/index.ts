@@ -264,10 +264,10 @@ export const sendTenantReplacementNotification = async (
       await sendSimpleNotificationEmail({
         to: recipient.email,
         recipientName: recipient.name || undefined,
-        subject: `Inquilino reemplazado en póliza #${policy.policyNumber}`,
-        message: `El inquilino ha sido reemplazado en la póliza #${policy.policyNumber}. El proceso de recolección de información ha sido reiniciado.`,
+        subject: `Inquilino reemplazado en protección #${policy.policyNumber}`,
+        message: `El inquilino ha sido reemplazado en la protección #${policy.policyNumber}. El proceso de recolección de información ha sido reiniciado.`,
         actionUrl: policyLink,
-        actionText: 'Ver póliza',
+        actionText: 'Ver protección',
       });
     } catch (error) {
       console.error('Failed to send tenant replacement notification to:', recipient.email, error);

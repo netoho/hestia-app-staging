@@ -218,7 +218,7 @@ export const InvestigationResultEmail: React.FC<InvestigationResultEmailProps> =
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                   }}
                 >
-                  Ver Póliza
+                  Ver Protección
                 </Button>
               </Section>
             )}

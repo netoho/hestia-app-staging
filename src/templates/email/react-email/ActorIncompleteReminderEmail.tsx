@@ -73,7 +73,7 @@ export const ActorIncompleteReminderEmail: React.FC<ActorIncompleteReminderEmail
               fontSize: '16px',
               fontWeight: '400'
             }}>
-              Complete su información para la póliza
+              Complete su información para la protección
             </Text>
           </Section>
 
@@ -101,7 +101,7 @@ export const ActorIncompleteReminderEmail: React.FC<ActorIncompleteReminderEmail
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Este es un recordatorio diario para completar su información como <strong>{actorTypeLabel}</strong> para la póliza <strong>{policyNumber}</strong>.
+              Este es un recordatorio diario para completar su información como <strong>{actorTypeLabel}</strong> para la protección <strong>{policyNumber}</strong>.
             </Text>
 
             <Text style={{
@@ -110,7 +110,7 @@ export const ActorIncompleteReminderEmail: React.FC<ActorIncompleteReminderEmail
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Su información está incompleta y es necesaria para procesar la póliza. Por favor, tómese unos minutos para completar el formulario.
+              Su información está incompleta y es necesaria para procesar la protección. Por favor, tómese unos minutos para completar el formulario.
             </Text>
 
             <Section style={{ textAlign: 'center', margin: '30px 0' }}>

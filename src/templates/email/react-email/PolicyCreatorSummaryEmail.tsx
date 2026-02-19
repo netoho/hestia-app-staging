@@ -63,7 +63,7 @@ export const PolicyCreatorSummaryEmail: React.FC<PolicyCreatorSummaryEmailProps>
               fontWeight: '700',
               letterSpacing: '-0.025em'
             }}>
-              Resumen de Póliza
+              Resumen de Protección
             </Heading>
             <Text style={{
               margin: '8px 0 0 0',
@@ -99,7 +99,7 @@ export const PolicyCreatorSummaryEmail: React.FC<PolicyCreatorSummaryEmailProps>
               color: brandColors.textPrimary,
               margin: '16px 0'
             }}>
-              Este es un resumen diario de los actores que aún necesitan completar su información para la póliza <strong>{policyNumber}</strong>.
+              Este es un resumen diario de los actores que aún necesitan completar su información para la protección <strong>{policyNumber}</strong>.
             </Text>
 
             {/* Pending Actors Section */}
@@ -209,7 +209,7 @@ export const PolicyCreatorSummaryEmail: React.FC<PolicyCreatorSummaryEmailProps>
                   display: 'inline-block'
                 }}
               >
-                Ver póliza
+                Ver protección
               </Button>
             </Section>
           </Section>

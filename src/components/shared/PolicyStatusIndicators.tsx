@@ -144,7 +144,7 @@ export function PolicyStatusBadge({
             sizeClasses[size],
           )}
         >
-          <span>{t.labels.policySubStatus[subStatus]}</span>
+          <span>{t.policySubStatus[subStatus]}</span>
         </div>
       )}
     </div>
