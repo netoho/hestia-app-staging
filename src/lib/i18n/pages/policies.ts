@@ -5,6 +5,7 @@ export const policies = {
     errorLoading: "No se pudieron cargar las protecciones",
     progressComplete: "Completo",
     progressStep: (step: number) => `Paso ${step}/4`,
+    stepOf: (current: number, total: number) => `Paso ${current} de ${total}`,
     viewProgress: "Ver Progreso",
     sendInvitations: "Enviar Invitaciones",
     approvePolicy: "Aprobar Protección",

@@ -118,14 +118,14 @@ export default function UsersPage() {
             <PageTitle title={t.pages.users.title} subtitle={t.pages.users.subtitle} />
 
             <TableFilters
-                searchPlaceholder="Search by name or email..."
+                searchPlaceholder={t.pages.users.searchPlaceholder}
                 searchValue={tableState.state.search}
                 onSearchChange={tableState.setSearch}
                 selectFilters={[
                     {
                         key: 'role',
-                        label: 'Roles',
-                        placeholder: 'Filter by role',
+                        label: t.pages.users.rolesFilterLabel,
+                        placeholder: t.pages.users.filterByRole,
                         options: roleOptions,
                         value: tableState.state.filters.role || 'all',
                         onChange: (value) => tableState.setFilter('role', value),
@@ -140,7 +140,7 @@ export default function UsersPage() {
                         <CardTitle>{t.pages.users.cardTitle}</CardTitle>
                         <CardDescription>
                             {!isLoading && !error && (
-                                `Showing ${users.length} of ${pagination.total} users`
+                                t.pages.users.showingUsers(users.length, pagination.total)
                             )}
                         </CardDescription>
                     </div>
@@ -188,7 +188,7 @@ export default function UsersPage() {
                                                 <DropdownMenuTrigger asChild>
                                                     <Button aria-haspopup="true" size="icon" variant="ghost">
                                                         <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">Toggle menu</span>
+                                                        <span className="sr-only">{t.pages.users.toggleMenu}</span>
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">

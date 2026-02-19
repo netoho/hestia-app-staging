@@ -18,6 +18,11 @@ export const users = {
     },
     noUsersFound: "No se encontraron usuarios.",
     errorLoading: "Error al cargar los usuarios.",
+    searchPlaceholder: "Buscar por nombre o correo...",
+    filterByRole: "Filtrar por rol",
+    rolesFilterLabel: "Roles",
+    showingUsers: (count: number, total: number) => `Mostrando ${count} de ${total} usuarios`,
+    toggleMenu: "Abrir menú",
     roleLabels: {
         admin: "Administrador",
         staff: "Staff",

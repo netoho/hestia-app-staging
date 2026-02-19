@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
               </Button>
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto min-h-[calc(100vh-8rem)]">
+          <main id="main-content" className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto min-h-[calc(100vh-8rem)]">
             {children}
           </main>
           <footer className="border-t bg-background/80 px-4 py-3 md:px-6 text-center md:text-left">
