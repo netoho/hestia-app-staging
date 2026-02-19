@@ -12,6 +12,7 @@ import { userRouter } from './user.router';
 import { staffRouter } from './staff.router';
 import { onboardRouter } from './onboard.router';
 import { addressRouter } from './address.router';
+import { receiptRouter } from './receipt.router';
 
 /**
  * Main app router
@@ -31,6 +32,7 @@ export const appRouter = createTRPCRouter({
   staff: staffRouter,
   onboard: onboardRouter,
   address: addressRouter,
+  receipt: receiptRouter,
 });
 
 // Export type for use in client
