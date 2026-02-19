@@ -1116,9 +1116,9 @@ export const investigationRouter = createTRPCRouter({
           'system',
           approvedBy,
         );
-      } catch {
+      } catch (error) {
         // Non-critical: log but don't fail the approval
-        console.error('Failed to auto-transition policy after investigation approval');
+        console.error('Failed to auto-transition policy after investigation approval:', error);
       }
 
       return {
