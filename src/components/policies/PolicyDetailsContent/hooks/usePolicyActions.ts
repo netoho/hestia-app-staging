@@ -112,12 +112,60 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     });
   };
 
+  // Activate policy mutation
+  const activateMutation = trpc.policy.activate.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Protección activada',
+        description: 'La protección ha sido activada exitosamente',
+      });
+      onRefresh();
+    },
+    onError: (error) => {
+      console.error('Error activating policy:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al activar la protección',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Deactivate policy mutation
+  const deactivateMutation = trpc.policy.deactivate.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Protección desactivada',
+        description: 'La protección ha sido desactivada exitosamente',
+      });
+      onRefresh();
+    },
+    onError: (error) => {
+      console.error('Error deactivating policy:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al desactivar la protección',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const approvePolicy = () => {
     if (!confirm('¿Estás seguro de que deseas aprobar esta protección?')) return;
     updateStatusMutation.mutate({
       policyId,
       status: 'APPROVED' as const,
     });
+  };
+
+  const activatePolicyAction = () => {
+    if (!confirm('¿Estás seguro de que deseas activar esta protección?')) return;
+    activateMutation.mutate({ policyId });
+  };
+
+  const deactivatePolicyAction = () => {
+    if (!confirm('¿Estás seguro de que deseas desactivar esta protección?')) return;
+    deactivateMutation.mutate({ policyId });
   };
 
   const handleMarkComplete = (skipValidation: boolean) => {
@@ -177,6 +225,8 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
+    activatePolicyAction,
+    deactivatePolicyAction,
     handleMarkComplete,
     handleDownloadPdf,
 

@@ -123,6 +123,8 @@ export default function PolicyDetailsContent({
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
+    activatePolicyAction,
+    deactivatePolicyAction,
     handleMarkComplete,
     handleDownloadPdf,
     handleEditActor,
@@ -130,21 +132,6 @@ export default function PolicyDetailsContent({
     closeEditingActor,
     closeMarkComplete,
   } = usePolicyActions({ policyId, policyNumber: policy.policyNumber, onRefresh });
-
-  // Check if all actors are approved
-  const checkAllActorsApproved = () => {
-    if (!policy) return false;
-
-    const landlordsApproved = policy.landlords?.length > 0 &&
-      policy.landlords.filter((l: any) => l.isPrimary).every((l: any) => l.verificationStatus === 'APPROVED');
-    const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
-    const jointObligorsApproved = !policy.jointObligors?.length ||
-      policy.jointObligors.every((jo: any) => jo.verificationStatus === 'APPROVED');
-    const avalsApproved = !policy.avals?.length ||
-      policy.avals.every((a: any) => a.verificationStatus === 'APPROVED');
-
-    return landlordsApproved && tenantApproved && jointObligorsApproved && avalsApproved;
-  };
 
   // Calculate payment stats
   const completedPayments = policy.payments?.filter(
@@ -218,13 +205,15 @@ export default function PolicyDetailsContent({
           policyId={policyId}
           permissions={permissions}
           isStaffOrAdmin={isStaffOrAdmin}
-          allActorsApproved={checkAllActorsApproved()}
           progressOverall={policy.progress?.overall}
           sending={sending}
           downloadingPdf={downloadingPdf}
           isRefreshing={isRefreshing}
+          activatedAt={policy.activatedAt}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
+          onActivate={activatePolicyAction}
+          onDeactivate={deactivatePolicyAction}
           onShareClick={() => setShowShareModal(true)}
           onCancelClick={() => setShowCancelModal(true)}
           onDownloadPdf={handleDownloadPdf}
