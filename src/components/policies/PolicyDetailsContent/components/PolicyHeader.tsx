@@ -37,10 +37,11 @@ interface PolicyHeaderProps {
     canVerifyDocuments: boolean;
   };
   isStaffOrAdmin: boolean;
-  progressOverall?: number;
   sending: string | null;
   downloadingPdf: boolean;
   isRefreshing?: boolean;
+  isActivating?: boolean;
+  isDeactivating?: boolean;
   activatedAt?: Date | string | null;
   onSendInvitations: () => void;
   onApprove: () => void;
@@ -62,6 +63,8 @@ export function PolicyHeader({
   sending,
   downloadingPdf,
   isRefreshing,
+  isActivating,
+  isDeactivating,
   activatedAt,
   onSendInvitations,
   onApprove,
@@ -132,16 +135,24 @@ export function PolicyHeader({
 
           {/* Activate Policy - Staff/Admin, APPROVED + not yet activated */}
           {isStaffOrAdmin && status === 'APPROVED' && !activatedAt && (
-            <DropdownMenuItem onClick={onActivate} className="text-green-600">
-              <CheckCircle2 className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={onActivate} disabled={isActivating} className="text-green-600">
+              {isActivating ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
               {t.pages.policies.activatePolicy}
             </DropdownMenuItem>
           )}
 
           {/* Deactivate Policy - Staff/Admin, APPROVED + currently activated */}
           {isStaffOrAdmin && status === 'APPROVED' && !!activatedAt && (
-            <DropdownMenuItem onClick={onDeactivate} className="text-orange-600">
-              <XCircle className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={onDeactivate} disabled={isDeactivating} className="text-orange-600">
+              {isDeactivating ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 h-4 w-4" />
+              )}
               {t.pages.policies.deactivatePolicy}
             </DropdownMenuItem>
           )}

@@ -48,6 +48,8 @@ export async function cancelPolicy(
       cancellationReason: input.reason,
       cancellationComment: input.comment,
       cancelledById: input.cancelledById,
+      activatedAt: null,
+      expiresAt: null,
     },
   });
 

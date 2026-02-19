@@ -186,3 +186,74 @@ src/components/portal/
 - Branch: `feature/tenant-receipts` (commit: cd39beb, all changes uncommitted)
 
 **Build**: `bun run build` ✅ passes
+
+---
+
+### Update — 2026-02-19 (session 3)
+
+**Summary**: In-depth audit of Policy status transitions. Found and fixed 15 workflow issues across two rounds.
+
+**Round 1 fixes** (committed separately earlier, files now clean):
+- Removed `allActorsApproved` gate from approve CTA — was checking `verificationStatus` instead of `actorInvestigation.status`, causing button to never appear
+- Added activate/deactivate buttons to PolicyHeader dropdown for APPROVED policies
+- Set `submittedAt` on COLLECTING_INFO → PENDING_APPROVAL transition (was always null)
+- Added payment gate (`paymentStatus === COMPLETED`) before activation
+- Fixed silent `catch {}` on investigation→policy auto-transition
+- Sent approval email to tenant on APPROVED transition
+- Deleted dead code: `autoTransitionPolicies()`, `ApprovalWorkflow` component + `approval/` folder
+
+**Round 2 fixes** (commit: 7c981e8):
+- Reset `activatedAt`/`expiresAt` on tenant replacement & guarantor type change (was leaving stale activation state)
+- Added `activatedAt: { not: null }` filter to receipt cron, portal magic link, and portal data queries
+- Added `status !== 'APPROVED'` guard to admin `listByPolicy` endpoint
+- Removed debug `console.log(pd)` from receipt router
+- Moved 4 hardcoded Spanish strings to i18n (activate, deactivate, share, cancel)
+- Added `utils.policy.getById.invalidate()` to activate/deactivate mutation success handlers
+- Created `sendPolicyPendingApprovalNotification()` — admins now get emailed when policy reaches PENDING_APPROVAL
+
+**Git Changes**:
+- Modified: `PolicyHeader.tsx`, `usePolicyActions.ts`, `PolicyDetailsContent.tsx`, `policies.ts` (i18n), `notificationService/index.ts`, `guarantorTypeChange.ts`, `tenantReplacement.ts`, `policyWorkflowService.ts`, `receipt.router.ts`, `receiptReminderService.ts`, `investigation.router.ts`
+- Deleted: `ApprovalWorkflow.tsx`, `approval/` folder (3 files), `ApprovalWorkflowSkeleton.tsx`
+- Branch: `feature/tenant-receipts` (commit: 7c981e8)
+- Working tree clean
+
+**Build**: `bun run build` ✅ passes
+
+---
+
+### Update — 2026-02-19 (session 4 — FINAL)
+
+**Summary**: Policy workflow improvements round 3 — 7 small fixes for data consistency, dead code, i18n gaps, confirmation UX, loading states, and timeline completeness. Also fixed a bug introduced during session (`t.statuses.policyStatusFull` → `t.policyStatusFull`).
+
+**Changes (all uncommitted, 8 files modified)**:
+
+1. **Cancellation date reset** — `cancellation.ts`: added `activatedAt: null, expiresAt: null` on cancel
+2. **Dead prop removal** — removed unused `progressOverall` from `PolicyHeader` interface + `PolicyDetailsContent` usage
+3. **Status text i18n** — `PolicyStatusIndicators.tsx`: replaced hardcoded `getStatusDisplayText()`/`getPaymentStatusText()` with `t.policyStatusFull`/`t.paymentStatusFull`
+4. **Toast i18n** — added 12 toast keys to `policies.ts`, replaced all hardcoded toast strings in `usePolicyActions.ts`
+5. **AlertDialog replaces confirm()** — added `pendingAction` state to `usePolicyActions`, `ConfirmActionDialog` component in `PolicyDetailsContent`
+6. **Loading states** — exposed `isActivating`/`isDeactivating` from hook, passed to `PolicyHeader`, spinner + disabled on menu items
+7. **Timeline expiresAt** — added `expiresAt` prop to `TimelineCard` with `CalendarClock` icon, wired from `OverviewTab`
+8. **Bugfix** — `t.statuses.policyStatusFull` → `t.policyStatusFull` (statuses is spread into `t`, not nested)
+
+**Modified files**:
+- `src/lib/services/policyService/cancellation.ts` (M)
+- `src/components/policies/PolicyDetailsContent/PolicyDetailsContent.tsx` (M)
+- `src/components/policies/PolicyDetailsContent/components/PolicyHeader.tsx` (M)
+- `src/components/policies/PolicyDetailsContent/hooks/usePolicyActions.ts` (M)
+- `src/components/policies/PolicyDetailsContent/tabs/OverviewTab.tsx` (M)
+- `src/components/policies/details/TimelineCard.tsx` (M)
+- `src/components/shared/PolicyStatusIndicators.tsx` (M)
+- `src/lib/i18n/pages/policies.ts` (M)
+
+**Stats**: 9 files changed, +203 -64 lines. 0 new commits (all uncommitted).
+
+**Build**: `bun run build` ✅
+
+**Remaining TODO**:
+- ◻ Commit round 3 changes
+- ◻ Commit all tenant receipts portal changes (from sessions 1-2, still uncommitted)
+- ◻ Run Prisma migration on environment
+- ◻ End-to-end testing
+
+**Key lesson**: The i18n `t` object spreads `statuses` at top level (`t.policyStatusFull`), not nested (`t.statuses.policyStatusFull`). Same for globals. Only `layout`, `wizard`, `pages` are nested.
