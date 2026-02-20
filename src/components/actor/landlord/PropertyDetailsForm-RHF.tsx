@@ -62,6 +62,13 @@ export default function PropertyDetailsFormRHF({
       hasInternet: initialData?.hasInternet ?? false,
       otherServices: initialData?.otherServices || '',
       utilitiesInLandlordName: initialData?.utilitiesInLandlordName ?? false,
+      // Included in rent
+      electricityIncludedInRent: initialData?.electricityIncludedInRent ?? false,
+      waterIncludedInRent: initialData?.waterIncludedInRent ?? false,
+      gasIncludedInRent: initialData?.gasIncludedInRent ?? false,
+      internetIncludedInRent: initialData?.internetIncludedInRent ?? false,
+      cableTVIncludedInRent: initialData?.cableTVIncludedInRent ?? false,
+      phoneIncludedInRent: initialData?.phoneIncludedInRent ?? false,
       // Features
       isFurnished: initialData?.isFurnished ?? false,
       petsAllowed: initialData?.petsAllowed ?? false,
@@ -139,107 +146,233 @@ export default function PropertyDetailsFormRHF({
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-sm font-medium">Servicios Incluidos</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="hasElectricity"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Electricidad</FormLabel>
-                    </FormItem>
+                {/* Electricity */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="hasElectricity"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Electricidad</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('hasElectricity') && (
+                    <FormField
+                      control={form.control}
+                      name="electricityIncludedInRent"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={disabled}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs text-muted-foreground">Incluido en la renta</FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="hasWater"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Agua</FormLabel>
-                    </FormItem>
+                {/* Water */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="hasWater"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Agua</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('hasWater') && (
+                    <FormField
+                      control={form.control}
+                      name="waterIncludedInRent"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={disabled}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs text-muted-foreground">Incluido en la renta</FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="hasGas"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Gas</FormLabel>
-                    </FormItem>
+                {/* Gas */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="hasGas"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Gas</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('hasGas') && (
+                    <FormField
+                      control={form.control}
+                      name="gasIncludedInRent"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={disabled}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs text-muted-foreground">Incluido en la renta</FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="hasPhone"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Teléfono</FormLabel>
-                    </FormItem>
+                {/* Phone */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="hasPhone"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Teléfono</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('hasPhone') && (
+                    <FormField
+                      control={form.control}
+                      name="phoneIncludedInRent"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={disabled}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs text-muted-foreground">Incluido en la renta</FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="hasCableTV"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">TV por Cable</FormLabel>
-                    </FormItem>
+                {/* Cable TV */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="hasCableTV"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">TV por Cable</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('hasCableTV') && (
+                    <FormField
+                      control={form.control}
+                      name="cableTVIncludedInRent"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={disabled}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs text-muted-foreground">Incluido en la renta</FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="hasInternet"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={disabled}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Internet</FormLabel>
-                    </FormItem>
+                {/* Internet */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="hasInternet"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Internet</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('hasInternet') && (
+                    <FormField
+                      control={form.control}
+                      name="internetIncludedInRent"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 ml-7">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={disabled}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs text-muted-foreground">Incluido en la renta</FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
               </div>
 
               <FormField

@@ -110,7 +110,7 @@ export const ARCHIVE_REASONS = Object.entries(archiveReasonConfig).map(([value, 
 export const approverTypeConfig: Record<ApproverType, { label: string; description: string }> = {
   BROKER: {
     label: 'Broker',
-    description: 'El broker de la póliza',
+    description: 'El broker de la protección',
   },
   LANDLORD: {
     label: 'Arrendador',

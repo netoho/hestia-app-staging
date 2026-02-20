@@ -24,29 +24,33 @@ interface EditingActor {
   actorId: string;
 }
 
+export type PendingActionType = 'approve' | 'activate' | 'deactivate' | null;
+
 export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolicyActionsProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const toastKeys = t.pages.policies.details.toast;
 
   const [sending, setSending] = useState<string | null>(null);
   const [editingActor, setEditingActor] = useState<EditingActor | null>(null);
   const [markCompleteActor, setMarkCompleteActor] = useState<MarkCompleteActor | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingActionType>(null);
 
   // Send invitations mutation
   const sendInvitationsMutation = trpc.policy.sendInvitations.useMutation({
     onSuccess: () => {
       toast({
-        title: 'Invitaciones enviadas',
-        description: 'Las invitaciones han sido enviadas exitosamente',
+        title: toastKeys.invitationsSent,
+        description: toastKeys.invitationsSentDesc,
       });
       onRefresh();
     },
     onError: (error) => {
       console.error('Error sending invitations:', error);
       toast({
-        title: 'Error',
-        description: 'Error al enviar invitaciones',
+        title: toastKeys.error,
+        description: toastKeys.invitationsError,
         variant: 'destructive',
       });
     },
@@ -59,16 +63,16 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
   const updateStatusMutation = trpc.policy.updateStatus.useMutation({
     onSuccess: () => {
       toast({
-        title: 'Protección aprobada',
-        description: 'La protección ha sido aprobada exitosamente',
+        title: toastKeys.policyApproved,
+        description: toastKeys.policyApprovedDesc,
       });
       onRefresh();
     },
     onError: (error) => {
       console.error('Error updating policy status:', error);
       toast({
-        title: 'Error',
-        description: 'Error al actualizar el estado de la protección',
+        title: toastKeys.error,
+        description: toastKeys.approvalError,
         variant: 'destructive',
       });
     },
@@ -78,8 +82,8 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
   const adminSubmitMutation = trpc.actor.adminSubmitActor.useMutation({
     onSuccess: () => {
       toast({
-        title: 'Actor marcado como completo',
-        description: 'El actor ha sido marcado como completo exitosamente',
+        title: toastKeys.actorMarkedComplete,
+        description: toastKeys.actorMarkedCompleteDesc,
       });
       utils.actor.listByPolicy.invalidate({ policyId });
       onRefresh();
@@ -87,8 +91,8 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     },
     onError: (error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Error al marcar como completo',
+        title: toastKeys.error,
+        description: error.message || toastKeys.markCompleteError,
         variant: 'destructive',
       });
     },
@@ -112,13 +116,68 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     });
   };
 
-  const approvePolicy = () => {
-    if (!confirm('¿Estás seguro de que deseas aprobar esta protección?')) return;
-    updateStatusMutation.mutate({
-      policyId,
-      status: 'APPROVED' as const,
-    });
+  // Activate policy mutation
+  const activateMutation = trpc.policy.activate.useMutation({
+    onSuccess: () => {
+      toast({
+        title: toastKeys.policyActivated,
+        description: toastKeys.policyActivatedDesc,
+      });
+      utils.policy.getById.invalidate({ id: policyId });
+      onRefresh();
+    },
+    onError: (error) => {
+      console.error('Error activating policy:', error);
+      toast({
+        title: toastKeys.error,
+        description: error.message || toastKeys.activationError,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Deactivate policy mutation
+  const deactivateMutation = trpc.policy.deactivate.useMutation({
+    onSuccess: () => {
+      toast({
+        title: toastKeys.policyDeactivated,
+        description: toastKeys.policyDeactivatedDesc,
+      });
+      utils.policy.getById.invalidate({ id: policyId });
+      onRefresh();
+    },
+    onError: (error) => {
+      console.error('Error deactivating policy:', error);
+      toast({
+        title: toastKeys.error,
+        description: error.message || toastKeys.deactivationError,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Instead of confirm(), set pending action state
+  const approvePolicy = () => setPendingAction('approve');
+  const activatePolicyAction = () => setPendingAction('activate');
+  const deactivatePolicyAction = () => setPendingAction('deactivate');
+
+  // Called from the AlertDialog confirm button
+  const confirmPendingAction = () => {
+    switch (pendingAction) {
+      case 'approve':
+        updateStatusMutation.mutate({ policyId, status: 'APPROVED' as const });
+        break;
+      case 'activate':
+        activateMutation.mutate({ policyId });
+        break;
+      case 'deactivate':
+        deactivateMutation.mutate({ policyId });
+        break;
+    }
+    setPendingAction(null);
   };
+
+  const cancelPendingAction = () => setPendingAction(null);
 
   const handleMarkComplete = (skipValidation: boolean) => {
     if (!markCompleteActor) return;
@@ -134,13 +193,13 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     try {
       await downloadPolicyPdf(policyId, policyNumber);
       toast({
-        title: t.pages.policies.details.toast.pdfGenerated,
-        description: t.pages.policies.details.toast.pdfGeneratedDesc,
+        title: toastKeys.pdfGenerated,
+        description: toastKeys.pdfGeneratedDesc,
       });
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast({
-        title: 'Error',
+        title: toastKeys.error,
         description: error instanceof Error ? error.message : 'Error al descargar PDF',
         variant: 'destructive',
       });
@@ -167,16 +226,23 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     editingActor,
     markCompleteActor,
     downloadingPdf,
+    pendingAction,
 
     // Mutations loading states
     isSending: sendInvitationsMutation.isPending,
     isApproving: updateStatusMutation.isPending,
+    isActivating: activateMutation.isPending,
+    isDeactivating: deactivateMutation.isPending,
     isMarkingComplete: adminSubmitMutation.isPending,
 
     // Handlers
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
+    activatePolicyAction,
+    deactivatePolicyAction,
+    confirmPendingAction,
+    cancelPendingAction,
     handleMarkComplete,
     handleDownloadPdf,
 

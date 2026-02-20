@@ -178,6 +178,30 @@ class DocumentService extends BaseService {
     return `policies/${policyNumber}/documents/${category}/${uuidv4().slice(0, 8)}-${baseName}.${ext}`;
   }
 
+  /**
+   * Generate S3 key for tenant receipts
+   * Pattern: receipts/{policyNumber}/{tenantId}/{year}-{month}/{receiptType}/{uuid}-{filename}
+   */
+  generateReceiptS3Key(
+    policyNumber: string,
+    tenantId: string,
+    year: number,
+    month: number,
+    receiptType: string,
+    fileName: string
+  ): string {
+    const ext = getFileExtension(fileName) || 'pdf';
+    const uniqueId = uuidv4().slice(0, 8);
+    const safeFileName = createSafeS3Key(fileName);
+    const nameWithoutExt = safeFileName.lastIndexOf('.') > 0
+      ? safeFileName.substring(0, safeFileName.lastIndexOf('.'))
+      : safeFileName;
+    const fileNamePart = nameWithoutExt.substring(0, 50);
+    const monthStr = String(month).padStart(2, '0');
+
+    return `receipts/${policyNumber}/${tenantId}/${year}-${monthStr}/${receiptType}/${uniqueId}-${fileNamePart}.${ext}`;
+  }
+
   // ============================================
   // PURE S3 OPERATIONS (no DB coupling)
   // ============================================

@@ -57,7 +57,7 @@ export const createPolicy = {
     property: {
       title: 'Información de la Propiedad',
       description: 'Ingrese los detalles de la propiedad a asegurar',
-      policyNumber: 'Número de Póliza',
+      policyNumber: 'Número de Protección',
       generateNewNumber: 'Generar nuevo número',
       internalCode: 'Código Interno',
       internalCodePlaceholder: 'INV1, CONT 1, etc.',
@@ -165,7 +165,7 @@ export const createPolicy = {
         guarantees: 'Garantías',
       },
       labels: {
-        policyNumber: 'Número de Póliza:',
+        policyNumber: 'Número de Protección:',
         internalCode: 'Código Interno:',
         address: 'Dirección:',
         notSpecified: 'No especificada',

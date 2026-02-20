@@ -32,7 +32,7 @@ export async function GET(
     });
 
     if (!policy) {
-      return NextResponse.json({ error: 'Póliza no encontrada' }, { status: 404 });
+      return NextResponse.json({ error: 'Protección no encontrada' }, { status: 404 });
     }
 
     // Brokers can only access their own policies
@@ -58,7 +58,7 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
-      return NextResponse.json({ error: 'Póliza no encontrada' }, { status: 404 });
+      return NextResponse.json({ error: 'Protección no encontrada' }, { status: 404 });
     }
 
     return NextResponse.json(

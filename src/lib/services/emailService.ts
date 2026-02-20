@@ -567,9 +567,9 @@ export const sendActorIncompleteReminder = async (data: ActorIncompleteReminderD
     const text = `
 Hola ${data.actorName},
 
-Este es un recordatorio diario para completar su información como ${actorTypeLabel} para la póliza ${data.policyNumber}.
+Este es un recordatorio diario para completar su información como ${actorTypeLabel} para la protección ${data.policyNumber}.
 
-Su información está incompleta y es necesaria para procesar la póliza. Por favor, visite el siguiente enlace para completar el formulario:
+Su información está incompleta y es necesaria para procesar la protección. Por favor, visite el siguiente enlace para completar el formulario:
 
 ${data.actorLink}
 
@@ -605,14 +605,14 @@ export const sendPolicyCreatorSummary = async (data: PolicyCreatorSummaryData): 
     const text = `
 Hola ${data.creatorName},
 
-Este es un resumen diario de los actores que aún necesitan completar su información para la póliza ${data.policyNumber}.
+Este es un resumen diario de los actores que aún necesitan completar su información para la protección ${data.policyNumber}.
 
 Actores Pendientes:
 ${actorsListText}
 
 Se han enviado recordatorios automáticos a cada actor con información de contacto. Los recordatorios continuarán enviándose diariamente hasta que completen su información.
 
-Ver póliza: ${data.policyLink}
+Ver protección: ${data.policyLink}
 
 © ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
     `.trim();
@@ -936,7 +936,7 @@ Fecha: ${formatDateTimeLong(data.submittedAt)}
 
 Se ha notificado al broker y arrendador para su aprobación.
 
-Ver póliza: ${data.policyUrl}
+Ver protección: ${data.policyUrl}
 
 © ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
     `.trim();
@@ -986,7 +986,7 @@ Hola${data.recipientName ? ` ${data.recipientName}` : ''},
 
 Se ha completado la investigación de ${data.actorName} (${actorTypeNames[data.actorType]}) y requiere tu aprobación.
 
-Póliza: ${data.policyNumber}
+Protección: ${data.policyNumber}
 Propiedad: ${data.propertyAddress}
 
 Por favor revisa la investigación y decide si aprobar o rechazar:
@@ -1053,14 +1053,14 @@ Hola${data.recipientName ? ` ${data.recipientName}` : ''},
 
 La investigación de ${data.actorName} (${actorTypeNames[data.actorType]}) ha sido ${resultText.toLowerCase()} por ${approverTypeNames[data.approvedByType]}.
 
-Póliza: ${data.policyNumber}
+Protección: ${data.policyNumber}
 Propiedad: ${data.propertyAddress}
 Fecha: ${formatDateTimeLong(data.approvedAt)}
 
 ${data.result === 'REJECTED' && data.rejectionReason ? `Motivo del rechazo: ${data.rejectionReason}` : ''}
 ${data.result === 'APPROVED' && data.notes ? `Notas: ${data.notes}` : ''}
 
-${data.policyUrl ? `Ver póliza: ${data.policyUrl}` : ''}
+${data.policyUrl ? `Ver protección: ${data.policyUrl}` : ''}
 
 © ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
     `.trim();
@@ -1073,6 +1073,83 @@ ${data.policyUrl ? `Ver póliza: ${data.policyUrl}` : ''}
     });
   } catch (error) {
     console.error('Failed to send investigation result email:', error);
+    return false;
+  }
+};
+
+// ============================================
+// RECEIPT EMAILS
+// ============================================
+
+export interface ReceiptReminderData {
+  tenantName: string;
+  email: string;
+  propertyAddress: string;
+  policyNumber: string;
+  monthName: string;
+  year: number;
+  requiredReceipts: string[];
+  portalUrl: string;
+}
+
+export const sendReceiptReminder = async (data: ReceiptReminderData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { ReceiptReminderEmail } = await import('../../templates/email/react-email/ReceiptReminderEmail');
+
+    const html = await render(await ReceiptReminderEmail(data));
+
+    const subject = emailSubject(`Comprobantes de ${data.monthName} ${data.year}`);
+    const receiptsText = data.requiredReceipts.map(r => `- ${r}`).join('\n');
+    const text = `
+Hola ${data.tenantName},
+
+Es momento de subir tus comprobantes de pago del mes de ${data.monthName} ${data.year} para la propiedad en ${data.propertyAddress}.
+
+Comprobantes solicitados:
+${receiptsText}
+
+Accede a tu portal: ${data.portalUrl}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send receipt reminder:', error);
+    return false;
+  }
+};
+
+export interface ReceiptMagicLinkData {
+  tenantName: string;
+  email: string;
+  portalUrl: string;
+}
+
+export const sendReceiptMagicLink = async (data: ReceiptMagicLinkData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { ReceiptMagicLinkEmail } = await import('../../templates/email/react-email/ReceiptMagicLinkEmail');
+
+    const html = await render(await ReceiptMagicLinkEmail(data));
+
+    const subject = emailSubject('Accede a tu Portal de Comprobantes');
+    const text = `
+Hola ${data.tenantName},
+
+Haz clic en el siguiente enlace para acceder a tu portal de comprobantes:
+
+${data.portalUrl}
+
+Este enlace es personal. No lo compartas con nadie.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send receipt magic link:', error);
     return false;
   }
 };

@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
             await logPolicyActivity({
               policyId,
               action: 'all_payments_completed',
-              description: 'Todos los pagos de la póliza han sido completados',
+              description: 'Todos los pagos de la protección han sido completados',
               performedById: 'system',
               details: { totalPayments: allPayments.length }
             });
@@ -520,7 +520,7 @@ export async function POST(request: NextRequest) {
             await logPolicyActivity({
               policyId,
               action: 'all_payments_completed',
-              description: 'Todos los pagos de la póliza han sido completados',
+              description: 'Todos los pagos de la protección han sido completados',
               performedById: 'system',
               details: { totalPayments: allPayments.length },
             });

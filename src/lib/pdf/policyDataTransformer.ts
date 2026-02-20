@@ -496,12 +496,12 @@ const IMPORTANT_ACTIONS = [
  */
 function getActivityActionLabel(action: string): string {
   const labels: Record<string, string> = {
-    created: 'Póliza Creada',
+    created: 'Protección Creada',
     status_changed: 'Cambio de Estado',
     status_transition: 'Transición de Estado',
     force_status_transition: 'Cambio de Estado Manual',
     investigation_approved: 'Investigación Aprobada',
-    policy_cancelled: 'Póliza Cancelada',
+    policy_cancelled: 'Protección Cancelada',
     all_payments_completed: 'Pagos Completados',
     tenant_replaced: 'Inquilino Reemplazado',
     actor_auto_approved: 'Actor Aprobado',

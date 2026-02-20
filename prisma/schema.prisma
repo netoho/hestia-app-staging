@@ -199,6 +199,7 @@ model Policy {
   contracts            Contract[]
   incidents       Incident[]
   validationNotes ReviewNote[]
+  tenantReceipts  TenantReceipt[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -245,6 +246,14 @@ model PropertyDetails {
   // Contract Signing Location (structured address)
   contractSigningAddressId      String?          @unique
   contractSigningAddressDetails PropertyAddress? @relation("ContractSigningAddress", fields: [contractSigningAddressId], references: [id])
+
+  // Service "included in rent" flags (per-service)
+  electricityIncludedInRent Boolean @default(false)
+  waterIncludedInRent       Boolean @default(false)
+  gasIncludedInRent         Boolean @default(false)
+  internetIncludedInRent    Boolean @default(false)
+  cableTVIncludedInRent     Boolean @default(false)
+  phoneIncludedInRent       Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -433,6 +442,9 @@ model Tenant {
 
   // Documents
   documents ActorDocument[]
+
+  // Receipts
+  receipts TenantReceipt[]
 
   // Status
   informationComplete Boolean   @default(false)
@@ -1464,4 +1476,87 @@ enum InvestigationArchiveReason {
 enum ApproverType {
   BROKER
   LANDLORD
+}
+
+// ============================================
+// TENANT RECEIPTS
+// ============================================
+
+enum ReceiptType {
+  RENT
+  ELECTRICITY
+  WATER
+  GAS
+  INTERNET
+  CABLE_TV
+  PHONE
+  MAINTENANCE
+  OTHER
+}
+
+enum ReceiptStatus {
+  UPLOADED
+  NOT_APPLICABLE
+}
+
+model TenantReceipt {
+  id       String @id @default(cuid())
+  tenantId String
+  policyId String
+
+  // Period
+  year  Int
+  month Int // 1-12
+
+  // Type & Status
+  receiptType ReceiptType
+  status      ReceiptStatus
+
+  // File (nullable — NOT_APPLICABLE has no file)
+  fileName     String?
+  originalName String?
+  fileSize     Int?
+  mimeType     String?
+  s3Key        String?              @unique
+  s3Bucket     String?
+  uploadStatus DocumentUploadStatus? // for presigned URL flow
+  uploadedAt   DateTime?
+
+  // Not applicable
+  notApplicableNote     String?
+  markedNotApplicableAt DateTime?
+
+  // Optional metadata
+  notes  String?
+  amount Float?
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([policyId, year, month, receiptType])
+  @@index([tenantId, year, month])
+  @@index([policyId])
+}
+
+// ============================================
+// REMINDER LOGS
+// ============================================
+
+model ReminderLog {
+  id             String   @id @default(cuid())
+  reminderType   String // "tenant_receipt", "incomplete_actor", etc.
+  recipientEmail String
+  recipientName  String?
+  policyId       String?
+  status         String // "sent", "failed", "skipped"
+  errorMessage   String?
+  metadata       Json? // { month, year, receiptTypes, etc. }
+  sentAt         DateTime @default(now())
+
+  @@index([reminderType, sentAt])
+  @@index([policyId])
 }

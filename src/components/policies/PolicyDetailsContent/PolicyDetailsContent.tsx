@@ -3,6 +3,17 @@
 import { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { t } from '@/lib/i18n';
 
 // Local components
 import { PolicyHeader } from './components/PolicyHeader';
@@ -15,7 +26,7 @@ import { SectionHeader } from './components/SectionHeader';
 import { OverviewTab, LandlordTab, TenantTab, GuarantorsTab } from './tabs';
 
 // Hook
-import { usePolicyActions } from './hooks/usePolicyActions';
+import { usePolicyActions, type PendingActionType } from './hooks/usePolicyActions';
 import { trpc } from '@/lib/trpc/client';
 
 // Skeletons
@@ -119,10 +130,17 @@ export default function PolicyDetailsContent({
     editingActor,
     markCompleteActor,
     isMarkingComplete,
+    isActivating,
+    isDeactivating,
     downloadingPdf,
+    pendingAction,
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
+    activatePolicyAction,
+    deactivatePolicyAction,
+    confirmPendingAction,
+    cancelPendingAction,
     handleMarkComplete,
     handleDownloadPdf,
     handleEditActor,
@@ -130,21 +148,6 @@ export default function PolicyDetailsContent({
     closeEditingActor,
     closeMarkComplete,
   } = usePolicyActions({ policyId, policyNumber: policy.policyNumber, onRefresh });
-
-  // Check if all actors are approved
-  const checkAllActorsApproved = () => {
-    if (!policy) return false;
-
-    const landlordsApproved = policy.landlords?.length > 0 &&
-      policy.landlords.filter((l: any) => l.isPrimary).every((l: any) => l.verificationStatus === 'APPROVED');
-    const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
-    const jointObligorsApproved = !policy.jointObligors?.length ||
-      policy.jointObligors.every((jo: any) => jo.verificationStatus === 'APPROVED');
-    const avalsApproved = !policy.avals?.length ||
-      policy.avals.every((a: any) => a.verificationStatus === 'APPROVED');
-
-    return landlordsApproved && tenantApproved && jointObligorsApproved && avalsApproved;
-  };
 
   // Calculate payment stats
   const completedPayments = policy.payments?.filter(
@@ -218,13 +221,16 @@ export default function PolicyDetailsContent({
           policyId={policyId}
           permissions={permissions}
           isStaffOrAdmin={isStaffOrAdmin}
-          allActorsApproved={checkAllActorsApproved()}
-          progressOverall={policy.progress?.overall}
           sending={sending}
           downloadingPdf={downloadingPdf}
           isRefreshing={isRefreshing}
+          isActivating={isActivating}
+          isDeactivating={isDeactivating}
+          activatedAt={policy.activatedAt}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
+          onActivate={activatePolicyAction}
+          onDeactivate={deactivatePolicyAction}
           onShareClick={() => setShowShareModal(true)}
           onCancelClick={() => setShowCancelModal(true)}
           onDownloadPdf={handleDownloadPdf}
@@ -419,6 +425,56 @@ export default function PolicyDetailsContent({
         isPending={isMarkingComplete}
         onMarkComplete={handleMarkComplete}
       />
+
+      {/* Confirmation dialog for approve/activate/deactivate */}
+      <ConfirmActionDialog
+        pendingAction={pendingAction}
+        onConfirm={confirmPendingAction}
+        onCancel={cancelPendingAction}
+      />
     </div>
+  );
+}
+
+const ACTION_DIALOG_CONFIG: Record<Exclude<PendingActionType, null>, { title: string; description: string }> = {
+  approve: {
+    title: t.pages.policies.approvePolicy,
+    description: '¿Estás seguro de que deseas aprobar esta protección?',
+  },
+  activate: {
+    title: t.pages.policies.activatePolicy,
+    description: '¿Estás seguro de que deseas activar esta protección?',
+  },
+  deactivate: {
+    title: t.pages.policies.deactivatePolicy,
+    description: '¿Estás seguro de que deseas desactivar esta protección?',
+  },
+};
+
+function ConfirmActionDialog({
+  pendingAction,
+  onConfirm,
+  onCancel,
+}: {
+  pendingAction: PendingActionType;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!pendingAction) return null;
+  const config = ACTION_DIALOG_CONFIG[pendingAction];
+
+  return (
+    <AlertDialog open onOpenChange={(open) => !open && onCancel()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{config.title}</AlertDialogTitle>
+          <AlertDialogDescription>{config.description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Confirmar</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

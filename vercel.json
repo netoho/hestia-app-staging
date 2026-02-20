@@ -10,6 +10,10 @@
     {
       "path": "/api/cron/incomplete-actors-reminder",
       "schedule": "30 17 * * *"
+    },
+    {
+      "path": "/api/cron/receipt-reminder",
+      "schedule": "0 15 1 * *"
     }
   ]
 }

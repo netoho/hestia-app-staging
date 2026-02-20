@@ -10,6 +10,7 @@ import {
   InvestigationsList,
 } from '@/components/investigations/list';
 import { trpc } from '@/lib/trpc/client';
+import { t } from '@/lib/i18n';
 
 interface InvestigationsPageProps {
   params: Promise<{ id: string }>;
@@ -58,7 +59,7 @@ export default function InvestigationsPage({ params }: InvestigationsPageProps) 
   if (policyLoading) {
     return (
       <div className="container mx-auto w-full">
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center h-64" role="status" aria-label={t.misc.loading}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </div>
@@ -69,7 +70,7 @@ export default function InvestigationsPage({ params }: InvestigationsPageProps) 
     return (
       <div className="container mx-auto w-full">
         <p className="text-center text-muted-foreground py-8">
-          Póliza no encontrada
+          Protección no encontrada
         </p>
       </div>
     );

@@ -144,7 +144,7 @@ export function PolicyStatusBadge({
             sizeClasses[size],
           )}
         >
-          <span>{t.labels.policySubStatus[subStatus]}</span>
+          <span>{t.policySubStatus[subStatus]}</span>
         </div>
       )}
     </div>
@@ -185,7 +185,7 @@ export function PolicyProgressIndicator({
       />
       {showStepText && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Step {currentStep} of {totalSteps}</span>
+          <span>{t.pages.policies.stepOf(currentStep, totalSteps)}</span>
           <span>{Math.round(progressPercentage)}%</span>
         </div>
       )}
@@ -262,24 +262,9 @@ export function PaymentStatusBadge({
 
 // Helper functions
 function getStatusDisplayText(status: PolicyStatusType): string {
-  const displayMap: Record<string, string> = {
-    COLLECTING_INFO: 'Recopilando Información',
-    PENDING_APPROVAL: 'Pendiente de Aprobación',
-    APPROVED: 'Aprobada',
-    CANCELLED: 'Cancelada',
-  };
-
-  return displayMap[status] || status;
+  return t.policyStatusFull[status] || status;
 }
 
 function getPaymentStatusText(status: string): string {
-  const displayMap: Record<string, string> = {
-    PENDING: 'Pendiente',
-    PROCESSING: 'Procesando',
-    COMPLETED: 'Completado',
-    FAILED: 'Fallido',
-    REFUNDED: 'Reembolsado'
-  };
-
-  return displayMap[status] || status;
+  return t.paymentStatusFull[status] || status;
 }
