@@ -66,13 +66,15 @@ export const POLICY_STEP_NAMES = {
 export const POLICY_STATUS_DISPLAY: Record<string, string> = {
   COLLECTING_INFO: 'Collecting Information',
   PENDING_APPROVAL: 'Pending Approval',
-  APPROVED: 'Approved',
+  ACTIVE: 'Active',
+  EXPIRED: 'Expired',
   CANCELLED: 'Cancelled',
 };
 
 export const POLICY_STATUS_COLORS: Record<string, string> = {
   COLLECTING_INFO: 'blue',
   PENDING_APPROVAL: 'yellow',
-  APPROVED: 'green',
+  ACTIVE: 'green',
+  EXPIRED: 'orange',
   CANCELLED: 'red',
 };

@@ -14,6 +14,10 @@
     {
       "path": "/api/cron/receipt-reminder",
       "schedule": "0 15 1 * *"
+    },
+    {
+      "path": "/api/cron/policy-expiry",
+      "schedule": "0 12 * * *"
     }
   ]
 }

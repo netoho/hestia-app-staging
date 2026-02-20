@@ -345,7 +345,7 @@ async function main() {
       totalPrice: 14000,
       guarantorType: 'AVAL',
       createdById: brokerUser.id,
-      status: 'APPROVED',
+      status: 'ACTIVE',
       submittedAt: new Date('2024-01-15'),
       approvedAt: new Date('2024-01-20'),
       activatedAt: new Date('2024-02-01'),

@@ -130,15 +130,11 @@ export default function PolicyDetailsContent({
     editingActor,
     markCompleteActor,
     isMarkingComplete,
-    isActivating,
-    isDeactivating,
     downloadingPdf,
     pendingAction,
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
-    activatePolicyAction,
-    deactivatePolicyAction,
     confirmPendingAction,
     cancelPendingAction,
     handleMarkComplete,
@@ -224,13 +220,8 @@ export default function PolicyDetailsContent({
           sending={sending}
           downloadingPdf={downloadingPdf}
           isRefreshing={isRefreshing}
-          isActivating={isActivating}
-          isDeactivating={isDeactivating}
-          activatedAt={policy.activatedAt}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
-          onActivate={activatePolicyAction}
-          onDeactivate={deactivatePolicyAction}
           onShareClick={() => setShowShareModal(true)}
           onCancelClick={() => setShowCancelModal(true)}
           onDownloadPdf={handleDownloadPdf}
@@ -426,7 +417,7 @@ export default function PolicyDetailsContent({
         onMarkComplete={handleMarkComplete}
       />
 
-      {/* Confirmation dialog for approve/activate/deactivate */}
+      {/* Confirmation dialog for approve */}
       <ConfirmActionDialog
         pendingAction={pendingAction}
         onConfirm={confirmPendingAction}
@@ -439,15 +430,7 @@ export default function PolicyDetailsContent({
 const ACTION_DIALOG_CONFIG: Record<Exclude<PendingActionType, null>, { title: string; description: string }> = {
   approve: {
     title: t.pages.policies.approvePolicy,
-    description: '¿Estás seguro de que deseas aprobar esta protección?',
-  },
-  activate: {
-    title: t.pages.policies.activatePolicy,
-    description: '¿Estás seguro de que deseas activar esta protección?',
-  },
-  deactivate: {
-    title: t.pages.policies.deactivatePolicy,
-    description: '¿Estás seguro de que deseas desactivar esta protección?',
+    description: '¿Estás seguro de que deseas aprobar y activar esta protección?',
   },
 };
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { PolicyStatusType } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
 interface PolicyStatusActionsProps {
-  status: PolicyStatusType;
-  onUpdateStatus: (newStatus: PolicyStatusType, reason?: string) => void;
+  status: PolicyStatus;
+  onUpdateStatus: (newStatus: PolicyStatus, reason?: string) => void;
   updatingStatus: boolean;
 }
 

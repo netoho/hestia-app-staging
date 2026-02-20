@@ -1110,8 +1110,8 @@ export const investigationRouter = createTRPCRouter({
 
       // Auto-transition policy to PENDING_APPROVAL if all investigations are now approved
       try {
-        const { policyStatusService } = await import('@/lib/services/PolicyStatusService');
-        await policyStatusService.checkAndTransition(
+        const { tryAutoTransition } = await import('@/lib/services/policyWorkflowService');
+        await tryAutoTransition(
           investigation.policyId,
           'system',
           approvedBy,

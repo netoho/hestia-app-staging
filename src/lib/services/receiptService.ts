@@ -181,7 +181,7 @@ class ReceiptService extends BaseService {
     return this.prisma.tenant.findMany({
       where: {
         email: { equals: email, mode: 'insensitive' },
-        policy: { status: PolicyStatus.APPROVED },
+        policy: { status: PolicyStatus.ACTIVE },
       },
       include: {
         policy: {

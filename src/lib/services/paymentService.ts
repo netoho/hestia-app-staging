@@ -18,6 +18,10 @@ import { PAYMENT_LIMITS } from '@/lib/config/payments';
 // IVA multiplier for convenience (1 + 0.16 = 1.16)
 const IVA_MULTIPLIER = 1 + TAX_CONFIG.IVA_RATE;
 
+const MULTIPLE_PAYMENT_TYPES = [
+  PaymentType.PARTIAL_PAYMENT,
+];
+
 // Stripe instance will be created when needed
 let stripe: Stripe | null = null;
 
@@ -356,7 +360,7 @@ class PaymentService extends BaseService {
     policyId: string
   ): Promise<boolean> {
     const allPayments = await tx.payment.findMany({
-      where: { policyId },
+      where: { policyId, status: { not: PaymentStatus.CANCELLED } },
       select: { status: true },
     });
 
@@ -889,7 +893,7 @@ class PaymentService extends BaseService {
       },
     });
 
-    if (existingCompleted) {
+    if (existingCompleted && !MULTIPLE_PAYMENT_TYPES.includes(type)) {
       throw new ServiceError(
         ErrorCode.ALREADY_EXISTS,
         `Payment of type ${type} already completed for this policy`,

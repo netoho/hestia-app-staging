@@ -57,6 +57,7 @@ All actors support both Individual and Company modes:
 
 ### Architecture
 - [Actor System Architecture](docs/ACTOR_SYSTEM_ARCHITECTURE.md) - Actor types, data flow, auth
+- [Policy Status Model](docs/POLICY_STATUS.md) - Status transitions, validation gates, cron
 - [Code Quality Plan](docs/CODE_QUALITY_PLAN.md) - Type safety, refactoring progress
 
 ### API & Services
@@ -142,7 +143,7 @@ Result<T, ServiceError>
 ```
 
 ### Status Transitions
-Use `transitionPolicyStatus()` from `policyWorkflowService.ts` - never update status directly.
+Use `transitionPolicyStatus()` from `policyWorkflowService.ts` - never update status directly. See [Policy Status Model](docs/POLICY_STATUS.md) for the full transition diagram and validation gates.
 
 ### Activity Logging
 Log significant actions with `logPolicyActivity()` from `policyService.ts`.

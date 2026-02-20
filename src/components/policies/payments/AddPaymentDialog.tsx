@@ -146,7 +146,7 @@ export function AddPaymentDialog({
                   </p>
                   <ul className="text-orange-700 space-y-1">
                     <li>• Se generará un link de pago con Stripe</li>
-                    <li>• El link expirará en 24 horas</li>
+                    <li>• Se generará un link de pago SPEI</li>
                     <li>• El pago quedará en estado pendiente hasta ser completado</li>
                   </ul>
                 </div>

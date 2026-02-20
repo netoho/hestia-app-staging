@@ -13,15 +13,9 @@ export const statuses = {
     policyStatusFull: {
         COLLECTING_INFO: 'Recopilando Información',
         PENDING_APPROVAL: 'Pendiente de Aprobación',
-        APPROVED: 'Aprobada',
+        ACTIVE: 'Activa',
+        EXPIRED: 'Expirada',
         CANCELLED: 'Cancelada',
-    } as Record<string, string>,
-
-    // Sub-status labels for APPROVED policies (computed from dates)
-    policySubStatus: {
-        active: 'Activa',
-        expired: 'Expirada',
-        pending_activation: 'Pendiente Activación',
     } as Record<string, string>,
 
     guarantorType: {

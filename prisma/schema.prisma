@@ -1336,7 +1336,8 @@ enum NationalityType {
 enum PolicyStatus {
   COLLECTING_INFO
   PENDING_APPROVAL
-  APPROVED
+  ACTIVE
+  EXPIRED
   CANCELLED
 }
 

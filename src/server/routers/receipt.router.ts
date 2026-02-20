@@ -55,7 +55,7 @@ async function validateTenantPolicyAccess(token: string, policyId: string) {
     where: {
       email: { equals: tenant.email, mode: 'insensitive' },
       policyId,
-      policy: { status: PolicyStatus.APPROVED, activatedAt: { not: null } },
+      policy: { status: PolicyStatus.ACTIVE },
     },
     include: {
       policy: {
@@ -115,10 +115,7 @@ export const receiptRouter = createTRPCRouter({
       const tenants = await prisma.tenant.findMany({
         where: {
           email: { equals: input.email, mode: 'insensitive' },
-          policy: {
-            status: PolicyStatus.APPROVED,
-            activatedAt: { not: null },
-          },
+          policy: { status: PolicyStatus.ACTIVE },
         },
         select: {
           id: true,
@@ -167,10 +164,7 @@ export const receiptRouter = createTRPCRouter({
       const allTenants = await prisma.tenant.findMany({
         where: {
           email: { equals: email, mode: 'insensitive' },
-          policy: {
-            status: PolicyStatus.APPROVED,
-            activatedAt: { not: null },
-          },
+          policy: { status: PolicyStatus.ACTIVE },
         },
         include: {
           policy: {
@@ -512,8 +506,8 @@ export const receiptRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
       }
 
-      if (policy.status !== 'APPROVED') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Los comprobantes solo están disponibles para protecciones aprobadas' });
+      if (policy.status !== 'ACTIVE' && policy.status !== 'EXPIRED') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Los comprobantes solo están disponibles para protecciones activas o expiradas' });
       }
 
       const receipts = await receiptService.getReceiptsByPolicy(input.policyId);

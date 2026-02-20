@@ -110,51 +110,6 @@ export function getPrimaryLandlord<T extends { isPrimary?: boolean }>(landlords?
 }
 
 // ============================================================================
-// Policy Activation Status (Computed)
-// ============================================================================
-
-interface PolicyActivationFields {
-  status: string;
-  activatedAt: Date | null;
-  expiresAt: Date | null;
-}
-
-/**
- * Check if an APPROVED policy is currently active
- * Active = APPROVED + activatedAt set + not expired
- */
-export function isPolicyActive(policy: PolicyActivationFields): boolean {
-  return (
-    policy.status === 'APPROVED' &&
-    policy.activatedAt != null &&
-    (policy.expiresAt == null || policy.expiresAt > new Date())
-  );
-}
-
-/**
- * Check if an APPROVED policy has expired
- * Expired = APPROVED + activatedAt set + expiresAt in the past
- */
-export function isPolicyExpired(policy: PolicyActivationFields): boolean {
-  return (
-    policy.status === 'APPROVED' &&
-    policy.activatedAt != null &&
-    policy.expiresAt != null &&
-    policy.expiresAt < new Date()
-  );
-}
-
-/**
- * Get the computed sub-status label for APPROVED policies
- */
-export function getApprovedSubStatus(policy: PolicyActivationFields): 'active' | 'expired' | 'pending_activation' | null {
-  if (policy.status !== 'APPROVED') return null;
-  if (isPolicyExpired(policy)) return 'expired';
-  if (isPolicyActive(policy)) return 'active';
-  return 'pending_activation';
-}
-
-// ============================================================================
 // Display Helpers
 // ============================================================================
 

@@ -48,8 +48,8 @@ export function PolicyContractInfo({
   onDownloadContract,
   onMarkSigned
 }: PolicyContractInfoProps) {
-  // Only show contract info for approved policies
-  if (policyStatus !== 'APPROVED') {
+  // Only show contract info for active/expired policies
+  if (policyStatus !== 'ACTIVE' && policyStatus !== 'EXPIRED') {
     return null;
   }
 

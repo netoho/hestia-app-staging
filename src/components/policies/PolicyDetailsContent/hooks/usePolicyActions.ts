@@ -24,7 +24,7 @@ interface EditingActor {
   actorId: string;
 }
 
-export type PendingActionType = 'approve' | 'activate' | 'deactivate' | null;
+export type PendingActionType = 'approve' | null;
 
 export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolicyActionsProps) {
   const { toast } = useToast();
@@ -59,7 +59,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     },
   });
 
-  // Update status mutation
+  // Update status mutation (handles approve → ACTIVE)
   const updateStatusMutation = trpc.policy.updateStatus.useMutation({
     onSuccess: () => {
       toast({
@@ -72,7 +72,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       console.error('Error updating policy status:', error);
       toast({
         title: toastKeys.error,
-        description: toastKeys.approvalError,
+        description: error.message || toastKeys.approvalError,
         variant: 'destructive',
       });
     },
@@ -116,62 +116,14 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     });
   };
 
-  // Activate policy mutation
-  const activateMutation = trpc.policy.activate.useMutation({
-    onSuccess: () => {
-      toast({
-        title: toastKeys.policyActivated,
-        description: toastKeys.policyActivatedDesc,
-      });
-      utils.policy.getById.invalidate({ id: policyId });
-      onRefresh();
-    },
-    onError: (error) => {
-      console.error('Error activating policy:', error);
-      toast({
-        title: toastKeys.error,
-        description: error.message || toastKeys.activationError,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Deactivate policy mutation
-  const deactivateMutation = trpc.policy.deactivate.useMutation({
-    onSuccess: () => {
-      toast({
-        title: toastKeys.policyDeactivated,
-        description: toastKeys.policyDeactivatedDesc,
-      });
-      utils.policy.getById.invalidate({ id: policyId });
-      onRefresh();
-    },
-    onError: (error) => {
-      console.error('Error deactivating policy:', error);
-      toast({
-        title: toastKeys.error,
-        description: error.message || toastKeys.deactivationError,
-        variant: 'destructive',
-      });
-    },
-  });
-
   // Instead of confirm(), set pending action state
   const approvePolicy = () => setPendingAction('approve');
-  const activatePolicyAction = () => setPendingAction('activate');
-  const deactivatePolicyAction = () => setPendingAction('deactivate');
 
   // Called from the AlertDialog confirm button
   const confirmPendingAction = () => {
     switch (pendingAction) {
       case 'approve':
-        updateStatusMutation.mutate({ policyId, status: 'APPROVED' as const });
-        break;
-      case 'activate':
-        activateMutation.mutate({ policyId });
-        break;
-      case 'deactivate':
-        deactivateMutation.mutate({ policyId });
+        updateStatusMutation.mutate({ policyId, status: 'ACTIVE' as const });
         break;
     }
     setPendingAction(null);
@@ -231,16 +183,12 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     // Mutations loading states
     isSending: sendInvitationsMutation.isPending,
     isApproving: updateStatusMutation.isPending,
-    isActivating: activateMutation.isPending,
-    isDeactivating: deactivateMutation.isPending,
     isMarkingComplete: adminSubmitMutation.isPending,
 
     // Handlers
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
-    activatePolicyAction,
-    deactivatePolicyAction,
     confirmPendingAction,
     cancelPendingAction,
     handleMarkComplete,
