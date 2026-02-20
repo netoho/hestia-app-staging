@@ -1,5 +1,5 @@
 import { BaseService } from './base/BaseService';
-import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import { PolicyStatus, PaymentStatus } from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from './policyService';
 import { sendPolicyStatusUpdate } from './emailService';
 import { sendPolicyPendingApprovalNotification } from './notificationService';
@@ -83,10 +83,28 @@ class PolicyWorkflowService extends BaseService {
   }
 
   /**
+   * Check if all active payments for a policy are settled (COMPLETED).
+   * Returns true if no active payments exist or all are COMPLETED.
+   */
+  async areAllPaymentsSettled(policyId: string): Promise<boolean> {
+    const activePayments = await this.prisma.payment.findMany({
+      where: {
+        policyId,
+        status: { notIn: [PaymentStatus.CANCELLED, PaymentStatus.FAILED] },
+      },
+      select: { status: true, id: true },
+    });
+
+    if (activePayments.length === 0) return true;
+    console.log(activePayments);
+    return activePayments.every(p => p.status === PaymentStatus.COMPLETED);
+  }
+
+  /**
    * Validate requirements before transitioning to a status
    */
   private async validateStatusRequirements(
-    policy: { id: string; paymentStatus?: string | null },
+    policy: { id: string },
     newStatus: PolicyStatus
   ): Promise<{ valid: boolean; error?: string }> {
     switch (newStatus) {
@@ -102,7 +120,8 @@ class PolicyWorkflowService extends BaseService {
       }
 
       case 'ACTIVE': {
-        if (policy.paymentStatus !== 'COMPLETED') {
+        const settled = await this.areAllPaymentsSettled(policy.id);
+        if (!settled) {
           return {
             valid: false,
             error: 'Todos los pagos deben estar completados antes de activar la protección',

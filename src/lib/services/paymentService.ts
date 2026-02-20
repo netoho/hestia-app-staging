@@ -308,16 +308,15 @@ class PaymentService extends BaseService {
   }
 
   /**
-   * Private helper: Check if all payments complete and update policy status
-   * Must be called within a transaction
+   * Private helper: Log activity when a payment is completed via Stripe webhook.
+   * Must be called within a transaction.
    */
-  private async checkAndUpdatePolicyPaymentStatus(
+  private async logPaymentCompleted(
     tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
     policyId: string,
     completedPayment: { type: string | null; amount: number; currency: string },
     method?: string
   ) {
-    // Log activity for this individual payment
     await tx.policyActivity.create({
       data: {
         policyId,
@@ -331,50 +330,6 @@ class PaymentService extends BaseService {
         performedById: 'system',
       },
     });
-
-    // Check if ALL payments for this policy are now completed
-    const allPayments = await tx.payment.findMany({
-      where: { policyId },
-      select: { status: true },
-    });
-
-    const allCompleted = allPayments.length > 0 &&
-      allPayments.every(p => p.status === PaymentStatus.COMPLETED);
-
-    if (allCompleted) {
-      await tx.policy.update({
-        where: { id: policyId },
-        data: { paymentStatus: PaymentStatus.COMPLETED },
-      });
-    }
-
-    return allCompleted;
-  }
-
-  /**
-   * Check if all payments are completed and update policy status
-   * Used when activity log is already created elsewhere (e.g., manual payment verification)
-   */
-  private async updatePolicyPaymentStatusIfComplete(
-    tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
-    policyId: string
-  ): Promise<boolean> {
-    const allPayments = await tx.payment.findMany({
-      where: { policyId, status: { not: PaymentStatus.CANCELLED } },
-      select: { status: true },
-    });
-
-    const allCompleted = allPayments.length > 0 &&
-      allPayments.every(p => p.status === PaymentStatus.COMPLETED);
-
-    if (allCompleted) {
-      await tx.policy.update({
-        where: { id: policyId },
-        data: { paymentStatus: PaymentStatus.COMPLETED },
-      });
-    }
-
-    return allCompleted;
   }
 
   /**
@@ -421,9 +376,9 @@ class PaymentService extends BaseService {
         },
       });
 
-      // Update policy payment status if ALL payments are completed
+      // Log activity when payment completes
       if (status === PaymentStatus.COMPLETED) {
-        await this.checkAndUpdatePolicyPaymentStatus(
+        await this.logPaymentCompleted(
           tx,
           payment.policyId,
           { type: payment.type, amount: payment.amount, currency: payment.currency },
@@ -473,9 +428,9 @@ class PaymentService extends BaseService {
         },
       });
 
-      // Update policy payment status if ALL payments are completed
+      // Log activity when payment completes
       if (status === PaymentStatus.COMPLETED) {
-        await this.checkAndUpdatePolicyPaymentStatus(
+        await this.logPaymentCompleted(
           tx,
           payment.policyId,
           { type: payment.type, amount: payment.amount, currency: payment.currency },
@@ -944,6 +899,107 @@ class PaymentService extends BaseService {
   }
 
   /**
+   * Convert an existing PENDING payment to a manual payment (PENDING_VERIFICATION)
+   * Used when staff records that a payment was made externally (cash, transfer, etc.)
+   */
+  async convertToManualPayment(
+    paymentId: string,
+    {
+      amount,
+      paidBy,
+      reference,
+      description,
+      createdById,
+    }: {
+      amount: number;
+      paidBy: PayerType;
+      reference?: string;
+      description?: string;
+      createdById?: string;
+    }
+  ): Promise<Payment> {
+    // Validate amount
+    if (amount <= 0 || amount > PAYMENT_LIMITS.MAX_TOTAL) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        `Amount must be between 0 and ${PAYMENT_LIMITS.MAX_TOTAL.toLocaleString()} MXN`,
+        400,
+        { amount, maxAllowed: PAYMENT_LIMITS.MAX_TOTAL }
+      );
+    }
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+    });
+
+    if (!payment) {
+      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'Can only convert pending payments to manual',
+        400,
+        { currentStatus: payment.status }
+      );
+    }
+
+    // Expire old Stripe checkout session if exists
+    if (payment.stripeSessionId) {
+      try {
+        const stripeInstance = await getStripe();
+        await stripeInstance.checkout.sessions.expire(payment.stripeSessionId);
+      } catch {
+        // Session might already be expired, continue
+      }
+    }
+
+    // Recalculate subtotal/iva
+    const breakdown = calculateBreakdown({ amount, includesTax: true });
+
+    // Update existing payment record
+    const updatedPayment = await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        amount,
+        subtotal: breakdown.subtotal,
+        iva: breakdown.iva,
+        status: PaymentStatus.PENDING_VERIFICATION,
+        method: PaymentMethod.MANUAL,
+        isManual: true,
+        paidBy,
+        reference,
+        description: description || `Pago manual - ${payment.type}`,
+        createdById,
+        // Clear Stripe checkout fields (keep SPEI fields for audit)
+        stripeSessionId: null,
+        checkoutUrl: null,
+        checkoutUrlExpiry: null,
+      },
+    });
+
+    // Log activity
+    await this.prisma.policyActivity.create({
+      data: {
+        policyId: payment.policyId,
+        action: 'manual_payment_recorded',
+        description: `Pago manual registrado: ${payment.type}`,
+        details: {
+          paymentId,
+          amount,
+          type: payment.type,
+          reference,
+          convertedFromExisting: true,
+        },
+        performedById: createdById || 'system',
+      },
+    });
+
+    return updatedPayment;
+  }
+
+  /**
    * Verify a manual payment (admin only)
    * Approves or rejects a PENDING_VERIFICATION payment
    */
@@ -953,7 +1009,7 @@ class PaymentService extends BaseService {
     verifierId: string,
     notes?: string
   ): Promise<Payment> {
-    const newStatus = approved ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
+    const newStatus = approved ? PaymentStatus.COMPLETED : PaymentStatus.CANCELLED;
 
     // Use transaction with atomic claim to prevent race conditions
     const updatedPayment = await this.prisma.$transaction(async (tx) => {
@@ -1013,11 +1069,6 @@ class PaymentService extends BaseService {
           performedByType: 'user',
         },
       });
-
-      // Check and update policy payment status if approved
-      if (approved) {
-        await this.updatePolicyPaymentStatusIfComplete(tx, payment.policyId);
-      }
 
       return payment;
     });
@@ -1620,6 +1671,7 @@ export const createPolicyPaymentSessions = paymentService.createPolicyPaymentSes
 export const getPaymentSummary = paymentService.getPaymentSummary.bind(paymentService);
 export const createManualPayment = paymentService.createManualPayment.bind(paymentService);
 export const verifyManualPayment = paymentService.verifyManualPayment.bind(paymentService);
+export const convertToManualPayment = paymentService.convertToManualPayment.bind(paymentService);
 export const updatePaymentReceipt = paymentService.updatePaymentReceipt.bind(paymentService);
 export const getPaymentById = paymentService.getPaymentById.bind(paymentService);
 export const editPaymentAmount = paymentService.editPaymentAmount.bind(paymentService);

@@ -161,7 +161,6 @@ model Policy {
 
   // Status & Workflow
   status        PolicyStatus   @default(COLLECTING_INFO)
-  paymentStatus PaymentStatus? // Overall payment status (null = no payments, COMPLETED = all paid)
 
   // Important Dates
   submittedAt DateTime?

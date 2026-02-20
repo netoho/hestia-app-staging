@@ -145,11 +145,13 @@ export default function PolicyDetailsContent({
     closeMarkComplete,
   } = usePolicyActions({ policyId, policyNumber: policy.policyNumber, onRefresh });
 
-  // Calculate payment stats
-  const completedPayments = policy.payments?.filter(
-    (p: { status: string }) => p.status === 'COMPLETED'
-  ).length ?? 0;
-  const totalPayments = policy.payments?.length ?? 0;
+  // Calculate payment stats (exclude cancelled, failed, and historical/replaced-tenant payments)
+  const activePayments = policy.payments?.filter(
+    (p: { status: string; paidByTenantName?: string | null }) =>
+      p.status !== 'CANCELLED' && p.status !== 'FAILED' && !p.paidByTenantName
+  ) ?? [];
+  const completedPayments = activePayments.filter((p: { status: string }) => p.status === 'COMPLETED').length;
+  const totalPayments = activePayments.length;
 
   // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {

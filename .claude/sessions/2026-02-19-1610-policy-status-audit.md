@@ -69,9 +69,49 @@ Simplify PolicyStatus enum by replacing overloaded APPROVED with explicit ACTIVE
 - Migration SQL fix
 - Policy status documentation (`docs/POLICY_STATUS.md` + README link)
 
+### Update - 2026-02-20 ~00:30
+
+**Summary**: Fixed payment system — dropped stale `policy.paymentStatus`, fixed progress bars, fixed webhook bugs.
+
+**Git Changes (14 files)**:
+- **Modified (schema):** `prisma/schema.prisma` (removed `paymentStatus` column from Policy)
+- **Added:** `prisma/migrations/20260220000000_drop_policy_payment_status/migration.sql`
+- **Modified (services):**
+  - `paymentService.ts` — removed `syncPolicyPaymentStatus`, `recheckPolicyPaymentStatus`, `checkAndUpdatePolicyPaymentStatus`, `updatePolicyPaymentStatusIfComplete` and all ~10 call sites
+  - `policyWorkflowService.ts` — added `areAllPaymentsSettled()` that queries payments directly; ACTIVE gate no longer uses stale `paymentStatus` field
+  - `policyService/index.ts` — removed unused `paymentStatus` param from `getPolicies`
+- **Modified (routes):**
+  - `payment.router.ts` — removed `recheckPolicyPaymentStatus` call, added `convertToManualPayment` support
+  - `policy.router.ts` — removed `paymentStatus` from `PolicyListSchema`
+- **Modified (webhook):**
+  - `stripe/route.ts` — removed `recheckPolicyPaymentStatus` import/calls; extracted `checkAndNotifyAllPaymentsComplete()` helper; fixed `allComplete` check to exclude CANCELLED/FAILED payments
+- **Modified (frontend):**
+  - `PolicyDetailsContent.tsx` — payment progress excludes cancelled, failed, and historical (replaced tenant) payments
+  - `PolicyProgressBar.tsx` — capped percentage at 100%, `isComplete` uses `>=`, display caps at `total/total`
+  - `PaymentsTab.tsx` — passes `paymentId` to manual payment dialog
+  - `ManualPaymentDialog.tsx` — accepts `paymentId` for converting existing payments
+  - `PaymentCard.tsx` — shows cancel button for FAILED payments
+- **Modified (docs):** `POLICY_STATUS.md` — updated ACTIVE gate description
+- Current branch: `fix/payment-policy-state-machine` (commit: f63f320)
+
+**Completed Tasks**:
+- ✓ Dropped `policy.paymentStatus` denormalized field (was always null/stale)
+- ✓ ACTIVE transition gate now queries payments directly via `areAllPaymentsSettled()`
+- ✓ Removed all paymentStatus sync machinery (~100 lines of dead code)
+- ✓ Fixed ManualPaymentDialog creating duplicate payments (now converts existing PENDING payment)
+- ✓ Fixed `verifyManualPayment` using FAILED→CANCELLED for rejections
+- ✓ Fixed progress bar: Pagos excludes cancelled/failed/historical payments
+- ✓ Fixed progress bar: Documentos caps at 100% when uploaded > required
+- ✓ Fixed webhook `allComplete` check to exclude CANCELLED/FAILED payments
+- ✓ Extracted duplicated 34-line webhook notification block into helper
+- ✓ Build passes clean
+
+**Key Architecture Decision**:
+Eliminated `policy.paymentStatus` entirely. It was a denormalized field written from 10+ mutation paths but always stale. The only consumer was the ACTIVE transition gate — now queries payments directly at transition time. Simpler, always correct.
+
 ### In Progress
 - (none)
 
 ### Pending
-- Run migration on database
+- Run migration `20260220000000_drop_policy_payment_status` on database
 - Commit changes

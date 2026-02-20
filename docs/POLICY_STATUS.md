@@ -34,7 +34,7 @@ CANCELLED        → (none)
 - All investigated actors (tenant, joint obligors, avals — not landlords) must have at least one `APPROVED` investigation.
 
 ### PENDING_APPROVAL → ACTIVE
-- `paymentStatus` must be `COMPLETED`.
+- All active payments (excluding CANCELLED/FAILED) must be `COMPLETED`.
 - On transition: sets `approvedAt`, `activatedAt`, and `expiresAt` (now + `contractLength` months).
 
 ### PENDING_APPROVAL → COLLECTING_INFO

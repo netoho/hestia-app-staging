@@ -168,7 +168,6 @@ const CreatePolicySchema = z.object({
 // Schema for listing policies
 const PolicyListSchema = z.object({
   status: z.nativeEnum(PolicyStatus).optional(),
-  paymentStatus: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
   search: z.string().optional(),
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(10),

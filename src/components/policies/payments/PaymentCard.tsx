@@ -159,6 +159,7 @@ export function PaymentCard({
   const isPending = payment.status === PaymentStatus.PENDING;
   const isPendingVerification = payment.status === PaymentStatus.PENDING_VERIFICATION;
   const isCompleted = payment.status === PaymentStatus.COMPLETED;
+  const isFailed = payment.status === PaymentStatus.FAILED;
 
   return (
     <Card>
@@ -167,7 +168,7 @@ export function PaymentCard({
           <CardTitle className="text-lg font-medium">{typeLabel}</CardTitle>
           <Badge variant={statusConfig.variant} className={statusConfig.className}>
             <StatusIcon className={`h-3.5 w-3.5 mr-1 ${payment.status === PaymentStatus.PROCESSING ? 'animate-spin' : ''}`} />
-            {statusConfig.label}
+            {statusConfig.label} {payment.id}
           </Badge>
         </div>
       </CardHeader>
@@ -389,8 +390,8 @@ export function PaymentCard({
               </Button>
             )}
 
-            {/* Cancel payment button (admin, pending) */}
-            {isPending && isStaffOrAdmin && onCancel && (
+            {/* Cancel payment button (admin, pending or failed) */}
+            {(isPending || isFailed) && isStaffOrAdmin && onCancel && (
               <Button
                 size="sm"
                 variant="ghost"
