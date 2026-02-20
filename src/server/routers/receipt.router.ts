@@ -97,6 +97,27 @@ async function validateTenantReceiptAccess(token: string, receiptId: string) {
 const ReceiptTypeSchema = z.nativeEnum(ReceiptType);
 
 // ============================================
+// RATE LIMITING (in-memory, per email, 3 requests/hour)
+// ============================================
+
+const MAGIC_LINK_RATE_LIMIT = { maxRequests: 3, windowMs: 60 * 60 * 1000 };
+const magicLinkAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isMagicLinkRateLimited(email: string): boolean {
+  const key = email.toLowerCase();
+  const now = Date.now();
+  const entry = magicLinkAttempts.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    magicLinkAttempts.set(key, { count: 1, resetAt: now + MAGIC_LINK_RATE_LIMIT.windowMs });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > MAGIC_LINK_RATE_LIMIT.maxRequests;
+}
+
+// ============================================
 // ROUTER
 // ============================================
 
@@ -111,7 +132,12 @@ export const receiptRouter = createTRPCRouter({
       email: z.string().email(),
     }))
     .mutation(async ({ input }) => {
-      // Find all tenants with this email in approved policies
+      // Rate limit: 3 requests per email per hour (silent — same success response)
+      if (isMagicLinkRateLimited(input.email)) {
+        return { success: true };
+      }
+
+      // Find all tenants with this email in active policies
       const tenants = await prisma.tenant.findMany({
         where: {
           email: { equals: input.email, mode: 'insensitive' },

@@ -96,7 +96,6 @@ class PolicyWorkflowService extends BaseService {
     });
 
     if (activePayments.length === 0) return true;
-    console.log(activePayments);
     return activePayments.every(p => p.status === PaymentStatus.COMPLETED);
   }
 
