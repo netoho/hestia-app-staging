@@ -114,4 +114,34 @@ Eliminated `policy.paymentStatus` entirely. It was a denormalized field written 
 
 ### Pending
 - Run migration `20260220000000_drop_policy_payment_status` on database
-- Commit changes
+- Run migration `20260219235928_add_policy_status` on database
+- Push branch & merge PR #69
+
+---
+
+### Update — 2026-02-22
+
+**Summary**: Full codebase audit (60+ files) + PR #69 Copilot review fixes. All clean.
+
+**Audit Results**:
+- ✅ Schema, services, routes, frontend, i18n, config — all correct
+- ✅ No stale APPROVED references, no activate/deactivate remnants, no paymentStatus on Policy
+- ✅ Token expiry, file validation, multi-policy access — all working
+
+**Fixes Applied (3 commits)**:
+1. `5f5dd60` — Removed `console.log(activePayments)` debug log from policyWorkflowService + added in-memory rate limiting (3/email/hour) to `requestMagicLink` public endpoint
+2. `175504b` — Removed stale `.claude/plans/` files
+3. `a6ecdb4` — PR #69 Copilot review: removed `payment.id` debug artifact from PaymentCard badge + fixed migration SQL to send unactivated APPROVED policies → PENDING_APPROVAL instead of ACTIVE
+
+**Git Changes**:
+- Modified: `src/lib/services/policyWorkflowService.ts`, `src/server/routers/receipt.router.ts`, `src/components/policies/payments/PaymentCard.tsx`, `prisma/migrations/20260219235928_add_policy_status/migration.sql`
+- Deleted: `.claude/plans/next_steps.md`, `.claude/plans/parsed-purring-crab.md`
+- Branch: `fix/payment-policy-state-machine` (commit: a6ecdb4)
+- Working tree clean, 1 commit ahead of origin
+
+**Copilot Review Triage (7 comments)**:
+- 2 fixed (console.log — already done, payment.id — fixed now)
+- 2 valid & fixed (payment.id debug in UI, migration catch-all)
+- 3 dismissed (ACTIVE-only for tenant receipts is intentional design)
+
+**Build**: `bun run build` ✅
