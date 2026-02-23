@@ -17,6 +17,11 @@ WHERE "status" = 'APPROVED'
 
 UPDATE "Policy"
 SET "status" = 'ACTIVE'
+WHERE "status" = 'APPROVED'
+  AND "activatedAt" IS NOT NULL;
+
+UPDATE "Policy"
+SET "status" = 'PENDING_APPROVAL'
 WHERE "status" = 'APPROVED';
 
 -- 4. Convert TEXT column to new enum, swap names, drop old

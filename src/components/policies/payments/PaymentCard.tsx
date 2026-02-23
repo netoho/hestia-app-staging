@@ -168,7 +168,7 @@ export function PaymentCard({
           <CardTitle className="text-lg font-medium">{typeLabel}</CardTitle>
           <Badge variant={statusConfig.variant} className={statusConfig.className}>
             <StatusIcon className={`h-3.5 w-3.5 mr-1 ${payment.status === PaymentStatus.PROCESSING ? 'animate-spin' : ''}`} />
-            {statusConfig.label} {payment.id}
+            {statusConfig.label}
           </Badge>
         </div>
       </CardHeader>
