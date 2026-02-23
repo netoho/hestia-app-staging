@@ -173,7 +173,6 @@ export async function createPolicy(data: CreatePolicyData) {
 
 export async function getPolicies(params?: {
   status?: PolicyStatus | 'all';
-  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all';
   search?: string;
   page?: number;
   limit?: number;

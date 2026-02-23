@@ -33,11 +33,10 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
   const monthName = t.months[month] || String(month);
 
   try {
-    // Find all APPROVED policies with tenants
+    // Find all ACTIVE policies with tenants
     const policies = await prisma.policy.findMany({
       where: {
-        status: PolicyStatus.APPROVED,
-        activatedAt: { not: null },
+        status: PolicyStatus.ACTIVE,
       },
       include: {
         tenant: {
@@ -57,7 +56,7 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
       },
     });
 
-    console.log(`[RECEIPT-REMINDER] Found ${policies.length} APPROVED policies`);
+    console.log(`[RECEIPT-REMINDER] Found ${policies.length} ACTIVE policies`);
 
     for (const policy of policies) {
       result.policiesProcessed++;

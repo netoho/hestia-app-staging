@@ -12,8 +12,8 @@ interface ProgressIndicatorProps {
 }
 
 function ProgressIndicator({ label, current, total, icon: Icon, onClick }: ProgressIndicatorProps) {
-  const percentage = total > 0 ? (current / total) * 100 : 0;
-  const isComplete = current === total && total > 0;
+  const percentage = total > 0 ? Math.min((current / total) * 100, 100) : 0;
+  const isComplete = current >= total && total > 0;
   const hasData = total > 0;
 
   return (
@@ -28,7 +28,7 @@ function ProgressIndicator({ label, current, total, icon: Icon, onClick }: Progr
       <Icon className={cn('h-4 w-4', isComplete ? 'text-green-600' : 'text-gray-500')} />
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className={cn('font-semibold', isComplete ? 'text-green-600' : 'text-gray-900')}>
-        {hasData ? `${current}/${total}` : '—'}
+        {hasData ? `${Math.min(current, total)}/${total}` : '—'}
       </span>
       {hasData && (
         <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">

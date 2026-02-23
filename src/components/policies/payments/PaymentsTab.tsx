@@ -30,6 +30,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     open: boolean;
     paymentType: PaymentType;
     expectedAmount: number;
+    paymentId?: string;
   }>({
     open: false,
     paymentType: PaymentType.INVESTIGATION_FEE,
@@ -102,11 +103,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     cancelPayment.mutate({ paymentId });
   };
 
-  const openManualPaymentDialog = (paymentType: PaymentType, expectedAmount: number) => {
+  const openManualPaymentDialog = (paymentType: PaymentType, expectedAmount: number, paymentId?: string) => {
     setManualPaymentDialog({
       open: true,
       paymentType,
       expectedAmount,
+      paymentId,
     });
   };
 
@@ -279,7 +281,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           payment={investigationPayment}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
-            openManualPaymentDialog(PaymentType.INVESTIGATION_FEE, breakdown.investigationFee)
+            openManualPaymentDialog(PaymentType.INVESTIGATION_FEE, breakdown.investigationFee, investigationPayment.id)
           }
           onVerify={
             investigationPayment.status === PaymentStatus.PENDING_VERIFICATION
@@ -302,7 +304,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           payment={tenantPayment}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
-            openManualPaymentDialog(PaymentType.TENANT_PORTION, breakdown.tenantAmountAfterFee)
+            openManualPaymentDialog(PaymentType.TENANT_PORTION, breakdown.tenantAmountAfterFee, tenantPayment.id)
           }
           onVerify={
             tenantPayment.status === PaymentStatus.PENDING_VERIFICATION
@@ -325,7 +327,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           payment={landlordPayment}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
-            openManualPaymentDialog(PaymentType.LANDLORD_PORTION, breakdown.landlordAmount)
+            openManualPaymentDialog(PaymentType.LANDLORD_PORTION, breakdown.landlordAmount, landlordPayment.id)
           }
           onVerify={
             landlordPayment.status === PaymentStatus.PENDING_VERIFICATION
@@ -349,7 +351,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
           payment={payment}
           isStaffOrAdmin={isStaffOrAdmin}
           onManualPayment={() =>
-            openManualPaymentDialog(payment.type as PaymentType, payment.amount)
+            openManualPaymentDialog(payment.type as PaymentType, payment.amount, payment.id)
           }
           onVerify={
             payment.status === PaymentStatus.PENDING_VERIFICATION
@@ -377,6 +379,12 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
               key={payment.id}
               payment={payment}
               isStaffOrAdmin={isStaffOrAdmin}
+              onCancel={
+                payment.status === PaymentStatus.FAILED
+                  ? () => handleCancelPayment(payment.id)
+                  : undefined
+              }
+              isCancelling={cancellingPaymentId === payment.id}
             />
           ))}
         </div>
@@ -413,6 +421,7 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
         policyId={policyId}
         paymentType={manualPaymentDialog.paymentType}
         expectedAmount={manualPaymentDialog.expectedAmount}
+        paymentId={manualPaymentDialog.paymentId}
         onSuccess={invalidatePayments}
       />
 

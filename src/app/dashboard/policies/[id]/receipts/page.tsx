@@ -86,7 +86,7 @@ export default function AdminReceiptsPage({ params }: ReceiptsPageProps) {
     );
   }
 
-  if (policy.status !== 'APPROVED') {
+  if (policy.status !== 'ACTIVE' && policy.status !== 'EXPIRED') {
     return (
       <div className="container mx-auto w-full space-y-4">
         <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/policies/${policyId}`)}>

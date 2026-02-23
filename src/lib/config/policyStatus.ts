@@ -7,7 +7,8 @@ export const POLICY_STATUS_CONFIG: Record<PolicyStatus, {
 }> = {
   [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando Info', variant: 'default', filterVisible: true },
   [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobación', variant: 'default', filterVisible: true },
-  [PolicyStatus.APPROVED]: { label: 'Aprobado', variant: 'default', filterVisible: true },
+  [PolicyStatus.ACTIVE]: { label: 'Activa', variant: 'default', filterVisible: true },
+  [PolicyStatus.EXPIRED]: { label: 'Expirada', variant: 'secondary', filterVisible: true },
   [PolicyStatus.CANCELLED]: { label: 'Cancelada', variant: 'destructive', filterVisible: true },
 };
 

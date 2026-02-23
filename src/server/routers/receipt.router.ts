@@ -55,7 +55,7 @@ async function validateTenantPolicyAccess(token: string, policyId: string) {
     where: {
       email: { equals: tenant.email, mode: 'insensitive' },
       policyId,
-      policy: { status: PolicyStatus.APPROVED, activatedAt: { not: null } },
+      policy: { status: PolicyStatus.ACTIVE },
     },
     include: {
       policy: {
@@ -97,6 +97,27 @@ async function validateTenantReceiptAccess(token: string, receiptId: string) {
 const ReceiptTypeSchema = z.nativeEnum(ReceiptType);
 
 // ============================================
+// RATE LIMITING (in-memory, per email, 3 requests/hour)
+// ============================================
+
+const MAGIC_LINK_RATE_LIMIT = { maxRequests: 3, windowMs: 60 * 60 * 1000 };
+const magicLinkAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isMagicLinkRateLimited(email: string): boolean {
+  const key = email.toLowerCase();
+  const now = Date.now();
+  const entry = magicLinkAttempts.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    magicLinkAttempts.set(key, { count: 1, resetAt: now + MAGIC_LINK_RATE_LIMIT.windowMs });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > MAGIC_LINK_RATE_LIMIT.maxRequests;
+}
+
+// ============================================
 // ROUTER
 // ============================================
 
@@ -111,14 +132,16 @@ export const receiptRouter = createTRPCRouter({
       email: z.string().email(),
     }))
     .mutation(async ({ input }) => {
-      // Find all tenants with this email in approved policies
+      // Rate limit: 3 requests per email per hour (silent — same success response)
+      if (isMagicLinkRateLimited(input.email)) {
+        return { success: true };
+      }
+
+      // Find all tenants with this email in active policies
       const tenants = await prisma.tenant.findMany({
         where: {
           email: { equals: input.email, mode: 'insensitive' },
-          policy: {
-            status: PolicyStatus.APPROVED,
-            activatedAt: { not: null },
-          },
+          policy: { status: PolicyStatus.ACTIVE },
         },
         select: {
           id: true,
@@ -167,10 +190,7 @@ export const receiptRouter = createTRPCRouter({
       const allTenants = await prisma.tenant.findMany({
         where: {
           email: { equals: email, mode: 'insensitive' },
-          policy: {
-            status: PolicyStatus.APPROVED,
-            activatedAt: { not: null },
-          },
+          policy: { status: PolicyStatus.ACTIVE },
         },
         include: {
           policy: {
@@ -512,8 +532,8 @@ export const receiptRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
       }
 
-      if (policy.status !== 'APPROVED') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Los comprobantes solo están disponibles para protecciones aprobadas' });
+      if (policy.status !== 'ACTIVE' && policy.status !== 'EXPIRED') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Los comprobantes solo están disponibles para protecciones activas o expiradas' });
       }
 
       const receipts = await receiptService.getReceiptsByPolicy(input.policyId);

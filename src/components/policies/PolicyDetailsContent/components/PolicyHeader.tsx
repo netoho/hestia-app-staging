@@ -22,13 +22,13 @@ import {
   Receipt,
 } from 'lucide-react';
 import { PolicyStatusBadge } from '@/components/shared/PolicyStatusIndicators';
-import { PolicyStatusType } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 import { t } from '@/lib/i18n';
 
 interface PolicyHeaderProps {
   policyNumber: string;
   propertyAddress: string;
-  status: PolicyStatusType;
+  status: PolicyStatus;
   policyId: string;
   permissions: {
     canEdit: boolean;
@@ -40,13 +40,8 @@ interface PolicyHeaderProps {
   sending: string | null;
   downloadingPdf: boolean;
   isRefreshing?: boolean;
-  isActivating?: boolean;
-  isDeactivating?: boolean;
-  activatedAt?: Date | string | null;
   onSendInvitations: () => void;
   onApprove: () => void;
-  onActivate: () => void;
-  onDeactivate: () => void;
   onShareClick: () => void;
   onCancelClick: () => void;
   onDownloadPdf: () => void;
@@ -63,13 +58,8 @@ export function PolicyHeader({
   sending,
   downloadingPdf,
   isRefreshing,
-  isActivating,
-  isDeactivating,
-  activatedAt,
   onSendInvitations,
   onApprove,
-  onActivate,
-  onDeactivate,
   onShareClick,
   onCancelClick,
   onDownloadPdf,
@@ -124,36 +114,12 @@ export function PolicyHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {/* Approve Policy - Staff/Admin */}
+          {/* Approve Policy (transitions to ACTIVE) - Staff/Admin */}
           {permissions.canApprove &&
            status === 'PENDING_APPROVAL' && (
             <DropdownMenuItem onClick={onApprove} className="text-green-600">
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {t.pages.policies.approvePolicy}
-            </DropdownMenuItem>
-          )}
-
-          {/* Activate Policy - Staff/Admin, APPROVED + not yet activated */}
-          {isStaffOrAdmin && status === 'APPROVED' && !activatedAt && (
-            <DropdownMenuItem onClick={onActivate} disabled={isActivating} className="text-green-600">
-              {isActivating ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              {t.pages.policies.activatePolicy}
-            </DropdownMenuItem>
-          )}
-
-          {/* Deactivate Policy - Staff/Admin, APPROVED + currently activated */}
-          {isStaffOrAdmin && status === 'APPROVED' && !!activatedAt && (
-            <DropdownMenuItem onClick={onDeactivate} disabled={isDeactivating} className="text-orange-600">
-              {isDeactivating ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="mr-2 h-4 w-4" />
-              )}
-              {t.pages.policies.deactivatePolicy}
             </DropdownMenuItem>
           )}
 
@@ -191,7 +157,7 @@ export function PolicyHeader({
           )}
 
           {/* Receipts */}
-          {isStaffOrAdmin && status === 'APPROVED' && (
+          {isStaffOrAdmin && (status === 'ACTIVE' || status === 'EXPIRED') && (
             <DropdownMenuItem
               onClick={() => router.push(`/dashboard/policies/${policyId}/receipts`)}
             >

@@ -3,13 +3,13 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileDown, Loader2 } from 'lucide-react';
-import { PolicyStatusType } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
 import { t } from '@/lib/i18n';
 
 interface PolicyDetailsHeaderProps {
   onBack: () => void;
-  status: PolicyStatusType;
+  status: PolicyStatus;
   onDownloadPDF: () => void;
   downloadingPDF: boolean;
 }
@@ -20,7 +20,7 @@ export function PolicyDetailsHeader({
   onDownloadPDF, 
   downloadingPDF 
 }: PolicyDetailsHeaderProps) {
-  const getStatusBadgeVariant = (status: PolicyStatusType) => {
+  const getStatusBadgeVariant = (status: PolicyStatus) => {
     const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       gray: 'secondary',
       blue: 'default',
