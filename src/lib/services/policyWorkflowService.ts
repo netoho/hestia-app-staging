@@ -112,7 +112,7 @@ class PolicyWorkflowService extends BaseService {
         if (!allApproved) {
           return {
             valid: false,
-            error: 'All investigated actors must have approved investigations',
+            error: 'Todas las investigaciones de los actores deben estar aprobadas antes de activar la protección',
           };
         }
         break;
