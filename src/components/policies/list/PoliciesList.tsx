@@ -50,7 +50,7 @@ export default function PoliciesList({ policies, loading }: PoliciesListProps) {
   // Loading state
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64" role="status" aria-label="Cargando">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -62,6 +62,7 @@ export default function PoliciesList({ policies, loading }: PoliciesListProps) {
       <EmptyState
         icon={FileText}
         title="No se encontraron protecciones"
+        description="Cree una nueva protección para comenzar"
       />
     );
   }

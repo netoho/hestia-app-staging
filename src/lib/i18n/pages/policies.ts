@@ -5,9 +5,12 @@ export const policies = {
     errorLoading: "No se pudieron cargar las protecciones",
     progressComplete: "Completo",
     progressStep: (step: number) => `Paso ${step}/4`,
+    stepOf: (current: number, total: number) => `Paso ${current} de ${total}`,
     viewProgress: "Ver Progreso",
     sendInvitations: "Enviar Invitaciones",
     approvePolicy: "Aprobar Protección",
+    shareLinks: "Compartir Enlaces",
+    cancelPolicy: "Cancelar Protección",
     actorVerification: {
         title: "Verificación de Actores",
         subtitle: "Revisa y aprueba la información de cada actor",
@@ -205,7 +208,16 @@ export const policies = {
             failedToGenerate: "Error al generar enlace de descarga",
             failedToDownload: "Error al descargar archivo",
             pdfGenerated: "Documento Generado",
-            pdfGeneratedDesc: "El documento de protección se ha descargado exitosamente. Puede imprimirlo o convertirlo a PDF."
+            pdfGeneratedDesc: "El documento de protección se ha descargado exitosamente. Puede imprimirlo o convertirlo a PDF.",
+            invitationsSent: "Invitaciones enviadas",
+            invitationsSentDesc: "Las invitaciones han sido enviadas exitosamente",
+            invitationsError: "Error al enviar invitaciones",
+            policyApproved: "Protección aprobada",
+            policyApprovedDesc: "La protección ha sido aprobada y activada exitosamente",
+            actorMarkedComplete: "Actor marcado como completo",
+            actorMarkedCompleteDesc: "El actor ha sido marcado como completo exitosamente",
+            approvalError: "Error al actualizar el estado de la protección",
+            markCompleteError: "Error al marcar como completo",
         }
     },
 };

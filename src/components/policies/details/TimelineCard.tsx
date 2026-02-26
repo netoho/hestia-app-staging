@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, CalendarClock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -8,6 +8,7 @@ interface TimelineCardProps {
   submittedAt?: string;
   approvedAt?: string;
   activatedAt?: string;
+  expiresAt?: string;
 }
 
 export default function TimelineCard({
@@ -15,6 +16,7 @@ export default function TimelineCard({
   submittedAt,
   approvedAt,
   activatedAt,
+  expiresAt,
 }: TimelineCardProps) {
   const formatDateTime = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy 'a las' HH:mm", { locale: es });
@@ -61,6 +63,21 @@ export default function TimelineCard({
               </div>
             </div>
           )}
+          {expiresAt && (() => {
+            const isExpired = new Date(expiresAt) < new Date();
+            return (
+              <div className="flex items-center gap-3">
+                <CalendarClock className={`h-5 w-5 ${isExpired ? 'text-red-500' : 'text-orange-500'}`} />
+                <div>
+                  <p className={`font-medium ${isExpired ? 'text-red-600' : ''}`}>
+                    {isExpired ? 'Expirada' : 'Expira'}
+                    {' el '}
+                    {formatDateTime(expiresAt)}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </CardContent>
     </Card>

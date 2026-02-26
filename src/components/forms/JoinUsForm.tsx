@@ -64,7 +64,7 @@ export function JoinUsForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="name">{t.pages.joinUs.form.name} *</Label>
+        <Label htmlFor="name" required>{t.pages.joinUs.form.name}</Label>
         <Input
           id="name"
           name="name"
@@ -77,7 +77,7 @@ export function JoinUsForm() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="email">{t.pages.joinUs.form.email} *</Label>
+          <Label htmlFor="email" required>{t.pages.joinUs.form.email}</Label>
           <Input
             id="email"
             name="email"
@@ -89,7 +89,7 @@ export function JoinUsForm() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">{t.pages.joinUs.form.phone} *</Label>
+          <Label htmlFor="phone" required>{t.pages.joinUs.form.phone}</Label>
           <Input
             id="phone"
             name="phone"
@@ -114,7 +114,7 @@ export function JoinUsForm() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="experience">{t.pages.joinUs.form.experience} *</Label>
+          <Label htmlFor="experience" required>{t.pages.joinUs.form.experience}</Label>
           <Input
             id="experience"
             name="experience"
@@ -136,7 +136,7 @@ export function JoinUsForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="message">{t.pages.joinUs.form.message} *</Label>
+        <Label htmlFor="message" required>{t.pages.joinUs.form.message}</Label>
         <Textarea
           id="message"
           name="message"

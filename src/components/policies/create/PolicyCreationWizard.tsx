@@ -23,15 +23,16 @@ import ReviewStep from './steps/ReviewStep';
 
 import type { PropertyStepData, PricingStepData, LandlordStepData, TenantStepData, GuarantorStepData } from '@/lib/schemas/policy/wizard';
 import type { PolicyCreationFormData } from './types';
+import { t } from '@/lib/i18n';
 
 // Tab configuration
 const POLICY_TABS = [
-  { id: 'property', label: 'Propiedad', needsSave: true },
-  { id: 'pricing', label: 'Precio', needsSave: true },
-  { id: 'landlord', label: 'Arrendador', needsSave: true },
-  { id: 'tenant', label: 'Inquilino', needsSave: true },
-  { id: 'guarantors', label: 'Garantía', needsSave: true },
-  { id: 'review', label: 'Revisar', needsSave: false },
+  { id: 'property', label: t.pages.createPolicy.tabs.property, needsSave: true },
+  { id: 'pricing', label: t.pages.createPolicy.tabs.pricing, needsSave: true },
+  { id: 'landlord', label: t.pages.createPolicy.tabs.landlord, needsSave: true },
+  { id: 'tenant', label: t.pages.createPolicy.tabs.tenant, needsSave: true },
+  { id: 'guarantors', label: t.pages.createPolicy.tabs.guarantors, needsSave: true },
+  { id: 'review', label: t.pages.createPolicy.tabs.review, needsSave: false },
 ];
 
 // Initial form data
@@ -132,8 +133,8 @@ export default function PolicyCreationWizard() {
   const calculatePriceMutation = trpc.pricing.calculate.useMutation({
     onError: (error) => {
       toast({
-        title: 'Error',
-        description: 'Error al calcular el precio',
+        title: t.pages.createPolicy.messages.error,
+        description: t.pages.createPolicy.messages.errorCalculating,
         variant: 'destructive',
       });
     },
@@ -142,15 +143,15 @@ export default function PolicyCreationWizard() {
   const createPolicyMutation = trpc.policy.create.useMutation({
     onSuccess: (data) => {
       toast({
-        title: 'Protección creada',
-        description: 'La protección se ha creado exitosamente',
+        title: t.pages.createPolicy.messages.created,
+        description: t.pages.createPolicy.messages.createdDesc,
       });
       router.push(`/dashboard/policies/${data.policy.id}`);
     },
     onError: (error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Error al crear la protección',
+        title: t.pages.createPolicy.messages.error,
+        description: error.message || t.pages.createPolicy.messages.errorCreating,
         variant: 'destructive',
       });
     },
@@ -208,8 +209,8 @@ export default function PolicyCreationWizard() {
   const handleCalculatePricing = useCallback((packageId: string) => {
     if (!formData.property.rentAmount || !packageId) {
       toast({
-        title: 'Datos incompletos',
-        description: 'Por favor ingrese la renta y seleccione un paquete',
+        title: t.pages.createPolicy.messages.incompleteData,
+        description: t.pages.createPolicy.messages.incompleteDataDesc,
         variant: 'destructive',
       });
       return;
@@ -319,8 +320,8 @@ export default function PolicyCreationWizard() {
       wizard.setActiveTab(tabId);
     } else {
       toast({
-        title: 'Paso incompleto',
-        description: 'Complete el paso actual antes de continuar',
+        title: t.pages.createPolicy.messages.stepIncomplete,
+        description: t.pages.createPolicy.messages.stepIncompleteDesc,
         variant: 'destructive',
       });
     }
@@ -349,9 +350,9 @@ export default function PolicyCreationWizard() {
           onClick={() => router.push('/dashboard/policies')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
+          {t.pages.createPolicy.navigation.back}
         </Button>
-        <h1 className="text-3xl font-bold">Nueva Protección</h1>
+        <h1 className="text-3xl font-bold">{t.pages.createPolicy.title}</h1>
       </div>
 
       {/* Progress */}
@@ -440,11 +441,11 @@ export default function PolicyCreationWizard() {
             onClick={handlePrevious}
             disabled={wizard.activeTab === 'property'}
           >
-            Anterior
+            {t.pages.createPolicy.navigation.previous}
           </Button>
 
           <Button onClick={handleNext}>
-            Guardar y Continuar
+            {t.pages.createPolicy.navigation.saveAndContinue}
           </Button>
         </div>
       )}

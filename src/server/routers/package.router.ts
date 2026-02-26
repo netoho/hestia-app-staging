@@ -81,8 +81,7 @@ export const packageRouter = createTRPCRouter({
         prisma.policy.count({
           where: {
             packageId: input.packageId,
-            status: 'APPROVED',
-            activatedAt: { not: null },
+            status: 'ACTIVE',
           },
         }),
 

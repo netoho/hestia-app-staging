@@ -31,7 +31,7 @@ const Label = React.forwardRef<
     >
       {children}
       {required && <span aria-hidden="true"> *</span>}
-      {optional && <span className="text-gray-500" aria-hidden="true"> (opcional)</span>}
+      {optional && <span className="text-muted-foreground" aria-hidden="true"> (opcional)</span>}
     </LabelPrimitive.Root>
   )
 })

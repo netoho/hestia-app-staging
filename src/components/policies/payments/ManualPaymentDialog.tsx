@@ -33,6 +33,7 @@ interface ManualPaymentDialogProps {
   policyId: string;
   paymentType: PaymentType;
   expectedAmount: number;
+  paymentId?: string;
   onSuccess: () => void;
 }
 
@@ -50,6 +51,7 @@ export function ManualPaymentDialog({
   policyId,
   paymentType,
   expectedAmount,
+  paymentId,
   onSuccess,
 }: ManualPaymentDialogProps) {
   const [paidBy, setPaidBy] = useState<PayerType>(
@@ -115,9 +117,10 @@ export function ManualPaymentDialog({
     let payment: { id: string } | null = null;
 
     try {
-      // 1. Create the manual payment record
+      // 1. Create or convert the manual payment record
       payment = await recordManualPayment.mutateAsync({
         policyId,
+        paymentId,
         type: paymentType,
         amount: parsedAmount,
         paidBy,
@@ -178,8 +181,9 @@ export function ManualPaymentDialog({
     } catch (error) {
       console.error('Error recording manual payment:', error);
 
-      // If payment was created but upload failed, cancel the payment to avoid orphaned records
-      if (payment?.id) {
+      // If a NEW payment was created but upload failed, cancel to avoid orphaned records
+      // Skip when converting existing payment (it stays as PENDING_VERIFICATION)
+      if (payment?.id && !paymentId) {
         try {
           await cancelPayment.mutateAsync({
             paymentId: payment.id,

@@ -14,10 +14,10 @@ import { ActorType } from '@/lib/utils/actor';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatFullName } from '@/lib/utils/names';
-import { PolicyStatusType } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
 // Statuses that allow guarantor type change
-const CHANGEABLE_STATUSES: PolicyStatusType[] = ['COLLECTING_INFO', 'PENDING_APPROVAL'];
+const CHANGEABLE_STATUSES: PolicyStatus[] = ['COLLECTING_INFO', 'PENDING_APPROVAL'];
 
 interface GuarantorsTabProps {
   guarantorType: string;
@@ -35,7 +35,7 @@ interface GuarantorsTabProps {
   onMarkComplete: (type: ActorType, actorId: string, name: string) => void;
   isLoading?: boolean;
   isStaffOrAdmin?: boolean;
-  policyStatus?: PolicyStatusType;
+  policyStatus?: PolicyStatus;
   jointObligorHistory?: any[];
   avalHistory?: any[];
   onChangeGuarantorType?: () => void;

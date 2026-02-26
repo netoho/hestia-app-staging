@@ -37,8 +37,9 @@ export function HeaderSection({ data }: HeaderSectionProps) {
 
 function getStatusBadgeStyle(status: string) {
   switch (status) {
-    case 'APPROVED':
+    case 'ACTIVE':
       return styles.badgeSuccess;
+    case 'EXPIRED':
     case 'CANCELLED':
       return styles.badgeDanger;
     case 'PENDING_APPROVAL':

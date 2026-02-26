@@ -19,15 +19,16 @@ import {
   MoreVertical,
   Download,
   FileSearch,
+  Receipt,
 } from 'lucide-react';
 import { PolicyStatusBadge } from '@/components/shared/PolicyStatusIndicators';
-import { PolicyStatusType } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 import { t } from '@/lib/i18n';
 
 interface PolicyHeaderProps {
   policyNumber: string;
   propertyAddress: string;
-  status: PolicyStatusType;
+  status: PolicyStatus;
   policyId: string;
   permissions: {
     canEdit: boolean;
@@ -36,8 +37,6 @@ interface PolicyHeaderProps {
     canVerifyDocuments: boolean;
   };
   isStaffOrAdmin: boolean;
-  allActorsApproved: boolean;
-  progressOverall?: number;
   sending: string | null;
   downloadingPdf: boolean;
   isRefreshing?: boolean;
@@ -56,7 +55,6 @@ export function PolicyHeader({
   policyId,
   permissions,
   isStaffOrAdmin,
-  allActorsApproved,
   sending,
   downloadingPdf,
   isRefreshing,
@@ -116,9 +114,8 @@ export function PolicyHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {/* Approve Policy - Staff/Admin */}
+          {/* Approve Policy (transitions to ACTIVE) - Staff/Admin */}
           {permissions.canApprove &&
-           allActorsApproved &&
            status === 'PENDING_APPROVAL' && (
             <DropdownMenuItem onClick={onApprove} className="text-green-600">
               <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -145,7 +142,7 @@ export function PolicyHeader({
           {permissions.canSendInvitations && (
             <DropdownMenuItem onClick={onShareClick}>
               <Share2 className="mr-2 h-4 w-4" />
-              Compartir Enlaces
+              {t.pages.policies.shareLinks}
             </DropdownMenuItem>
           )}
 
@@ -156,6 +153,16 @@ export function PolicyHeader({
             >
               <FileSearch className="mr-2 h-4 w-4" />
               Investigaciones
+            </DropdownMenuItem>
+          )}
+
+          {/* Receipts */}
+          {isStaffOrAdmin && (status === 'ACTIVE' || status === 'EXPIRED') && (
+            <DropdownMenuItem
+              onClick={() => router.push(`/dashboard/policies/${policyId}/receipts`)}
+            >
+              <Receipt className="mr-2 h-4 w-4" />
+              Comprobantes
             </DropdownMenuItem>
           )}
 
@@ -178,7 +185,7 @@ export function PolicyHeader({
                 className="text-destructive focus:text-destructive"
               >
                 <XCircle className="mr-2 h-4 w-4" />
-                Cancelar Protección
+                {t.pages.policies.cancelPolicy}
               </DropdownMenuItem>
             </>
           )}

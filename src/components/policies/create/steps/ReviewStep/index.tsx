@@ -8,6 +8,7 @@ import { Mail } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatFullName } from '@/lib/utils/names';
 import { GuarantorType, TenantType } from "@/prisma/generated/prisma-client/enums";
+import { t } from '@/lib/i18n';
 import { PolicyCreationFormData } from '../../types';
 
 interface ReviewStepProps {
@@ -36,51 +37,51 @@ export default function ReviewStep({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Revisar y Confirmar</CardTitle>
-        <CardDescription>Verifique que todos los datos sean correctos</CardDescription>
+        <CardTitle>{t.pages.createPolicy.steps.review.title}</CardTitle>
+        <CardDescription>{t.pages.createPolicy.steps.review.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Property Summary */}
         <div>
-          <h3 className="font-medium mb-2">Propiedad</h3>
+          <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.property}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Número de Póliza:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.policyNumber}</dt>
               <dd className="font-medium">{formData.property.policyNumber}</dd>
             </div>
             {formData.property.internalCode && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">Código Interno:</dt>
+                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.internalCode}</dt>
                 <dd>{formData.property.internalCode}</dd>
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">Dirección:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.address}</dt>
               <dd>
                 {formData.property.propertyAddressDetails?.formattedAddress ||
                  (formData.property.propertyAddressDetails?.street
                    ? `${formData.property.propertyAddressDetails.street} ${formData.property.propertyAddressDetails.exteriorNumber || ''}, ${formData.property.propertyAddressDetails.neighborhood || ''}, ${formData.property.propertyAddressDetails.city || ''}`
-                   : 'No especificada')}
+                   : t.pages.createPolicy.steps.review.labels.notSpecified)}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Tipo:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.type}</dt>
               <dd>{formData.property.propertyType}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Renta:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.rent}</dt>
               <dd>{formatCurrency(parseFloat(formData.property.rentAmount || '0'))}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Depósito:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.deposit}</dt>
               <dd>{formatCurrency(parseFloat(formData.property.depositAmount || formData.property.rentAmount || '0'))}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Duración:</dt>
-              <dd>{formData.property.contractLength} meses</dd>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.duration}</dt>
+              <dd>{formData.property.contractLength} {t.pages.createPolicy.steps.review.labels.months}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Período:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.period}</dt>
               <dd>{formData.property.startDate} - {formData.property.endDate}</dd>
             </div>
           </dl>
@@ -88,39 +89,39 @@ export default function ReviewStep({
 
         {/* Pricing Summary */}
         <div>
-          <h3 className="font-medium mb-2">Paquete y Precio</h3>
+          <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.packageAndPrice}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Paquete:</dt>
-              <dd>{selectedPackage?.name || 'No seleccionado'}</dd>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.package}</dt>
+              <dd>{selectedPackage?.name || t.pages.createPolicy.steps.review.labels.notSelected}</dd>
             </div>
             {pricingResult && (
               <>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Subtotal:</dt>
+                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.subtotal}</dt>
                   <dd>{formatCurrency(pricingResult.subtotal)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">IVA (16%):</dt>
+                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.iva}</dt>
                   <dd>{formatCurrency(pricingResult.iva)}</dd>
                 </div>
                 <div className="flex justify-between font-medium">
-                  <dt>Total con IVA:</dt>
+                  <dt>{t.pages.createPolicy.steps.review.labels.totalWithIva}</dt>
                   <dd>{formatCurrency(pricingResult.totalWithIva)}</dd>
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex justify-between text-blue-600">
-                    <dt className="text-gray-500">Pago Inquilino ({formData.pricing.tenantPercentage}%):</dt>
+                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.tenantPayment(formData.pricing.tenantPercentage)}</dt>
                     <dd>{formatCurrency(pricingResult.totalWithIva * formData.pricing.tenantPercentage / 100)}</dd>
                   </div>
                   <div className="flex justify-between text-green-600">
-                    <dt className="text-gray-500">Pago Arrendador ({formData.pricing.landlordPercentage}%):</dt>
+                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.landlordPayment(formData.pricing.landlordPercentage)}</dt>
                     <dd>{formatCurrency(pricingResult.totalWithIva * formData.pricing.landlordPercentage / 100)}</dd>
                   </div>
                 </div>
                 {formData.pricing.isManualOverride && (
                   <div className="flex justify-between text-orange-600">
-                    <dt className="text-gray-500">Precio ajustado manualmente</dt>
+                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.manuallyAdjusted}</dt>
                     <dd>✓</dd>
                   </div>
                 )}
@@ -131,28 +132,28 @@ export default function ReviewStep({
 
         {/* Landlord Summary */}
         <div>
-          <h3 className="font-medium mb-2">Arrendador</h3>
+          <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.landlord}</h3>
           <dl className="space-y-1 text-sm">
             {formData.landlord.isCompany ? (
               <>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Empresa:</dt>
+                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.company}</dt>
                   <dd>{formData.landlord.companyName}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">RFC:</dt>
+                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.rfc}</dt>
                   <dd>{formData.landlord.companyRfc}</dd>
                 </div>
                 {formData.landlord.legalRepName && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Representante:</dt>
+                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.representative}</dt>
                     <dd>{formData.landlord.legalRepName}</dd>
                   </div>
                 )}
               </>
             ) : (
               <div className="flex justify-between">
-                <dt className="text-gray-500">Nombre:</dt>
+                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.name}</dt>
                 <dd>{formatFullName(
                   formData.landlord.firstName || '',
                   formData.landlord.paternalLastName || '',
@@ -162,12 +163,12 @@ export default function ReviewStep({
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">Email:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.email}</dt>
               <dd>{formData.landlord.email}</dd>
             </div>
             {formData.landlord.phone && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">Teléfono:</dt>
+                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.phone}</dt>
                 <dd>{formData.landlord.phone}</dd>
               </div>
             )}
@@ -176,15 +177,15 @@ export default function ReviewStep({
 
         {/* Tenant Summary */}
         <div>
-          <h3 className="font-medium mb-2">Inquilino</h3>
+          <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.tenant}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Tipo:</dt>
-              <dd>{formData.tenant.tenantType === TenantType.INDIVIDUAL ? 'Persona Física' : 'Persona Moral'}</dd>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.tenantType}</dt>
+              <dd>{formData.tenant.tenantType === TenantType.INDIVIDUAL ? t.pages.createPolicy.steps.review.labels.individual : t.pages.createPolicy.steps.review.labels.companyType}</dd>
             </div>
             {formData.tenant.tenantType === TenantType.COMPANY && formData.tenant.companyName && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">Empresa:</dt>
+                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.company}</dt>
                 <dd>{formData.tenant.companyName}</dd>
               </div>
             )}
@@ -192,7 +193,7 @@ export default function ReviewStep({
               (formData.tenant.tenantType === TenantType.COMPANY && formData.tenant.firstName)) && (
               <div className="flex justify-between">
                 <dt className="text-gray-500">
-                  {formData.tenant.tenantType === TenantType.COMPANY ? 'Representante:' : 'Nombre:'}
+                  {formData.tenant.tenantType === TenantType.COMPANY ? t.pages.createPolicy.steps.review.labels.representative : t.pages.createPolicy.steps.review.labels.name}
                 </dt>
                 <dd>{formatFullName(
                   formData.tenant.firstName,
@@ -203,12 +204,12 @@ export default function ReviewStep({
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">Email:</dt>
+              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.email}</dt>
               <dd>{formData.tenant.email}</dd>
             </div>
             {formData.tenant.phone && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">Teléfono:</dt>
+                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.phone}</dt>
                 <dd>{formData.tenant.phone}</dd>
               </div>
             )}
@@ -218,20 +219,20 @@ export default function ReviewStep({
         {/* Guarantors Summary */}
         {formData.guarantorType !== GuarantorType.NONE && (
           <div>
-            <h3 className="font-medium mb-2">Garantías</h3>
+            <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.guarantees}</h3>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-500">Tipo de Garantía:</dt>
+                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.guaranteeType}</dt>
                 <dd>
-                  {formData.guarantorType === GuarantorType.JOINT_OBLIGOR && 'Obligado Solidario'}
-                  {formData.guarantorType === GuarantorType.AVAL && 'Aval'}
-                  {formData.guarantorType === GuarantorType.BOTH && 'Obligado Solidario y Aval'}
+                  {formData.guarantorType === GuarantorType.JOINT_OBLIGOR && t.pages.createPolicy.steps.review.labels.jointObligor}
+                  {formData.guarantorType === GuarantorType.AVAL && t.pages.createPolicy.steps.review.labels.aval}
+                  {formData.guarantorType === GuarantorType.BOTH && t.pages.createPolicy.steps.review.labels.jointObligorAndAval}
                 </dd>
               </div>
 
               {formData.jointObligors.length > 0 && (
                 <div>
-                  <dt className="text-gray-500 mb-1">Obligados Solidarios:</dt>
+                  <dt className="text-gray-500 mb-1">{t.pages.createPolicy.steps.review.labels.jointObligors}</dt>
                   <ul className="ml-4 space-y-1">
                     {formData.jointObligors.map((jo, index) => (
                       <li key={index} className="text-xs">
@@ -244,7 +245,7 @@ export default function ReviewStep({
 
               {formData.avals.length > 0 && (
                 <div>
-                  <dt className="text-gray-500 mb-1">Avales:</dt>
+                  <dt className="text-gray-500 mb-1">{t.pages.createPolicy.steps.review.labels.avals}</dt>
                   <ul className="ml-4 space-y-1">
                     {formData.avals.map((aval, index) => (
                       <li key={index} className="text-xs">
@@ -272,10 +273,10 @@ export default function ReviewStep({
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
                 <Mail className="inline h-4 w-4 mr-1" />
-                Enviar invitaciones automáticamente
+                {t.pages.createPolicy.steps.review.autoInvite}
               </Label>
               <p className="text-sm text-gray-500">
-                Se enviarán invitaciones por correo a los actores para que completen su información
+                {t.pages.createPolicy.steps.review.autoInviteDesc}
               </p>
             </div>
           </div>
@@ -284,10 +285,10 @@ export default function ReviewStep({
         {/* Navigation */}
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onPrevious} disabled={isSubmitting}>
-            Anterior
+            {t.pages.createPolicy.navigation.previous}
           </Button>
           <Button onClick={onSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Creando...' : 'Crear Protección'}
+            {isSubmitting ? t.pages.createPolicy.navigation.creating : t.pages.createPolicy.navigation.create}
           </Button>
         </div>
       </CardContent>

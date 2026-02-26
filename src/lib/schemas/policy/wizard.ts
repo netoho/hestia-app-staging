@@ -23,7 +23,7 @@ const propertyAddressSchema = addressSchema.extend({
  * Step 1: Property Information
  */
 export const propertyStepSchema = z.object({
-  policyNumber: z.string().min(1, 'Número de póliza requerido'),
+  policyNumber: z.string().min(1, 'Número de protección requerido'),
   internalCode: z.string().optional(),
   propertyAddressDetails: propertyAddressSchema,
   propertyType: z.nativeEnum(PropertyType),

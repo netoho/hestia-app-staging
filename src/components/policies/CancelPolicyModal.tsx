@@ -102,7 +102,7 @@ export default function CancelPolicyModal({
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
-            Esta acción no se puede deshacer. Los administradores seran notificados.
+            Esta acción no se puede deshacer. Los pagos pendientes no serán cobrados y los administradores serán notificados.
           </AlertDescription>
         </Alert>
 

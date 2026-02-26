@@ -24,6 +24,51 @@ const PAYMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
   LANDLORD_PORTION: 'Pago del Arrendador',
 };
 
+/**
+ * Check if all active payments for a policy are complete and notify admins.
+ * Excludes CANCELLED/FAILED payments from the check.
+ */
+async function checkAndNotifyAllPaymentsComplete(policyId: string, policyNumber: string) {
+  const allPayments = await prisma.payment.findMany({
+    where: { policyId },
+  });
+
+  const activePayments = allPayments.filter(
+    p => p.status !== PaymentStatus.CANCELLED && p.status !== PaymentStatus.FAILED
+  );
+
+  const allComplete = activePayments.length > 0 &&
+    activePayments.every(p => p.status === PaymentStatus.COMPLETED);
+
+  if (!allComplete) return;
+
+  await logPolicyActivity({
+    policyId,
+    action: 'all_payments_completed',
+    description: 'Todos los pagos de la protección han sido completados',
+    performedById: 'system',
+    details: { totalPayments: activePayments.length },
+  });
+
+  const totalAmount = activePayments.reduce((sum, p) => sum + p.amount, 0);
+  const admins = await getActiveAdmins();
+
+  if (admins.length === 0) {
+    console.warn('No active admin users found - skipping admin notification');
+    return;
+  }
+
+  for (const admin of admins) {
+    if (!admin.email) continue;
+    await sendAllPaymentsCompletedEmail({
+      adminEmail: admin.email,
+      policyNumber,
+      totalPayments: activePayments.length,
+      totalAmount,
+    });
+  }
+}
+
 export async function POST(request: NextRequest) {
   let eventType: string | undefined;
 
@@ -137,41 +182,8 @@ export async function POST(request: NextRequest) {
             });
           }
 
-          // Check if all payments are complete
-          const allPayments = await prisma.payment.findMany({
-            where: { policyId }
-          });
-
-          const allComplete = allPayments.length > 0 &&
-            allPayments.every(p => p.status === PaymentStatus.COMPLETED);
-
-          if (allComplete) {
-            await logPolicyActivity({
-              policyId,
-              action: 'all_payments_completed',
-              description: 'Todos los pagos de la póliza han sido completados',
-              performedById: 'system',
-              details: { totalPayments: allPayments.length }
-            });
-
-            // Send notification to all admin users
-            const totalAmount = allPayments.reduce((sum, p) => sum + p.amount, 0);
-            const admins = await getActiveAdmins();
-
-            if (admins.length === 0) {
-              console.warn('No active admin users found - skipping admin notification');
-            } else {
-              for (const admin of admins) {
-                if (!admin.email) continue;
-                await sendAllPaymentsCompletedEmail({
-                  adminEmail: admin.email,
-                  policyNumber: policy?.policyNumber || policyId,
-                  totalPayments: allPayments.length,
-                  totalAmount
-                });
-              }
-            }
-          }
+          // Check if all active payments are complete and notify admins
+          await checkAndNotifyAllPaymentsComplete(policyId, policy?.policyNumber || policyId);
         }
         break;
       }
@@ -508,36 +520,8 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Check if all payments are complete
-          const allPayments = await prisma.payment.findMany({
-            where: { policyId },
-          });
-
-          const allComplete = allPayments.length > 0 &&
-            allPayments.every(p => p.status === PaymentStatus.COMPLETED);
-
-          if (allComplete) {
-            await logPolicyActivity({
-              policyId,
-              action: 'all_payments_completed',
-              description: 'Todos los pagos de la póliza han sido completados',
-              performedById: 'system',
-              details: { totalPayments: allPayments.length },
-            });
-
-            const totalAmount = allPayments.reduce((sum, p) => sum + p.amount, 0);
-            const admins = await getActiveAdmins();
-
-            for (const admin of admins) {
-              if (!admin.email) continue;
-              await sendAllPaymentsCompletedEmail({
-                adminEmail: admin.email,
-                policyNumber: policy?.policyNumber || policyId,
-                totalPayments: allPayments.length,
-                totalAmount,
-              });
-            }
-          }
+          // Check if all active payments are complete and notify admins
+          await checkAndNotifyAllPaymentsComplete(policyId, policy?.policyNumber || policyId);
         }
 
         console.log(`Webhook: SPEI payment ${paymentId} completed`);

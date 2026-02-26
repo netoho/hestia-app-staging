@@ -9,22 +9,23 @@ import {
   Clock,
   Loader2,
   RefreshCw,
-  Ban
+  Ban,
+  AlertTriangle,
 } from 'lucide-react';
-import { PolicyStatusType } from '@/lib/prisma-types';
-import { getApprovedSubStatus } from '@/lib/utils/policy';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 import { t } from '@/lib/i18n';
 
 // Icon mapping for each status
-const STATUS_ICONS: Record<PolicyStatusType, React.ElementType> = {
+const STATUS_ICONS: Record<PolicyStatus, React.ElementType> = {
   COLLECTING_INFO: Clock,
   PENDING_APPROVAL: FileCheck,
-  APPROVED: CheckCircle,
+  ACTIVE: CheckCircle,
+  EXPIRED: AlertTriangle,
   CANCELLED: Ban
 };
 
 // Enhanced color mapping with tailwind classes
-const STATUS_COLORS: Record<PolicyStatusType, {
+const STATUS_COLORS: Record<PolicyStatus, {
   bg: string;
   text: string;
   border: string;
@@ -42,11 +43,17 @@ const STATUS_COLORS: Record<PolicyStatusType, {
     border: 'border-emerald-200',
     icon: 'text-emerald-500'
   },
-  APPROVED: {
+  ACTIVE: {
     bg: 'bg-green-50',
     text: 'text-green-700',
     border: 'border-green-200',
     icon: 'text-green-500'
+  },
+  EXPIRED: {
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    border: 'border-orange-200',
+    icon: 'text-orange-500'
   },
   CANCELLED: {
     bg: 'bg-red-50',
@@ -56,45 +63,16 @@ const STATUS_COLORS: Record<PolicyStatusType, {
   }
 };
 
-// Sub-status colors for APPROVED policies
-const SUB_STATUS_COLORS: Record<string, {
-  bg: string;
-  text: string;
-  border: string;
-}> = {
-  active: {
-    bg: 'bg-green-50',
-    text: 'text-green-700',
-    border: 'border-green-200',
-  },
-  expired: {
-    bg: 'bg-orange-50',
-    text: 'text-orange-700',
-    border: 'border-orange-200',
-  },
-  pending_activation: {
-    bg: 'bg-gray-50',
-    text: 'text-gray-600',
-    border: 'border-gray-200',
-  },
-};
-
 interface PolicyStatusBadgeProps {
-  status: PolicyStatusType;
-  activatedAt?: Date | null;
-  expiresAt?: Date | null;
+  status: PolicyStatus;
   showIcon?: boolean;
-  showSubStatus?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 export function PolicyStatusBadge({
   status,
-  activatedAt,
-  expiresAt,
   showIcon = true,
-  showSubStatus = true,
   size = 'md',
   className
 }: PolicyStatusBadgeProps) {
@@ -113,40 +91,21 @@ export function PolicyStatusBadge({
     lg: 'h-5 w-5'
   };
 
-  const subStatus = showSubStatus && status === 'APPROVED'
-    ? getApprovedSubStatus({ status, activatedAt: activatedAt ?? null, expiresAt: expiresAt ?? null })
-    : null;
-
   return (
-    <div className="inline-flex items-center gap-1.5">
-      <div
-        className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border font-medium',
-          colors.bg,
-          colors.text,
-          colors.border,
-          sizeClasses[size],
-          className
-        )}
-      >
-        {showIcon && Icon && (
-          <Icon className={cn(iconSizes[size], colors.icon)} />
-        )}
-        <span>{getStatusDisplayText(status)}</span>
-      </div>
-      {subStatus && (
-        <div
-          className={cn(
-            'inline-flex items-center rounded-full border font-medium',
-            SUB_STATUS_COLORS[subStatus].bg,
-            SUB_STATUS_COLORS[subStatus].text,
-            SUB_STATUS_COLORS[subStatus].border,
-            sizeClasses[size],
-          )}
-        >
-          <span>{t.labels.policySubStatus[subStatus]}</span>
-        </div>
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border font-medium',
+        colors.bg,
+        colors.text,
+        colors.border,
+        sizeClasses[size],
+        className
       )}
+    >
+      {showIcon && Icon && (
+        <Icon className={cn(iconSizes[size], colors.icon)} />
+      )}
+      <span>{getStatusDisplayText(status)}</span>
     </div>
   );
 }
@@ -154,7 +113,7 @@ export function PolicyStatusBadge({
 interface PolicyProgressIndicatorProps {
   currentStep: number;
   totalSteps?: number;
-  status: PolicyStatusType;
+  status: PolicyStatus;
   showStepText?: boolean;
   className?: string;
 }
@@ -185,7 +144,7 @@ export function PolicyProgressIndicator({
       />
       {showStepText && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Step {currentStep} of {totalSteps}</span>
+          <span>{t.pages.policies.stepOf(currentStep, totalSteps)}</span>
           <span>{Math.round(progressPercentage)}%</span>
         </div>
       )}
@@ -261,25 +220,10 @@ export function PaymentStatusBadge({
 }
 
 // Helper functions
-function getStatusDisplayText(status: PolicyStatusType): string {
-  const displayMap: Record<string, string> = {
-    COLLECTING_INFO: 'Recopilando Información',
-    PENDING_APPROVAL: 'Pendiente de Aprobación',
-    APPROVED: 'Aprobada',
-    CANCELLED: 'Cancelada',
-  };
-
-  return displayMap[status] || status;
+function getStatusDisplayText(status: PolicyStatus): string {
+  return t.policyStatusFull[status] || status;
 }
 
 function getPaymentStatusText(status: string): string {
-  const displayMap: Record<string, string> = {
-    PENDING: 'Pendiente',
-    PROCESSING: 'Procesando',
-    COMPLETED: 'Completado',
-    FAILED: 'Fallido',
-    REFUNDED: 'Reembolsado'
-  };
-
-  return displayMap[status] || status;
+  return t.paymentStatusFull[status] || status;
 }

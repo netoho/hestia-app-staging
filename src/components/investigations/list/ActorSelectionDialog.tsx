@@ -136,7 +136,7 @@ export default function ActorSelectionDialog({
         <div className="space-y-2 mt-4">
           {actors.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No hay actores disponibles en esta póliza
+              No hay actores disponibles en esta protección
             </p>
           ) : (
             actors.map((actor) => {

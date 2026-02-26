@@ -59,7 +59,7 @@ export default function ReplaceTenantModal({
     onSuccess: () => {
       toast({
         title: 'Inquilino Reemplazado',
-        description: `El inquilino de la póliza ${policyNumber} ha sido reemplazado exitosamente`,
+        description: `El inquilino de la protección ${policyNumber} ha sido reemplazado exitosamente`,
       });
       onSuccess();
       handleClose();
@@ -115,14 +115,14 @@ export default function ReplaceTenantModal({
             Reemplazar Inquilino
           </DialogTitle>
           <DialogDescription>
-            Reemplazar inquilino en la póliza {policyNumber}. El inquilino actual ({currentTenantEmail}) será archivado.
+            Reemplazar inquilino en la protección {policyNumber}. El inquilino actual ({currentTenantEmail}) será archivado.
           </DialogDescription>
         </DialogHeader>
 
         <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
-            Esta acción archivará los datos del inquilino actual y sus documentos. La póliza volverá al estado de recopilación de información.
+            Esta acción archivará los datos del inquilino actual y sus documentos. La protección volverá al estado de recopilación de información.
           </AlertDescription>
         </Alert>
 

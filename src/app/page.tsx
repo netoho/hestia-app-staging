@@ -27,7 +27,7 @@ export default function HomePage() {
                 src="/images/hero-home.jpg"
                 alt="Happy couple securing their rental agreement"
                 fill
-                className="object-cover fixed"
+                className="object-cover fixed motion-reduce:relative"
                 data-ai-hint="happy couple"
                 priority
               />

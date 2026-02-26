@@ -10,6 +10,7 @@ import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { calculatePolicyProgress } from '@/lib/utils/policy';
 import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 import ActorsList from './ActorsList';
+import { t } from '@/lib/i18n';
 
 interface Actor {
   firstName?: string | null;
@@ -65,12 +66,12 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>No. Protección</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Propiedad</TableHead>
-                <TableHead>Actores</TableHead>
-                <TableHead>Precio Total</TableHead>
-                <TableHead>Progreso</TableHead>
+                <TableHead>{t.pages.createPolicy.list.headers.policyNumber}</TableHead>
+                <TableHead>{t.pages.createPolicy.list.headers.status}</TableHead>
+                <TableHead>{t.pages.createPolicy.list.headers.property}</TableHead>
+                <TableHead>{t.pages.createPolicy.list.headers.actors}</TableHead>
+                <TableHead>{t.pages.createPolicy.list.headers.totalPrice}</TableHead>
+                <TableHead>{t.pages.createPolicy.list.headers.progress}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -84,11 +85,11 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                       <div>
                         <button
                           onClick={() => router.push(`/dashboard/policies/${policy.id}`)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                          className="text-primary hover:text-primary/80 hover:underline text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                           {policy.policyNumber}
                         </button>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {policy.createdAt && format(new Date(policy.createdAt), 'dd/MM/yyyy', { locale: es })}
                         </div>
                       </div>
@@ -102,9 +103,9 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                       <div>
                         <div className="text-sm font-medium">{policy.propertyDetails?.propertyAddressDetails?.formattedAddress || 'N/A'}</div>
                         {policy.propertyType && (
-                          <div className="text-xs text-gray-500">{policy.propertyType}</div>
+                          <div className="text-xs text-muted-foreground">{policy.propertyType}</div>
                         )}
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           ${policy.rentAmount?.toLocaleString('es-MX')} /mes
                         </div>
                       </div>
@@ -128,7 +129,7 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                           ${policy.totalPrice?.toLocaleString('es-MX')}
                         </div>
                         {policy.package && (
-                          <div className="text-xs text-gray-500">{policy.package.name}</div>
+                          <div className="text-xs text-muted-foreground">{policy.package.name}</div>
                         )}
                       </div>
                     </TableCell>
@@ -136,21 +137,21 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                     {/* Progress */}
                     <TableCell>
                       <div className="w-20">
-                        <div className="text-xs text-gray-600 mb-1">{progress.percentage}%</div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="text-xs text-muted-foreground mb-1">{progress.percentage}%</div>
+                        <div className="w-full bg-muted rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               progress.percentage === 100
-                                ? 'bg-green-500'
+                                ? 'bg-emerald-500 dark:bg-emerald-400'
                                 : progress.percentage > 0
-                                ? 'bg-blue-500'
-                                : 'bg-gray-300'
+                                ? 'bg-primary'
+                                : 'bg-muted'
                             }`}
                             style={{ width: `${progress.percentage}%` }}
                           />
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {progress.completedActors}/{progress.totalActors} actores
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {progress.completedActors}/{progress.totalActors} {t.pages.createPolicy.list.actors}
                         </div>
                       </div>
                     </TableCell>

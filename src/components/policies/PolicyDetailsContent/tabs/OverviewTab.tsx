@@ -28,6 +28,7 @@ interface OverviewTabProps {
     submittedAt?: string;
     approvedAt?: string;
     activatedAt?: string;
+    expiresAt?: string;
   };
   policyId: string;
 }
@@ -68,6 +69,7 @@ export function OverviewTab({ policy, policyId }: OverviewTabProps) {
         submittedAt={policy.submittedAt}
         approvedAt={policy.approvedAt}
         activatedAt={policy.activatedAt}
+        expiresAt={policy.expiresAt}
       />
     </div>
   );

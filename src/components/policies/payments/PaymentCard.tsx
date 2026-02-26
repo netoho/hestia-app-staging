@@ -159,6 +159,7 @@ export function PaymentCard({
   const isPending = payment.status === PaymentStatus.PENDING;
   const isPendingVerification = payment.status === PaymentStatus.PENDING_VERIFICATION;
   const isCompleted = payment.status === PaymentStatus.COMPLETED;
+  const isFailed = payment.status === PaymentStatus.FAILED;
 
   return (
     <Card>
@@ -389,8 +390,8 @@ export function PaymentCard({
               </Button>
             )}
 
-            {/* Cancel payment button (admin, pending) */}
-            {isPending && isStaffOrAdmin && onCancel && (
+            {/* Cancel payment button (admin, pending or failed) */}
+            {(isPending || isFailed) && isStaffOrAdmin && onCancel && (
               <Button
                 size="sm"
                 variant="ghost"

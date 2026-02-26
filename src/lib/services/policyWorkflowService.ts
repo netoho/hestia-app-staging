@@ -1,16 +1,19 @@
 import { BaseService } from './base/BaseService';
-import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
+import { PolicyStatus, PaymentStatus } from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from './policyService';
+import { sendPolicyStatusUpdate } from './emailService';
+import { sendPolicyPendingApprovalNotification } from './notificationService';
 import { ServiceError, ErrorCode } from './types/errors';
 
 /**
  * Policy workflow state transitions
- * Simplified: COLLECTING_INFO → PENDING_APPROVAL → APPROVED → CANCELLED
+ * COLLECTING_INFO → PENDING_APPROVAL → ACTIVE → EXPIRED | CANCELLED
  */
 const ALLOWED_TRANSITIONS: Record<PolicyStatus, PolicyStatus[]> = {
   COLLECTING_INFO: ['PENDING_APPROVAL', 'CANCELLED'],
-  PENDING_APPROVAL: ['APPROVED', 'COLLECTING_INFO', 'CANCELLED'],
-  APPROVED: ['CANCELLED'],
+  PENDING_APPROVAL: ['ACTIVE', 'COLLECTING_INFO', 'CANCELLED'],
+  ACTIVE: ['EXPIRED', 'CANCELLED'],
+  EXPIRED: ['CANCELLED'],
   CANCELLED: [],
 };
 
@@ -80,6 +83,23 @@ class PolicyWorkflowService extends BaseService {
   }
 
   /**
+   * Check if all active payments for a policy are settled (COMPLETED).
+   * Returns true if no active payments exist or all are COMPLETED.
+   */
+  async areAllPaymentsSettled(policyId: string): Promise<boolean> {
+    const activePayments = await this.prisma.payment.findMany({
+      where: {
+        policyId,
+        status: { notIn: [PaymentStatus.CANCELLED, PaymentStatus.FAILED] },
+      },
+      select: { status: true, id: true },
+    });
+
+    if (activePayments.length === 0) return true;
+    return activePayments.every(p => p.status === PaymentStatus.COMPLETED);
+  }
+
+  /**
    * Validate requirements before transitioning to a status
    */
   private async validateStatusRequirements(
@@ -92,14 +112,22 @@ class PolicyWorkflowService extends BaseService {
         if (!allApproved) {
           return {
             valid: false,
-            error: 'All investigated actors must have approved investigations',
+            error: 'Todas las investigaciones de los actores deben estar aprobadas antes de activar la protección',
           };
         }
         break;
       }
 
-      case 'APPROVED':
+      case 'ACTIVE': {
+        const settled = await this.areAllPaymentsSettled(policy.id);
+        if (!settled) {
+          return {
+            valid: false,
+            error: 'Todos los pagos deben estar completados antes de activar la protección',
+          };
+        }
         break;
+      }
     }
 
     return { valid: true };
@@ -142,12 +170,24 @@ class PolicyWorkflowService extends BaseService {
       return { success: false, error: validation.error };
     }
 
+    // Calculate expiresAt when transitioning to ACTIVE
+    let expiresAt: Date | undefined;
+    if (newStatus === 'ACTIVE') {
+      expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + (policy.contractLength || 12));
+    }
+
     const updatedPolicy = await this.prisma.policy.update({
       where: { id: policyId },
       data: {
         status: newStatus,
         ...(notes && { reviewNotes: notes }),
-        ...(newStatus === 'APPROVED' && { approvedAt: new Date() }),
+        ...(newStatus === 'PENDING_APPROVAL' && { submittedAt: new Date() }),
+        ...(newStatus === 'ACTIVE' && {
+          approvedAt: new Date(),
+          activatedAt: new Date(),
+          expiresAt,
+        }),
       },
     });
 
@@ -164,111 +204,123 @@ class PolicyWorkflowService extends BaseService {
       performedById: userId,
     });
 
+    // Send email notification on ACTIVE
+    if (newStatus === 'ACTIVE' && policy.tenant?.email) {
+      const reviewer = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      sendPolicyStatusUpdate({
+        tenantEmail: policy.tenant.email,
+        tenantName: policy.tenant.firstName ?? undefined,
+        status: 'approved',
+        reviewerName: reviewer?.name ?? 'Equipo Hestia',
+      }).catch((err) => console.error('Failed to send approval email:', err));
+    }
+
+    // Notify admins when policy reaches PENDING_APPROVAL
+    if (newStatus === 'PENDING_APPROVAL') {
+      sendPolicyPendingApprovalNotification(policyId)
+        .catch((err) => console.error('Failed to send pending approval notification:', err));
+    }
+
     return { success: true, policy: updatedPolicy };
   }
 
   /**
-   * Activate a policy (separate from status transition)
-   * Sets activatedAt and calculates expiresAt from contractLength
+   * Auto-transition policy to PENDING_APPROVAL if all investigations are approved.
+   * Called after investigation approval or actor completion.
    */
-  async activatePolicy(
+  async tryAutoTransition(
     policyId: string,
-    userId: string,
-  ): Promise<{ success: boolean; error?: string }> {
+    performedBy: string = 'system',
+    performedById?: string,
+  ): Promise<boolean> {
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
-      select: { id: true, status: true, contractLength: true },
+      select: { status: true }
     });
 
-    if (!policy) {
-      return { success: false, error: 'Policy not found' };
+    if (!policy) return false;
+
+    // Only transition if currently in COLLECTING_INFO
+    if (policy.status !== PolicyStatus.COLLECTING_INFO) {
+      return false;
     }
 
-    if (policy.status !== 'APPROVED') {
-      return { success: false, error: 'Policy must be approved before activation' };
+    const allApproved = await this.checkAllInvestigationsApproved(policyId);
+    if (!allApproved) {
+      return false;
     }
 
-    const expirationDate = new Date();
-    expirationDate.setMonth(expirationDate.getMonth() + (policy.contractLength || 12));
+    await this.transitionPolicyStatus(
+      policyId,
+      PolicyStatus.PENDING_APPROVAL,
+      performedById ?? performedBy,
+      'All actor investigations approved',
+    );
 
-    await this.prisma.policy.update({
-      where: { id: policyId },
-      data: {
-        activatedAt: new Date(),
-        expiresAt: expirationDate,
+    await logPolicyActivity({
+      policyId,
+      action: 'status_transition',
+      description: 'Policy transitioned to pending approval',
+      details: {
+        fromStatus: PolicyStatus.COLLECTING_INFO,
+        toStatus: PolicyStatus.PENDING_APPROVAL,
+        reason: 'All actor investigations approved',
       },
+      performedByType: performedBy,
+      performedById,
     });
 
-    await logPolicyActivity({
-      policyId,
-      action: 'policy_activated',
-      description: 'Policy activated',
-      details: { expiresAt: expirationDate.toISOString() },
-      performedById: userId,
-    });
-
-    return { success: true };
+    return true;
   }
 
   /**
-   * Deactivate a policy (reset activatedAt)
+   * Expire all ACTIVE policies whose expiresAt has passed.
+   * Called by daily cron job.
    */
-  async deactivatePolicy(
-    policyId: string,
-    userId: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    const policy = await this.prisma.policy.findUnique({
-      where: { id: policyId },
-      select: { id: true, status: true, activatedAt: true },
+  async expireActivePolicies(): Promise<{ expired: number; errors: string[] }> {
+    const now = new Date();
+    const errors: string[] = [];
+
+    const expiredPolicies = await this.prisma.policy.findMany({
+      where: {
+        status: PolicyStatus.ACTIVE,
+        expiresAt: { lt: now },
+      },
+      select: { id: true, policyNumber: true },
     });
 
-    if (!policy) {
-      return { success: false, error: 'Policy not found' };
-    }
+    let expired = 0;
+    for (const policy of expiredPolicies) {
+      try {
+        await this.prisma.policy.update({
+          where: { id: policy.id },
+          data: { status: PolicyStatus.EXPIRED },
+        });
 
-    if (policy.status !== 'APPROVED') {
-      return { success: false, error: 'Policy must be approved to deactivate' };
-    }
+        await logPolicyActivity({
+          policyId: policy.id,
+          action: 'status_changed',
+          description: 'Policy expired automatically',
+          details: {
+            fromStatus: PolicyStatus.ACTIVE,
+            toStatus: PolicyStatus.EXPIRED,
+            reason: 'Contract period ended',
+          },
+          performedByType: 'system',
+        });
 
-    if (!policy.activatedAt) {
-      return { success: false, error: 'Policy is not currently active' };
-    }
-
-    await this.prisma.policy.update({
-      where: { id: policyId },
-      data: { activatedAt: null, expiresAt: null },
-    });
-
-    await logPolicyActivity({
-      policyId,
-      action: 'policy_deactivated',
-      description: 'Policy deactivated',
-      performedById: userId,
-    });
-
-    return { success: true };
-  }
-
-  /**
-   * Auto-transition policies in COLLECTING_INFO when all investigations approved
-   */
-  async autoTransitionPolicies(): Promise<void> {
-    const collectingPolicies = await this.prisma.policy.findMany({
-      where: { status: 'COLLECTING_INFO' },
-      select: { id: true },
-    });
-
-    for (const policy of collectingPolicies) {
-      const allApproved = await this.checkAllInvestigationsApproved(policy.id);
-      if (allApproved) {
-        await this.transitionPolicyStatus(
-          policy.id,
-          'PENDING_APPROVAL',
-          'system',
-          'Auto-transitioned: All actor investigations approved',
-        );
+        expired++;
+      } catch (error) {
+        const msg = `Policy ${policy.policyNumber}: ${error instanceof Error ? error.message : error}`;
+        console.error(`[POLICY-EXPIRY] ${msg}`);
+        errors.push(msg);
       }
     }
+
+    return { expired, errors };
   }
 
   /**
@@ -309,9 +361,9 @@ class PolicyWorkflowService extends BaseService {
         description: 'Pendiente de aprobación',
       },
       {
-        name: 'Aprobado',
-        statuses: ['APPROVED'],
-        description: 'Protección aprobada',
+        name: 'Activa',
+        statuses: ['ACTIVE'],
+        description: 'Protección activa',
       },
     ];
 
@@ -321,6 +373,11 @@ class PolicyWorkflowService extends BaseService {
         currentStepIndex = i;
         break;
       }
+    }
+
+    // EXPIRED = fully completed
+    if (policy.status === 'EXPIRED') {
+      currentStepIndex = workflowSteps.length;
     }
 
     const progress = workflowSteps.length > 1
@@ -347,12 +404,7 @@ class PolicyWorkflowService extends BaseService {
         }
         break;
       case 'PENDING_APPROVAL':
-        nextActions.push('Aprobar protección');
-        break;
-      case 'APPROVED':
-        if (!policy.activatedAt) {
-          nextActions.push('Activar protección');
-        }
+        nextActions.push('Aprobar y activar protección');
         break;
     }
 
@@ -373,7 +425,6 @@ export const isTransitionAllowed = policyWorkflowService.isTransitionAllowed.bin
 export const getAllowedNextStatuses = policyWorkflowService.getAllowedNextStatuses.bind(policyWorkflowService);
 export const checkAllInvestigationsApproved = policyWorkflowService.checkAllInvestigationsApproved.bind(policyWorkflowService);
 export const transitionPolicyStatus = policyWorkflowService.transitionPolicyStatus.bind(policyWorkflowService);
-export const activatePolicy = policyWorkflowService.activatePolicy.bind(policyWorkflowService);
-export const deactivatePolicy = policyWorkflowService.deactivatePolicy.bind(policyWorkflowService);
-export const autoTransitionPolicies = policyWorkflowService.autoTransitionPolicies.bind(policyWorkflowService);
+export const tryAutoTransition = policyWorkflowService.tryAutoTransition.bind(policyWorkflowService);
+export const expireActivePolicies = policyWorkflowService.expireActivePolicies.bind(policyWorkflowService);
 export const getPolicyWorkflowProgress = policyWorkflowService.getPolicyWorkflowProgress.bind(policyWorkflowService);

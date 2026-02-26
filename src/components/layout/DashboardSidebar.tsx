@@ -17,7 +17,7 @@ import {
 import Logo from '@/components/Logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { LogOut, ChevronDown, Settings, UserCircle, Bell } from 'lucide-react';
+import { LogOut, ChevronDown, UserCircle } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { t } from '@/lib/i18n';
@@ -105,7 +105,7 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start h-auto p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-10">
               <Avatar className="h-8 w-8 mr-2 group-data-[collapsible=icon]:mr-0">
-                <AvatarImage src={user.image || 'https://placehold.co/100x100.png'} alt={user.name || 'User'} data-ai-hint="user avatar" />
+                <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
                 <AvatarFallback>{user.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
               </Avatar>
               <div className="group-data-[collapsible=icon]:hidden text-left">
@@ -121,12 +121,6 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
             <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
               <UserCircle className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.profile}
             </DropdownMenuItem>
-            {/* <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}> */}
-            {/*   <Settings className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.settings} */}
-            {/* </DropdownMenuItem> */}
-            {/* <DropdownMenuItem> */}
-            {/*   <Bell className="mr-2 h-4 w-4" /> {t.layout.dashboardSidebar.userMenu.notifications} */}
-            {/* </DropdownMenuItem> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"

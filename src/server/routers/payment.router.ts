@@ -145,7 +145,7 @@ export const paymentRouter = createTRPCRouter({
         if (error instanceof Error && error.message.includes('already has pending payments')) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: 'Esta póliza ya tiene pagos pendientes. Use regenerar link para actualizar URLs expiradas.',
+            message: 'Esta protección ya tiene pagos pendientes. Use regenerar link para actualizar URLs expiradas.',
           });
         }
         throw error;
@@ -160,6 +160,7 @@ export const paymentRouter = createTRPCRouter({
   recordManualPayment: adminProcedure
     .input(z.object({
       policyId: z.string(),
+      paymentId: z.string().optional(),
       // Only allow types appropriate for manual payment entry
       type: z.enum([
         PaymentType.TENANT_PORTION,
@@ -175,6 +176,15 @@ export const paymentRouter = createTRPCRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        if (input.paymentId) {
+          return await paymentService.convertToManualPayment(input.paymentId, {
+            amount: input.amount,
+            paidBy: input.paidBy,
+            reference: input.reference,
+            description: input.description,
+            createdById: ctx.userId,
+          });
+        }
         return await paymentService.createManualPayment({
           ...input,
           createdById: ctx.userId,
@@ -183,7 +193,7 @@ export const paymentRouter = createTRPCRouter({
         if (error instanceof Error && error.message.includes('already completed')) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: `Ya existe un pago completado de tipo ${input.type} para esta póliza`,
+            message: `Ya existe un pago completado de tipo ${input.type} para esta protección`,
           });
         }
         throw error;
@@ -296,10 +306,11 @@ export const paymentRouter = createTRPCRouter({
         });
       }
 
-      if (payment.status !== PaymentStatus.PENDING && payment.status !== PaymentStatus.PENDING_VERIFICATION) {
+      const cancellableStatuses = [PaymentStatus.PENDING, PaymentStatus.PENDING_VERIFICATION, PaymentStatus.FAILED];
+      if (!cancellableStatuses.includes(payment.status)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Solo se pueden cancelar pagos pendientes',
+          message: 'Solo se pueden cancelar pagos pendientes o fallidos',
         });
       }
 
@@ -411,7 +422,7 @@ export const paymentRouter = createTRPCRouter({
       if (!policy) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Póliza no encontrada',
+          message: 'Protección no encontrada',
         });
       }
 

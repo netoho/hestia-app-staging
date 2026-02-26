@@ -173,7 +173,6 @@ export async function createPolicy(data: CreatePolicyData) {
 
 export async function getPolicies(params?: {
   status?: PolicyStatus | 'all';
-  paymentStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'all';
   search?: string;
   page?: number;
   limit?: number;
@@ -573,7 +572,7 @@ export async function validatePolicyNumber(policyNumber: string): Promise<{
   if (!isUnique) {
     return {
       isValid: false,
-      error: 'Este número de póliza ya existe',
+      error: 'Este número de protección ya existe',
     };
   }
 

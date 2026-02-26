@@ -3,6 +3,17 @@
 import { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { t } from '@/lib/i18n';
 
 // Local components
 import { PolicyHeader } from './components/PolicyHeader';
@@ -15,7 +26,7 @@ import { SectionHeader } from './components/SectionHeader';
 import { OverviewTab, LandlordTab, TenantTab, GuarantorsTab } from './tabs';
 
 // Hook
-import { usePolicyActions } from './hooks/usePolicyActions';
+import { usePolicyActions, type PendingActionType } from './hooks/usePolicyActions';
 import { trpc } from '@/lib/trpc/client';
 
 // Skeletons
@@ -120,9 +131,12 @@ export default function PolicyDetailsContent({
     markCompleteActor,
     isMarkingComplete,
     downloadingPdf,
+    pendingAction,
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
+    confirmPendingAction,
+    cancelPendingAction,
     handleMarkComplete,
     handleDownloadPdf,
     handleEditActor,
@@ -131,26 +145,13 @@ export default function PolicyDetailsContent({
     closeMarkComplete,
   } = usePolicyActions({ policyId, policyNumber: policy.policyNumber, onRefresh });
 
-  // Check if all actors are approved
-  const checkAllActorsApproved = () => {
-    if (!policy) return false;
-
-    const landlordsApproved = policy.landlords?.length > 0 &&
-      policy.landlords.filter((l: any) => l.isPrimary).every((l: any) => l.verificationStatus === 'APPROVED');
-    const tenantApproved = policy.tenant?.verificationStatus === 'APPROVED';
-    const jointObligorsApproved = !policy.jointObligors?.length ||
-      policy.jointObligors.every((jo: any) => jo.verificationStatus === 'APPROVED');
-    const avalsApproved = !policy.avals?.length ||
-      policy.avals.every((a: any) => a.verificationStatus === 'APPROVED');
-
-    return landlordsApproved && tenantApproved && jointObligorsApproved && avalsApproved;
-  };
-
-  // Calculate payment stats
-  const completedPayments = policy.payments?.filter(
-    (p: { status: string }) => p.status === 'COMPLETED'
-  ).length ?? 0;
-  const totalPayments = policy.payments?.length ?? 0;
+  // Calculate payment stats (exclude cancelled, failed, and historical/replaced-tenant payments)
+  const activePayments = policy.payments?.filter(
+    (p: { status: string; paidByTenantName?: string | null }) =>
+      p.status !== 'CANCELLED' && p.status !== 'FAILED' && !p.paidByTenantName
+  ) ?? [];
+  const completedPayments = activePayments.filter((p: { status: string }) => p.status === 'COMPLETED').length;
+  const totalPayments = activePayments.length;
 
   // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {
@@ -218,8 +219,6 @@ export default function PolicyDetailsContent({
           policyId={policyId}
           permissions={permissions}
           isStaffOrAdmin={isStaffOrAdmin}
-          allActorsApproved={checkAllActorsApproved()}
-          progressOverall={policy.progress?.overall}
           sending={sending}
           downloadingPdf={downloadingPdf}
           isRefreshing={isRefreshing}
@@ -419,6 +418,48 @@ export default function PolicyDetailsContent({
         isPending={isMarkingComplete}
         onMarkComplete={handleMarkComplete}
       />
+
+      {/* Confirmation dialog for approve */}
+      <ConfirmActionDialog
+        pendingAction={pendingAction}
+        onConfirm={confirmPendingAction}
+        onCancel={cancelPendingAction}
+      />
     </div>
+  );
+}
+
+const ACTION_DIALOG_CONFIG: Record<Exclude<PendingActionType, null>, { title: string; description: string }> = {
+  approve: {
+    title: t.pages.policies.approvePolicy,
+    description: '¿Estás seguro de que deseas aprobar y activar esta protección?',
+  },
+};
+
+function ConfirmActionDialog({
+  pendingAction,
+  onConfirm,
+  onCancel,
+}: {
+  pendingAction: PendingActionType;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!pendingAction) return null;
+  const config = ACTION_DIALOG_CONFIG[pendingAction];
+
+  return (
+    <AlertDialog open onOpenChange={(open) => !open && onCancel()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{config.title}</AlertDialogTitle>
+          <AlertDialogDescription>{config.description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Confirmar</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

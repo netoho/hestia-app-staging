@@ -26,9 +26,9 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center" role="status" aria-label={t.misc.loading}>
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Cargando...</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t.misc.loading}</p>
         </div>
       </div>
     );
@@ -53,7 +53,7 @@ export default function DashboardPage() {
             <FileText className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
             <p className="text-xs text-muted-foreground">{t.pages.dashboard.ownerCards.managedBy}</p>
             <Button asChild variant="link" className="px-0 mt-2">
               <Link href="/dashboard/policies">{t.pages.dashboard.ownerCards.viewPolicies}</Link>
@@ -66,7 +66,7 @@ export default function DashboardPage() {
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12,500.00</div>
+            <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
             <p className="text-xs text-muted-foreground">{t.pages.dashboard.ownerCards.acrossAll}</p>
              <Button asChild variant="link" className="px-0 mt-2">
               <Link href="/dashboard/payments">{t.pages.dashboard.ownerCards.viewPayments}</Link>
@@ -128,7 +128,7 @@ export default function DashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,280</div>
+            <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
             <p className="text-xs text-muted-foreground">{t.pages.dashboard.staffCards.thisMonth}</p>
             <Button asChild variant="link" className="px-0 mt-2">
               <Link href="/dashboard/users">{t.pages.dashboard.staffCards.manageUsers}</Link>
@@ -141,7 +141,7 @@ export default function DashboardPage() {
             <ListChecks className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">15</div>
+            <div className="text-2xl font-bold text-muted-foreground">&mdash;</div>
             <p className="text-xs text-muted-foreground">{t.pages.dashboard.staffCards.requireReview}</p>
              <Button asChild variant="link" className="px-0 mt-2">
               <Link href="/dashboard/policies?status=pending">{t.pages.dashboard.staffCards.reviewPolicies}</Link>

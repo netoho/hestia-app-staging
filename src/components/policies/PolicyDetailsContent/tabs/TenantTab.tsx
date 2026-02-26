@@ -13,10 +13,10 @@ import { UserMinus, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatFullName } from '@/lib/utils/names';
-import { PolicyStatusType } from '@/lib/prisma-types';
+import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
 // Statuses that allow tenant replacement
-const REPLACEABLE_STATUSES: PolicyStatusType[] = ['COLLECTING_INFO', 'PENDING_APPROVAL'];
+const REPLACEABLE_STATUSES: PolicyStatus[] = ['COLLECTING_INFO', 'PENDING_APPROVAL'];
 
 interface TenantTabProps {
   tenant: any;
@@ -32,7 +32,7 @@ interface TenantTabProps {
   onMarkComplete: (type: ActorType, actorId: string, name: string) => void;
   isLoading?: boolean;
   isStaffOrAdmin?: boolean;
-  policyStatus?: PolicyStatusType;
+  policyStatus?: PolicyStatus;
   tenantHistory?: any[];
   onReplaceTenant?: () => void;
 }

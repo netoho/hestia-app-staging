@@ -30,18 +30,18 @@ const roleDescriptions = {
 const rolePermissions = {
   ADMIN: [
     'Gestión completa de usuarios y roles',
-    'Acceso total a todas las pólizas',
+    'Acceso total a todas las protecciones',
     // 'Configuración del sistema',
     // 'Reportes y análisis avanzados',
   ],
   STAFF: [
-    'Gestión de pólizas',
+    'Gestión de protecciones',
     'Revisión de documentación',
     // 'Comunicación con clientes',
     'Seguimiento de procesos',
   ],
   BROKER: [
-    'Creación de nuevas pólizas',
+    'Creación de nuevas protecciones',
     'Gestión de clientes propios',
     // 'Seguimiento de comisiones',
     // 'Acceso a herramientas de venta',

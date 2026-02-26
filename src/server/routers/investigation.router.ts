@@ -68,7 +68,7 @@ export const investigationRouter = createTRPCRouter({
    */
   create: adminProcedure
     .input(z.object({
-      policyId: z.string().cuid('ID de póliza inválido'),
+      policyId: z.string().cuid('ID de protección inválido'),
       actorType: InvestigatedActorTypeSchema,
       actorId: z.string().cuid('ID de actor inválido'),
     }))
@@ -274,7 +274,7 @@ export const investigationRouter = createTRPCRouter({
    */
   getByPolicy: protectedProcedure
     .input(z.object({
-      policyId: z.string().cuid('ID de póliza inválido'),
+      policyId: z.string().cuid('ID de protección inválido'),
       status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED']).optional(),
       includeArchived: z.boolean().optional().default(false),
     }))
@@ -601,14 +601,14 @@ export const investigationRouter = createTRPCRouter({
       if (!broker?.email) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'La póliza no tiene un broker asignado',
+          message: 'La protección no tiene un broker asignado',
         });
       }
 
       if (!primaryLandlord?.email) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'La póliza no tiene un arrendador principal con email',
+          message: 'La protección no tiene un arrendador principal con email',
         });
       }
 
@@ -1110,15 +1110,15 @@ export const investigationRouter = createTRPCRouter({
 
       // Auto-transition policy to PENDING_APPROVAL if all investigations are now approved
       try {
-        const { policyStatusService } = await import('@/lib/services/PolicyStatusService');
-        await policyStatusService.checkAndTransition(
+        const { tryAutoTransition } = await import('@/lib/services/policyWorkflowService');
+        await tryAutoTransition(
           investigation.policyId,
           'system',
           approvedBy,
         );
-      } catch {
+      } catch (error) {
         // Non-critical: log but don't fail the approval
-        console.error('Failed to auto-transition policy after investigation approval');
+        console.error('Failed to auto-transition policy after investigation approval:', error);
       }
 
       return {

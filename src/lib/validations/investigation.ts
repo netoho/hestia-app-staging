@@ -67,7 +67,7 @@ export type InvestigationApproveData = z.infer<typeof investigationApproveSchema
 // ============================================
 
 export const investigationCreateSchema = z.object({
-  policyId: z.string().cuid('ID de póliza inválido'),
+  policyId: z.string().cuid('ID de protección inválido'),
   actorType: z.enum(InvestigatedActorTypeValues, {
     errorMap: () => ({ message: 'Tipo de actor inválido' }),
   }),
