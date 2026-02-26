@@ -15,7 +15,7 @@ interface ReminderResult {
 }
 
 /**
- * Send monthly receipt reminders to tenants with APPROVED policies.
+ * Send monthly receipt reminders to tenants with ACTIVE policies.
  * For each policy: check which receipts are missing for the current month,
  * generate/renew tenant token, send reminder email, log to ReminderLog.
  */

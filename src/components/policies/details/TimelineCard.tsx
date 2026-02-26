@@ -63,15 +63,21 @@ export default function TimelineCard({
               </div>
             </div>
           )}
-          {expiresAt && (
-            <div className="flex items-center gap-3">
-              <CalendarClock className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="font-medium">Fecha de Vencimiento</p>
-                <p className="text-sm text-gray-600">{formatDateTime(expiresAt)}</p>
+          {expiresAt && (() => {
+            const isExpired = new Date(expiresAt) < new Date();
+            return (
+              <div className="flex items-center gap-3">
+                <CalendarClock className={`h-5 w-5 ${isExpired ? 'text-red-500' : 'text-orange-500'}`} />
+                <div>
+                  <p className={`font-medium ${isExpired ? 'text-red-600' : ''}`}>
+                    {isExpired ? 'Expirada' : 'Expira'}
+                    {' el '}
+                    {formatDateTime(expiresAt)}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </CardContent>
     </Card>

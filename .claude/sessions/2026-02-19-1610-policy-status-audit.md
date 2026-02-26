@@ -145,3 +145,89 @@ Eliminated `policy.paymentStatus` entirely. It was a denormalized field written 
 - 3 dismissed (ACTIVE-only for tenant receipts is intentional design)
 
 **Build**: `bun run build` ✅
+
+---
+
+### Update — 2026-02-23
+
+**Summary**: Deep post-session audit (4 parallel agents, 60+ files). Found 7 issues — all fixed.
+
+**Audit Scope**: Schema, services, routes, frontend, i18n, config, enums, cron, webhook, seed, email templates, PDF generation, types, Zod schemas.
+
+**Verdict**: All original session goals correctly implemented. No stale APPROVED, no paymentStatus on Policy, no activate/deactivate remnants.
+
+**Fixes Applied (1 commit)**:
+- `977308a` — post-audit cleanup:
+  1. Deleted deprecated `PolicyStatusActions.tsx` (returned null, unused)
+  2. Fixed stale "APPROVED" → "ACTIVE" in receiptReminderService JSDoc
+  3. Translated English error to Spanish in policyWorkflowService
+  4. Distinct badge variants: COLLECTING_INFO→outline, PENDING_APPROVAL→secondary
+  5. TimelineCard: "Expirada el" (red) vs "Expira el" for expired/future policies
+  6. Cancel modal: clarified pending payments won't be charged
+  7. Deleted 14 `.bak` files (gitignored, not in commit)
+
+**Git Changes**:
+- Deleted: `src/components/policy-details/PolicyStatusActions.tsx`
+- Modified: `CancelPolicyModal.tsx`, `TimelineCard.tsx`, `policyStatus.ts`, `policyWorkflowService.ts`, `receiptReminderService.ts`
+- Branch: `fix/payment-policy-state-machine` (commit: 977308a)
+- 2 commits ahead of origin
+
+**Build**: `bun run build` ✅
+
+---
+
+## Session Closed — 2026-02-24
+
+**Duration:** ~5 days (2026-02-19 16:10 → 2026-02-24)
+
+### Final Git Summary
+- **Branch:** `fix/payment-policy-state-machine`
+- **Final commit:** `977308a`
+- **Total commits (session):** 8 (de14a1e → 977308a)
+- **Total files changed:** 25 (net: +356 / −486 lines)
+- **Working tree:** clean
+
+**Changed files:**
+- **Deleted:** `PolicyStatusService.ts`, `PolicyStatusActions.tsx`, 2 stale plan files
+- **Added:** `policy-expiry/route.ts` (cron), 2 migration SQL files
+- **Modified (schema):** `schema.prisma` (enum + drop paymentStatus)
+- **Modified (services):** `policyWorkflowService.ts`, `paymentService.ts`, `receiptService.ts`, `receiptReminderService.ts`, `policyService/index.ts`
+- **Modified (routes):** `policy.router.ts`, `receipt.router.ts`, `payment.router.ts`, `investigation.router.ts`
+- **Modified (webhook):** `stripe/route.ts`
+- **Modified (frontend):** `PolicyDetailsContent.tsx`, `PolicyHeader.tsx`, `PolicyStatusIndicators.tsx`, `PolicyProgressBar.tsx`, `PaymentsTab.tsx`, `ManualPaymentDialog.tsx`, `PaymentCard.tsx`, `TimelineCard.tsx`, `CancelPolicyModal.tsx`
+- **Modified (config/i18n):** `policyStatus.ts`, `statuses.ts`, `policies.ts`, `policy.ts`
+- **Modified (other):** `vercel.json`, `docs/POLICY_STATUS.md`, `CLAUDE.md`
+
+### All Goals Completed ✅
+1. ✓ PolicyStatus enum: APPROVED → ACTIVE + EXPIRED
+2. ✓ Deleted PolicyStatusService, consolidated into PolicyWorkflowService
+3. ✓ Removed activate/deactivate endpoints and UI
+4. ✓ Receipt queries use ACTIVE instead of APPROVED+activatedAt
+5. ✓ Daily cron for auto-expiring policies (`/api/cron/policy-expiry`)
+6. ✓ Migration SQL (with TEXT intermediate column fix)
+7. ✓ Dropped stale `policy.paymentStatus` — ACTIVE gate queries payments directly
+8. ✓ Fixed payment progress bars (exclude cancelled/failed/historical)
+9. ✓ Fixed ManualPaymentDialog (converts existing payments, no duplicates)
+10. ✓ Fixed webhook allComplete check
+11. ✓ PR #69 Copilot review fixes
+12. ✓ Post-audit cleanup (dead code, i18n, UX improvements)
+
+### Key Architecture Decisions
+1. **Eliminated `policy.paymentStatus`** — denormalized field written from 10+ paths but always stale. ACTIVE gate now queries payments directly. Simpler, always correct.
+2. **No activate/deactivate flow** — approval transitions directly to ACTIVE when all payments settled + investigations approved.
+3. **Cron-based expiry** — daily job checks `expiresAt < now` for ACTIVE policies → EXPIRED.
+
+### Problems & Solutions
+| Problem | Solution |
+|---------|----------|
+| Migration SQL `current transaction aborted` | Removed explicit BEGIN/COMMIT; use TEXT intermediate column |
+| paymentStatus always stale | Eliminated field entirely; query payments at transition time |
+| Progress bar >100% | Capped with `Math.min`, `isComplete` uses `>=` |
+| Duplicate manual payments | Dialog now converts existing PENDING payment via paymentId |
+
+### Tips for Future Work
+- `PolicyStatus` enum: `COLLECTING_INFO → PENDING_APPROVAL → ACTIVE → EXPIRED → CANCELLED`
+- ACTIVE gate requires: all investigations APPROVED + all payments COMPLETED
+- `activatedAt` is still stored for receipt month calculations — it's a data field, not an activation gate
+- See `docs/POLICY_STATUS.md` for full transition diagram
+- 14 `.bak` files were deleted locally but were gitignored — won't appear in commits
