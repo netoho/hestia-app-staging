@@ -57,7 +57,7 @@ export function InlineDocumentManager({
             {hasDocuments ? (
               <CheckCircle className="h-5 w-5 text-green-500" />
             ) : (
-              <Upload className="h-5 w-5 text-gray-400" />
+              <Upload className="h-5 w-5 text-muted-foreground/60" />
             )}
             <span className={hasDocuments ? 'text-green-700 font-medium' : ''}>
               {label}

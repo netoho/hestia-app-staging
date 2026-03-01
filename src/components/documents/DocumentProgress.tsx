@@ -64,11 +64,11 @@ export function DocumentProgress({
               <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
               <span className="text-blue-600">Subiendo...</span>
             </div>
-            <span className="text-gray-600">{percentage}%</span>
+            <span className="text-muted-foreground">{percentage}%</span>
           </div>
           <Progress value={percentage} className="h-2" />
           {showBytes && total > 0 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {formatFileSize(loaded)} de {formatFileSize(total)}
             </p>
           )}

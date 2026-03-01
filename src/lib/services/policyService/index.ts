@@ -470,40 +470,6 @@ export async function getPolicyById(id: string) {
   });
 }
 
-export async function updatePolicyStatus(
-  id: string,
-  status: PolicyStatus,
-  userId: string,
-  reviewNotes?: string,
-  reviewReason?: string
-) {
-  return prisma.policy.update({
-    where: { id },
-    data: {
-      status,
-      managedById: userId,
-      // reviewedAt: new Date(),
-      ...(reviewNotes && { reviewNotes }),
-    },
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        }
-      },
-      managedBy: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        }
-      }
-    }
-  });
-}
-
 
 export async function logPolicyActivity(data: logPolicyActivityParams) {
   const {

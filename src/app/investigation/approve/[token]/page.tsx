@@ -39,7 +39,7 @@ export default function InvestigationApprovalPage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando investigación...</p>
@@ -50,7 +50,7 @@ export default function InvestigationApprovalPage({ params }: PageProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-muted/50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <div className="flex items-center gap-2 text-destructive">
@@ -74,7 +74,7 @@ export default function InvestigationApprovalPage({ params }: PageProps) {
 
   if (!investigation) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-muted/50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <div className="flex items-center gap-2 text-destructive">
@@ -95,7 +95,7 @@ export default function InvestigationApprovalPage({ params }: PageProps) {
   // Completion screen
   if (completed && completedStatus) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-muted/50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             {completedStatus === 'APPROVED' ? (
@@ -121,7 +121,7 @@ export default function InvestigationApprovalPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/50">
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">

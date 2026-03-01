@@ -16,7 +16,7 @@ export function InfoField({ label, value, mono }: { label: string; value: React.
   if (value === null || value === undefined || value === '') return null;
   return (
     <div>
-      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p className={`font-medium ${mono ? 'font-mono' : ''}`}>{value}</p>
     </div>
   );
@@ -27,8 +27,8 @@ function Field({ label, value, mono }: { label: string; value: React.ReactNode; 
   const isEmpty = value === null || value === undefined || value === '' || value === '-';
   return (
     <div>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className={isEmpty ? 'text-gray-400' : `font-medium ${mono ? 'font-mono' : ''}`}>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={isEmpty ? 'text-muted-foreground/60' : `font-medium ${mono ? 'font-mono' : ''}`}>
         {isEmpty ? '-' : value}
       </p>
     </div>
@@ -43,8 +43,8 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
   return (
     <Collapsible defaultOpen={defaultOpen} className="border-b border-gray-100">
       <CollapsibleTrigger className="flex w-full items-center justify-between py-3 group">
-        <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">{title}</h4>
-        <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-data-[state=open]:rotate-180" />
+        <h4 className="font-semibold text-sm text-foreground uppercase tracking-wider">{title}</h4>
+        <ChevronDown className="h-4 w-4 text-muted-foreground/60 transition-transform group-data-[state=open]:rotate-180" />
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 pb-4">
@@ -61,10 +61,10 @@ function ReferenceCard({ name, phone, relationship, email, occupation }: {
   return (
     <Card className="p-3">
       <p className="font-medium text-base">{name}</p>
-      {relationship && <p className="text-sm text-gray-600">{relationship}</p>}
-      {occupation && <p className="text-sm text-gray-600">{occupation}</p>}
-      <p className="text-sm text-gray-600">{phone}</p>
-      {email && <p className="text-sm text-gray-600 truncate">{email}</p>}
+      {relationship && <p className="text-sm text-muted-foreground">{relationship}</p>}
+      {occupation && <p className="text-sm text-muted-foreground">{occupation}</p>}
+      <p className="text-sm text-muted-foreground">{phone}</p>
+      {email && <p className="text-sm text-muted-foreground truncate">{email}</p>}
     </Card>
   );
 }
@@ -79,12 +79,12 @@ function CommercialReferenceCard({ data }: { data: any }) {
   return (
     <Card className="p-3">
       <p className="font-medium text-base">{data.companyName}</p>
-      <p className="text-sm text-gray-600">Contacto: {contactName}</p>
-      <p className="text-sm text-gray-600">{data.relationship}</p>
-      <p className="text-sm text-gray-600">{data.phone}</p>
-      {data.email && <p className="text-sm text-gray-600 truncate">{data.email}</p>}
+      <p className="text-sm text-muted-foreground">Contacto: {contactName}</p>
+      <p className="text-sm text-muted-foreground">{data.relationship}</p>
+      <p className="text-sm text-muted-foreground">{data.phone}</p>
+      {data.email && <p className="text-sm text-muted-foreground truncate">{data.email}</p>}
       {data.yearsOfRelationship != null && (
-        <p className="text-sm text-gray-600">{data.yearsOfRelationship} {data.yearsOfRelationship === 1 ? 'año' : 'años'} de relación</p>
+        <p className="text-sm text-muted-foreground">{data.yearsOfRelationship} {data.yearsOfRelationship === 1 ? 'año' : 'años'} de relación</p>
       )}
     </Card>
   );
@@ -271,12 +271,12 @@ function ReferencesSection({ actor }: { actor: any }) {
   return (
     <Section title="Referencias">
       {!hasRefs && (
-        <p className="col-span-full text-sm text-gray-400">Sin referencias</p>
+        <p className="col-span-full text-sm text-muted-foreground/60">Sin referencias</p>
       )}
       {personalRefs.length > 0 && (
         <div className="col-span-full">
           {commercialRefs.length > 0 && (
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Personales</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Personales</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {personalRefs.map((ref: any, i: number) => (
@@ -295,7 +295,7 @@ function ReferencesSection({ actor }: { actor: any }) {
       {commercialRefs.length > 0 && (
         <div className="col-span-full mt-2">
           {personalRefs.length > 0 && (
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Comerciales</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Comerciales</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {commercialRefs.map((ref: any, i: number) => (

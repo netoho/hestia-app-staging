@@ -92,10 +92,10 @@ export default class ErrorBoundary extends Component<
 
                 {/* Title and Description */}
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-foreground">
                     Algo salió mal
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Se produjo un error inesperado en la aplicación.
                   </p>
                 </div>
@@ -115,7 +115,7 @@ export default class ErrorBoundary extends Component<
                               <summary className="cursor-pointer hover:text-blue-600">
                                 Ver stack trace
                               </summary>
-                              <pre className="mt-2 overflow-auto p-2 bg-gray-50 rounded">
+                              <pre className="mt-2 overflow-auto p-2 bg-muted/50 rounded">
                                 {this.state.errorInfo.componentStack}
                               </pre>
                             </details>

@@ -3,24 +3,14 @@
 import { Home, User, Users, CheckSquare, Square } from 'lucide-react';
 import { formatFullName } from '@/lib/utils/names';
 import { ReactNode } from 'react';
+import { PolicyListActor } from './types';
 import { t } from '@/lib/i18n';
 
-interface Actor {
-  firstName?: string;
-  middleName?: string;
-  paternalLastName?: string;
-  maternalLastName?: string;
-  companyName?: string;
-  email?: string;
-  phone?: string;
-  informationComplete: boolean;
-}
-
 interface ActorsListProps {
-  landlords?: Actor[];
-  tenant?: Actor | null;
-  jointObligors?: Actor[];
-  avals?: Actor[];
+  landlords?: PolicyListActor[];
+  tenant?: PolicyListActor | null;
+  jointObligors?: PolicyListActor[];
+  avals?: PolicyListActor[];
   guarantorType?: string;
 }
 

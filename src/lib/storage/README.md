@@ -1,14 +1,12 @@
 # Storage Abstraction Layer
 
 **Status**: ✅ Production-Ready Multi-Provider Storage
-**Last Updated**: December 2024
-**Files**: 4 core files + 3 provider implementations
 
 ---
 
 ## Purpose
 
-Provider-agnostic file storage abstraction supporting AWS S3, Firebase Storage, and local filesystem. Enables switching storage backends without changing application code, facilitates testing with local storage, and provides consistent API across all providers.
+Provider-agnostic file storage abstraction supporting AWS S3 and local filesystem. Enables switching storage backends without changing application code, facilitates testing with local storage, and provides consistent API across all providers.
 
 ---
 
@@ -19,7 +17,6 @@ Provider-agnostic file storage abstraction supporting AWS S3, Firebase Storage, 
 ```
 StorageProvider (interface)
   ├─> S3StorageProvider (AWS S3)
-  ├─> FirebaseStorageProvider (Firebase Storage)
   └─> LocalStorageProvider (Local filesystem)
 
 getStorageProvider() → Configured provider (singleton)
@@ -44,12 +41,11 @@ export function getStorageProvider(): StorageProvider {
 
 ## Files
 
-- **index.ts** (61 lines) - Factory and exports
-- **types.ts** (110 lines) - Interfaces and types
-- **config.ts** (53 lines) - Configuration helper
-- **providers/s3.ts** (221 lines) - AWS S3 implementation
-- **providers/firebase.ts** (155 lines) - Firebase Storage
-- **providers/local.ts** (128 lines) - Local filesystem
+- **index.ts** - Factory and exports
+- **types.ts** - Interfaces and types
+- **config.ts** - Configuration helper
+- **providers/s3.ts** - AWS S3 implementation
+- **providers/local.ts** - Local filesystem
 
 ---
 
@@ -68,7 +64,6 @@ export function resetStorageInstance(): void; // Testing only
 ```typescript
 export function getStorageConfig(): StorageConfig;
 export function isUsingS3(): boolean;
-export function isUsingFirebase(): boolean;
 export function isUsingLocalStorage(): boolean;
 ```
 
@@ -80,7 +75,7 @@ export interface StorageFile { ... }
 export interface StorageUploadOptions { ... }
 export interface SignedUrlOptions { ... }
 export interface StorageFileMetadata { ... }
-export type StorageProviderType = 's3' | 'firebase' | 'local';
+export type StorageProviderType = 's3' | 'local';
 ```
 
 ---
@@ -177,14 +172,6 @@ AWS_S3_ACCESS_KEY_ID=AKIAxxxxx
 AWS_S3_SECRET_ACCESS_KEY=xxxxx
 ```
 
-**Firebase Storage**:
-```bash
-STORAGE_PROVIDER=firebase
-FIREBASE_STORAGE_BUCKET=hestia-app.appspot.com
-FIREBASE_PROJECT_ID=hestia-app
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-```
-
 **Local Storage** (Development):
 ```bash
 STORAGE_PROVIDER=local
@@ -193,7 +180,7 @@ LOCAL_STORAGE_PATH=./uploads
 
 ### config.ts
 
-**File**: `config.ts:1-53`
+**File**: `config.ts`
 
 ```typescript
 export function getStorageConfig(): StorageConfig {
@@ -209,16 +196,6 @@ export function getStorageConfig(): StorageConfig {
           region: process.env.AWS_S3_REGION!,
           accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID!,
           secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY!,
-        }
-      };
-
-    case 'firebase':
-      return {
-        provider: 'firebase',
-        firebase: {
-          bucketName: process.env.FIREBASE_STORAGE_BUCKET!,
-          projectId: process.env.FIREBASE_PROJECT_ID!,
-          keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
         }
       };
 
@@ -319,7 +296,7 @@ const deleted = await storage.delete('documents/old-file.pdf');
 
 ### S3StorageProvider
 
-**File**: `providers/s3.ts:1-221`
+**File**: `providers/s3.ts`
 
 **Features**:
 - Separate public/private buckets
@@ -358,44 +335,9 @@ await s3Provider.privateUpload({ path: 'docs/file.pdf', file });
 
 ---
 
-### FirebaseStorageProvider
-
-**File**: `providers/firebase.ts:1-155`
-
-**Features**:
-- Firebase Admin SDK integration
-- Token-based access control
-- Custom metadata support
-- Download tokens
-
-**Configuration**:
-```typescript
-{
-  provider: 'firebase',
-  firebase: {
-    bucketName: 'hestia-app.appspot.com',
-    projectId: 'hestia-app',
-    keyFilename: '/path/to/service-account.json'
-  }
-}
-```
-
-**Example Usage**:
-```typescript
-const firebaseProvider = new FirebaseStorageProvider({
-  bucketName: 'my-app.appspot.com',
-  projectId: 'my-app',
-  keyFilename: './service-account.json'
-});
-
-await firebaseProvider.upload({ path: 'uploads/file.pdf', file }, true);
-```
-
----
-
 ### LocalStorageProvider
 
-**File**: `providers/local.ts:1-128`
+**File**: `providers/local.ts`
 
 **Features**:
 - Local filesystem storage
@@ -638,7 +580,7 @@ AWS_S3_ACCESS_KEY_ID=AKIAxxxxx
 AWS_S3_SECRET_ACCESS_KEY=xxxxx
 ```
 
-**No code changes required!** Factory automatically creates correct provider.
+**No code changes required!** The factory automatically creates the correct provider.
 
 ---
 
@@ -844,9 +786,7 @@ await storage.upload({
 - **[/src/lib/services/documentService.ts](../services/README.md)** - Uses storage for document management
 - **[/src/lib/documentManagement/](../documentManagement/README.md)** - Document upload/download utilities
 - **[/src/lib/utils/filename.ts](../utils/README.md)** - Filename utilities
-- **[DEVELOPER_GUIDE.md](../../../docs/DEVELOPER_GUIDE.md)** - Main developer guide
 
 ---
 
-**Last Verified**: November 2024
 **Production Status**: ✅ S3 in Production, Local in Development

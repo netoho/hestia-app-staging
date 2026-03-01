@@ -140,7 +140,7 @@ export default function AdminReceiptsPage({ params }: ReceiptsPageProps) {
           <div className="px-3 py-1.5 rounded-full bg-green-100 text-green-700">
             {rt.admin.summary.uploaded}: {receipts.filter((r: any) => r.status === 'UPLOADED').length}
           </div>
-          <div className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
+          <div className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
             {rt.admin.summary.notApplicable}: {receipts.filter((r: any) => r.status === 'NOT_APPLICABLE').length}
           </div>
         </div>

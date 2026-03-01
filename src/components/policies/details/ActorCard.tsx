@@ -106,10 +106,10 @@ export default function ActorCard({
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <div className="h-12 w-12 mx-auto mb-4 text-gray-400">
+          <div className="h-12 w-12 mx-auto mb-4 text-muted-foreground/60">
             <ActorIcon className="h-5 w-5" />
           </div>
-          <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTitle(actorType).toLowerCase()}</p>
+          <p className="text-muted-foreground mb-4">No se ha capturado información del {getActorTitle(actorType).toLowerCase()}</p>
           {isStaffOrAdmin && (
             <Button onClick={() => {
               if (onEditClick) {
@@ -177,16 +177,16 @@ export default function ActorCard({
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0 mt-1">
+            <div className="p-2 bg-muted rounded-lg flex-shrink-0 mt-1">
               <ActorIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg">
                 {actorType === 'tenant' || actorType === 'landlord' ? getActorTitle(actorType) : displayName}
               </h3>
-              <p className="text-sm text-gray-600">{actor.email || 'Sin email'}</p>
+              <p className="text-sm text-muted-foreground">{actor.email || 'Sin email'}</p>
               {actor.phone && (
-                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                   <Phone className="h-4 w-4" />
                   {actor.phone}
                 </p>
@@ -285,19 +285,19 @@ export default function ActorCard({
 
         {/* Quick Stats - Responsive */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-          <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+          <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-purple-600">{actor.documents?.length || 0}</div>
-            <div className="text-xs sm:text-sm text-gray-600">Documentos</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Documentos</div>
           </div>
-          <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+          <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-green-600">
               {(actor.personalReferences?.length || 0) + (actor.commercialReferences?.length || 0)}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600">Referencias</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Referencias</div>
           </div>
-          <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+          <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
             <div className="text-base sm:text-lg font-bold text-blue-600">{progress}%</div>
-            <div className="text-xs sm:text-sm text-gray-600">Completo</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Completo</div>
           </div>
         </div>
 
@@ -311,7 +311,7 @@ export default function ActorCard({
 
         {/* Documents Section - Using InlineDocumentManager */}
         <div className="mt-6">
-          <h3 className="font-semibold text-base text-gray-700 uppercase tracking-wider mb-3">
+          <h3 className="font-semibold text-base text-foreground uppercase tracking-wider mb-3">
             Documentos
           </h3>
           <div className="space-y-3">

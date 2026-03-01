@@ -10,12 +10,17 @@ This directory contains configuration constants, field mappings, and static data
 constants/
 ├── actorConfig.ts              # Actor configuration and tabs
 ├── actorDocumentRequirements.ts # Required documents per actor type
+├── actorSectionConfig.ts       # Actor section configuration
 ├── actorTabFields.ts           # Common tab field utilities
-├── tenantTabFields.ts          # Tenant field mappings
-├── landlordTabFields.ts        # Landlord field mappings
 ├── avalTabFields.ts            # Aval field mappings
+├── businessConfig.ts           # Business-level configuration
+├── documentCategories.ts       # Document category validation config
+├── formMessages.ts             # Validation and UI messages
+├── investigationConfig.ts      # Investigation configuration
 ├── jointObligorTabFields.ts    # Joint Obligor field mappings
-└── formMessages.ts             # Validation and UI messages
+├── landlordTabFields.ts        # Landlord field mappings
+├── paymentConfig.ts            # Payment configuration
+└── tenantTabFields.ts          # Tenant field mappings
 ```
 
 ## Actor Configuration (`actorConfig.ts`)
@@ -107,74 +112,6 @@ export function getTenantTabFields(
   }
   return tenantIndividualTabFields[tab] || [];
 }
-
-// Check if tab is complete
-export function isTabComplete(
-  tab: string,
-  data: any,
-  actorType: 'INDIVIDUAL' | 'COMPANY'
-): boolean {
-  const fields = getTenantTabFields(tab, actorType);
-
-  return fields.every(field => {
-    const value = getNestedValue(data, field);
-    return value !== null && value !== undefined && value !== '';
-  });
-}
-```
-
-## Special Actor Features
-
-### Landlord - Multiple Support
-```typescript
-export const landlordTabFields = {
-  // ...fields
-  isPrimary: true, // One must be primary
-  ownershipPercentage: 0, // If co-ownership
-};
-
-export function validateLandlordArray(landlords: Landlord[]): boolean {
-  // Ensure exactly one primary
-  const primaryCount = landlords.filter(l => l.isPrimary).length;
-  return primaryCount === 1;
-}
-```
-
-### Aval - Mandatory Property
-```typescript
-export const avalTabFields = {
-  property: [
-    'hasPropertyGuarantee', // Always true
-    'propertyValue',
-    'propertyDeedNumber',
-    'propertyRegistry',
-    'maritalStatus',
-    'spouseName', // Required if married
-    // ...
-  ],
-};
-```
-
-### Joint Obligor - Flexible Guarantee
-```typescript
-export function getGuaranteeFields(
-  guaranteeMethod: 'income' | 'property'
-): string[] {
-  if (guaranteeMethod === 'income') {
-    return [
-      'bankName',
-      'accountHolder',
-      'monthlyIncome',
-    ];
-  } else {
-    return [
-      'propertyValue',
-      'propertyDeedNumber',
-      'guaranteePropertyDetails',
-      // ... property fields
-    ];
-  }
-}
 ```
 
 ## Form Messages (`formMessages.ts`)
@@ -214,33 +151,6 @@ export const formMessages = {
     uploading: 'Subiendo archivo...',
   },
 };
-```
-
-## Document Categories
-
-```typescript
-export const DOCUMENT_CATEGORIES = {
-  IDENTITY: {
-    label: 'Identificación',
-    types: ['ine', 'passport', 'drivers_license'],
-    maxFiles: 2,
-  },
-  ADDRESS: {
-    label: 'Comprobante de Domicilio',
-    types: ['utility_bill', 'bank_statement', 'lease'],
-    maxFiles: 1,
-  },
-  INCOME: {
-    label: 'Comprobante de Ingresos',
-    types: ['pay_stub', 'tax_return', 'bank_statement'],
-    maxFiles: 3,
-  },
-  PROPERTY: {
-    label: 'Documentos de Propiedad',
-    types: ['deed', 'tax_statement', 'registry'],
-    maxFiles: 5,
-  },
-} as const;
 ```
 
 ## Document Upload Validation (`documentCategories.ts`)
@@ -388,59 +298,6 @@ protected async validateRequiredDocuments(tenantId: string): AsyncResult<boolean
 }
 ```
 
-## Status Enums
-
-```typescript
-export const ACTOR_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETE: 'complete',
-  REJECTED: 'rejected',
-} as const;
-
-export const GUARANTEE_METHODS = {
-  INCOME: 'income',
-  PROPERTY: 'property',
-} as const;
-
-export const EMPLOYMENT_STATUS = {
-  EMPLOYED: 'employed',
-  SELF_EMPLOYED: 'self_employed',
-  UNEMPLOYED: 'unemployed',
-  RETIRED: 'retired',
-} as const;
-```
-
-## Validation Rules
-
-```typescript
-export const VALIDATION_RULES = {
-  name: {
-    min: 2,
-    max: 50,
-    pattern: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
-  },
-  email: {
-    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  },
-  phone: {
-    pattern: /^[0-9]{10}$/,
-    format: '### ### ####',
-  },
-  rfc: {
-    pattern: /^[A-Z]{3,4}[0-9]{6}[A-Z0-9]{3}$/,
-  },
-  curp: {
-    pattern: /^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z]{2}$/,
-  },
-  postalCode: {
-    pattern: /^[0-9]{5}$/,
-  },
-  income: {
-    min: 0,
-    max: 10000000,
-  },
-};
 ```
 
 ## Adding New Constants
@@ -483,21 +340,6 @@ export const actorConfig = {
 export * from './newActorTabFields';
 ```
 
-## Environment-Specific Constants
-
-```typescript
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-export const API_TIMEOUTS = {
-  default: isDevelopment ? 30000 : 10000,
-  upload: isDevelopment ? 60000 : 30000,
-};
-
-export const FEATURE_FLAGS = {
-  enableNewActor: process.env.NEXT_PUBLIC_ENABLE_NEW_ACTOR === 'true',
-  debugMode: isDevelopment,
-};
-```
 
 ## Best Practices
 

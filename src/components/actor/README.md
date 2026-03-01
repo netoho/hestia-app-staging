@@ -11,9 +11,7 @@ actor/
 ├── shared/                  # Reusable components
 │   ├── FormWizardProgress.tsx
 │   ├── FormWizardTabs.tsx
-│   ├── PersonInformation.tsx
-│   ├── CompanyInformation.tsx
-│   └── SaveTabButton.tsx
+│   └── DocumentProgressBar.tsx
 ├── tenant/                  # Tenant-specific components
 │   ├── TenantFormWizard.tsx
 │   └── [Tab Components]
@@ -26,7 +24,7 @@ actor/
 
 ### 1. FormWizard Pattern
 
-Each actor has a main wizard component that orchestrates the tab flow:
+Each actor has a main wizard component that orchestrates the tab flow. Components use React Hook Form (RHF suffix on form components) and manage tab-based state internally:
 
 ```tsx
 export default function TenantFormWizard({
@@ -36,28 +34,13 @@ export default function TenantFormWizard({
   onComplete,
   isAdminEdit = false,
 }) {
-  // State management
-  const formState = useActorFormState({
-    actorType: 'tenant',
-    initialData,
-    policy,
-    isAdminEdit,
-    token,
-  });
-
-  // Tab configuration
+  // Tab configuration based on actor type
   const tabs = formData.tenantType === 'COMPANY'
     ? config.companyTabs
     : config.personTabs;
 
-  // Wizard navigation
-  const wizard = useFormWizardTabs({
-    tabs,
-    isAdminEdit,
-  });
-
   return (
-    <FormWizardTabs tabs={tabs} activeTab={wizard.activeTab}>
+    <FormWizardTabs tabs={tabs} activeTab={activeTab}>
       {/* Tab content based on activeTab */}
     </FormWizardTabs>
   );
@@ -90,19 +73,7 @@ export default function TenantPersonalInfoTab({
 
 ### 3. State Management
 
-Forms use custom hooks for state management:
-
-```tsx
-const formState = useActorFormState({
-  actorType: 'tenant',
-  initialData,
-  policy,
-  isAdminEdit,
-  token,
-});
-
-const { formData, updateField, errors, setErrors } = formState;
-```
+Forms use React Hook Form for state management, with per-tab validation and save logic handled inside each wizard component.
 
 ## Key Components
 
@@ -129,37 +100,18 @@ Container for tab navigation and content:
 </FormWizardTabs>
 ```
 
-### SaveTabButton
-Handles partial saves with validation:
+### DocumentProgressBar
+Shows document upload progress for a given actor:
 ```tsx
-<SaveTabButton
-  onClick={handleSaveTab}
-  loading={isSaving}
-  disabled={!isValid}
+<DocumentProgressBar
+  uploaded={uploadedCount}
+  required={requiredCount}
 />
 ```
 
 ## Actor Type Handling
 
-Components adapt based on actor type (Individual vs Company):
-
-```tsx
-// Radio group for type selection
-<RadioGroup
-  value={formData.tenantType}
-  onValueChange={(value) => onFieldChange('tenantType', value)}
->
-  <RadioGroupItem value="INDIVIDUAL" />
-  <RadioGroupItem value="COMPANY" />
-</RadioGroup>
-
-// Conditional rendering
-{formData.tenantType === 'COMPANY' ? (
-  <CompanyInformation />
-) : (
-  <PersonInformation />
-)}
-```
+Components adapt based on actor type (Individual vs Company). Each wizard selects the appropriate tab set and renders different form fields based on the type selection.
 
 ## Validation Integration
 
@@ -193,31 +145,6 @@ const validatePersonalTab = useCallback(() => {
 5. **Final Submit**: Complete validation and submission
 
 ## Shared Components
-
-### PersonInformation
-Reusable person fields with Mexican naming:
-```tsx
-<PersonInformation
-  data={formData}
-  onChange={onFieldChange}
-  errors={errors}
-  disabled={disabled}
-  showEmploymentInfo={false}
-  showAdditionalContact={true}
-/>
-```
-
-### CompanyInformation
-Company-specific fields with legal rep:
-```tsx
-<CompanyInformation
-  data={formData}
-  onChange={onFieldChange}
-  errors={errors}
-  disabled={disabled}
-  showAdditionalFields={true}
-/>
-```
 
 ### AddressAutocomplete
 Smart address input with autocomplete:

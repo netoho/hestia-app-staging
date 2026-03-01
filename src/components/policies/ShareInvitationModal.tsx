@@ -224,8 +224,8 @@ export default function ShareInvitationModal({
           </div>
         ) : shareLinks.length === 0 ? (
           <div className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">
+            <AlertCircle className="h-12 w-12 text-muted-foreground/60 mx-auto mb-4" />
+            <p className="text-muted-foreground">
               No hay enlaces disponibles. Primero envía las invitaciones para generar los tokens.
             </p>
           </div>
@@ -274,7 +274,7 @@ export default function ShareInvitationModal({
                 return (
                   <div
                     key={link.actorId}
-                    className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       {/* Checkbox */}
@@ -290,13 +290,13 @@ export default function ShareInvitationModal({
                         <div className="flex items-start justify-between">
                           <div>
                             <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-500" />
+                              <User className="h-4 w-4 text-muted-foreground" />
                               <span className="font-semibold">{link.actorName}</span>
                               <Badge variant="outline" className="text-xs">
                                 {getActorTypeLabel(link.actorType)}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
                                 {link.email}
@@ -322,7 +322,7 @@ export default function ShareInvitationModal({
                         </div>
 
                         {/* URL Display */}
-                        <div className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs font-mono max-w-md">
+                        <div className="flex items-center gap-2 p-2 bg-muted rounded text-xs font-mono max-w-md">
                           <span className="flex-1 truncate">{link.url}</span>
                         </div>
 
@@ -381,7 +381,7 @@ export default function ShareInvitationModal({
                         </div>
 
                         {/* Expiry Info */}
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {expired ? (
                             <span className="text-red-600">
                               El token expiró el {formatDate(link.tokenExpiry)}

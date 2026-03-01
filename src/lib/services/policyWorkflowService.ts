@@ -2,8 +2,9 @@ import { BaseService } from './base/BaseService';
 import { PolicyStatus, PaymentStatus } from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from './policyService';
 import { sendPolicyStatusUpdate } from './emailService';
-import { sendPolicyPendingApprovalNotification } from './notificationService';
+import { sendPolicyPendingApprovalNotification, sendPolicyExpiryNotification } from './notificationService';
 import { ServiceError, ErrorCode } from './types/errors';
+import { addMonths } from 'date-fns';
 
 /**
  * Policy workflow state transitions
@@ -173,8 +174,7 @@ class PolicyWorkflowService extends BaseService {
     // Calculate expiresAt when transitioning to ACTIVE
     let expiresAt: Date | undefined;
     if (newStatus === 'ACTIVE') {
-      expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + (policy.contractLength || 12));
+      expiresAt = addMonths(new Date(), policy.contractLength || 12);
     }
 
     const updatedPolicy = await this.prisma.policy.update({
@@ -260,19 +260,6 @@ class PolicyWorkflowService extends BaseService {
       'All actor investigations approved',
     );
 
-    await logPolicyActivity({
-      policyId,
-      action: 'status_transition',
-      description: 'Policy transitioned to pending approval',
-      details: {
-        fromStatus: PolicyStatus.COLLECTING_INFO,
-        toStatus: PolicyStatus.PENDING_APPROVAL,
-        reason: 'All actor investigations approved',
-      },
-      performedByType: performedBy,
-      performedById,
-    });
-
     return true;
   }
 
@@ -311,6 +298,9 @@ class PolicyWorkflowService extends BaseService {
           },
           performedByType: 'system',
         });
+
+        sendPolicyExpiryNotification(policy.id)
+          .catch((err) => console.error('Failed to send expiry notification:', err));
 
         expired++;
       } catch (error) {

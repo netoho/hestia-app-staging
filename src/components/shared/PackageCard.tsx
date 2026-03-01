@@ -33,7 +33,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
     "flex flex-col h-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300",
     {
       "bg-primary text-white": isPremium,
-      "bg-gray-100": isStandard,
+      "bg-muted": isStandard,
       "bg-card": isBasic,
     }
   );
@@ -100,7 +100,7 @@ export function PackageCard({ packageItem }: PackageCardProps) {
   const buttonClasses = cn(
     "w-full text-lg py-6",
     {
-      "bg-white hover:bg-gray-100 text-primary": isPremium,
+      "bg-white hover:bg-muted text-primary": isPremium,
       "bg-primary hover:bg-primary/90 text-primary-foreground": isStandard,
       "bg-accent hover:bg-accent/90 text-accent-foreground": isBasic,
     }

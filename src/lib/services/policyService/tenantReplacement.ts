@@ -531,6 +531,7 @@ export async function replaceTenantOnPolicy(
         where: { id: input.policyId },
         data: {
           status: 'COLLECTING_INFO',
+          submittedAt: null,
           activatedAt: null,
           expiresAt: null,
         },

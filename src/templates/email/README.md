@@ -1,8 +1,7 @@
 # Hestia Email Templates
 
 **Status**: Production-Ready
-**Last Updated**: December 2024
-**Templates**: 10 React email templates
+**Templates**: 18 React email templates
 
 ---
 
@@ -15,16 +14,24 @@ Modern, responsive email templates using React Email library with Hestia brand g
 ```
 src/templates/email/
 ├── react-email/
-│   ├── ActorIncompleteReminderEmail.tsx  # Reminder for incomplete actors
-│   ├── ActorInvitationEmail.tsx          # Actor portal invitation
-│   ├── ActorRejectionEmail.tsx           # Actor rejection notification
-│   ├── JoinUsNotificationEmail.tsx       # New user signup notification
-│   ├── PasswordResetEmail.tsx            # Password reset link
-│   ├── PolicyCreatorSummaryEmail.tsx     # Policy summary for creators
-│   ├── PolicyInvitationEmail.tsx         # Policy invitation
-│   ├── PolicyStatusUpdateEmail.tsx       # Approval/denial notification
-│   ├── PolicySubmissionEmail.tsx         # Submission confirmation
-│   └── UserInvitationEmail.tsx           # User invitation to platform
+│   ├── ActorIncompleteReminderEmail.tsx      # Reminder for incomplete actors
+│   ├── ActorInvitationEmail.tsx              # Actor portal invitation
+│   ├── ActorRejectionEmail.tsx               # Actor rejection notification
+│   ├── AllPaymentsCompletedEmail.tsx         # All payments completed notification
+│   ├── InvestigationApprovalRequestEmail.tsx # Request approval for investigation
+│   ├── InvestigationResultEmail.tsx          # Investigation result notification
+│   ├── InvestigationSubmittedEmail.tsx       # Investigation submission confirmation
+│   ├── JoinUsNotificationEmail.tsx           # New user signup notification
+│   ├── PasswordResetEmail.tsx                # Password reset link
+│   ├── PaymentCompletedEmail.tsx             # Single payment completed notification
+│   ├── PolicyCancellationEmail.tsx           # Policy cancellation notification
+│   ├── PolicyCreatorSummaryEmail.tsx         # Policy summary for creators
+│   ├── PolicyInvitationEmail.tsx             # Policy invitation
+│   ├── PolicyStatusUpdateEmail.tsx           # Approval/denial notification
+│   ├── PolicySubmissionEmail.tsx             # Submission confirmation
+│   ├── ReceiptMagicLinkEmail.tsx             # Magic link for receipt access
+│   ├── ReceiptReminderEmail.tsx              # Receipt payment reminder
+│   └── UserInvitationEmail.tsx               # User invitation to platform
 └── README.md
 ```
 
@@ -35,12 +42,20 @@ src/templates/email/
 | `ActorIncompleteReminderEmail` | Remind actors to complete their information |
 | `ActorInvitationEmail` | Invite actors to submit their information |
 | `ActorRejectionEmail` | Notify actors of rejection with reason |
+| `AllPaymentsCompletedEmail` | Notify when all payments have been completed |
+| `InvestigationApprovalRequestEmail` | Request approval for an investigation |
+| `InvestigationResultEmail` | Notify of investigation result |
+| `InvestigationSubmittedEmail` | Confirm investigation submission |
 | `JoinUsNotificationEmail` | Welcome new users to platform |
 | `PasswordResetEmail` | Password reset with secure link |
+| `PaymentCompletedEmail` | Notify when a single payment is completed |
+| `PolicyCancellationEmail` | Notify of policy cancellation |
 | `PolicyCreatorSummaryEmail` | Summary for policy initiators |
 | `PolicyInvitationEmail` | Invite tenants to policy application |
 | `PolicyStatusUpdateEmail` | Approval/denial decisions |
 | `PolicySubmissionEmail` | Confirm receipt of application |
+| `ReceiptMagicLinkEmail` | Magic link for accessing a receipt |
+| `ReceiptReminderEmail` | Remind about pending receipt payment |
 | `UserInvitationEmail` | Invite users to join platform |
 
 ## Brand Guidelines

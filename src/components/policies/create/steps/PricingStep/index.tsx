@@ -114,7 +114,7 @@ export default function PricingStep({
                 </SelectContent>
               </Select>
               {pricingData.packageId && packages.find(p => p.id === pricingData.packageId) && (
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   {packages.find(p => p.id === pricingData.packageId)?.description}
                 </p>
               )}
@@ -153,7 +153,7 @@ export default function PricingStep({
 
         {/* Pricing Result */}
         {pricingResult && (
-          <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+          <div className="bg-muted/50 p-4 rounded-lg space-y-3">
             <h4 className="font-medium flex items-center gap-2">
               <Calculator className="h-4 w-4" />
               Resumen de Costos
@@ -290,7 +290,7 @@ export default function PricingStep({
                   )}
                 </div>
                 {pricingData.manualPrice && (
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-muted-foreground mt-2">
                     Total con IVA: {formatCurrency((pricingData.manualPrice || 0) * (1 + TAX_CONFIG.IVA_RATE))}
                   </p>
                 )}

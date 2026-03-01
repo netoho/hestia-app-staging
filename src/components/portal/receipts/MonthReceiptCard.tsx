@@ -73,7 +73,7 @@ export default function MonthReceiptCard({
               allDone
                 ? 'bg-green-100 text-green-700 border-green-200'
                 : noneStarted
-                  ? 'bg-gray-100 text-gray-600 border-gray-200'
+                  ? 'bg-muted text-muted-foreground border-gray-200'
                   : 'bg-amber-100 text-amber-700 border-amber-200'
             }
             variant="outline"

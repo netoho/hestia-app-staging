@@ -198,7 +198,7 @@ export default function TenantStepRHF({
             {/* Company Representative Fields (Optional) */}
             {isCompany && (
               <div className="border-l-2 border-blue-200 pl-4 space-y-4">
-                <h4 className="font-medium text-sm text-gray-700">
+                <h4 className="font-medium text-sm text-foreground">
                   {t.pages.createPolicy.steps.tenant.legalRepresentative}
                 </h4>
                 <div className="grid grid-cols-2 gap-4">

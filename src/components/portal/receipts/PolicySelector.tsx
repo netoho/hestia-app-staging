@@ -39,14 +39,14 @@ export default function PolicySelector({
             className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
               isActive
                 ? 'text-white border-transparent'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                : 'bg-white text-foreground border-gray-300 hover:border-gray-400'
             }`}
             style={isActive ? { backgroundColor: '#173459' } : undefined}
             onClick={() => onSelect(policy.policyId)}
           >
             <span>#{policy.policyNumber}</span>
             {addressSnippet && (
-              <span className={`ml-1 ${isActive ? 'text-blue-200' : 'text-gray-400'}`}>
+              <span className={`ml-1 ${isActive ? 'text-blue-200' : 'text-muted-foreground/60'}`}>
                 — {addressSnippet}
               </span>
             )}

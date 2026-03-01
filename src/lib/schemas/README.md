@@ -9,11 +9,16 @@ This directory contains the Zod schema definitions that form the backbone of our
 ```
 schemas/
 ├── shared/           # Reusable schema components
-│   ├── person.schema.ts
 │   ├── address.schema.ts
+│   ├── banking.schema.ts
 │   ├── company.schema.ts
 │   ├── contact.schema.ts
+│   ├── person.schema.ts
+│   ├── property.schema.ts
 │   └── references.schema.ts
+├── helpers.ts        # Schema helper utilities
+├── policy/          # Policy-level schemas
+│   └── wizard.ts
 ├── tenant/          # Tenant actor schemas
 ├── landlord/        # Landlord actor schemas
 ├── aval/           # Aval actor schemas
@@ -80,7 +85,7 @@ const guaranteeSchema = z.discriminatedUnion('guaranteeMethod', [
 - Supports multiple landlords per policy
 - Primary landlord designation
 - Financial data maps to Policy model
-- 5 tabs: owner-info, property-info, financial-info, documents
+- 4 tabs: owner-info, property-info, financial-info, documents
 
 ### Aval (`/aval/index.ts`)
 - Mandatory property guarantee

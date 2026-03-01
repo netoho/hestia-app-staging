@@ -133,7 +133,7 @@ export default function ReceiptDashboard({
             <h1 className="font-headline text-3xl md:text-4xl mb-2" style={{ color: '#173459' }}>
               {t.portal.title}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Bienvenido, {tenantName}
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function ReceiptDashboard({
               <div className="flex items-start gap-3">
                 <Home className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">{t.portal.propertyLabel}</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">{t.portal.propertyLabel}</p>
                   <p className="text-sm font-medium" style={{ color: '#173459' }}>
                     {formatAddress(selectedPolicy.propertyAddress)}
                   </p>
@@ -174,7 +174,7 @@ export default function ReceiptDashboard({
                 <div className="flex items-start gap-3">
                   <DollarSign className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Renta mensual</p>
+                    <p className="text-xs text-muted-foreground mb-0.5">Renta mensual</p>
                     <p className="text-sm font-medium" style={{ color: '#173459' }}>
                       ${selectedPolicy.rentAmount.toLocaleString('es-MX')} MXN
                     </p>
@@ -185,7 +185,7 @@ export default function ReceiptDashboard({
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Período</p>
+                    <p className="text-xs text-muted-foreground mb-0.5">Período</p>
                     <p className="text-sm font-medium" style={{ color: '#173459' }}>
                       {selectedPolicy.contractLength} meses
                     </p>

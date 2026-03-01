@@ -33,7 +33,7 @@ export default function ActorCardSkeleton() {
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="text-center p-2 bg-gray-50 rounded-lg">
+            <div key={i} className="text-center p-2 bg-muted/50 rounded-lg">
               <Shimmer className="h-6 w-8 mx-auto mb-1" />
               <Shimmer className="h-3 w-16 mx-auto" />
             </div>

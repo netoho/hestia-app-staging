@@ -33,7 +33,7 @@ export default function TimelineCard({
             <CheckCircle2 className="h-5 w-5 text-green-500" />
             <div>
               <p className="font-medium">Protección Creada</p>
-              <p className="text-sm text-gray-600">{formatDateTime(createdAt)}</p>
+              <p className="text-sm text-muted-foreground">{formatDateTime(createdAt)}</p>
             </div>
           </div>
           {submittedAt && (
@@ -41,7 +41,7 @@ export default function TimelineCard({
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
                 <p className="font-medium">Enviada para Investigación</p>
-                <p className="text-sm text-gray-600">{formatDateTime(submittedAt)}</p>
+                <p className="text-sm text-muted-foreground">{formatDateTime(submittedAt)}</p>
               </div>
             </div>
           )}
@@ -50,7 +50,7 @@ export default function TimelineCard({
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
                 <p className="font-medium">Protección Aprobada</p>
-                <p className="text-sm text-gray-600">{formatDateTime(approvedAt)}</p>
+                <p className="text-sm text-muted-foreground">{formatDateTime(approvedAt)}</p>
               </div>
             </div>
           )}
@@ -59,7 +59,7 @@ export default function TimelineCard({
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
                 <p className="font-medium">Protección Activada</p>
-                <p className="text-sm text-gray-600">{formatDateTime(activatedAt)}</p>
+                <p className="text-sm text-muted-foreground">{formatDateTime(activatedAt)}</p>
               </div>
             </div>
           )}

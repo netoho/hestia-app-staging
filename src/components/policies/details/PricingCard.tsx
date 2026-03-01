@@ -64,17 +64,17 @@ export default function PricingCard({
       <CardContent className="space-y-3">
         {packageData && (
           <div>
-            <p className="text-sm text-gray-600">Plan Seleccionado</p>
+            <p className="text-sm text-muted-foreground">Plan Seleccionado</p>
             <p className="font-medium">{packageData.name}</p>
           </div>
         )}
         <div>
-          <p className="text-sm text-gray-600">Precio Total</p>
+          <p className="text-sm text-muted-foreground">Precio Total</p>
           <p className="font-medium text-lg text-green-600">{formatCurrency(totalPrice)}</p>
         </div>
         {tenantPercentage !== undefined && landlordPercentage !== undefined && (
           <div>
-            <p className="text-sm text-gray-600">División del Pago</p>
+            <p className="text-sm text-muted-foreground">División del Pago</p>
             <div className="flex justify-between mt-1">
               <span className="text-sm">Inquilino: {tenantPercentage}%</span>
               <span className="text-sm">Arrendador: {landlordPercentage}%</span>
@@ -92,7 +92,7 @@ export default function PricingCard({
           </div>
         )}
         <div>
-          <p className="text-sm text-gray-600">Tipo de Garantía</p>
+          <p className="text-sm text-muted-foreground">Tipo de Garantía</p>
           <p className="font-medium">{getGuarantorTypeLabel(guarantorType)}</p>
         </div>
       </CardContent>

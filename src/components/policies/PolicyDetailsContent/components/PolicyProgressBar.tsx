@@ -21,17 +21,17 @@ function ProgressIndicator({ label, current, total, icon: Icon, onClick }: Progr
       onClick={onClick}
       className={cn(
         'flex items-center gap-2 px-3 py-2 rounded-lg transition-all',
-        onClick && 'hover:bg-gray-100 cursor-pointer',
+        onClick && 'hover:bg-muted cursor-pointer',
         !onClick && 'cursor-default'
       )}
     >
-      <Icon className={cn('h-4 w-4', isComplete ? 'text-green-600' : 'text-gray-500')} />
+      <Icon className={cn('h-4 w-4', isComplete ? 'text-green-600' : 'text-muted-foreground')} />
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={cn('font-semibold', isComplete ? 'text-green-600' : 'text-gray-900')}>
+      <span className={cn('font-semibold', isComplete ? 'text-green-600' : 'text-foreground')}>
         {hasData ? `${Math.min(current, total)}/${total}` : '—'}
       </span>
       {hasData && (
-        <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-20 h-3 bg-muted rounded-full overflow-hidden">
           <div
             className={cn(
               'h-full rounded-full transition-all duration-500',
@@ -69,7 +69,7 @@ export function PolicyProgressBar({
   onPaymentsClick,
 }: PolicyProgressBarProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-gray-50 rounded-lg p-2">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-muted/50 rounded-lg p-2">
       <ProgressIndicator
         label="Actores"
         current={completedActors}
@@ -77,7 +77,7 @@ export function PolicyProgressBar({
         icon={Users}
         onClick={onActorsClick}
       />
-      <div className="hidden sm:block w-px h-6 bg-gray-300" />
+      <div className="hidden sm:block w-px h-6 bg-border" />
       <ProgressIndicator
         label="Documentos"
         current={documentsUploaded}
@@ -85,7 +85,7 @@ export function PolicyProgressBar({
         icon={FileText}
         onClick={onDocumentsClick}
       />
-      <div className="hidden sm:block w-px h-6 bg-gray-300" />
+      <div className="hidden sm:block w-px h-6 bg-border" />
       <ProgressIndicator
         label="Pagos"
         current={completedPayments}

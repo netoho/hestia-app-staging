@@ -67,7 +67,7 @@ export default function ReceiptUploader({
   if (isUploading) {
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{t.upload.uploading}</span>
           <span>{operation.progress?.percentage ?? 0}%</span>
         </div>
@@ -92,16 +92,16 @@ export default function ReceiptUploader({
         className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
           isDragging
             ? 'border-blue-400 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+            : 'border-gray-300 hover:border-gray-400 hover:bg-muted/50'
         } ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
         onClick={() => fileInputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        <Upload className="h-5 w-5 mx-auto mb-1 text-gray-400" />
-        <p className="text-xs text-gray-500">{t.upload.dragDrop}</p>
-        <p className="text-xs text-gray-400 mt-1">{t.upload.maxSize}</p>
+        <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground/60" />
+        <p className="text-xs text-muted-foreground">{t.upload.dragDrop}</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">{t.upload.maxSize}</p>
         <input
           ref={fileInputRef}
           type="file"

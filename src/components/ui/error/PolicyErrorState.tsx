@@ -83,8 +83,8 @@ export default function PolicyErrorState({
       icon: AlertCircle,
       title: 'Error inesperado',
       description: error?.message || 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted/50',
       borderColor: 'border-gray-200'
     };
   };
@@ -104,13 +104,13 @@ export default function PolicyErrorState({
 
             {/* Title and Description */}
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-gray-900">{config.title}</h2>
-              <p className="text-gray-600">{config.description}</p>
+              <h2 className="text-2xl font-bold text-foreground">{config.title}</h2>
+              <p className="text-muted-foreground">{config.description}</p>
             </div>
 
             {/* Error Code */}
             {error?.code && (
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-muted-foreground">
                 Código de error: {error.code}
               </div>
             )}
