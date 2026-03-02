@@ -131,6 +131,7 @@ export default function PolicyDetailsContent({
     markCompleteActor,
     isMarkingComplete,
     downloadingPdf,
+    downloadingDocx,
     pendingAction,
     handleSendInvitations,
     sendIndividualInvitation,
@@ -139,6 +140,7 @@ export default function PolicyDetailsContent({
     cancelPendingAction,
     handleMarkComplete,
     handleDownloadPdf,
+    handleDownloadDocx,
     handleEditActor,
     handleMarkActorComplete,
     closeEditingActor,
@@ -221,12 +223,14 @@ export default function PolicyDetailsContent({
           isStaffOrAdmin={isStaffOrAdmin}
           sending={sending}
           downloadingPdf={downloadingPdf}
+          downloadingDocx={downloadingDocx}
           isRefreshing={isRefreshing}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
           onShareClick={() => setShowShareModal(true)}
           onCancelClick={() => setShowCancelModal(true)}
           onDownloadPdf={handleDownloadPdf}
+          onDownloadDocx={handleDownloadDocx}
           onRefresh={handleRefresh}
         />
 

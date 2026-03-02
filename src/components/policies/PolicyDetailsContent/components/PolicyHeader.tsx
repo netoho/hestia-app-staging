@@ -18,6 +18,7 @@ import {
   XCircle,
   MoreVertical,
   Download,
+  FileText,
   FileSearch,
   Receipt,
 } from 'lucide-react';
@@ -39,12 +40,14 @@ interface PolicyHeaderProps {
   isStaffOrAdmin: boolean;
   sending: string | null;
   downloadingPdf: boolean;
+  downloadingDocx: boolean;
   isRefreshing?: boolean;
   onSendInvitations: () => void;
   onApprove: () => void;
   onShareClick: () => void;
   onCancelClick: () => void;
   onDownloadPdf: () => void;
+  onDownloadDocx: () => void;
   onRefresh?: () => void;
 }
 
@@ -57,12 +60,14 @@ export function PolicyHeader({
   isStaffOrAdmin,
   sending,
   downloadingPdf,
+  downloadingDocx,
   isRefreshing,
   onSendInvitations,
   onApprove,
   onShareClick,
   onCancelClick,
   onDownloadPdf,
+  onDownloadDocx,
   onRefresh,
 }: PolicyHeaderProps) {
   const router = useRouter();
@@ -174,6 +179,16 @@ export function PolicyHeader({
               <Download className="mr-2 h-4 w-4" />
             )}
             {t.pages.policies.details.downloadPDF}
+          </DropdownMenuItem>
+
+          {/* Download Cover Page (.docx) */}
+          <DropdownMenuItem onClick={onDownloadDocx} disabled={downloadingDocx}>
+            {downloadingDocx ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="mr-2 h-4 w-4" />
+            )}
+            {t.pages.policies.details.downloadCover}
           </DropdownMenuItem>
 
           {/* Cancel Policy - Staff/Admin only */}
