@@ -1,5 +1,6 @@
 /**
  * Render the contract cover page as a .docx Document using the `docx` package.
+ * Matches the formatting of sample contracts in documents/contracts/screenshots/.
  */
 
 import {
@@ -14,257 +15,398 @@ import {
   BorderStyle,
   VerticalAlign,
   Packer,
-  HeadingLevel,
   TableLayoutType,
+  TextDirection,
+  ShadingType,
+  Header,
+  Footer,
+  PageNumber,
 } from 'docx';
 import type { CoverPageData, CoverActorData, CoverGuarantorProperty } from './types';
 
 // ─── Styling constants ──────────────────────────────────────────────
 const FONT = 'Arial';
-const FONT_SIZE = 22; // half-points → 11pt
-const FONT_SIZE_TITLE = 28; // 14pt
-const FONT_SIZE_SUBTITLE = 24; // 12pt
+const SZ = 20; // half-points → 10pt
+const SZ_TITLE = 26; // 13pt
+const SZ_SUBTITLE = 22; // 11pt
+const SZ_SMALL = 18; // 9pt
 
-const THIN_BORDER = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
-const TABLE_BORDERS = {
-  top: THIN_BORDER,
-  bottom: THIN_BORDER,
-  left: THIN_BORDER,
-  right: THIN_BORDER,
-  insideHorizontal: THIN_BORDER,
-  insideVertical: THIN_BORDER,
+const LABEL_BG = 'D6E4F0'; // Light blue
+
+const THIN = { style: BorderStyle.SINGLE as const, size: 1, color: '000000' };
+const BORDERS = {
+  top: THIN, bottom: THIN, left: THIN, right: THIN,
+  insideHorizontal: THIN, insideVertical: THIN,
 };
+const NO_BORDER = { style: BorderStyle.NONE as const, size: 0, color: 'FFFFFF' };
+const NO_BORDERS = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER };
+
+// Column widths for 5-column layout (vertical-label | label | value | label | value)
+const COL_VLABEL = 5;   // %
+const COL_LABEL = 14;   // %
+const COL_VALUE = 31;   // %
+// Total: 5 + 14 + 31 + 14 + 31 = 95... let's adjust
+// 5 + 15 + 30 + 15 + 35 = 100
+const W_VL = 5;
+const W_L1 = 15;
+const W_V1 = 30;
+const W_L2 = 15;
+const W_V2 = 35;
 
 // ─── Helpers ────────────────────────────────────────────────────────
-function text(value: string, bold = false, size = FONT_SIZE): TextRun {
+function txt(value: string, bold = false, size = SZ): TextRun {
   return new TextRun({ text: value, font: FONT, size, bold });
 }
 
-function labelCell(label: string, rowSpan?: number): TableCell {
-  return new TableCell({
-    children: [new Paragraph({ children: [text(label, true)], spacing: { before: 40, after: 40 } })],
-    width: { size: 30, type: WidthType.PERCENTAGE },
-    verticalAlign: VerticalAlign.CENTER,
-    ...(rowSpan && rowSpan > 1 ? { rowSpan } : {}),
+function para(value: string, bold = false, size = SZ, alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]): Paragraph {
+  return new Paragraph({
+    children: [txt(value, bold, size)],
+    alignment,
+    spacing: { before: 20, after: 20 },
   });
 }
 
-function valueCell(value: string, colSpan?: number): TableCell {
-  return new TableCell({
-    children: [new Paragraph({ children: [text(value)], spacing: { before: 40, after: 40 } })],
-    width: { size: 70, type: WidthType.PERCENTAGE },
-    verticalAlign: VerticalAlign.CENTER,
-    ...(colSpan && colSpan > 1 ? { columnSpan: colSpan } : {}),
-  });
-}
-
-function headerCell(value: string, colSpan?: number): TableCell {
+/** Vertical label cell — rotated text, light blue background, spans N rows */
+function vlabelCell(label: string, rowSpan: number): TableCell {
   return new TableCell({
     children: [new Paragraph({
-      children: [text(value, true, FONT_SIZE_SUBTITLE)],
+      children: [txt(label, true, SZ)],
       alignment: AlignmentType.CENTER,
-      spacing: { before: 60, after: 60 },
     })],
-    ...(colSpan && colSpan > 1 ? { columnSpan: colSpan } : {}),
+    textDirection: TextDirection.BOTTOM_TO_TOP_LEFT_TO_RIGHT,
+    shading: { fill: LABEL_BG, type: ShadingType.CLEAR },
+    verticalAlign: VerticalAlign.CENTER,
+    width: { size: W_VL, type: WidthType.PERCENTAGE },
+    rowSpan,
+  });
+}
+
+/** Bold label cell */
+function lbl(label: string, width = W_L1): TableCell {
+  return new TableCell({
+    children: [para(label, true)],
+    width: { size: width, type: WidthType.PERCENTAGE },
     verticalAlign: VerticalAlign.CENTER,
   });
 }
 
-function row(label: string, value: string): TableRow {
-  return new TableRow({ children: [labelCell(label), valueCell(value)] });
-}
-
-function sectionTitle(title: string): Paragraph {
-  return new Paragraph({
-    children: [text(title, true, FONT_SIZE_SUBTITLE)],
-    spacing: { before: 300, after: 100 },
+/** Value cell */
+function val(value: string, width = W_V1, colSpan?: number): TableCell {
+  return new TableCell({
+    children: [para(value)],
+    width: { size: width, type: WidthType.PERCENTAGE },
+    verticalAlign: VerticalAlign.CENTER,
+    ...(colSpan && colSpan > 1 ? { columnSpan: colSpan } : {}),
   });
 }
 
-function emptyParagraph(): Paragraph {
-  return new Paragraph({ children: [], spacing: { before: 100 } });
+/** Full-width value cell spanning label+value+label+value (4 cols) */
+function fullVal(value: string): TableCell {
+  return new TableCell({
+    children: [para(value)],
+    width: { size: W_L1 + W_V1 + W_L2 + W_V2, type: WidthType.PERCENTAGE },
+    columnSpan: 4,
+    verticalAlign: VerticalAlign.CENTER,
+  });
 }
 
-// ─── Actor table ────────────────────────────────────────────────────
-function actorTable(actor: CoverActorData): Table {
-  const rows: TableRow[] = [
-    new TableRow({ children: [headerCell(actor.label, 2)] }),
+/** Section sub-header row spanning all 5 cols */
+function subHeaderRow5(text: string): TableRow {
+  return new TableRow({
+    cantSplit: true,
+    children: [
+      new TableCell({
+        children: [para(text, true, SZ)],
+        columnSpan: 5,
+        verticalAlign: VerticalAlign.CENTER,
+      }),
+    ],
+  });
+}
+
+/** Standard 2-field row: | label1 | value1 | label2 | value2 | */
+function row2(l1: string, v1: string, l2: string, v2: string): TableRow {
+  return new TableRow({
+    cantSplit: true,
+    children: [lbl(l1), val(v1), lbl(l2, W_L2), val(v2, W_V2)],
+  });
+}
+
+/** Single wide-field row: | label | value (spanning 3 cols) | */
+function row1(label: string, value: string): TableRow {
+  return new TableRow({
+    cantSplit: true,
+    children: [lbl(label), val(value, W_V1 + W_L2 + W_V2, 3)],
+  });
+}
+
+// ─── Actor table (individual) ───────────────────────────────────────
+function individualActorRows(a: CoverActorData): TableRow[] {
+  return [
+    row2('Nombre:', a.name, 'Nacionalidad:', a.nationality),
+    row1('Domicilio:', a.address),
+    row2('Identificación:', a.identificationType, 'Número:', a.identificationNumber),
+    row2('RFC:', a.rfc, 'CURP', a.curp),
+    row2('Correo electrónico:', a.email, 'Teléfono:', a.phone),
   ];
+}
+
+// ─── Actor table (company) ──────────────────────────────────────────
+function companyActorRows(a: CoverActorData): TableRow[] {
+  return [
+    row2('Denominación:', a.name, 'Nacionalidad:', a.nationality),
+    row1('Domicilio:', a.address),
+    row1('RFC:', a.rfc),
+  ];
+}
+
+function companyConstitutionRows(a: CoverActorData): TableRow[] {
+  return [
+    subHeaderRow5('Datos de Constitución de la Persona Moral.'),
+    row2('Escritura:', a.constitutionDeed, 'Fecha:', a.constitutionDate),
+    row2('Notario:', a.constitutionNotary, 'Notaría:', a.constitutionNotaryNumber),
+    row1('Registro Público:', a.registryCity),
+    row2('Folio Registro Público:', a.registryFolio, 'Fecha Inscripción:', a.registryDate),
+  ];
+}
+
+function legalRepRows(a: CoverActorData): TableRow[] {
+  return [
+    row2('Nombre:', a.legalRepName, 'Cargo:', a.legalRepPosition),
+    row2('Identificación:', a.legalRepIdentificationType, 'Número:', a.legalRepIdentificationNumber),
+    row1('Domicilio:', a.legalRepAddress),
+    row2('Teléfono:', a.legalRepPhone, '', ''),
+    row2('RFC:', a.legalRepRfc, 'CURP:', a.legalRepCurp),
+    row2('Correo Electrónico Laboral:', a.legalRepWorkEmail, 'Correo Electrónico Personal:', a.legalRepEmail),
+    // Power of attorney
+    subHeaderRow5('Datos de la escritura de poderes'),
+    row2('Escritura:', a.powerDeed, 'Fecha:', a.powerDate),
+    row2('Notario:', a.powerNotary, 'Notaría:', a.powerNotaryNumber),
+  ];
+}
+
+/** Build a complete actor section as a single table with vertical label */
+function actorTable(actor: CoverActorData): Table {
+  let dataRows: TableRow[];
 
   if (actor.isCompany) {
-    rows.push(row('Denominación:', actor.name));
-    rows.push(row('Escritura Constitutiva:', actor.companyConstitution));
-    rows.push(row('Notario:', actor.notary));
-    rows.push(row('Registro Público:', actor.publicRegistry));
-    rows.push(row('Representante Legal:', actor.legalRepName));
-    rows.push(row('Identificación Rep.:', actor.legalRepId));
+    // Company: main info + constitution + legal rep (legal rep gets its own vertical label)
+    const mainRows = companyActorRows(actor);
+    const constRows = companyConstitutionRows(actor);
+    dataRows = [...mainRows, ...constRows];
   } else {
-    rows.push(row('Nombre:', actor.name));
+    dataRows = individualActorRows(actor);
   }
 
-  rows.push(row('Nacionalidad:', actor.nationality));
-  rows.push(row('Domicilio:', actor.address));
-  rows.push(row('Identificación:', actor.identificationType));
-  rows.push(row('No. Identificación:', actor.identificationNumber));
-  rows.push(row('RFC:', actor.rfc));
-  rows.push(row('CURP:', actor.curp));
-  rows.push(row('Email:', actor.email));
-  rows.push(row('Teléfono:', actor.phone));
+  const rowCount = dataRows.length;
+
+  // First row gets the vertical label cell
+  const rows: TableRow[] = [];
+  for (let i = 0; i < dataRows.length; i++) {
+    const existingCells = dataRows[i].options?.children || [];
+    if (i === 0) {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: [vlabelCell(actor.label, rowCount), ...existingCells],
+      }));
+    } else {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: existingCells,
+      }));
+    }
+  }
 
   return new Table({
     rows,
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: TABLE_BORDERS,
+    borders: BORDERS,
+    layout: TableLayoutType.FIXED,
+  });
+}
+
+/** Legal rep section as separate table with its own vertical label */
+function legalRepTable(actor: CoverActorData): Table {
+  const dataRows = legalRepRows(actor);
+  const rowCount = dataRows.length;
+
+  const rows: TableRow[] = [];
+  for (let i = 0; i < dataRows.length; i++) {
+    const existingCells = dataRows[i].options?.children || [];
+    if (i === 0) {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: [vlabelCell('Representante Legal.', rowCount), ...existingCells],
+      }));
+    } else {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: existingCells,
+      }));
+    }
+  }
+
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: BORDERS,
     layout: TableLayoutType.FIXED,
   });
 }
 
 // ─── Guarantor property table ───────────────────────────────────────
-function guarantorPropertyTable(prop: CoverGuarantorProperty, index: number): Table {
-  const label = `INMUEBLE DEL OBLIGADO${index > 0 ? ` ${index + 1}` : ''}`;
-  return new Table({
-    rows: [
-      new TableRow({ children: [headerCell(label, 2)] }),
-      row('Escritura:', prop.deedNumber),
-      row('Notario:', prop.notary),
-      row('Registro Público:', prop.publicRegistry),
-      row('Uso:', prop.useType),
-      row('Dirección:', prop.address),
-      row('Superficie Terreno:', prop.landArea),
-      row('Superficie Construcción:', prop.constructionArea),
-      row('Linderos/Colindancias:', prop.boundaries),
-    ],
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: TABLE_BORDERS,
-    layout: TableLayoutType.FIXED,
-  });
-}
-
-// ─── Contract terms table ───────────────────────────────────────────
-function contractTermsTable(data: CoverPageData): Table {
-  const ct = data.contractTerms;
-  const rows: TableRow[] = [
-    new TableRow({ children: [headerCell('CONDICIONES DEL ARRENDAMIENTO', 2)] }),
-    row('Inmueble:', ct.propertyAddress),
-    row('Cajones de estacionamiento:', ct.parkingSpaces),
-    row('Uso:', ct.propertyUse),
-    row('Renta Mensual:', ct.rentFormatted),
-    row('Renta en Letra:', ct.rentInWords),
-    row('Depósito en Garantía:', ct.securityDeposit),
-    row('Plazo:', ct.contractLength),
-    row('Fecha de Inicio:', ct.startDate),
-    row('Fecha de Término:', ct.endDate),
-    row('Fecha de Entrega:', ct.deliveryDate),
-    row('Mantenimiento:', ct.maintenanceFee),
-    row('Método de Pago:', ct.paymentMethod),
+function guarantorPropertyTable(prop: CoverGuarantorProperty): Table {
+  const dataRows: TableRow[] = [
+    row2('Escritura Número:', prop.deedNumber, 'Fecha de otorgamiento:', prop.deedDate),
+    row2('Notaría No:', prop.notaryNumber, 'Ciudad:', prop.city),
+    row2('', '', 'Notario:', prop.notaryName),
+    row2('Folio del Registro Público de la Propiedad:', prop.registryFolio, 'Fecha de inscripción:', prop.registryDate),
+    row1('Inscrita en el Registro Público de:', prop.registryCity),
+    row2('Tipo de Uso:', prop.useType, '', ''),
+    row1('Dirección:', prop.address),
+    row2('Superficie de Terreno:', prop.landArea, 'Superficie de Construcción:', prop.constructionArea),
   ];
 
-  // Bank details if payment method involves transfer
-  if (ct.bankName && ct.bankName !== '________________') {
-    rows.push(row('Banco:', ct.bankName));
-    rows.push(row('Titular de Cuenta:', ct.accountHolder));
-    rows.push(row('No. de Cuenta:', ct.accountNumber));
-    rows.push(row('CLABE:', ct.clabe));
+  // Boundary rows
+  if (prop.boundaries.length > 0) {
+    // First boundary gets the "Linderos y Colindancias" label
+    for (let i = 0; i < prop.boundaries.length; i++) {
+      const b = prop.boundaries[i];
+      if (i === 0) {
+        dataRows.push(row2('Linderos y Colindancias', '', b.direction + ':', b.value));
+      } else {
+        dataRows.push(row2('', '', b.direction + ':', b.value));
+      }
+    }
+  } else {
+    dataRows.push(row1('Linderos y Colindancias:', BLANK));
+  }
+
+  const rowCount = dataRows.length;
+  const rows: TableRow[] = [];
+  for (let i = 0; i < dataRows.length; i++) {
+    const existingCells = dataRows[i].options?.children || [];
+    if (i === 0) {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: [vlabelCell('Inmueble del Obligado Solidario y Fiador.', rowCount), ...existingCells],
+      }));
+    } else {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: existingCells,
+      }));
+    }
   }
 
   return new Table({
     rows,
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: TABLE_BORDERS,
+    borders: BORDERS,
     layout: TableLayoutType.FIXED,
   });
 }
 
-// ─── Signature block ────────────────────────────────────────────────
-function signatureBlock(parties: CoverPageData['signatureParties']): Table {
-  // Split into pairs for two-column layout
+// ─── Condiciones: Inmueble table ────────────────────────────────────
+function inmuebleTable(data: CoverPageData): Table {
+  const ct = data.contractTerms;
+  const dataRows: TableRow[] = [
+    row1('Ubicación:', ct.propertyAddress),
+    row1('Cajón(es) de estacionamiento:', ct.parkingSpaces),
+    row1('Uso:', ct.propertyUse),
+  ];
+
+  const rowCount = dataRows.length;
   const rows: TableRow[] = [];
-
-  for (let i = 0; i < parties.length; i += 2) {
-    const left = parties[i];
-    const right = parties[i + 1];
-
-    // Spacing row
-    rows.push(new TableRow({
-      children: [
-        new TableCell({
-          children: [emptyParagraph(), emptyParagraph(), emptyParagraph()],
-          borders: { top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
-        }),
-        new TableCell({
-          children: [emptyParagraph()],
-          borders: { top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
-        }),
-      ],
-    }));
-
-    // Signature line row
-    const noBorders = {
-      top: { style: BorderStyle.NONE as const, size: 0, color: 'FFFFFF' },
-      bottom: { style: BorderStyle.NONE as const, size: 0, color: 'FFFFFF' },
-      left: { style: BorderStyle.NONE as const, size: 0, color: 'FFFFFF' },
-      right: { style: BorderStyle.NONE as const, size: 0, color: 'FFFFFF' },
-    };
-
-    rows.push(new TableRow({
-      children: [
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [text('_______________________________')],
-              alignment: AlignmentType.CENTER,
-            }),
-            new Paragraph({
-              children: [text(left.name, true)],
-              alignment: AlignmentType.CENTER,
-            }),
-            new Paragraph({
-              children: [text(left.label)],
-              alignment: AlignmentType.CENTER,
-            }),
-          ],
-          borders: noBorders,
-          width: { size: 50, type: WidthType.PERCENTAGE },
-        }),
-        right
-          ? new TableCell({
-              children: [
-                new Paragraph({
-                  children: [text('_______________________________')],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  children: [text(right.name, true)],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  children: [text(right.label)],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
-              borders: noBorders,
-              width: { size: 50, type: WidthType.PERCENTAGE },
-            })
-          : new TableCell({
-              children: [emptyParagraph()],
-              borders: noBorders,
-              width: { size: 50, type: WidthType.PERCENTAGE },
-            }),
-      ],
-    }));
+  for (let i = 0; i < dataRows.length; i++) {
+    const existingCells = dataRows[i].options?.children || [];
+    if (i === 0) {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: [vlabelCell('Inmueble.', rowCount), ...existingCells],
+      }));
+    } else {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: existingCells,
+      }));
+    }
   }
 
   return new Table({
     rows,
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    },
+    borders: BORDERS,
+    layout: TableLayoutType.FIXED,
+  });
+}
+
+// ─── Condiciones: terms table ───────────────────────────────────────
+function condicionesTable(data: CoverPageData): Table {
+  const ct = data.contractTerms;
+  const dataRows: TableRow[] = [
+    row1('Monto de Renta:', ct.rentDisplay),
+    row1('Depósito en Garantía:', ct.securityDeposit),
+    row1('Plazo:', ct.contractLength),
+    row1('Fecha de Inicio:', ct.startDate),
+    row1('Fecha de Término:', ct.endDate),
+    row1('Fecha de Entrega Posesión:', ct.deliveryDate),
+    row1('Monto Mantenimiento:', ct.maintenanceFee),
+  ];
+
+  const rowCount = dataRows.length;
+  const rows: TableRow[] = [];
+  for (let i = 0; i < dataRows.length; i++) {
+    const existingCells = dataRows[i].options?.children || [];
+    if (i === 0) {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: [vlabelCell('Condiciones del arrendamiento.', rowCount), ...existingCells],
+      }));
+    } else {
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: existingCells,
+      }));
+    }
+  }
+
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: BORDERS,
+    layout: TableLayoutType.FIXED,
+  });
+}
+
+// ─── Método de pago table ───────────────────────────────────────────
+function metodoPagoTable(data: CoverPageData): Table {
+  const description = data.contractTerms.paymentMethodDescription;
+  // Split by newlines to handle multi-line payment descriptions
+  const lines = description.split('\n');
+  const paragraphs = lines.map((line, i) =>
+    new Paragraph({
+      children: [txt(line, i === 0, SZ)], // First line bold
+      spacing: { before: 20, after: 20 },
+    })
+  );
+
+  const dataCell = new TableCell({
+    children: paragraphs,
+    width: { size: 100 - W_VL, type: WidthType.PERCENTAGE },
+    columnSpan: 4,
+    verticalAlign: VerticalAlign.CENTER,
+  });
+
+  return new Table({
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        children: [vlabelCell('Método de pago.', 1), dataCell],
+      }),
+    ],
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: BORDERS,
     layout: TableLayoutType.FIXED,
   });
 }
@@ -275,76 +417,89 @@ export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> 
 
   // Title
   children.push(new Paragraph({
-    children: [text('CONTRATO DE ARRENDAMIENTO.', true, FONT_SIZE_TITLE)],
+    children: [txt('CONTRATO DE ARRENDAMIENTO.', true, SZ_TITLE)],
     alignment: AlignmentType.CENTER,
-    spacing: { after: 100 },
+    spacing: { after: 80 },
   }));
   children.push(new Paragraph({
-    children: [text('CARÁTULA.', true, FONT_SIZE_SUBTITLE)],
+    children: [txt('CARÁTULA.', true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
-    spacing: { after: 200 },
+    spacing: { after: 80 },
+  }));
+  children.push(new Paragraph({
+    children: [txt('PARTES.', true, SZ_SUBTITLE)],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 160 },
   }));
 
-  // Section: PARTES
-  children.push(sectionTitle('I. PARTES'));
+  // Actor tables
+  const allActors = [
+    ...data.landlords,
+    ...data.tenants,
+    ...data.jointObligors,
+    ...data.avals,
+  ];
 
-  // Landlords
-  for (const landlord of data.landlords) {
-    children.push(emptyParagraph());
-    children.push(actorTable(landlord));
-  }
-
-  // Tenants
-  for (const tenant of data.tenants) {
-    children.push(emptyParagraph());
-    children.push(actorTable(tenant));
-  }
-
-  // Joint Obligors
-  for (const jo of data.jointObligors) {
-    children.push(emptyParagraph());
-    children.push(actorTable(jo));
-  }
-
-  // Avals
-  for (const aval of data.avals) {
-    children.push(emptyParagraph());
-    children.push(actorTable(aval));
-  }
-
-  // Guarantor properties
-  if (data.guarantorProperties.length > 0) {
-    for (let i = 0; i < data.guarantorProperties.length; i++) {
-      children.push(emptyParagraph());
-      children.push(guarantorPropertyTable(data.guarantorProperties[i], i));
+  for (const actor of allActors) {
+    children.push(actorTable(actor));
+    if (actor.isCompany) {
+      children.push(legalRepTable(actor));
     }
   }
 
-  // Section: CONTRACT TERMS
-  children.push(emptyParagraph());
-  children.push(sectionTitle('II. CONDICIONES DEL ARRENDAMIENTO'));
-  children.push(emptyParagraph());
-  children.push(contractTermsTable(data));
+  // Guarantor properties
+  for (const prop of data.guarantorProperties) {
+    children.push(guarantorPropertyTable(prop));
+  }
 
-  // Section: SIGNATURES
-  children.push(emptyParagraph());
-  children.push(sectionTitle('FIRMAS'));
-  children.push(emptyParagraph());
-  children.push(signatureBlock(data.signatureParties));
+  // Condiciones del Arrendamiento
+  children.push(new Paragraph({
+    children: [txt('Condiciones del Arrendamiento.', true, SZ_SUBTITLE)],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 300, after: 160 },
+  }));
+  children.push(inmuebleTable(data));
+  children.push(condicionesTable(data));
+
+  // Método de pago
+  children.push(metodoPagoTable(data));
+
+  // Header: policy number right-aligned
+  const header = new Header({
+    children: [new Paragraph({
+      children: [txt(data.policyNumber, false, SZ_SMALL)],
+      alignment: AlignmentType.RIGHT,
+    })],
+  });
+
+  // Footer: page numbers
+  const footer = new Footer({
+    children: [new Paragraph({
+      children: [
+        txt('Página ', false, SZ_SMALL),
+        new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: SZ_SMALL }),
+        txt(' de ', false, SZ_SMALL),
+        new TextRun({ children: [PageNumber.TOTAL_PAGES], font: FONT, size: SZ_SMALL }),
+      ],
+      alignment: AlignmentType.RIGHT,
+    })],
+  });
 
   const doc = new Document({
     sections: [{
       properties: {
         page: {
-          margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 }, // 1 inch = 1440 twips
+          margin: { top: 1440, bottom: 1440, left: 1080, right: 1080 }, // 1in top/bottom, 0.75in sides
         },
       },
+      headers: { default: header },
+      footers: { default: footer },
       children,
     }],
     styles: {
       default: {
         document: {
-          run: { font: FONT, size: FONT_SIZE },
+          run: { font: FONT, size: SZ },
         },
       },
     },

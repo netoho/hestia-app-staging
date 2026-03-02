@@ -6,7 +6,6 @@ import { getPolicyForPDF } from '@/lib/services/policyService';
 import { transformPolicyForPDF } from '@/lib/pdf/policyDataTransformer';
 import { buildCoverPageData } from './coverPageTransformer';
 import { renderCoverPageDocx } from './coverPageDocxTemplate';
-import { amountToSpanishLegal } from './numberToSpanishWords';
 
 export async function generateCoverPageDocx(policyId: string): Promise<Buffer> {
   const policy = await getPolicyForPDF(policyId);
@@ -14,13 +13,6 @@ export async function generateCoverPageDocx(policyId: string): Promise<Buffer> {
 
   const pdfData = transformPolicyForPDF(policy);
   const coverData = buildCoverPageData(pdfData);
-
-  // Fill in rent in words
-  if (coverData.contractTerms.rentAmount != null) {
-    coverData.contractTerms.rentInWords = amountToSpanishLegal(coverData.contractTerms.rentAmount);
-  } else {
-    coverData.contractTerms.rentInWords = '________________';
-  }
 
   return renderCoverPageDocx(coverData);
 }

@@ -4,6 +4,7 @@
 
 import type { PDFPolicyData, PDFLandlord, PDFTenant, PDFJointObligor, PDFAval } from '@/lib/pdf/types';
 import type { CoverPageData, CoverActorData, CoverGuarantorProperty, CoverContractTerms } from './types';
+import { amountToSpanishLegal } from './numberToSpanishWords';
 
 const BLANK = '________________';
 
@@ -16,12 +17,12 @@ function val(v: string | null | undefined): string {
 }
 
 function transformLandlord(l: PDFLandlord, index: number, total: number): CoverActorData {
-  const label = total > 1 ? `ARRENDADOR ${index + 1}` : 'ARRENDADOR';
+  const label = total > 1 ? `Arrendador ${index + 1}.` : 'Arrendador.';
   return {
     label,
     isCompany: l.isCompany,
     name: l.name || BLANK,
-    nationality: 'Mexicana', // Not in schema, default
+    nationality: 'Mexicana.',
     address: addr(l.address),
     identificationType: BLANK,
     identificationNumber: BLANK,
@@ -29,20 +30,36 @@ function transformLandlord(l: PDFLandlord, index: number, total: number): CoverA
     curp: val(l.curp),
     email: val(l.email),
     phone: val(l.phone),
-    companyConstitution: BLANK,
-    notary: BLANK,
-    publicRegistry: BLANK,
+    constitutionDeed: BLANK,
+    constitutionDate: BLANK,
+    constitutionNotary: BLANK,
+    constitutionNotaryNumber: BLANK,
+    registryCity: BLANK,
+    registryFolio: BLANK,
+    registryDate: BLANK,
     legalRepName: val(l.legalRepName),
-    legalRepId: BLANK,
+    legalRepPosition: val(l.legalRepPosition),
+    legalRepIdentificationType: BLANK,
+    legalRepIdentificationNumber: BLANK,
+    legalRepAddress: BLANK,
+    legalRepPhone: val(l.legalRepPhone),
+    legalRepRfc: val(l.legalRepRfc),
+    legalRepCurp: BLANK,
+    legalRepEmail: val(l.legalRepEmail),
+    legalRepWorkEmail: BLANK,
+    powerDeed: BLANK,
+    powerDate: BLANK,
+    powerNotary: BLANK,
+    powerNotaryNumber: BLANK,
   };
 }
 
 function transformTenant(t: PDFTenant): CoverActorData {
   return {
-    label: 'ARRENDATARIO',
+    label: 'Arrendatario.',
     isCompany: t.isCompany,
     name: t.name || BLANK,
-    nationality: t.nationality || BLANK,
+    nationality: t.isCompany ? 'Sociedad de nacionalidad mexicana.' : (t.nationality === 'Mexicano' ? 'Mexicana.' : val(t.nationality)),
     address: addr(t.address),
     identificationType: BLANK,
     identificationNumber: BLANK,
@@ -50,21 +67,37 @@ function transformTenant(t: PDFTenant): CoverActorData {
     curp: val(t.curp),
     email: val(t.email),
     phone: val(t.phone),
-    companyConstitution: BLANK,
-    notary: BLANK,
-    publicRegistry: BLANK,
+    constitutionDeed: BLANK,
+    constitutionDate: BLANK,
+    constitutionNotary: BLANK,
+    constitutionNotaryNumber: BLANK,
+    registryCity: BLANK,
+    registryFolio: BLANK,
+    registryDate: BLANK,
     legalRepName: val(t.legalRepName),
-    legalRepId: BLANK,
+    legalRepPosition: val(t.legalRepPosition),
+    legalRepIdentificationType: BLANK,
+    legalRepIdentificationNumber: BLANK,
+    legalRepAddress: BLANK,
+    legalRepPhone: val(t.legalRepPhone),
+    legalRepRfc: val(t.legalRepRfc),
+    legalRepCurp: BLANK,
+    legalRepEmail: val(t.legalRepEmail),
+    legalRepWorkEmail: BLANK,
+    powerDeed: BLANK,
+    powerDate: BLANK,
+    powerNotary: BLANK,
+    powerNotaryNumber: BLANK,
   };
 }
 
 function transformJointObligor(jo: PDFJointObligor, index: number, total: number): CoverActorData {
-  const label = total > 1 ? `OBLIGADO SOLIDARIO ${index + 1}` : 'OBLIGADO SOLIDARIO';
+  const label = total > 1 ? `Obligado Solidario y Fiador ${index + 1}.` : 'Obligado Solidario y Fiador.';
   return {
     label,
     isCompany: jo.isCompany,
     name: jo.name || BLANK,
-    nationality: BLANK,
+    nationality: 'Mexicana.',
     address: addr(jo.address),
     identificationType: BLANK,
     identificationNumber: BLANK,
@@ -72,21 +105,37 @@ function transformJointObligor(jo: PDFJointObligor, index: number, total: number
     curp: val(jo.curp),
     email: val(jo.email),
     phone: val(jo.phone),
-    companyConstitution: BLANK,
-    notary: BLANK,
-    publicRegistry: BLANK,
+    constitutionDeed: BLANK,
+    constitutionDate: BLANK,
+    constitutionNotary: BLANK,
+    constitutionNotaryNumber: BLANK,
+    registryCity: BLANK,
+    registryFolio: BLANK,
+    registryDate: BLANK,
     legalRepName: val(jo.legalRepName),
-    legalRepId: BLANK,
+    legalRepPosition: val(jo.legalRepPosition),
+    legalRepIdentificationType: BLANK,
+    legalRepIdentificationNumber: BLANK,
+    legalRepAddress: BLANK,
+    legalRepPhone: val(jo.legalRepPhone),
+    legalRepRfc: val(jo.legalRepRfc),
+    legalRepCurp: BLANK,
+    legalRepEmail: val(jo.legalRepEmail),
+    legalRepWorkEmail: BLANK,
+    powerDeed: BLANK,
+    powerDate: BLANK,
+    powerNotary: BLANK,
+    powerNotaryNumber: BLANK,
   };
 }
 
 function transformAval(a: PDFAval, index: number, total: number): CoverActorData {
-  const label = total > 1 ? `AVAL ${index + 1}` : 'AVAL';
+  const label = total > 1 ? `Aval ${index + 1}.` : 'Aval.';
   return {
     label,
     isCompany: a.isCompany,
     name: a.name || BLANK,
-    nationality: BLANK,
+    nationality: 'Mexicana.',
     address: addr(a.address),
     identificationType: BLANK,
     identificationNumber: BLANK,
@@ -94,11 +143,27 @@ function transformAval(a: PDFAval, index: number, total: number): CoverActorData
     curp: val(a.curp),
     email: val(a.email),
     phone: val(a.phone),
-    companyConstitution: BLANK,
-    notary: BLANK,
-    publicRegistry: BLANK,
+    constitutionDeed: BLANK,
+    constitutionDate: BLANK,
+    constitutionNotary: BLANK,
+    constitutionNotaryNumber: BLANK,
+    registryCity: BLANK,
+    registryFolio: BLANK,
+    registryDate: BLANK,
     legalRepName: val(a.legalRepName),
-    legalRepId: BLANK,
+    legalRepPosition: val(a.legalRepPosition),
+    legalRepIdentificationType: BLANK,
+    legalRepIdentificationNumber: BLANK,
+    legalRepAddress: BLANK,
+    legalRepPhone: val(a.legalRepPhone),
+    legalRepRfc: val(a.legalRepRfc),
+    legalRepCurp: BLANK,
+    legalRepEmail: val(a.legalRepEmail),
+    legalRepWorkEmail: BLANK,
+    powerDeed: BLANK,
+    powerDate: BLANK,
+    powerNotary: BLANK,
+    powerNotaryNumber: BLANK,
   };
 }
 
@@ -106,13 +171,22 @@ function extractGuarantorProperty(jo: PDFJointObligor): CoverGuarantorProperty |
   if (!jo.hasPropertyGuarantee) return null;
   return {
     deedNumber: val(jo.propertyDeedNumber),
-    notary: BLANK,
-    publicRegistry: val(jo.propertyRegistry),
+    deedDate: BLANK,
+    notaryNumber: BLANK,
+    notaryName: BLANK,
+    city: BLANK,
+    registryFolio: val(jo.propertyRegistry),
+    registryDate: BLANK,
+    registryCity: BLANK,
     useType: BLANK,
+    useHabitacional: false,
+    useComercial: false,
+    useIndustrial: false,
     address: addr(jo.propertyAddress),
+    direction: BLANK,
     landArea: BLANK,
     constructionArea: BLANK,
-    boundaries: BLANK,
+    boundaries: [],
   };
 }
 
@@ -120,44 +194,74 @@ function extractAvalProperty(a: PDFAval): CoverGuarantorProperty | null {
   if (!a.hasPropertyGuarantee) return null;
   return {
     deedNumber: val(a.propertyDeedNumber),
-    notary: BLANK,
-    publicRegistry: val(a.propertyRegistry),
+    deedDate: BLANK,
+    notaryNumber: BLANK,
+    notaryName: BLANK,
+    city: BLANK,
+    registryFolio: val(a.propertyRegistry),
+    registryDate: BLANK,
+    registryCity: BLANK,
     useType: BLANK,
+    useHabitacional: false,
+    useComercial: false,
+    useIndustrial: false,
     address: addr(a.propertyAddress),
+    direction: BLANK,
     landArea: BLANK,
     constructionArea: BLANK,
-    boundaries: BLANK,
+    boundaries: [],
   };
 }
 
-function buildContractTerms(data: PDFPolicyData): CoverContractTerms {
-  // Find primary landlord for bank details
+function buildRentDisplay(data: PDFPolicyData): string {
+  if (!data.rentAmount || data.rentAmount === '-') return BLANK;
+
+  const numericStr = data.rentAmount.replace(/[^0-9.]/g, '');
+  const num = parseFloat(numericStr);
+  if (isNaN(num)) return data.rentAmount;
+
+  const words = amountToSpanishLegal(num);
+  return `${data.rentAmount} (${words}), mensuales.`;
+}
+
+function buildPaymentMethodDescription(data: PDFPolicyData): string {
   const primaryLandlord = data.landlords.find(l => l.isPrimary) || data.landlords[0];
+  const method = data.paymentMethod;
 
-  const rentNum = data.rentAmount && data.rentAmount !== '-'
-    ? parseFloat(data.rentAmount.replace(/[^0-9.]/g, ''))
-    : null;
+  if (!method) return BLANK;
 
+  // Check if it's a bank transfer
+  if (method.toLowerCase().includes('transfer') || primaryLandlord?.bankName) {
+    const parts = ['TRANSFERENCIA ELECTRÓNICA DE FONDOS.'];
+    if (primaryLandlord?.accountHolder) parts.push(`Titular: ${primaryLandlord.accountHolder}.`);
+    if (primaryLandlord?.bankName) parts.push(`Banco: ${primaryLandlord.bankName}.`);
+    if (primaryLandlord?.accountNumber) parts.push(`Cuenta: ${primaryLandlord.accountNumber}.`);
+    if (primaryLandlord?.clabe) parts.push(`CLABE: ${primaryLandlord.clabe}.`);
+    return parts.join('\n');
+  }
+
+  return `PAGO EN EFECTIVO EN EL INMUEBLE ARRENDADO.`;
+}
+
+function buildContractTerms(data: PDFPolicyData): CoverContractTerms {
   return {
     propertyAddress: data.property?.address?.formatted || BLANK,
     parkingSpaces: data.property?.parkingSpaces
       ? String(data.property.parkingSpaces)
+      : 'N/A',
+    propertyUse: data.property?.typeLabel
+      ? `${data.property.typeLabel}.`
       : BLANK,
-    propertyUse: data.property?.typeLabel || BLANK,
-    rentAmount: rentNum,
-    rentFormatted: data.rentAmount !== '-' ? data.rentAmount : BLANK,
-    rentInWords: '', // Filled by the service with amountToSpanishLegal
+    rentDisplay: buildRentDisplay(data),
     securityDeposit: val(data.securityDeposit),
-    contractLength: data.contractLengthLabel || BLANK,
+    contractLength: data.contractLengthLabel
+      ? `${data.contractLengthLabel}.`
+      : BLANK,
     startDate: val(data.activatedAt),
     endDate: val(data.expiresAt),
     deliveryDate: data.property?.deliveryDate || BLANK,
     maintenanceFee: val(data.maintenanceFee),
-    paymentMethod: val(data.paymentMethod),
-    bankName: val(primaryLandlord?.bankName),
-    accountHolder: val(primaryLandlord?.accountHolder),
-    accountNumber: val(primaryLandlord?.accountNumber),
-    clabe: val(primaryLandlord?.clabe),
+    paymentMethodDescription: buildPaymentMethodDescription(data),
   };
 }
 
@@ -172,23 +276,13 @@ export function buildCoverPageData(data: PDFPolicyData): CoverPageData {
     ...data.avals.map(extractAvalProperty).filter(Boolean) as CoverGuarantorProperty[],
   ];
 
-  const contractTerms = buildContractTerms(data);
-
-  // Signature parties
-  const signatureParties = [
-    ...landlords.map(l => ({ label: l.label, name: l.name })),
-    ...tenants.map(t => ({ label: t.label, name: t.name })),
-    ...jointObligors.map(jo => ({ label: jo.label, name: jo.name })),
-    ...avals.map(a => ({ label: a.label, name: a.name })),
-  ];
-
   return {
+    policyNumber: data.policyNumber,
     landlords,
     tenants,
     jointObligors,
     avals,
     guarantorProperties,
-    contractTerms,
-    signatureParties,
+    contractTerms: buildContractTerms(data),
   };
 }
