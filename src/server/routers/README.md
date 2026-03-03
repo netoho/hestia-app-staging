@@ -37,7 +37,7 @@ routers/
 | `onboard.router.ts` | `onboard.*` | Staff onboarding via invitation token: validate token, set password, upload avatar |
 | `package.router.ts` | `package.*` | Service package CRUD (admin) and public listing |
 | `payment.router.ts` | `payment.*` | List payments, generate Stripe checkout sessions, record manual payments |
-| `policy.router.ts` | `policy.*` | Proteccion CRUD, status transitions, tenant replacement, guarantor type change, cancellation, share links |
+| `policy.router.ts` | `policy.*` | Protección CRUD, status transitions, tenant replacement, guarantor type change, cancellation, share links |
 | `pricing.router.ts` | `pricing.*` | Price calculation and price override (admin) |
 | `receipt.router.ts` | `receipt.*` | Monthly receipt portal: validate tenant token, list receipts, upload/confirm receipts |
 | `staff.router.ts` | `staff.*` | Staff user management: list, create, update, deactivate, resend invitation (admin only) |

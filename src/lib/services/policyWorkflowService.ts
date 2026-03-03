@@ -299,7 +299,7 @@ class PolicyWorkflowService extends BaseService {
           performedByType: 'system',
         });
 
-        sendPolicyExpiryNotification(policy.id)
+        await sendPolicyExpiryNotification(policy.id)
           .catch((err) => console.error('Failed to send expiry notification:', err));
 
         expired++;

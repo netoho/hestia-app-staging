@@ -5,7 +5,7 @@ import {
   generateTenantToken
 } from '@/lib/services/actorTokenService';
 import prisma from "@/lib/prisma";
-import { sendActorInvitation, sendPolicyCancellationEmail, sendSimpleNotificationEmail, sendPolicyStatusUpdate } from "@/lib/services/emailService";
+import { sendActorInvitation, sendPolicyCancellationEmail, sendSimpleNotificationEmail } from "@/lib/services/emailService";
 import { getActiveAdmins } from "@/lib/services/userService";
 import { formatFullName } from "@/lib/utils/names";
 import {AvalType, JointObligorType, TenantType} from "@/prisma/generated/prisma-client/enums";

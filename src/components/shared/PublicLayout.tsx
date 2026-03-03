@@ -14,7 +14,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         </div>
       </header>
 
-      {children}
+      <main id="main-content">
+        {children}
+      </main>
 
       <footer className="border-t border-border mt-12 bg-white">
         <div className="container mx-auto px-4 py-8">
