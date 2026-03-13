@@ -60,3 +60,51 @@ Generate .docx contract cover pages ("carátula") from policy data — everythin
 - Fixed "Proteccion" → "Protección" typo in routers README
 
 **Status**: Build passes. PR #71 review comments all addressed.
+
+### Update - 2026-03-13
+
+**Summary**: Fixed all 3 Copilot review comments on PR #72 (Release/2.7.0).
+
+**Git Changes**:
+- Branch: `release/2.7.0`
+- `c6d97cb` fix: address PR #72 review comments
+- 3 files changed, 8 insertions, 3 deletions
+
+**Fixes applied**:
+1. Added missing `BLANK` constant in `coverPageDocxTemplate.ts` — was undefined, would cause build failure
+2. Fixed invalid Tailwind class `bg-muted/500` → `bg-muted text-muted-foreground` in `ActorActivityTimeline.tsx`
+3. Fixed rounding edge case in `amountToSpanishLegal` where `decPart` could round to 100 without carrying into integer part
+
+**Status**: Build passes. All PR #72 review comments addressed.
+
+---
+
+## Session End - 2026-03-13
+
+**Duration**: 2026-03-01 → 2026-03-13 (across multiple working sessions)
+
+### Git Summary
+- **Total commits in session**: 5 (feat, style, 2x fix, session update)
+- **Files changed**: ~110+ across all commits
+- **Key commits**:
+  - `df7ff03` feat: add contract cover page (.docx) generator
+  - `9e50693` style: match contract cover page formatting to sample contracts
+  - `29cdcae` fix: address PR #71 review comments
+  - `c6d97cb` fix: address PR #72 review comments
+
+### Key Accomplishments
+- Full .docx contract cover page generation pipeline (transformer → template → API → download)
+- Matched formatting to sample contracts (vertical labels, 5-column layout, paired fields)
+- Added `docx@9.6.0` dependency
+- Policy expiry notifications in cron workflow
+- Reset `submittedAt` on policy status revert
+- UI tokenization to design tokens (`bg-muted`, `text-muted-foreground`, etc.)
+- Addressed all Copilot review comments on PRs #71 and #72
+
+### What Wasn't Completed
+- Manual visual testing of .docx output with real policy data still recommended
+
+### Tips for Future Developers
+- The docx pipeline reuses `getPolicyForPDF()` data — any changes to PDF data shape affect cover pages too
+- `numberToSpanishWords.ts` handles up to millions; if larger amounts needed, extend `convertNumber()`
+- Cover page template uses `docx` library's `TableRow.options.children` to inject vertical label cells — fragile pattern, test if upgrading `docx`
