@@ -18,6 +18,10 @@ export interface CancelPolicyResult {
 /**
  * Cancel a policy with a reason and comment.
  * Updates policy status, logs activity, and sends notifications.
+ *
+ * Note: Intentionally bypasses PolicyWorkflowService.transitionPolicyStatus()
+ * because cancellation is allowed from any non-CANCELLED state and requires
+ * additional fields (reason, comment, cancelledById) beyond a standard transition.
  */
 export async function cancelPolicy(
   input: CancelPolicyInput

@@ -111,10 +111,10 @@ export default function ReceiptSlot({
     return (
       <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
-          <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-            <Icon className="h-4 w-4 text-gray-500" />
+          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+            <Icon className="h-4 w-4 text-muted-foreground" />
           </div>
-          <span className="text-sm font-medium text-gray-700">{typeLabel}</span>
+          <span className="text-sm font-medium text-foreground">{typeLabel}</span>
         </div>
 
         {!readOnly && (
@@ -122,7 +122,7 @@ export default function ReceiptSlot({
             <ReceiptUploader onFileSelect={handleFileSelect} operation={operation} />
             <button
               type="button"
-              className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline"
+              className="mt-2 text-xs text-muted-foreground/60 hover:text-muted-foreground underline"
               onClick={() => setShowNAModal(true)}
             >
               {t.slot.markNotApplicable}
@@ -154,13 +154,13 @@ export default function ReceiptSlot({
               <Icon className="h-4 w-4 text-green-600" />
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-700">{typeLabel}</span>
+              <span className="text-sm font-medium text-foreground">{typeLabel}</span>
               <CheckCircle2 className="inline-block ml-1.5 h-3.5 w-3.5 text-green-500" />
             </div>
           </div>
         </div>
 
-        <div className="text-xs text-gray-500 mb-2 truncate">
+        <div className="text-xs text-muted-foreground mb-2 truncate">
           {receipt.originalName || receipt.fileName}
           {receipt.uploadedAt && (
             <span className="ml-1">— {t.slot.uploadedOn} {formatDate(receipt.uploadedAt)}</span>
@@ -254,24 +254,24 @@ export default function ReceiptSlot({
   // --- Not Applicable state ---
   if (isNA) {
     return (
-      <div className="border rounded-lg p-4 bg-gray-50">
+      <div className="border rounded-lg p-4 bg-muted/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <Icon className="h-4 w-4 text-gray-400" />
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+              <Icon className="h-4 w-4 text-muted-foreground/60" />
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-400">{typeLabel}</span>
-              <XCircle className="inline-block ml-1.5 h-3.5 w-3.5 text-gray-400" />
+              <span className="text-sm font-medium text-muted-foreground/60">{typeLabel}</span>
+              <XCircle className="inline-block ml-1.5 h-3.5 w-3.5 text-muted-foreground/60" />
             </div>
           </div>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
             {t.status.notApplicable}
           </span>
         </div>
 
         {receipt.notApplicableNote && (
-          <p className="text-xs text-gray-400 mt-2 italic">{receipt.notApplicableNote}</p>
+          <p className="text-xs text-muted-foreground/60 mt-2 italic">{receipt.notApplicableNote}</p>
         )}
 
         {!readOnly && (

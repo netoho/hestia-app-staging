@@ -1,8 +1,6 @@
 # Actor Services
 
 **Status**: ✅ Production-Ready Actor Management
-**Last Updated**: December 2024
-**Total Lines**: 2,948 lines across 6 files
 
 ---
 
@@ -14,12 +12,13 @@ Complete CRUD and business logic for all actor types (Landlord, Tenant, Aval, Jo
 
 ## Files
 
-- **BaseActorService.ts** (511 lines) - Abstract base class with common actor operations
-- **LandlordService.ts** (594 lines) - Landlord-specific service
-- **TenantService.ts** (384 lines) - Tenant-specific service
-- **AvalService.ts** (707 lines) - Aval (guarantor) service
-- **JointObligorService.ts** (711 lines) - Joint obligor service
-- **index.ts** (41 lines) - Exports and factory function
+- **BaseActorService.ts** - Abstract base class with common actor operations
+- **LandlordService.ts** - Landlord-specific service
+- **TenantService.ts** - Tenant-specific service
+- **AvalService.ts** - Aval (guarantor) service
+- **JointObligorService.ts** - Joint obligor service
+- **types.ts** - Shared actor types and interfaces
+- **index.ts** - Exports and factory function
 
 ---
 
@@ -84,7 +83,7 @@ export function getServiceForType(
 
 ## BaseActorService
 
-**File**: `BaseActorService.ts:1-511`
+**File**: `BaseActorService.ts`
 
 ### Purpose
 
@@ -143,7 +142,7 @@ protected validateActorData(
 
 ## Landlord Service
 
-**File**: `LandlordService.ts:1-594`
+**File**: `LandlordService.ts`
 
 ### Special Features
 
@@ -203,7 +202,7 @@ return NextResponse.json({ success: true, data: result.value });
 
 ## Tenant Service
 
-**File**: `TenantService.ts:1-384`
+**File**: `TenantService.ts`
 
 ### Special Features
 
@@ -265,7 +264,7 @@ if (!result.ok) {
 
 ## Aval Service
 
-**File**: `AvalService.ts:1-707`
+**File**: `AvalService.ts`
 
 ### Special Features
 
@@ -322,7 +321,7 @@ const result = await avalService.update(avalId, {
 
 ## Joint Obligor Service
 
-**File**: `JointObligorService.ts:1-711`
+**File**: `JointObligorService.ts`
 
 ### Special Features
 
@@ -727,10 +726,8 @@ describe('LandlordService', () => {
 - **[/src/lib/services/](../README.md)** - Service layer overview
 - **[/src/lib/services/base/](../base/README.md)** - BaseService foundation
 - **[/src/lib/services/types/](../types/README.md)** - Result pattern
-- **[/docs/ACTOR_SYSTEM.md](../../../../docs/ACTOR_SYSTEM.md)** - Complete actor system architecture
-- **[/src/lib/validations/](../../validations/README.md)** - Actor validation schemas
+- **[/docs/ACTOR_SYSTEM_ARCHITECTURE.md](../../../../docs/ACTOR_SYSTEM_ARCHITECTURE.md)** - Complete actor system architecture
 
 ---
 
-**Last Verified**: November 2024
 **Production Status**: ✅ Handles All Actor CRUD Operations

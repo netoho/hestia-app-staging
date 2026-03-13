@@ -60,7 +60,7 @@ export default function ReceiptHistoryList({
 
   if (months.length === 0) {
     return (
-      <p className="text-sm text-gray-500 text-center py-4">
+      <p className="text-sm text-muted-foreground text-center py-4">
         {t.portal.noReceipts}
       </p>
     );
@@ -98,13 +98,13 @@ export default function ReceiptHistoryList({
           <div key={key} className="border rounded-lg overflow-hidden">
             <button
               type="button"
-              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
               onClick={() => toggleMonth(key)}
             >
               <div className="flex items-center gap-2">
                 {isExpanded
-                  ? <ChevronDown className="h-4 w-4 text-gray-500" />
-                  : <ChevronRight className="h-4 w-4 text-gray-500" />
+                  ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 }
                 <span className="text-sm font-medium" style={{ color: '#173459' }}>
                   {monthLabel}
@@ -115,7 +115,7 @@ export default function ReceiptHistoryList({
                   allDone
                     ? 'bg-green-100 text-green-700 border-green-200'
                     : completedCount === 0
-                      ? 'bg-gray-100 text-gray-600 border-gray-200'
+                      ? 'bg-muted text-muted-foreground border-gray-200'
                       : 'bg-amber-100 text-amber-700 border-amber-200'
                 }
                 variant="outline"

@@ -160,7 +160,7 @@ export default function PricingStepRHF({
                         </SelectContent>
                       </Select>
                       {field.value && packages.find(p => p.id === field.value) && (
-                        <p className="text-sm text-gray-500 mt-2">
+                        <p className="text-sm text-muted-foreground mt-2">
                           {packages.find(p => p.id === field.value)?.description}
                         </p>
                       )}
@@ -195,7 +195,7 @@ export default function PricingStepRHF({
 
             {/* Pricing Result */}
             {pricingResult && (
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <Calculator className="h-4 w-4" />
                   {t.pages.createPolicy.steps.pricing.costSummary}
@@ -366,7 +366,7 @@ export default function PricingStepRHF({
                           )}
                         </div>
                         {watchedManualPrice && (
-                          <p className="text-sm text-gray-600 mt-2">
+                          <p className="text-sm text-muted-foreground mt-2">
                             {t.pages.createPolicy.steps.pricing.totalWithIvaValue(formatCurrency((watchedManualPrice || 0) * (1 + TAX_CONFIG.IVA_RATE)))}
                           </p>
                         )}

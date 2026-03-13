@@ -158,7 +158,7 @@ export default function PricingEditPage({
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando información...</p>
+          <p className="mt-4 text-muted-foreground">Cargando información...</p>
         </div>
       </div>
     );
@@ -224,7 +224,7 @@ export default function PricingEditPage({
                     <SelectItem key={pkg.id} value={pkg.id}>
                       <div className="flex flex-col">
                         <span className="font-medium">{pkg.name}</span>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-muted-foreground">
                           {pkg.price
                             ? formatCurrency(pkg.price)
                             : `${pkg.percentage}% de la renta (mín. ${formatCurrency(pkg.minAmount || 0)})`}
@@ -235,7 +235,7 @@ export default function PricingEditPage({
                 </SelectContent>
               </Select>
               {selectedPackage && selectedPackage.description && (
-                <p className="text-sm text-gray-600 mt-2">{selectedPackage.description}</p>
+                <p className="text-sm text-muted-foreground mt-2">{selectedPackage.description}</p>
               )}
             </div>
 
@@ -251,7 +251,7 @@ export default function PricingEditPage({
                 min="0"
                 step="100"
               />
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {formatCurrency(formData.totalPrice)}
               </p>
             </div>
@@ -303,40 +303,40 @@ export default function PricingEditPage({
             </div>
 
             {/* Preview Card */}
-            <Card className="bg-gray-50">
+            <Card className="bg-muted/50">
               <CardContent className="pt-6 space-y-3">
-                <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider mb-3">
+                <h3 className="font-semibold text-sm text-foreground uppercase tracking-wider mb-3">
                   Resumen de Precio
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Paquete:</span>
+                    <span className="text-muted-foreground">Paquete:</span>
                     <span className="font-medium">
                       {selectedPackage ? selectedPackage.name : 'Precio Manual'}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Precio Total:</span>
+                    <span className="text-muted-foreground">Precio Total:</span>
                     <span className="font-medium text-green-600">
                       {formatCurrency(formData.totalPrice)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Pago Inquilino:</span>
+                    <span className="text-muted-foreground">Pago Inquilino:</span>
                     <span className="font-medium">
                       {formatCurrency((formData.totalPrice * formData.tenantPercentage) / 100)}
-                      <span className="text-gray-500 ml-1">({formData.tenantPercentage}%)</span>
+                      <span className="text-muted-foreground ml-1">({formData.tenantPercentage}%)</span>
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Pago Arrendador:</span>
+                    <span className="text-muted-foreground">Pago Arrendador:</span>
                     <span className="font-medium">
                       {formatCurrency((formData.totalPrice * formData.landlordPercentage) / 100)}
-                      <span className="text-gray-500 ml-1">({formData.landlordPercentage}%)</span>
+                      <span className="text-muted-foreground ml-1">({formData.landlordPercentage}%)</span>
                     </span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
-                    <span className="text-gray-600">Tipo de Garantía:</span>
+                    <span className="text-muted-foreground">Tipo de Garantía:</span>
                     <span className="font-medium">
                       {getGuarantorTypeLabel(formData.guarantorType)}
                     </span>
@@ -354,7 +354,7 @@ export default function PricingEditPage({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 whitespace-pre-line">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">
                     {selectedPackage.features}
                   </p>
                 </CardContent>

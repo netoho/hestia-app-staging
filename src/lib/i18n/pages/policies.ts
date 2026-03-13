@@ -129,6 +129,7 @@ export const policies = {
             markUnderReview: "Marcar En Revisión"
         },
         downloadPDF: "Descargar PDF",
+        downloadCover: "Descargar Carátula",
         tabs: {
             details: "Datos de Solicitud",
             activity: "Registro de Actividad"

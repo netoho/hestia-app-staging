@@ -41,8 +41,8 @@ function TransfersList({ transfers }: { transfers: Array<{ id: string; amount: n
   if (transfers.length === 0) return null;
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-      <p className="text-xs font-medium text-gray-700">Transferencias recibidas</p>
+    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+      <p className="text-xs font-medium text-foreground">Transferencias recibidas</p>
       {transfers.map((transfer) => (
         <div key={transfer.id} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
           <span className="text-muted-foreground">
@@ -123,7 +123,7 @@ export default function SpeiPaymentPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="py-12">
             <div className="flex flex-col items-center gap-4">
@@ -139,7 +139,7 @@ export default function SpeiPaymentPage() {
   // Error state
   if (error || !payment) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -170,7 +170,7 @@ export default function SpeiPaymentPage() {
   // Payment completed
   if (payment.status === PaymentStatus.COMPLETED) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -183,7 +183,7 @@ export default function SpeiPaymentPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">ID de transaccion</span>
                   <span className="font-mono text-xs">{payment.id.slice(0, 8).toUpperCase()}</span>
@@ -256,7 +256,7 @@ export default function SpeiPaymentPage() {
   // Payment cancelled/failed
   if (payment.status === PaymentStatus.CANCELLED || payment.status === PaymentStatus.FAILED) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -285,7 +285,7 @@ export default function SpeiPaymentPage() {
   // Manual payment pending verification
   if (payment.status === PaymentStatus.PENDING_VERIFICATION || payment.isManual) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -298,7 +298,7 @@ export default function SpeiPaymentPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Concepto</span>
                   <span className="font-medium">{typeLabel}</span>
@@ -321,7 +321,7 @@ export default function SpeiPaymentPage() {
   // Creating SPEI session
   if (createSpeiSession.isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="py-12">
             <div className="flex flex-col items-center gap-4">
@@ -338,7 +338,7 @@ export default function SpeiPaymentPage() {
   // Error creating SPEI
   if (createSpeiSession.error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -374,7 +374,7 @@ export default function SpeiPaymentPage() {
     const hasPartialPayment = details.fundedAmount > 0 && details.fundedAmount < details.amount;
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -434,8 +434,8 @@ export default function SpeiPaymentPage() {
               )}
 
               {/* Info text */}
-              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                <p className="text-xs font-medium text-gray-700">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-xs font-medium text-foreground">
                   Despues de transferir, tu pago se reflejara automaticamente.
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -480,7 +480,7 @@ export default function SpeiPaymentPage() {
 
   // Fallback: waiting for SPEI data
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-muted/50">
       <Card className="w-full max-w-md mx-4">
         <CardContent className="py-12">
           <div className="flex flex-col items-center gap-4">

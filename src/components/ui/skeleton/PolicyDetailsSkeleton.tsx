@@ -49,7 +49,7 @@ export default function PolicyDetailsSkeleton() {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="text-center p-3 bg-gray-50 rounded-lg">
+                <div key={i} className="text-center p-3 bg-muted/50 rounded-lg">
                   <Shimmer className="h-8 w-12 mx-auto mb-2" />
                   <Shimmer className="h-3 w-24 mx-auto" />
                 </div>

@@ -41,12 +41,12 @@ export function DocumentList({
       <div className="p-4 border-2 border-dashed rounded-lg text-center">
         {label && (
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Upload className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-500 font-medium">{label}</span>
+            <Upload className="h-4 w-4 text-muted-foreground/60" />
+            <span className="text-sm text-muted-foreground font-medium">{label}</span>
           </div>
         )}
-        {!label && <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />}
-        <p className="text-sm text-gray-500">{emptyMessage}</p>
+        {!label && <Upload className="h-8 w-8 text-muted-foreground/60 mx-auto mb-2" />}
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }

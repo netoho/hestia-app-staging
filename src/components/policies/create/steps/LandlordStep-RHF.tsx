@@ -153,7 +153,7 @@ export default function LandlordStepRHF({
 
                 {/* Legal Representative Section */}
                 <div className="border-l-2 border-blue-200 pl-4 space-y-4">
-                  <h4 className="font-medium text-sm text-gray-700">{t.pages.createPolicy.steps.landlord.legalRepresentative}</h4>
+                  <h4 className="font-medium text-sm text-foreground">{t.pages.createPolicy.steps.landlord.legalRepresentative}</h4>
 
                   <FormField
                     control={form.control}

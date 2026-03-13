@@ -72,7 +72,7 @@ export default function ActorActivityTimeline({
       DOCUMENT_VERIFIED: { label: 'Verificado', className: 'bg-green-500' },
     };
 
-    const badgeConfig = config[action] || { label: action, className: 'bg-gray-500' };
+    const badgeConfig = config[action] || { label: action, className: 'bg-muted text-muted-foreground' };
 
     return (
       <Badge className={`${badgeConfig.className} text-white text-xs`}>
@@ -139,7 +139,7 @@ export default function ActorActivityTimeline({
                 key={activity.id}
                 className="flex items-start gap-3 pb-4 border-b last:border-0"
               >
-                <div className="p-2 bg-gray-100 rounded-full mt-1">
+                <div className="p-2 bg-muted rounded-full mt-1">
                   {getActivityIcon(activity.action)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -147,7 +147,7 @@ export default function ActorActivityTimeline({
                     <p className="font-medium text-sm">{activity.description}</p>
                     {getActionBadge(activity.action)}
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     {activity.performedBy?.name ||
                       activity.performedBy?.email ||
                       activity.performedByType ||
@@ -155,14 +155,14 @@ export default function ActorActivityTimeline({
                     • {formatDateTime(activity.createdAt)}
                   </p>
                   {activity.details && Object.keys(activity.details).length > 0 && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                    <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
                       {activity.details.reason && (
-                        <p className="text-gray-700">
+                        <p className="text-foreground">
                           <span className="font-semibold">Razón:</span> {activity.details.reason}
                         </p>
                       )}
                       {activity.details.documentType && (
-                        <p className="text-gray-700">
+                        <p className="text-foreground">
                           <span className="font-semibold">Documento:</span> {activity.details.documentType}
                         </p>
                       )}
@@ -174,8 +174,8 @@ export default function ActorActivityTimeline({
           </div>
         ) : (
           <div className="text-center py-8">
-            <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">
+            <Activity className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">
               {actorId || actorType
                 ? 'No hay actividad registrada para este actor'
                 : 'No hay actividad registrada'}

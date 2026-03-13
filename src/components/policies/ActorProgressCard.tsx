@@ -36,10 +36,10 @@ export default function ActorProgressCard({
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <div className="h-12 w-12 mx-auto mb-4 text-gray-400 flex items-center justify-center">
+          <div className="h-12 w-12 mx-auto mb-4 text-muted-foreground/60 flex items-center justify-center">
             <ActorIcon className="h-5 w-5" />
           </div>
-          <p className="text-gray-600 mb-4">No se ha capturado información del {getActorTypeLabel(actorType).toLowerCase()}</p>
+          <p className="text-muted-foreground mb-4">No se ha capturado información del {getActorTypeLabel(actorType).toLowerCase()}</p>
           {permissions.canEdit && (
             <Button onClick={onEdit} size="sm">
               <Edit className="mr-2 h-4 w-4" />
@@ -56,14 +56,14 @@ export default function ActorProgressCard({
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
+            <div className="p-2 bg-muted rounded-lg flex-shrink-0">
               <ActorIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold truncate">
                 {actor.fullName || actor.companyName || getActorTypeLabel(actorType)}
               </h3>
-              <p className="text-sm text-gray-600 truncate">{actor.email || 'Sin email'}</p>
+              <p className="text-sm text-muted-foreground truncate">{actor.email || 'Sin email'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -91,17 +91,17 @@ export default function ActorProgressCard({
 
           {/* Quick Stats - Responsive */}
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="p-2 sm:p-3 bg-gray-50 rounded-lg">
+            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg">
               <div className="text-lg sm:text-2xl font-bold text-blue-600">{completedFields}/10</div>
-              <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Campos</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">Campos</div>
             </div>
-            <div className="p-2 sm:p-3 bg-gray-50 rounded-lg">
+            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg">
               <div className="text-lg sm:text-2xl font-bold text-purple-600">{documentsCount}</div>
-              <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Documentos</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">Documentos</div>
             </div>
-            <div className="p-2 sm:p-3 bg-gray-50 rounded-lg">
+            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg">
               <div className="text-lg sm:text-2xl font-bold text-green-600">{referencesCount}</div>
-              <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Referencias</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">Referencias</div>
             </div>
           </div>
 

@@ -20,8 +20,8 @@ export default function ReceiptPortalPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto" style={{ color: '#173459' }} />
-          <p className="mt-4 text-gray-600">Validando acceso...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Validando acceso...</p>
         </div>
       </div>
     );

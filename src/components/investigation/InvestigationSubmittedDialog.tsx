@@ -121,7 +121,7 @@ export function InvestigationSubmittedDialog({
               <Badge variant="outline" className="text-xs">Broker</Badge>
             </div>
 
-            <div className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-hidden">
+            <div className="flex items-center gap-2 p-2 bg-muted rounded text-xs font-mono overflow-hidden">
               <span className="flex-1 truncate text-ellipsis">{approvalUrls.broker}</span>
             </div>
 
@@ -155,7 +155,7 @@ export function InvestigationSubmittedDialog({
               <Badge variant="outline" className="text-xs">Arrendador</Badge>
             </div>
 
-            <div className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs font-mono overflow-hidden">
+            <div className="flex items-center gap-2 p-2 bg-muted rounded text-xs font-mono overflow-hidden">
               <span className="flex-1 truncate text-ellipsis">{approvalUrls.landlord}</span>
             </div>
 

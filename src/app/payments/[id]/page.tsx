@@ -19,7 +19,7 @@ function PaymentSummary({ payment, typeLabel }: {
   typeLabel: string;
 }) {
   return (
-    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Concepto</span>
         <span className="font-medium">{typeLabel}</span>
@@ -116,7 +116,7 @@ export default function PaymentPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="py-12">
             <div className="flex flex-col items-center gap-4">
@@ -132,7 +132,7 @@ export default function PaymentPage() {
   // Error state
   if (error || !payment) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -163,7 +163,7 @@ export default function PaymentPage() {
   // Redirecting to Stripe (card)
   if (isRedirecting || createCheckoutSession.isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="py-12">
             <div className="flex flex-col items-center gap-4">
@@ -180,7 +180,7 @@ export default function PaymentPage() {
   // Payment completed
   if (payment.status === PaymentStatus.COMPLETED || statusParam === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -193,7 +193,7 @@ export default function PaymentPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">ID de transaccion</span>
                   <span className="font-mono text-xs">{payment.id.slice(0, 8).toUpperCase()}</span>
@@ -251,7 +251,7 @@ export default function PaymentPage() {
   // Payment cancelled by user (returned from Stripe)
   if (statusParam === 'cancelled') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -290,7 +290,7 @@ export default function PaymentPage() {
   // Payment cancelled/failed by admin
   if (payment.status === PaymentStatus.CANCELLED || payment.status === PaymentStatus.FAILED) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -319,7 +319,7 @@ export default function PaymentPage() {
   // Manual payment pending verification
   if (payment.status === PaymentStatus.PENDING_VERIFICATION || payment.isManual) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -345,7 +345,7 @@ export default function PaymentPage() {
 
   // Default: Pending payment — auto-redirect should have fired, show fallback
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-muted/50">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
           <CardTitle>Pago Pendiente</CardTitle>

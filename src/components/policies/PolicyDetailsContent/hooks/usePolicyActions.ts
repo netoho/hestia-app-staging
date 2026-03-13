@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
 import { ActorType } from '@/lib/utils/actor';
 import { downloadPolicyPdf } from '@/lib/pdf/downloadPdf';
+import { downloadContractCover } from '@/lib/docx/downloadDocx';
 import { t } from '@/lib/i18n';
 
 interface UsePolicyActionsProps {
@@ -35,6 +36,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
   const [editingActor, setEditingActor] = useState<EditingActor | null>(null);
   const [markCompleteActor, setMarkCompleteActor] = useState<MarkCompleteActor | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingActionType>(null);
 
   // Send invitations mutation
@@ -160,6 +162,26 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     }
   };
 
+  const handleDownloadDocx = async () => {
+    setDownloadingDocx(true);
+    try {
+      await downloadContractCover(policyId, policyNumber);
+      toast({
+        title: 'Carátula generada',
+        description: 'La carátula se descargó correctamente',
+      });
+    } catch (error) {
+      console.error('Error downloading cover page:', error);
+      toast({
+        title: toastKeys.error,
+        description: error instanceof Error ? error.message : 'Error al descargar carátula',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingDocx(false);
+    }
+  };
+
   // Actor callbacks for ActorCard
   const handleEditActor = (type: ActorType, actorId: string) => {
     setEditingActor({ type, actorId });
@@ -178,6 +200,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     editingActor,
     markCompleteActor,
     downloadingPdf,
+    downloadingDocx,
     pendingAction,
 
     // Mutations loading states
@@ -193,6 +216,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     cancelPendingAction,
     handleMarkComplete,
     handleDownloadPdf,
+    handleDownloadDocx,
 
     // Actor callbacks
     handleEditActor,

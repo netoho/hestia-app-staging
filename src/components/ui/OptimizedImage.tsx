@@ -22,7 +22,7 @@ export default function OptimizedImage({
   return (
     <div className={`relative ${className}`}>
       {isLoading && showPlaceholder && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded" />
+        <div className="absolute inset-0 bg-muted animate-pulse rounded" />
       )}
       <Image
         src={hasError ? fallback : src}

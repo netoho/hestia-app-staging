@@ -342,3 +342,80 @@ export const sendPolicyPendingApprovalNotification = async (policyId: string): P
     }).catch((err) => console.error('Failed to send pending approval notification to:', admin.email, err));
   }
 }
+
+// Send policy expiry notification to tenant, landlord, broker, and admins
+export const sendPolicyExpiryNotification = async (policyId: string): Promise<void> => {
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    select: {
+      policyNumber: true,
+      expiresAt: true,
+      tenant: {
+        select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true, middleName: true, companyName: true, tenantType: true },
+      },
+      landlords: {
+        where: { isPrimary: true },
+        take: 1,
+        select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true, middleName: true, companyName: true, landlordType: true },
+      },
+      managedBy: { select: { email: true, name: true } },
+      propertyDetails: {
+        select: { propertyAddressDetails: { select: { formattedAddress: true } } },
+      },
+    },
+  });
+
+  if (!policy) {
+    console.error('Policy not found for expiry notification:', policyId);
+    return;
+  }
+
+  const policyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/policies/${policyId}`;
+  const propertyAddress = policy.propertyDetails?.propertyAddressDetails?.formattedAddress || 'N/A';
+  const message = `La protección ${policy.policyNumber} para la propiedad ${propertyAddress} ha expirado. El periodo del contrato ha finalizado.`;
+
+  // Collect all recipients
+  const recipients: { email: string; name?: string }[] = [];
+
+  // Tenant
+  if (policy.tenant?.email) {
+    const tenantName = policy.tenant.tenantType === 'COMPANY'
+      ? policy.tenant.companyName || undefined
+      : formatFullName(policy.tenant) || undefined;
+    recipients.push({ email: policy.tenant.email, name: tenantName });
+  }
+
+  // Primary landlord
+  const primaryLandlord = policy.landlords[0];
+  if (primaryLandlord?.email) {
+    const landlordName = primaryLandlord.landlordType === 'COMPANY'
+      ? primaryLandlord.companyName || undefined
+      : formatFullName(primaryLandlord) || undefined;
+    recipients.push({ email: primaryLandlord.email, name: landlordName });
+  }
+
+  // Broker (managedBy)
+  if (policy.managedBy?.email) {
+    recipients.push({ email: policy.managedBy.email, name: policy.managedBy.name || undefined });
+  }
+
+  // Admins
+  const admins = await getActiveAdmins();
+  for (const admin of admins) {
+    if (admin.email && !recipients.some(r => r.email === admin.email)) {
+      recipients.push({ email: admin.email, name: admin.name || undefined });
+    }
+  }
+
+  // Send to all
+  for (const recipient of recipients) {
+    await sendSimpleNotificationEmail({
+      to: recipient.email,
+      recipientName: recipient.name,
+      subject: `Protección Expirada - ${policy.policyNumber}`,
+      message,
+      actionUrl: policyLink,
+      actionText: 'Ver protección',
+    }).catch((err) => console.error('Failed to send expiry notification to:', recipient.email, err));
+  }
+}
