@@ -46,17 +46,17 @@ export default function ReviewStep({
           <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.property}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.policyNumber}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.policyNumber}</dt>
               <dd className="font-medium">{formData.property.policyNumber}</dd>
             </div>
             {formData.property.internalCode && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.internalCode}</dt>
+                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.internalCode}</dt>
                 <dd>{formData.property.internalCode}</dd>
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.address}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.address}</dt>
               <dd>
                 {formData.property.propertyAddressDetails?.formattedAddress ||
                  (formData.property.propertyAddressDetails?.street
@@ -65,23 +65,23 @@ export default function ReviewStep({
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.type}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.type}</dt>
               <dd>{formData.property.propertyType}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.rent}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.rent}</dt>
               <dd>{formatCurrency(parseFloat(formData.property.rentAmount || '0'))}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.deposit}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.deposit}</dt>
               <dd>{formatCurrency(parseFloat(formData.property.depositAmount || formData.property.rentAmount || '0'))}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.duration}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.duration}</dt>
               <dd>{formData.property.contractLength} {t.pages.createPolicy.steps.review.labels.months}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.period}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.period}</dt>
               <dd>{formData.property.startDate} - {formData.property.endDate}</dd>
             </div>
           </dl>
@@ -92,17 +92,17 @@ export default function ReviewStep({
           <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.packageAndPrice}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.package}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.package}</dt>
               <dd>{selectedPackage?.name || t.pages.createPolicy.steps.review.labels.notSelected}</dd>
             </div>
             {pricingResult && (
               <>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.subtotal}</dt>
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.subtotal}</dt>
                   <dd>{formatCurrency(pricingResult.subtotal)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.iva}</dt>
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.iva}</dt>
                   <dd>{formatCurrency(pricingResult.iva)}</dd>
                 </div>
                 <div className="flex justify-between font-medium">
@@ -111,17 +111,17 @@ export default function ReviewStep({
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex justify-between text-blue-600">
-                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.tenantPayment(formData.pricing.tenantPercentage)}</dt>
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.tenantPayment(formData.pricing.tenantPercentage)}</dt>
                     <dd>{formatCurrency(pricingResult.totalWithIva * formData.pricing.tenantPercentage / 100)}</dd>
                   </div>
                   <div className="flex justify-between text-green-600">
-                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.landlordPayment(formData.pricing.landlordPercentage)}</dt>
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.landlordPayment(formData.pricing.landlordPercentage)}</dt>
                     <dd>{formatCurrency(pricingResult.totalWithIva * formData.pricing.landlordPercentage / 100)}</dd>
                   </div>
                 </div>
                 {formData.pricing.isManualOverride && (
                   <div className="flex justify-between text-orange-600">
-                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.manuallyAdjusted}</dt>
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.manuallyAdjusted}</dt>
                     <dd>✓</dd>
                   </div>
                 )}
@@ -137,23 +137,23 @@ export default function ReviewStep({
             {formData.landlord.isCompany ? (
               <>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.company}</dt>
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.company}</dt>
                   <dd>{formData.landlord.companyName}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.rfc}</dt>
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.rfc}</dt>
                   <dd>{formData.landlord.companyRfc}</dd>
                 </div>
                 {formData.landlord.legalRepName && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.representative}</dt>
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.representative}</dt>
                     <dd>{formData.landlord.legalRepName}</dd>
                   </div>
                 )}
               </>
             ) : (
               <div className="flex justify-between">
-                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.name}</dt>
+                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.name}</dt>
                 <dd>{formatFullName(
                   formData.landlord.firstName || '',
                   formData.landlord.paternalLastName || '',
@@ -163,12 +163,12 @@ export default function ReviewStep({
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.email}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.email}</dt>
               <dd>{formData.landlord.email}</dd>
             </div>
             {formData.landlord.phone && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.phone}</dt>
+                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.phone}</dt>
                 <dd>{formData.landlord.phone}</dd>
               </div>
             )}
@@ -180,19 +180,19 @@ export default function ReviewStep({
           <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.tenant}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.tenantType}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.tenantType}</dt>
               <dd>{formData.tenant.tenantType === TenantType.INDIVIDUAL ? t.pages.createPolicy.steps.review.labels.individual : t.pages.createPolicy.steps.review.labels.companyType}</dd>
             </div>
             {formData.tenant.tenantType === TenantType.COMPANY && formData.tenant.companyName && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.company}</dt>
+                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.company}</dt>
                 <dd>{formData.tenant.companyName}</dd>
               </div>
             )}
             {(formData.tenant.tenantType === TenantType.INDIVIDUAL ||
               (formData.tenant.tenantType === TenantType.COMPANY && formData.tenant.firstName)) && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">
+                <dt className="text-muted-foreground">
                   {formData.tenant.tenantType === TenantType.COMPANY ? t.pages.createPolicy.steps.review.labels.representative : t.pages.createPolicy.steps.review.labels.name}
                 </dt>
                 <dd>{formatFullName(
@@ -204,12 +204,12 @@ export default function ReviewStep({
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.email}</dt>
+              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.email}</dt>
               <dd>{formData.tenant.email}</dd>
             </div>
             {formData.tenant.phone && (
               <div className="flex justify-between">
-                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.phone}</dt>
+                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.phone}</dt>
                 <dd>{formData.tenant.phone}</dd>
               </div>
             )}
@@ -222,7 +222,7 @@ export default function ReviewStep({
             <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.guarantees}</h3>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-500">{t.pages.createPolicy.steps.review.labels.guaranteeType}</dt>
+                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.guaranteeType}</dt>
                 <dd>
                   {formData.guarantorType === GuarantorType.JOINT_OBLIGOR && t.pages.createPolicy.steps.review.labels.jointObligor}
                   {formData.guarantorType === GuarantorType.AVAL && t.pages.createPolicy.steps.review.labels.aval}
@@ -232,7 +232,7 @@ export default function ReviewStep({
 
               {formData.jointObligors.length > 0 && (
                 <div>
-                  <dt className="text-gray-500 mb-1">{t.pages.createPolicy.steps.review.labels.jointObligors}</dt>
+                  <dt className="text-muted-foreground mb-1">{t.pages.createPolicy.steps.review.labels.jointObligors}</dt>
                   <ul className="ml-4 space-y-1">
                     {formData.jointObligors.map((jo, index) => (
                       <li key={index} className="text-xs">
@@ -245,7 +245,7 @@ export default function ReviewStep({
 
               {formData.avals.length > 0 && (
                 <div>
-                  <dt className="text-gray-500 mb-1">{t.pages.createPolicy.steps.review.labels.avals}</dt>
+                  <dt className="text-muted-foreground mb-1">{t.pages.createPolicy.steps.review.labels.avals}</dt>
                   <ul className="ml-4 space-y-1">
                     {formData.avals.map((aval, index) => (
                       <li key={index} className="text-xs">
@@ -275,7 +275,7 @@ export default function ReviewStep({
                 <Mail className="inline h-4 w-4 mr-1" />
                 {t.pages.createPolicy.steps.review.autoInvite}
               </Label>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 {t.pages.createPolicy.steps.review.autoInviteDesc}
               </p>
             </div>

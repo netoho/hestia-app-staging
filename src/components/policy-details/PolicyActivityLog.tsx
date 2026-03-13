@@ -55,7 +55,7 @@ export function PolicyActivityLog({ activities }: PolicyActivityLogProps) {
       case 'denied':
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -121,7 +121,7 @@ export function PolicyActivityLog({ activities }: PolicyActivityLogProps) {
                    activity.performedBy ? t.pages.policies.details.activity.performedBy.staff : t.pages.policies.details.activity.performedBy.system}
                 </p>
                 {activity.details && (
-                  <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                  <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
                     <pre className="whitespace-pre-wrap">{JSON.stringify(activity.details, null, 2)}</pre>
                   </div>
                 )}

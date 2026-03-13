@@ -84,12 +84,12 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
                         key={activity.id}
                         className="flex items-start gap-3 pb-4 border-b last:border-0"
                       >
-                        <div className="p-2 bg-gray-100 rounded-full">
+                        <div className="p-2 bg-muted rounded-full">
                           <Activity className="h-4 w-4" />
                         </div>
                         <div className="flex-1">
                           <p className="font-medium">{activity.description}</p>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             {activity.performedBy?.name ||
                               activity.performedBy?.email ||
                               activity.performedByType ||
@@ -105,7 +105,7 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
             })}
           </div>
         ) : (
-          <p className="text-center text-gray-500 py-8">No hay actividad registrada</p>
+          <p className="text-center text-muted-foreground py-8">No hay actividad registrada</p>
         )}
       </CardContent>
     </Card>

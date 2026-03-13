@@ -4,42 +4,10 @@ import { FileText } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import PoliciesCards from './PoliciesCards';
 import PoliciesTable from './PoliciesTable';
-import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
-
-interface Actor {
-  firstName?: string | null;
-  middleName?: string | null;
-  paternalLastName?: string | null;
-  maternalLastName?: string | null;
-  companyName?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  informationComplete: boolean;
-  isPrimary?: boolean;
-  [key: string]: unknown;
-}
-
-interface Policy {
-  id: string;
-  policyNumber: string;
-  status: PolicyStatus;
-  propertyAddress?: { formattedAddress?: string | null } | null;
-  propertyDetails?: { propertyAddressDetails?: { formattedAddress?: string | null } | null } | null;
-  propertyType?: string | null;
-  rentAmount: number;
-  totalPrice?: number | null;
-  createdAt: Date | string;
-  package?: { name: string } | null;
-  tenant?: Actor | null;
-  landlords?: Actor[];
-  jointObligors?: Actor[];
-  avals?: Actor[];
-  guarantorType?: string | null;
-  [key: string]: unknown;
-}
+import { PolicyListItem } from './types';
 
 interface PoliciesListProps {
-  policies: Policy[];
+  policies: PolicyListItem[];
   loading: boolean;
 }
 

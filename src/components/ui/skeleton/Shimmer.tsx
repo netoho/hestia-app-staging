@@ -17,7 +17,7 @@ export default function Shimmer({ className, speed = 'normal' }: ShimmerProps) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden bg-gray-200 rounded-md',
+        'relative overflow-hidden bg-muted rounded-md',
         className
       )}
     >

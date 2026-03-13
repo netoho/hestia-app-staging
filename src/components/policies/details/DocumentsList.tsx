@@ -34,13 +34,13 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-gray-500" />
+                  <FileText className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">{doc.originalName}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {getDocumentCategoryLabel(doc.category as any)} • {formatFileSize(doc.fileSize)} •{' '}
                       {formatDate(doc.createdAt)}
                     </p>
@@ -68,7 +68,7 @@ export default function DocumentsList({ documents }: DocumentsListProps) {
             ))}
           </div>
         ) : (
-          <p className="text-center text-gray-500 py-8">No hay documentos cargados</p>
+          <p className="text-center text-muted-foreground py-8">No hay documentos cargados</p>
         )}
       </CardContent>
     </Card>

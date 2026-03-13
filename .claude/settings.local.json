@@ -97,7 +97,9 @@
       "Bash(git -C /Users/neto/Development/hestia/hestia-app add prisma/schema.prisma prisma/migrations/20260216174633_add_payment_transfer/ src/app/api/webhooks/stripe/route.ts src/app/payments/[id]/spei/page.tsx src/components/policies/payments/PaymentCard.tsx src/lib/services/paymentService.ts CLAUDE.md)",
       "Bash(git -C:*)",
       "Bash(git stash:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(unzip:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

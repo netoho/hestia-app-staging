@@ -84,28 +84,28 @@ export default function PropertyCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
-          <p className="text-sm text-gray-600">Dirección</p>
+          <p className="text-sm text-muted-foreground">Dirección</p>
           <p className="font-medium">{propertyAddress}</p>
         </div>
         {propertyType && (
           <div>
-            <p className="text-sm text-gray-600">Tipo de Propiedad</p>
+            <p className="text-sm text-muted-foreground">Tipo de Propiedad</p>
             <p className="font-medium">{propertyType}</p>
           </div>
         )}
         {propertyDescription && (
           <div>
-            <p className="text-sm text-gray-600">Descripción</p>
+            <p className="text-sm text-muted-foreground">Descripción</p>
             <p className="font-medium">{propertyDescription}</p>
           </div>
         )}
         <div>
-          <p className="text-sm text-gray-600">Renta Mensual</p>
+          <p className="text-sm text-muted-foreground">Renta Mensual</p>
           <p className="font-medium text-lg">{formatCurrency(rentAmount)}</p>
         </div>
         {contractLength && (
           <div>
-            <p className="text-sm text-gray-600">Duración del Contrato</p>
+            <p className="text-sm text-muted-foreground">Duración del Contrato</p>
             <p className="font-medium">{contractLength} meses</p>
           </div>
         )}
@@ -119,38 +119,38 @@ export default function PropertyCard({
               <div className="grid grid-cols-2 gap-2">
                 {propertyDetails.isFurnished !== undefined && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Amueblado:</span> {propertyDetails.isFurnished ? 'Sí' : 'No'}
+                    <span className="text-muted-foreground">Amueblado:</span> {propertyDetails.isFurnished ? 'Sí' : 'No'}
                   </p>
                 )}
                 {propertyDetails.parkingSpaces !== undefined && propertyDetails.parkingSpaces !== null && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Estacionamientos:</span> {propertyDetails.parkingSpaces}
+                    <span className="text-muted-foreground">Estacionamientos:</span> {propertyDetails.parkingSpaces}
                   </p>
                 )}
                 {propertyDetails.petsAllowed !== undefined && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Mascotas:</span> {propertyDetails.petsAllowed ? 'Sí' : 'No'}
+                    <span className="text-muted-foreground">Mascotas:</span> {propertyDetails.petsAllowed ? 'Sí' : 'No'}
                   </p>
                 )}
                 {propertyDetails.parkingNumbers && (
                   <p className="text-sm">
-                    <span className="text-gray-600">No. Cajones:</span> {propertyDetails.parkingNumbers}
+                    <span className="text-muted-foreground">No. Cajones:</span> {propertyDetails.parkingNumbers}
                   </p>
                 )}
                 {propertyDetails.hasInventory !== undefined && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Inventario:</span> {propertyDetails.hasInventory ? 'Sí' : 'No'}
+                    <span className="text-muted-foreground">Inventario:</span> {propertyDetails.hasInventory ? 'Sí' : 'No'}
                   </p>
                 )}
                 {propertyDetails.hasRules !== undefined && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Reglamento:</span> {propertyDetails.hasRules ? 'Sí' : 'No'}
+                    <span className="text-muted-foreground">Reglamento:</span> {propertyDetails.hasRules ? 'Sí' : 'No'}
                   </p>
                 )}
               </div>
               {propertyDetails.otherServices && (
                 <p className="text-sm mt-2">
-                  <span className="text-gray-600">Otros servicios:</span> {propertyDetails.otherServices}
+                  <span className="text-muted-foreground">Otros servicios:</span> {propertyDetails.otherServices}
                 </p>
               )}
             </div>
@@ -177,17 +177,17 @@ export default function PropertyCard({
                 <p className="text-sm font-semibold mb-2">Fechas y Firma</p>
                 {propertyDetails.contractSigningDate && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Firma de contrato:</span> {formatDateLong(propertyDetails.contractSigningDate)}
+                    <span className="text-muted-foreground">Firma de contrato:</span> {formatDateLong(propertyDetails.contractSigningDate)}
                   </p>
                 )}
                 {propertyDetails.contractSigningLocation && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Lugar de firma:</span> {propertyDetails.contractSigningLocation}
+                    <span className="text-muted-foreground">Lugar de firma:</span> {propertyDetails.contractSigningLocation}
                   </p>
                 )}
                 {propertyDetails.propertyDeliveryDate && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Entrega del inmueble:</span> {formatDateLong(propertyDetails.propertyDeliveryDate)}
+                    <span className="text-muted-foreground">Entrega del inmueble:</span> {formatDateLong(propertyDetails.propertyDeliveryDate)}
                   </p>
                 )}
               </div>
@@ -199,23 +199,23 @@ export default function PropertyCard({
                 <p className="text-sm font-semibold mb-2">Detalles Financieros</p>
                 {policyFinancialData.securityDeposit !== undefined && policyFinancialData.securityDeposit !== null && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Depósito:</span> {policyFinancialData.securityDeposit} mes(es)
+                    <span className="text-muted-foreground">Depósito:</span> {policyFinancialData.securityDeposit} mes(es)
                   </p>
                 )}
                 {policyFinancialData.maintenanceFee !== undefined && policyFinancialData.maintenanceFee !== null && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Mantenimiento:</span> {formatCurrency(policyFinancialData.maintenanceFee)}
+                    <span className="text-muted-foreground">Mantenimiento:</span> {formatCurrency(policyFinancialData.maintenanceFee)}
                     {policyFinancialData.maintenanceIncludedInRent && ' (incluido en renta)'}
                   </p>
                 )}
                 {policyFinancialData.rentIncreasePercentage !== undefined && policyFinancialData.rentIncreasePercentage !== null && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Incremento anual:</span> {policyFinancialData.rentIncreasePercentage}%
+                    <span className="text-muted-foreground">Incremento anual:</span> {policyFinancialData.rentIncreasePercentage}%
                   </p>
                 )}
                 {policyFinancialData.paymentMethod && (
                   <p className="text-sm">
-                    <span className="text-gray-600">Método de pago:</span> {policyFinancialData.paymentMethod}
+                    <span className="text-muted-foreground">Método de pago:</span> {policyFinancialData.paymentMethod}
                   </p>
                 )}
               </div>

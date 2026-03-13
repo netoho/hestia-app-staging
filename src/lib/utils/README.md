@@ -12,13 +12,23 @@ utils/
 ├── tenant/prepareForDB.ts     # Tenant-specific transforms
 ├── aval/prepareForDB.ts       # Aval-specific transforms
 ├── joint-obligor/prepareForDB.ts  # JointObligor-specific transforms
+├── actor.ts               # Actor helper utilities
+├── actorMapping.ts        # Actor type/model mapping
 ├── actorValidation.ts     # Actor validation helpers
-├── names.ts               # Name formatting
-├── currency.ts            # Currency formatting
 ├── addressUtils.ts        # Address utilities
+├── currency.ts            # Currency formatting
+├── filename.ts            # Filename utilities
+├── formatting.ts          # Date, address, file size formatting
+├── modernEmailTemplates.ts # Email template helpers
+├── money.ts               # Money/amount utilities
+├── names.ts               # Name formatting
+├── optimisticUpdates.ts   # Optimistic UI update helpers
 ├── policy.ts              # Policy utils (number, progress, display)
+├── prismaActorDelegate.ts # Prisma actor delegate abstraction
+├── requestCache.ts        # Request-level caching
 ├── tokenUtils.ts          # Token utilities
-└── trpcErrorHandler.ts    # tRPC error mapping
+├── trpcErrorHandler.ts    # tRPC error mapping
+└── validationUtils.ts     # Shared validation helpers
 ```
 
 ## Data Transformation

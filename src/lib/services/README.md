@@ -1,7 +1,6 @@
 # Service Layer
 
 **Status**: Active (mostly consolidated)
-**Last Updated**: January 2026
 
 ---
 
@@ -37,8 +36,10 @@ BaseService (abstract)
 ├── DocumentService
 ├── UserTokenService
 ├── PricingService
-├── FileUploadService
 ├── ActorTokenService
+├── ActorAuthService
+├── PaymentService
+├── ReceiptService
 └── PolicyWorkflowService
 ```
 
@@ -48,10 +49,9 @@ These remain functional because they don't need DB access or BaseService benefit
 
 - `progressService.ts` - Pure calculation functions
 
-### Class Singletons (No BaseService)
+### Notification Services
 
-- `reviewService.ts` - `class ReviewService`
-- `validationService.ts` - `class ValidationService`
+- `notificationService/` - Notification delivery (directory with multiple modules)
 
 ---
 
@@ -118,17 +118,6 @@ const policyProgress = calculatePolicyProgress(policy);
 
 ### Document Services
 
-#### fileUploadService
-**File**: `src/lib/services/fileUploadService.ts`
-**Pattern**: BaseService (singleton + legacy exports)
-
-```typescript
-import { uploadActorDocument, getDocumentUrl, deleteDocument } from '@/lib/services/fileUploadService';
-
-await uploadActorDocument(file, actorId, actorType, category);
-const url = await getDocumentUrl(documentId);
-```
-
 #### documentService
 **File**: `src/lib/services/documentService.ts`
 **Pattern**: BaseService (singleton + legacy exports)
@@ -181,27 +170,25 @@ import { calculatePolicyPricing, getPackageDetails } from '@/lib/services/pricin
 const pricing = await calculatePolicyPricing(input);
 ```
 
-### Review & Validation
+### Payment & Receipt Services
 
-#### reviewService
-**File**: `src/lib/services/reviewService.ts`
-**Pattern**: Class singleton (no BaseService)
+#### paymentService
+**File**: `src/lib/services/paymentService.ts`
+**Pattern**: BaseService
 
-```typescript
-import { reviewService } from '@/lib/services/reviewService';
+#### receiptService
+**File**: `src/lib/services/receiptService.ts`
+**Pattern**: BaseService
 
-const reviewData = await reviewService.getPolicyReviewData(policyId);
-```
+### Auth Services
 
-#### validationService
-**File**: `src/lib/services/validationService.ts`
-**Pattern**: Class singleton (no BaseService)
+#### ActorAuthService
+**File**: `src/lib/services/ActorAuthService.ts`
+**Pattern**: BaseService
 
-```typescript
-import { validationService } from '@/lib/services/validationService';
+### Notification Services
 
-const progress = await validationService.getValidationProgress(policyId);
-```
+**Directory**: `src/lib/services/notificationService/`
 
 ### BaseService Pattern Services
 

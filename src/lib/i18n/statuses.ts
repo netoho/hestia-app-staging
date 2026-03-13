@@ -1,15 +1,4 @@
 export const statuses = {
-    policyStatus: {
-        draft: 'Borrador',
-        sent_to_tenant: 'Enviada a Inquilin@',
-        in_progress: 'En Proceso',
-        submitted: 'Completada por Inquilin@',
-        under_review: 'En Revisión',
-        approved: 'Aprobada',
-        denied: 'Rechazada',
-    } as Record<string, string>,
-
-    // Full policy status labels (matching Prisma schema)
     policyStatusFull: {
         COLLECTING_INFO: 'Recopilando Información',
         PENDING_APPROVAL: 'Pendiente de Aprobación',

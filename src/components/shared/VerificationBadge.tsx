@@ -12,13 +12,13 @@ interface VerificationBadgeProps {
 
 const VERIFICATION_CONFIG: Record<VerificationStatus, {
   label: string;
-  color: string;
+  variant: 'muted' | 'success' | 'destructive' | 'warning';
   icon: typeof Clock;
 }> = {
-  PENDING: { label: 'Pendiente', color: 'bg-gray-500', icon: Clock },
-  APPROVED: { label: 'Aprobado', color: 'bg-green-500', icon: CheckCircle2 },
-  REJECTED: { label: 'Rechazado', color: 'bg-red-500', icon: XCircle },
-  IN_REVIEW: { label: 'En Revisión', color: 'bg-yellow-500', icon: Eye },
+  PENDING: { label: 'Pendiente', variant: 'muted', icon: Clock },
+  APPROVED: { label: 'Aprobado', variant: 'success', icon: CheckCircle2 },
+  REJECTED: { label: 'Rechazado', variant: 'destructive', icon: XCircle },
+  IN_REVIEW: { label: 'En Revisión', variant: 'warning', icon: Eye },
 };
 
 export function VerificationBadge({ status, size = 'md', className }: VerificationBadgeProps) {
@@ -26,12 +26,14 @@ export function VerificationBadge({ status, size = 'md', className }: Verificati
   const Icon = config.icon;
 
   return (
-    <Badge className={cn(
-      config.color,
-      'text-white flex items-center gap-1',
-      size === 'sm' && 'text-xs px-2 py-0.5',
-      className
-    )}>
+    <Badge
+      variant={config.variant}
+      className={cn(
+        'flex items-center gap-1',
+        size === 'sm' && 'text-xs px-2 py-0.5',
+        className
+      )}
+    >
       <Icon className={cn('h-3 w-3', size === 'sm' && 'h-2.5 w-2.5')} />
       {config.label}
     </Badge>

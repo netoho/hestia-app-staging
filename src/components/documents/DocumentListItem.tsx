@@ -30,7 +30,7 @@ export function DocumentListItem({
     if (document.mimeType?.startsWith('image/')) {
       return <Image className="h-5 w-5 text-blue-500" />;
     }
-    return <FileText className="h-5 w-5 text-gray-500" />;
+    return <FileText className="h-5 w-5 text-muted-foreground" />;
   };
 
   const displayName = document.originalName || document.fileName;
@@ -42,12 +42,12 @@ export function DocumentListItem({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {getFileIcon()}
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{displayName}</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {formatFileSize(document.fileSize)}
               {' • '}
               {formatDate(document.createdAt)}

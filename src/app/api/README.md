@@ -1,155 +1,56 @@
-# API Routes Module
+# API Routes
 
-## Status: 🟢 Build Passing
+Next.js App Router API routes. Most business logic lives in tRPC routers at `src/server/routers/` — these REST routes handle cases where tRPC is not suitable (file uploads, webhooks, cron jobs, NextAuth).
 
-## Overview
-
-This directory contains all Next.js 15 API routes using the App Router pattern. The API is organized by domain and follows RESTful conventions where possible.
-
-## Architecture
+## Directory Structure
 
 ```
-/api/
-├── actor/          # Actor self-service portals (NEW)
-│   ├── tenant/
-│   ├── landlord/
-│   ├── joint-obligor/
-│   └── aval/
-├── policies/       # Policy CRUD and workflows
-│   └── [id]/      # Policy-specific operations
-├── tenant/        # DEPRECATED - Legacy tenant API
-├── admin/         # Admin-only operations
-├── auth/          # Authentication endpoints
-├── address/       # Google Maps integration
-└── documents/     # Document management
+api/
+├── auth/
+│   ├── [...nextauth]/      # NextAuth.js handler
+│   ├── login/              # POST — custom JWT login
+│   ├── register/           # POST — user registration
+│   ├── forgot-password/    # POST — send password reset email
+│   └── reset-password/
+│       └── [token]/        # POST — reset password with token
+├── cron/
+│   ├── incomplete-actors-reminder/  # GET — daily reminder emails for incomplete actor info
+│   ├── policy-expiry/               # GET — daily job to expire ended protecciones
+│   ├── receipt-reminder/            # GET — monthly receipt reminder to tenants
+│   └── test-reminder/               # GET — dev-only manual trigger for reminders
+├── payments/
+│   └── [paymentId]/
+│       └── receipt/        # POST — get S3 presigned URL to upload a payment receipt
+├── policies/
+│   └── [policyId]/
+│       └── pdf/            # GET — generate and download PDF for a protección (staff/admin/broker)
+├── trpc/
+│   └── [trpc]/             # tRPC fetch adapter — all tRPC calls go through here
+├── user/
+│   └── avatar/             # GET/POST — get presigned URL to upload user avatar
+└── webhooks/
+    └── stripe/             # POST — Stripe webhook handler (payment events)
 ```
 
-## Known Issues
+## Route Groups
 
-### Security (TODO)
-- [ ] BROKER role can access other brokers' policies
-- [ ] No rate limiting implemented
+### `auth/`
+Custom authentication endpoints alongside NextAuth. Handles credential login, registration, and the forgot/reset password flow with rate limiting.
 
-### Cleanup (TODO)
-- [ ] Migrate `/tenant/` (legacy) to `/actor/tenant/` (new)
-- [ ] Delete `_deprecated/` folder
+### `cron/`
+Vercel Cron Job endpoints. All are GET handlers that verify `Authorization: Bearer $CRON_SECRET` in production. `test-reminder` is blocked in production.
 
-## Design Patterns
+### `payments/`
+File upload support for payment receipts. Returns an S3 presigned URL; the client uploads directly to S3 (avoids routing large files through Vercel).
 
-### Authentication Pattern
-```typescript
-const authResult = await authenticateUser(request);
-if (!authResult.success || !authResult.user) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-}
-const user = authResult.user;
-```
+### `policies/`
+PDF generation for protecciones. Streams the generated PDF as a response.
 
-### Response Format
-```typescript
-// Success
-return NextResponse.json({
-  success: true,
-  data: result
-});
+### `trpc/`
+Single catch-all route that mounts the tRPC app router (`src/server/routers/_app.ts`). All tRPC procedures are served here.
 
-// Error
-return NextResponse.json({
-  success: false,
-  error: 'Error message'
-}, { status: 400 });
-```
+### `user/`
+Avatar upload presigned URL. Supports both authenticated sessions and invitation-token-based access (for onboarding).
 
-### Database Operations
-- Always use Prisma client
-- Include relations when needed
-- Use transactions for multi-table updates
-
-## Key Endpoints
-
-### Policy Management
-- `POST /api/policies` - Create new policy
-- `GET /api/policies/[id]` - Get policy details
-- `POST /api/policies/[id]/send-invitations` - Send actor invites
-- `POST /api/policies/[id]/actors/[type]/[actorId]/verify` - Verify actors
-
-### Actor Portals
-- `GET /api/actor/[type]/[token]/validate` - Validate token
-- `POST /api/actor/[type]/[token]/submit` - Submit information
-- `POST /api/actor/[type]/[token]/documents` - Upload documents
-
-### Investigation
-- `POST /api/policies/[id]/investigation` - Create investigation
-- `POST /api/policies/[id]/investigation/complete` - Complete investigation
-
-## TODO - Priority Order
-
-1. [ ] Add BROKER authorization checks
-2. [ ] Implement rate limiting
-3. [ ] Migrate legacy tenant API
-4. [ ] Delete `_deprecated/` folder
-5. [ ] Add integration tests
-
-## Testing
-
-Currently no automated tests. Test manually via:
-- Postman collection (not in repo)
-- curl commands
-- Frontend integration
-
-## Environment Variables Required
-
-```env
-DATABASE_URL=
-NEXTAUTH_SECRET=
-JWT_SECRET=
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-S3_BUCKET_NAME=
-```
-
-## Common Fixes
-
-### Prisma Type Errors
-```bash
-npx prisma generate
-```
-
-### Import Enum from Prisma
-```typescript
-import { PolicyStatus, UserRole } from "@/prisma/generated/prisma-client/enums";
-```
-
-### Handle Nullable Fields
-```typescript
-field: value ?? null
-```
-
-## Migration Notes
-
-When migrating from Pages to App Router:
-- Use `NextRequest` instead of `NextApiRequest`
-- Use `NextResponse` instead of `res.json()`
-- Params are async: `{ params }: { params: Promise<{ id: string }> }`
-
-## Security Checklist
-
-- [ ] All endpoints check authentication
-- [ ] Role-based access implemented
-- [ ] Input validation on all POST/PUT
-- [ ] SQL injection prevention (Prisma handles)
-- [ ] Rate limiting configured
-- [ ] CORS properly set
-- [ ] Sensitive data not logged
-
-## Performance Considerations
-
-- Use `select` to limit fields returned
-- Add database indexes for common queries
-- Implement caching for repeated queries
-- Remove all console.log statements
-- Use pagination for list endpoints
-
----
-
-**Last Updated:** 2026-01-07
+### `webhooks/`
+Stripe webhook receiver. Verifies signature, processes payment events (`payment_intent.succeeded`, etc.), and updates payment/policy state.

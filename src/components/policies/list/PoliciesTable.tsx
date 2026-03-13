@@ -6,46 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { PolicyStatus } from "@/prisma/generated/prisma-client/enums";
 import { calculatePolicyProgress } from '@/lib/utils/policy';
 import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 import ActorsList from './ActorsList';
+import { PolicyListItem } from './types';
 import { t } from '@/lib/i18n';
 
-interface Actor {
-  firstName?: string | null;
-  middleName?: string | null;
-  paternalLastName?: string | null;
-  maternalLastName?: string | null;
-  companyName?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  informationComplete: boolean;
-  isPrimary?: boolean;
-  [key: string]: unknown;
-}
-
-interface Policy {
-  id: string;
-  policyNumber: string;
-  status: PolicyStatus;
-  propertyAddress?: { formattedAddress?: string | null } | null;
-  propertyDetails?: { propertyAddressDetails?: { formattedAddress?: string | null } | null } | null;
-  propertyType?: string | null;
-  rentAmount: number;
-  totalPrice?: number | null;
-  createdAt: Date | string;
-  package?: { name: string } | null;
-  tenant?: Actor | null;
-  landlords?: Actor[];
-  jointObligors?: Actor[];
-  avals?: Actor[];
-  guarantorType?: string | null;
-  [key: string]: unknown;
-}
-
 interface PoliciesTableProps {
-  policies: Policy[];
+  policies: PolicyListItem[];
 }
 
 /**

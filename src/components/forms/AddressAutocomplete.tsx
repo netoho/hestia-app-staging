@@ -332,7 +332,7 @@ export function AddressAutocomplete({
         )}
         <div className="relative">
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
             <Input
               id={`address-search-${sessionToken}`}
               name={`address_${sessionToken}`}
@@ -356,7 +356,7 @@ export function AddressAutocomplete({
                   onClick={handleClear}
                   className="ml-1"
                 >
-                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  <X className="h-4 w-4 text-muted-foreground/60 hover:text-muted-foreground" />
                 </button>
               )}
             </div>
@@ -370,11 +370,11 @@ export function AddressAutocomplete({
                   <button
                     key={suggestion.placeId}
                     type="button"
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                    className="w-full text-left px-4 py-2 hover:bg-muted focus:bg-muted focus:outline-none"
                     onClick={() => handleSelectSuggestion(suggestion)}
                   >
                     <div className="font-medium">{suggestion.mainText}</div>
-                    <div className="text-sm text-gray-500">{suggestion.secondaryText}</div>
+                    <div className="text-sm text-muted-foreground">{suggestion.secondaryText}</div>
                   </button>
                 ))}
               </CardContent>
@@ -398,7 +398,7 @@ export function AddressAutocomplete({
 
       {/* Manual Form Fields */}
       {showManualForm && (
-        <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="street">Calle *</Label>
@@ -504,7 +504,7 @@ export function AddressAutocomplete({
           </div>
 
           {formData.placeId && (
-            <div className="text-xs text-gray-500 max-w-md">
+            <div className="text-xs text-muted-foreground max-w-md">
               <p className='text-ellipsis truncate'>Google Place ID: {formData.placeId}</p>
               {formData.latitude && formData.longitude && (
                 <p>Coordenadas: {formData.latitude}, {formData.longitude}</p>

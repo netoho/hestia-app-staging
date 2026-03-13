@@ -12,7 +12,7 @@ export function CompletionBadge({ isComplete, size = 'md', showIcon = false }: C
 
   if (isComplete) {
     return (
-      <Badge className={`bg-green-500 text-white ${sizeClass}`}>
+      <Badge variant="success" className={sizeClass}>
         {showIcon && <CheckCircle2 className="h-3 w-3 mr-1" />}
         Completo
       </Badge>
@@ -20,7 +20,7 @@ export function CompletionBadge({ isComplete, size = 'md', showIcon = false }: C
   }
 
   return (
-    <Badge className={`bg-orange-500 text-white ${sizeClass}`}>
+    <Badge variant="warning" className={sizeClass}>
       {showIcon && <Clock className="h-3 w-3 mr-1" />}
       Pendiente
     </Badge>

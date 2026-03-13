@@ -145,6 +145,14 @@ Result<T, ServiceError>
 ### Status Transitions
 Use `transitionPolicyStatus()` from `policyWorkflowService.ts` - never update status directly. See [Policy Status Model](docs/POLICY_STATUS.md) for the full transition diagram and validation gates.
 
+### Key Services
+- `policyService` / `policyWorkflowService` - Policy lifecycle and status transitions
+- `paymentService` - Payment processing
+- `receiptService` - Receipt generation
+- `notificationService` - Notifications
+- `ActorAuthService` - Actor portal authentication via access tokens
+- `documentService`, `emailService`, `progressService` - Supporting services
+
 ### Activity Logging
 Log significant actions with `logPolicyActivity()` from `policyService.ts`.
 
@@ -152,10 +160,3 @@ Log significant actions with `logPolicyActivity()` from `policyService.ts`.
 
 See [docs/BACKLOG.md](docs/BACKLOG.md) for current work items and priorities.
 
-## Session Context
-
-See [SESSION_CONTEXT.md](SESSION_CONTEXT.md) for detailed system context and recent changes.
-
----
-
-**Last Updated:** 2026-01-07

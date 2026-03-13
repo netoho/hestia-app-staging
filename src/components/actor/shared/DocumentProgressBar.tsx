@@ -18,7 +18,7 @@ export function DocumentProgressBar({ uploadedCount, requiredCount, extraMessage
             {uploadedCount} de {requiredCount} requeridos
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-muted rounded-full h-2">
           <div
             className="bg-green-500 h-2 rounded-full transition-all"
             style={{ width: `${percentage}%` }}

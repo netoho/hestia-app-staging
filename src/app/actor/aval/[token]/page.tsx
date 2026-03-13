@@ -50,8 +50,8 @@ export default function AvalPortalPage({
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto" style={{ color: '#173459' }} />
-          <p className="mt-4 text-gray-600">Validando acceso...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Validando acceso...</p>
         </div>
       </div>
     );
@@ -93,13 +93,13 @@ export default function AvalPortalPage({
       <div className="min-h-screen bg-gradient-to-b from-white to-blue-50">
         <div className="container mx-auto px-4 py-12 max-w-4xl">
           <Card className="shadow-lg border-0">
-            <CardHeader style={{ background: 'linear-gradient(to bottom, #ffffff, #f0f9ff)', borderBottom: '1px solid #d4dae1' }}>
+            <CardHeader className="bg-gradient-to-b from-white to-blue-50 border-b border-border">
               <div className="flex items-center gap-3 mb-2">
-                <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#173459' }}>
+                <div className="h-12 w-12 rounded-full flex items-center justify-center bg-primary">
                   <CheckCircle2 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="font-headline text-2xl" style={{ color: '#173459' }}>
+                  <CardTitle className="font-headline text-2xl text-primary">
                     Portal del Aval
                   </CardTitle>
                   <CardDescription className="text-base">
@@ -111,27 +111,27 @@ export default function AvalPortalPage({
             <CardContent className="pt-6">
               {/* Policy Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
-                  <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50">
+                  <Home className="h-5 w-5 mt-0.5 text-primary" />
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Propiedad</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Propiedad</p>
+                    <p className="text-sm font-medium text-primary">{policy.propertyAddress}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
-                  <DollarSign className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50">
+                  <DollarSign className="h-5 w-5 mt-0.5 text-primary" />
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    <p className="text-xs text-muted-foreground mb-1">Renta mensual</p>
+                    <p className="text-sm font-medium text-primary">
                       ${policy.rentAmount?.toLocaleString('es-MX')} MXN
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff' }}>
-                  <Calendar className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50">
+                  <Calendar className="h-5 w-5 mt-0.5 text-primary" />
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Período</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    <p className="text-xs text-muted-foreground mb-1">Período</p>
+                    <p className="text-sm font-medium text-primary">
                       {policy.contractLength} meses
                     </p>
                   </div>
@@ -159,17 +159,16 @@ export default function AvalPortalPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50">
       {/* Hero Section */}
-      <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)', borderColor: '#d4dae1' }} className="border-b">
+      <div className="bg-gradient-to-b from-white to-blue-100 border-b border-border">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="text-center">
-            <h1 className="font-headline text-3xl md:text-4xl mb-3" style={{ color: '#173459' }}>
+            <h1 className="font-headline text-3xl md:text-4xl mb-3 text-primary">
               Bienvenido, Aval
             </h1>
-            <p className="text-lg text-gray-600 mb-4">
+            <p className="text-lg text-muted-foreground mb-4">
               Complete su información para la protección de arrendamiento con garantía de propiedad
             </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
-                 style={{ backgroundColor: '#fff7ed', color: '#FF7F50', border: '1px solid #fed7aa' }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-orange-50 text-accent border border-orange-200">
               <AlertCircle className="h-4 w-4" />
               Protección #{policy.policyNumber}
             </div>
@@ -181,23 +180,23 @@ export default function AvalPortalPage({
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Policy Info Card */}
         <Card className="mb-6 shadow-lg border-0">
-          <CardHeader style={{ background: 'linear-gradient(to right, #173459, #2b5a8c)', color: 'white' }}>
+          <CardHeader className="bg-gradient-to-r from-primary to-primary/70 text-white">
             <CardTitle className="font-headline">Detalles de la Protección</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
-                <Home className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <Home className="h-5 w-5 mt-0.5 text-primary" />
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Propiedad</p>
-                  <p className="text-sm font-medium" style={{ color: '#173459' }}>{policy.propertyAddress}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Propiedad</p>
+                  <p className="text-sm font-medium text-primary">{policy.propertyAddress}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <DollarSign className="h-5 w-5 mt-0.5" style={{ color: '#173459' }} />
+                <DollarSign className="h-5 w-5 mt-0.5 text-primary" />
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Renta mensual</p>
-                  <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                  <p className="text-xs text-muted-foreground mb-1">Renta mensual</p>
+                  <p className="text-sm font-medium text-primary">
                     ${policy.rentAmount?.toLocaleString('es-MX')} MXN
                   </p>
                 </div>

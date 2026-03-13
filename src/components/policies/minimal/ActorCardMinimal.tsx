@@ -33,10 +33,10 @@ export default function ActorCardMinimal({ actor, actorType, onExpand }: ActorCa
     return (
       <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onExpand}>
         <CardContent className="py-6 text-center">
-          <div className="h-8 w-8 mx-auto mb-2 text-gray-400">
+          <div className="h-8 w-8 mx-auto mb-2 text-muted-foreground/60">
             {getActorIcon()}
           </div>
-          <p className="text-sm text-gray-600">Sin información</p>
+          <p className="text-sm text-muted-foreground">Sin información</p>
         </CardContent>
       </Card>
     );
@@ -57,22 +57,22 @@ export default function ActorCardMinimal({ actor, actorType, onExpand }: ActorCa
       </CardHeader>
       <CardContent className="space-y-2">
         <div>
-          <p className="text-xs text-gray-600">Nombre</p>
+          <p className="text-xs text-muted-foreground">Nombre</p>
           <p className="text-sm font-medium truncate">{displayName}</p>
         </div>
         {actor.email && (
           <div>
-            <p className="text-xs text-gray-600">Email</p>
+            <p className="text-xs text-muted-foreground">Email</p>
             <p className="text-sm truncate">{actor.email}</p>
           </div>
         )}
         <div className="flex justify-between pt-2 border-t">
           <div className="text-center">
-            <p className="text-xs text-gray-600">Documentos</p>
+            <p className="text-xs text-muted-foreground">Documentos</p>
             <p className="text-sm font-bold">{actor.documents?.length || 0}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-gray-600">Referencias</p>
+            <p className="text-xs text-muted-foreground">Referencias</p>
             <p className="text-sm font-bold">
               {(actor.references?.length || 0) + (actor.commercialReferences?.length || 0)}
             </p>

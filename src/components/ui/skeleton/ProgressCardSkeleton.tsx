@@ -34,7 +34,7 @@ export default function ProgressCardSkeleton() {
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-3 gap-2 text-center">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="p-3 bg-gray-50 rounded-lg">
+              <div key={i} className="p-3 bg-muted/50 rounded-lg">
                 <Shimmer className="h-8 w-12 mx-auto mb-1" />
                 <Shimmer className="h-3 w-16 mx-auto" />
               </div>
