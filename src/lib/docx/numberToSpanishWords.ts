@@ -81,8 +81,12 @@ function convertNumber(n: number): string {
  * @returns e.g. "CINCUENTA MIL PESOS 00/100 M.N."
  */
 export function amountToSpanishLegal(amount: number): string {
-  const intPart = Math.floor(Math.abs(amount));
-  const decPart = Math.round((Math.abs(amount) - intPart) * 100);
+  let intPart = Math.floor(Math.abs(amount));
+  let decPart = Math.round((Math.abs(amount) - intPart) * 100);
+  if (decPart >= 100) {
+    intPart += 1;
+    decPart = 0;
+  }
   const cents = String(decPart).padStart(2, '0');
 
   return `${convertNumber(intPart)} PESOS ${cents}/100 M.N.`;

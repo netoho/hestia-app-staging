@@ -72,7 +72,7 @@ export default function ActorActivityTimeline({
       DOCUMENT_VERIFIED: { label: 'Verificado', className: 'bg-green-500' },
     };
 
-    const badgeConfig = config[action] || { label: action, className: 'bg-muted/500' };
+    const badgeConfig = config[action] || { label: action, className: 'bg-muted text-muted-foreground' };
 
     return (
       <Badge className={`${badgeConfig.className} text-white text-xs`}>

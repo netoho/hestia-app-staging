@@ -32,6 +32,7 @@ const SZ_SUBTITLE = 22; // 11pt
 const SZ_SMALL = 18; // 9pt
 
 const LABEL_BG = 'D6E4F0'; // Light blue
+const BLANK = '';
 
 const THIN = { style: BorderStyle.SINGLE as const, size: 1, color: '000000' };
 const BORDERS = {
