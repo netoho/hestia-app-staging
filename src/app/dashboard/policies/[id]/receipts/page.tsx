@@ -36,7 +36,7 @@ export default function AdminReceiptsPage({ params }: ReceiptsPageProps) {
 
   // Auth check
   if (!userLoading && !user) redirect('/login');
-  if (!userLoading && user && !['ADMIN', 'STAFF', 'BROKER'].includes(user.role)) redirect('/dashboard');
+  if (!userLoading && user && !['ADMIN', 'STAFF'].includes(user.role)) redirect('/dashboard');
 
   if (policyLoading || receiptsLoading) {
     return (

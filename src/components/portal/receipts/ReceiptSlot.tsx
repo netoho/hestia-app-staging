@@ -38,7 +38,8 @@ interface ReceiptRecord {
 interface ReceiptSlotProps {
   receiptType: ReceiptType;
   receipt?: ReceiptRecord;
-  operation?: ReceiptOperation;
+  operation?: ReceiptOperation;       // slot-key based (for upload/markNA)
+  receiptOperation?: ReceiptOperation; // receiptId-based (for delete/undo/download)
   monthLabel: string;
   onUpload?: (file: File) => void;
   onDelete?: (receiptId: string) => void;
@@ -53,6 +54,7 @@ export default function ReceiptSlot({
   receiptType,
   receipt,
   operation,
+  receiptOperation,
   monthLabel,
   onUpload,
   onDelete,
@@ -73,9 +75,9 @@ export default function ReceiptSlot({
   const isNA = receipt?.status === ReceiptStatus.NOT_APPLICABLE;
   const isPending = !receipt;
 
-  const isDeleting = operation?.type === 'delete' && operation.status === 'pending';
+  const isDeleting = receiptOperation?.type === 'delete' && receiptOperation.status === 'pending';
   const isMarkingNA = operation?.type === 'markNA' && operation.status === 'pending';
-  const isUndoingNA = operation?.type === 'undoNA' && operation.status === 'pending';
+  const isUndoingNA = receiptOperation?.type === 'undoNA' && receiptOperation.status === 'pending';
 
   // Handle file selection — if already uploaded, show replace confirmation
   const handleFileSelect = (file: File) => {

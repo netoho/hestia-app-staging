@@ -23,6 +23,7 @@ interface OtherReceiptItemProps {
   onDownload?: (receiptId: string) => void;
   onDelete?: (receiptId: string) => void;
   operation?: ReceiptOperation;
+  receiptOperation?: ReceiptOperation;
 }
 
 function getCategoryLabel(category: string | null | undefined): string {
@@ -36,8 +37,9 @@ export default function OtherReceiptItem({
   onDownload,
   onDelete,
   operation,
+  receiptOperation,
 }: OtherReceiptItemProps) {
-  const isDeleting = operation?.type === 'delete' && operation.status === 'pending';
+  const isDeleting = receiptOperation?.type === 'delete' && receiptOperation.status === 'pending';
   const categoryLabel = getCategoryLabel(receipt.otherCategory);
 
   return (

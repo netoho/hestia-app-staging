@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ReceiptType } from '@/prisma/generated/prisma-client/enums';
+import { ReceiptType, ReceiptStatus } from '@/prisma/generated/prisma-client/enums';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Home, DollarSign, Calendar, ShieldCheck } from 'lucide-react';
@@ -21,7 +21,7 @@ interface ReceiptRecord {
   year: number;
   month: number;
   receiptType: ReceiptType;
-  status: string;
+  status: ReceiptStatus;
   originalName?: string | null;
   fileName?: string | null;
   uploadedAt?: Date | string | null;
@@ -257,6 +257,7 @@ export default function ReceiptDashboard({
               onMarkNA={(type, note) => ops.markNotApplicable(currentYear, currentMonth, type, note)}
               onUndoNA={ops.undoNotApplicable}
               getSlotOperation={(type, otherCat) => ops.getSlotOperation(currentYear, currentMonth, type, otherCat)}
+              getReceiptOperation={ops.getReceiptOperation}
             />
           </div>
         )}
@@ -277,6 +278,7 @@ export default function ReceiptDashboard({
               onMarkNA={(year, month, type, note) => ops.markNotApplicable(year, month, type, note)}
               onUndoNA={ops.undoNotApplicable}
               getSlotOperation={(year, month, type, otherCat) => ops.getSlotOperation(year, month, type, otherCat)}
+              getReceiptOperation={ops.getReceiptOperation}
             />
           </div>
         )}

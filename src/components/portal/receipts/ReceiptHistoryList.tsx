@@ -40,6 +40,7 @@ interface ReceiptHistoryListProps {
   onMarkNA?: (year: number, month: number, receiptType: ReceiptType, note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
   getSlotOperation?: (year: number, month: number, receiptType: ReceiptType, otherCategory?: string) => ReceiptOperation | undefined;
+  getReceiptOperation?: (receiptId: string) => ReceiptOperation | undefined;
 }
 
 // --- Component ---
@@ -54,6 +55,7 @@ export default function ReceiptHistoryList({
   onMarkNA,
   onUndoNA,
   getSlotOperation,
+  getReceiptOperation,
 }: ReceiptHistoryListProps) {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 
@@ -138,6 +140,7 @@ export default function ReceiptHistoryList({
                   onMarkNA={(type, note) => onMarkNA?.(year, month, type, note)}
                   onUndoNA={onUndoNA}
                   getSlotOperation={(type, otherCat) => getSlotOperation?.(year, month, type, otherCat)}
+                  getReceiptOperation={getReceiptOperation}
                 />
               </div>
             )}

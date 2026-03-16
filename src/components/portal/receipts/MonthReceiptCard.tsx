@@ -40,6 +40,7 @@ interface MonthReceiptCardProps {
   onMarkNA?: (receiptType: ReceiptType, note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
   getSlotOperation?: (receiptType: ReceiptType, otherCategory?: string) => ReceiptOperation | undefined;
+  getReceiptOperation?: (receiptId: string) => ReceiptOperation | undefined;
 }
 
 // --- Component ---
@@ -55,6 +56,7 @@ export default function MonthReceiptCard({
   onMarkNA,
   onUndoNA,
   getSlotOperation,
+  getReceiptOperation,
 }: MonthReceiptCardProps) {
   const [showOtherModal, setShowOtherModal] = useState(false);
 
@@ -124,6 +126,7 @@ export default function MonthReceiptCard({
             receiptType={ReceiptType.RENT}
             receipt={receiptMap.get(ReceiptType.RENT)}
             operation={getSlotOperation?.(ReceiptType.RENT)}
+            receiptOperation={receiptMap.get(ReceiptType.RENT) ? getReceiptOperation?.(receiptMap.get(ReceiptType.RENT)!.id) : undefined}
             monthLabel={monthLabel}
             onUpload={file => onUpload?.(file, ReceiptType.RENT)}
             onDelete={onDelete}
@@ -142,6 +145,7 @@ export default function MonthReceiptCard({
                 receiptType={type}
                 receipt={receiptMap.get(type)}
                 operation={getSlotOperation?.(type)}
+                receiptOperation={receiptMap.get(type) ? getReceiptOperation?.(receiptMap.get(type)!.id) : undefined}
                 monthLabel={monthLabel}
                 onUpload={file => onUpload?.(file, type)}
                 onDelete={onDelete}
@@ -221,6 +225,7 @@ export default function MonthReceiptCard({
                       onDownload={onDownload}
                       onDelete={onDelete}
                       operation={getSlotOperation?.(ReceiptType.OTHER, receipt.otherCategory ?? undefined)}
+                      receiptOperation={getReceiptOperation?.(receipt.id)}
                     />
                   ))}
                 </div>

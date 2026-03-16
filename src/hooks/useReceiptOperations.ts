@@ -245,6 +245,13 @@ export function useReceiptOperations({
     return operations[slotKey(year, month, receiptType, otherCategory)];
   }, [operations]);
 
+  // Lookup by receiptId — for delete, download, undoNA which use id-based keys
+  const getReceiptOperation = useCallback((receiptId: string): ReceiptOperation | undefined => {
+    return operations[`delete-${receiptId}`]
+      || operations[`download-${receiptId}`]
+      || operations[`undoNA-${receiptId}`];
+  }, [operations]);
+
   return {
     operations,
     uploadReceipt,
@@ -253,5 +260,6 @@ export function useReceiptOperations({
     markNotApplicable,
     undoNotApplicable,
     getSlotOperation,
+    getReceiptOperation,
   };
 }

@@ -54,6 +54,7 @@ export default function ReceiptConfigEditor({
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const { data: configData, isLoading, isRefetching } = trpc.receipt.getConfig.useQuery(
     { policyId },
@@ -75,6 +76,7 @@ export default function ReceiptConfigEditor({
   useEffect(() => {
     if (configData?.currentTypes) {
       setSelectedTypes(new Set(configData.currentTypes));
+      setInitialized(true);
     }
   }, [configData?.currentTypes]);
 
@@ -101,7 +103,7 @@ export default function ReceiptConfigEditor({
     utils.receipt.getConfig.invalidate({ policyId });
   };
 
-  const hasChanges = configData?.currentTypes &&
+  const hasChanges = initialized && configData?.currentTypes &&
     (configData.currentTypes.length !== selectedTypes.size ||
       configData.currentTypes.some(ct => !selectedTypes.has(ct)));
 
