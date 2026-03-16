@@ -29,7 +29,7 @@ export default function ReceiptUploader({
     setValidationError('');
     const result = validateFile(file);
     if (!result.valid) {
-      setValidationError(result.error || 'Archivo inválido');
+      setValidationError(result.error || t.errors.invalidFile);
       return;
     }
     onFileSelect(file);
@@ -100,7 +100,7 @@ export default function ReceiptUploader({
         onDragLeave={handleDragLeave}
       >
         <Upload className="h-5 w-5 mx-auto mb-1 text-muted-foreground/60" />
-        <p className="text-xs text-muted-foreground">{t.upload.dragDrop}</p>
+        <p className="text-sm text-muted-foreground">{t.upload.dragDrop}</p>
         <p className="text-xs text-muted-foreground/60 mt-1">{t.upload.maxSize}</p>
         <input
           ref={fileInputRef}

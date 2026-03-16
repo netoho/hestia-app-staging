@@ -67,6 +67,7 @@ export default function ReceiptSlot({
 
   const Icon = RECEIPT_TYPE_ICONS[receiptType] || FileText;
   const typeLabel = t.types[receiptType] || receiptType;
+  const isRent = receiptType === ReceiptType.RENT;
 
   const isUploaded = receipt?.status === ReceiptStatus.UPLOADED;
   const isNA = receipt?.status === ReceiptStatus.NOT_APPLICABLE;
@@ -95,22 +96,31 @@ export default function ReceiptSlot({
   // --- Pending state ---
   if (isPending) {
     return (
-      <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-            <Icon className="h-4 w-4 text-muted-foreground" />
+      <div className={
+        isRent
+          ? 'border border-primary/20 bg-primary/5 rounded-lg p-4'
+          : 'border-2 border-dashed border-gray-200 rounded-lg p-4'
+      }>
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className={`flex items-center justify-center rounded-full ${
+            isRent ? 'h-9 w-9 bg-primary/10' : 'h-8 w-8 bg-muted'
+          }`}>
+            <Icon className={`h-4 w-4 ${isRent ? 'text-primary' : 'text-muted-foreground'}`} />
           </div>
-          <span className="text-sm font-medium text-foreground">{typeLabel}</span>
+          <span className={`font-medium ${isRent ? 'text-base text-primary' : 'text-base text-foreground'}`}>
+            {typeLabel}
+          </span>
         </div>
 
         <ReceiptUploader onFileSelect={handleFileSelect} operation={operation} />
-        <button
-          type="button"
-          className="mt-2 text-xs text-muted-foreground/60 hover:text-muted-foreground underline"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 text-xs text-muted-foreground/60 hover:text-muted-foreground"
           onClick={() => setShowNAModal(true)}
         >
           {t.slot.markNotApplicable}
-        </button>
+        </Button>
         <NotApplicableModal
           open={showNAModal}
           onOpenChange={setShowNAModal}
@@ -129,20 +139,26 @@ export default function ReceiptSlot({
   // --- Uploaded state ---
   if (isUploaded) {
     return (
-      <div className="border rounded-lg p-4 border-l-4 border-l-green-500 bg-green-50/50">
+      <div className={`border rounded-lg p-4 border-l-4 border-l-green-500 ${
+        isRent ? 'bg-green-50/70' : 'bg-green-50/50'
+      }`}>
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className={`flex items-center justify-center rounded-full ${
+              isRent ? 'h-9 w-9 bg-green-100' : 'h-8 w-8 bg-green-100'
+            }`}>
               <Icon className="h-4 w-4 text-green-600" />
             </div>
             <div>
-              <span className="text-sm font-medium text-foreground">{typeLabel}</span>
-              <CheckCircle2 className="inline-block ml-1.5 h-3.5 w-3.5 text-green-500" />
+              <span className={`font-medium ${isRent ? 'text-base' : 'text-base'} text-foreground`}>
+                {typeLabel}
+              </span>
+              <CheckCircle2 className="inline-block ml-1.5 h-4 w-4 text-green-500" />
             </div>
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground mb-2 truncate">
+        <div className="text-sm text-muted-foreground mb-2 truncate">
           {receipt.originalName || receipt.fileName}
           {receipt.uploadedAt && (
             <span className="ml-1">— {t.slot.uploadedOn} {formatDateTime(receipt.uploadedAt)}</span>
@@ -153,19 +169,17 @@ export default function ReceiptSlot({
           <Button
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
             onClick={() => onDownload?.(receipt.id)}
           >
-            <Download className="mr-1 h-3 w-3" />
+            <Download className="mr-1.5 h-3.5 w-3.5" />
             {t.slot.download}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
             onClick={() => document.getElementById(`replace-${receipt.id}`)?.click()}
           >
-            <RotateCcw className="mr-1 h-3 w-3" />
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
             {t.slot.replace}
           </Button>
           <input
@@ -182,11 +196,11 @@ export default function ReceiptSlot({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+            className="text-red-500 hover:text-red-700 hover:bg-red-50"
             onClick={() => setShowDeleteConfirm(true)}
             disabled={isDeleting}
           >
-            {isDeleting ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Trash2 className="mr-1 h-3 w-3" />}
+            {isDeleting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-1.5 h-3.5 w-3.5" />}
             {t.slot.delete}
           </Button>
         </div>
@@ -247,15 +261,17 @@ export default function ReceiptSlot({
   // --- Not Applicable state ---
   if (isNA) {
     return (
-      <div className="border rounded-lg p-4 bg-muted/50">
+      <div className={`border rounded-lg p-4 ${isRent ? 'bg-muted/60' : 'bg-muted/50'}`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className={`flex items-center justify-center rounded-full ${
+              isRent ? 'h-9 w-9 bg-muted' : 'h-8 w-8 bg-muted'
+            }`}>
               <Icon className="h-4 w-4 text-muted-foreground/60" />
             </div>
             <div>
-              <span className="text-sm font-medium text-muted-foreground/60">{typeLabel}</span>
-              <XCircle className="inline-block ml-1.5 h-3.5 w-3.5 text-muted-foreground/60" />
+              <span className="text-base font-medium text-muted-foreground/60">{typeLabel}</span>
+              <XCircle className="inline-block ml-1.5 h-4 w-4 text-muted-foreground/60" />
             </div>
           </div>
           <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
@@ -264,17 +280,18 @@ export default function ReceiptSlot({
         </div>
 
         {receipt.notApplicableNote && (
-          <p className="text-xs text-muted-foreground/60 mt-2 italic">{receipt.notApplicableNote}</p>
+          <p className="text-sm text-muted-foreground/60 mt-2 italic">{receipt.notApplicableNote}</p>
         )}
 
-        <button
-          type="button"
-          className="mt-2 text-xs text-blue-500 hover:text-blue-700 underline disabled:opacity-50"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 text-xs text-blue-500 hover:text-blue-700"
           onClick={() => onUndoNA?.(receipt.id)}
           disabled={isUndoingNA}
         >
           {isUndoingNA ? t.upload.uploading : t.slot.undoNotApplicable}
-        </button>
+        </Button>
       </div>
     );
   }

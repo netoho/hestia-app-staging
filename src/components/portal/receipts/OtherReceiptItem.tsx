@@ -45,20 +45,20 @@ export default function OtherReceiptItem({
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-green-600" />
-          <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">
+          <Badge variant="outline" className="text-sm bg-green-100 text-green-700 border-green-200">
             {categoryLabel}
           </Badge>
-          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
         </div>
       </div>
 
       {receipt.otherDescription && (
-        <p className="text-xs text-muted-foreground mb-1.5 italic">
+        <p className="text-sm text-muted-foreground mb-1.5 italic">
           {receipt.otherDescription}
         </p>
       )}
 
-      <div className="text-xs text-muted-foreground mb-2 truncate">
+      <div className="text-sm text-muted-foreground mb-2 truncate">
         {receipt.originalName || receipt.fileName}
         {receipt.uploadedAt && (
           <span className="ml-1">— {t.slot.uploadedOn} {formatDateTime(receipt.uploadedAt)}</span>

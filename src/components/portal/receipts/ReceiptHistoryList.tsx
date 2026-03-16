@@ -107,7 +107,7 @@ export default function ReceiptHistoryList({
                   ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 }
-                <span className="text-sm font-medium" style={{ color: '#173459' }}>
+                <span className="text-sm font-medium text-primary">
                   {monthLabel}
                 </span>
               </div>
