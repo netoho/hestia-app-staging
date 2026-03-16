@@ -88,7 +88,7 @@ export default function MonthReceiptCard({
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-headline" style={{ color: '#173459' }}>
+          <CardTitle className="text-lg font-headline text-primary">
             {monthLabel}
           </CardTitle>
           <Badge
@@ -104,6 +104,15 @@ export default function MonthReceiptCard({
             {t.portal.completionSummary(completedCount, totalCount)}
           </Badge>
         </div>
+        {/* Completion progress bar */}
+        {totalCount > 0 && (
+          <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${allDone ? 'bg-green-500' : 'bg-amber-400'}`}
+              style={{ width: `${(completedCount / totalCount) * 100}%` }}
+            />
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Standard required receipt slots */}

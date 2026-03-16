@@ -20,7 +20,7 @@ import ReceiptUploader from './ReceiptUploader';
 import NotApplicableModal from './NotApplicableModal';
 import { RECEIPT_TYPE_ICONS } from './receiptTypeIcons';
 import { receipts as t } from '@/lib/i18n/pages/receipts';
-import { formatDate } from '@/lib/utils/formatting';
+import { formatDateTime } from '@/lib/utils/formatting';
 
 // --- Types ---
 
@@ -62,6 +62,7 @@ export default function ReceiptSlot({
 }: ReceiptSlotProps) {
   const [showNAModal, setShowNAModal] = useState(false);
   const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const Icon = RECEIPT_TYPE_ICONS[receiptType] || FileText;
@@ -144,7 +145,7 @@ export default function ReceiptSlot({
         <div className="text-xs text-muted-foreground mb-2 truncate">
           {receipt.originalName || receipt.fileName}
           {receipt.uploadedAt && (
-            <span className="ml-1">— {t.slot.uploadedOn} {formatDate(receipt.uploadedAt)}</span>
+            <span className="ml-1">— {t.slot.uploadedOn} {formatDateTime(receipt.uploadedAt)}</span>
           )}
         </div>
 
@@ -182,7 +183,7 @@ export default function ReceiptSlot({
             variant="ghost"
             size="sm"
             className="h-7 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-            onClick={() => onDelete?.(receipt.id)}
+            onClick={() => setShowDeleteConfirm(true)}
             disabled={isDeleting}
           >
             {isDeleting ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Trash2 className="mr-1 h-3 w-3" />}
@@ -212,6 +213,29 @@ export default function ReceiptSlot({
               </Button>
               <Button onClick={confirmReplace}>
                 {t.slot.replace}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t.slot.deleteConfirmTitle}</DialogTitle>
+              <DialogDescription>
+                {t.slot.deleteConfirmDescription(typeLabel)}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                {t.notApplicableModal.cancel}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => { onDelete?.(receipt.id); setShowDeleteConfirm(false); }}
+              >
+                {t.slot.delete}
               </Button>
             </DialogFooter>
           </DialogContent>

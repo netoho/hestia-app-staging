@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload } from 'lucide-react';
+import { Upload, Loader2 } from 'lucide-react';
 import ReceiptUploader from './ReceiptUploader';
 import { receipts as t } from '@/lib/i18n/pages/receipts';
 import type { ReceiptOperation } from '@/hooks/useReceiptOperations';
@@ -40,13 +40,15 @@ export default function OtherReceiptUploadModal({
   const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isCustom = category === 'other';
   const effectiveCategory = isCustom ? `other_${Date.now()}` : category;
-  const canSubmit = category && (!isCustom || customCategory.trim()) && selectedFile;
+  const canSubmit = category && (!isCustom || customCategory.trim()) && selectedFile && !isSubmitting;
 
   const handleSubmit = () => {
     if (!canSubmit || !selectedFile) return;
+    setIsSubmitting(true);
     const desc = isCustom
       ? `${customCategory.trim()}${description ? ` - ${description}` : ''}`
       : description || undefined;
@@ -59,6 +61,7 @@ export default function OtherReceiptUploadModal({
     setCustomCategory('');
     setDescription('');
     setSelectedFile(null);
+    setIsSubmitting(false);
     onOpenChange(false);
   };
 
@@ -73,7 +76,7 @@ export default function OtherReceiptUploadModal({
           {/* Category */}
           <div className="space-y-2">
             <Label>{t.otherUpload.categoryLabel}</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
               <SelectTrigger>
                 <SelectValue placeholder={t.otherUpload.categoryPlaceholder} />
               </SelectTrigger>
@@ -95,6 +98,7 @@ export default function OtherReceiptUploadModal({
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
                 placeholder={t.otherUpload.customCategoryPlaceholder}
+                disabled={isSubmitting}
               />
             </div>
           )}
@@ -107,6 +111,7 @@ export default function OtherReceiptUploadModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t.otherUpload.descriptionPlaceholder}
               rows={2}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -119,8 +124,8 @@ export default function OtherReceiptUploadModal({
           ) : (
             <div className="flex items-center justify-between rounded-md border p-3 text-sm">
               <span className="truncate">{selectedFile.name}</span>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                Cambiar
+              <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)} disabled={isSubmitting}>
+                {t.slot.changeFile}
               </Button>
             </div>
           )}
@@ -131,8 +136,11 @@ export default function OtherReceiptUploadModal({
             onClick={handleSubmit}
             disabled={!canSubmit}
           >
-            <Upload className="mr-2 h-4 w-4" />
-            {t.otherUpload.upload}
+            {isSubmitting
+              ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              : <Upload className="mr-2 h-4 w-4" />
+            }
+            {isSubmitting ? t.upload.uploading : t.otherUpload.upload}
           </Button>
         </div>
       </DialogContent>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, Trash2, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { receipts as t } from '@/lib/i18n/pages/receipts';
-import { formatDate } from '@/lib/utils/formatting';
+import { formatDateTime } from '@/lib/utils/formatting';
 import type { ReceiptOperation } from '@/hooks/useReceiptOperations';
 
 interface OtherReceiptRecord {
@@ -61,7 +61,7 @@ export default function OtherReceiptItem({
       <div className="text-xs text-muted-foreground mb-2 truncate">
         {receipt.originalName || receipt.fileName}
         {receipt.uploadedAt && (
-          <span className="ml-1">— {t.slot.uploadedOn} {formatDate(receipt.uploadedAt)}</span>
+          <span className="ml-1">— {t.slot.uploadedOn} {formatDateTime(receipt.uploadedAt)}</span>
         )}
       </div>
 

@@ -116,7 +116,7 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
           );
 
         // Build property address
-        const propertyAddress = formatAddress(pd?.propertyAddressDetails);
+        const propertyAddress = formatAddress(policy.propertyDetails?.propertyAddressDetails);
 
         // Send reminder
         const success = await sendReceiptReminder({

@@ -51,7 +51,7 @@ export default function AdminReceiptsPage({ params }: ReceiptsPageProps) {
   if (!policy) {
     return (
       <div className="container mx-auto w-full">
-        <p className="text-center text-muted-foreground py-8">Protección no encontrada</p>
+        <p className="text-center text-muted-foreground py-8">{rt.admin.policyNotFound}</p>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function AdminReceiptsPage({ params }: ReceiptsPageProps) {
         <div>
           <h1 className="text-xl font-bold">{rt.admin.title}</h1>
           <p className="text-sm text-muted-foreground">
-            Protección #{policy.policyNumber}
+            {rt.admin.policySubtitle(policy.policyNumber)}
             {tenantName && <span> — {tenantName}</span>}
           </p>
         </div>

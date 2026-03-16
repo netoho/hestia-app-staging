@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ReceiptType } from '@/prisma/generated/prisma-client/enums';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home, DollarSign, Calendar } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Home, DollarSign, Calendar, ShieldCheck } from 'lucide-react';
 import { useReceiptOperations } from '@/hooks/useReceiptOperations';
 import { formatAddress } from '@/lib/utils/formatting';
 import { getTypesForMonth, type ReceiptConfigEntry } from '@/lib/utils/receiptConfig';
@@ -149,14 +150,14 @@ export default function ReceiptDashboard({
     <div>
       {/* Hero — portal only */}
       {isPortal && (
-        <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)', borderColor: '#d4dae1' }} className="border-b">
+        <div className="border-b bg-gradient-to-b from-white to-blue-50">
           <div className="container mx-auto px-4 py-8 max-w-4xl">
             <div className="text-center">
-              <h1 className="font-headline text-3xl md:text-4xl mb-2" style={{ color: '#173459' }}>
+              <h1 className="font-headline text-3xl md:text-4xl mb-2 text-primary">
                 {t.portal.title}
               </h1>
               <p className="text-muted-foreground">
-                Bienvenido, {tenantName}
+                {t.portal.welcome(tenantName)}
               </p>
             </div>
           </div>
@@ -164,6 +165,16 @@ export default function ReceiptDashboard({
       )}
 
       <div className={isPortal ? 'container mx-auto px-4 py-6 max-w-4xl space-y-6' : 'space-y-6'}>
+        {/* Admin badge */}
+        {mode === 'admin' && (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs gap-1">
+              <ShieldCheck className="h-3 w-3" />
+              {t.admin.viewingAs}
+            </Badge>
+          </div>
+        )}
+
         {/* Policy selector — portal only (multi-policy) */}
         {isPortal && policies.length > 1 && (
           <PolicySelector
@@ -187,28 +198,28 @@ export default function ReceiptDashboard({
 
         {/* Policy info card */}
         <Card className="shadow-sm border-0">
-          <CardHeader style={{ background: 'linear-gradient(to right, #173459, #2b5a8c)', color: 'white' }}>
+          <CardHeader className="bg-gradient-to-r from-primary to-primary/70 text-white">
             <CardTitle className="font-headline text-lg">
-              Protección #{selectedPolicy.policyNumber}
+              {t.admin.policySubtitle(selectedPolicy.policyNumber)}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-start gap-3">
-                <Home className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
+                <Home className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">{t.portal.propertyLabel}</p>
-                  <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                  <p className="text-sm font-medium text-primary">
                     {formatAddress(selectedPolicy.propertyAddress)}
                   </p>
                 </div>
               </div>
               {selectedPolicy.rentAmount && (
                 <div className="flex items-start gap-3">
-                  <DollarSign className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
+                  <DollarSign className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Renta mensual</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    <p className="text-xs text-muted-foreground mb-0.5">{t.portal.rentAmount}</p>
+                    <p className="text-sm font-medium text-primary">
                       ${selectedPolicy.rentAmount.toLocaleString('es-MX')} MXN
                     </p>
                   </div>
@@ -216,10 +227,10 @@ export default function ReceiptDashboard({
               )}
               {selectedPolicy.contractLength && (
                 <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
+                  <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Período</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    <p className="text-xs text-muted-foreground mb-0.5">{t.portal.period}</p>
+                    <p className="text-sm font-medium text-primary">
                       {selectedPolicy.contractLength} meses
                     </p>
                   </div>
@@ -232,7 +243,7 @@ export default function ReceiptDashboard({
         {/* Current month */}
         {currentMonthEntry && (
           <div>
-            <h2 className="text-lg font-semibold mb-3" style={{ color: '#173459' }}>
+            <h2 className="text-lg font-semibold mb-3 text-primary">
               {t.portal.currentMonth}
             </h2>
             <MonthReceiptCard
@@ -253,7 +264,7 @@ export default function ReceiptDashboard({
         {/* Past months */}
         {pastMonths.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-3" style={{ color: '#173459' }}>
+            <h2 className="text-lg font-semibold mb-3 text-primary">
               {t.portal.pastMonths}
             </h2>
             <ReceiptHistoryList

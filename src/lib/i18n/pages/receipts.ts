@@ -45,6 +45,11 @@ export const receipts = {
     noReceipts: 'No hay comprobantes para este período',
     completionSummary: (uploaded: number, total: number) =>
       `${uploaded}/${total} comprobantes`,
+    validating: 'Validando acceso...',
+    tokenExpired: 'Token inválido o expirado',
+    welcome: (name: string) => `Bienvenido, ${name}`,
+    rentAmount: 'Renta mensual',
+    period: 'Período',
   },
 
   // Receipt slot
@@ -56,6 +61,10 @@ export const receipts = {
     markNotApplicable: 'No aplica este mes',
     undoNotApplicable: 'Deshacer',
     uploadedOn: 'Subido el',
+    deleteConfirmTitle: 'Eliminar comprobante',
+    deleteConfirmDescription: (receiptType: string) =>
+      `¿Estás seguro de que deseas eliminar el comprobante de ${receiptType}? Esta acción no se puede deshacer.`,
+    changeFile: 'Cambiar',
   },
 
   // Not applicable modal
@@ -79,12 +88,34 @@ export const receipts = {
     maxSize: 'Máx 5MB. Formatos: PDF, JPG, PNG, WEBP',
   },
 
+  // Operation feedback
+  errors: {
+    invalidFile: 'Archivo inválido',
+    uploadFailed: 'Error al subir el comprobante',
+    deleteFailed: 'Error al eliminar',
+    downloadFailed: 'Error al descargar',
+    markNAFailed: 'Error al marcar como no aplica',
+    undoNAFailed: 'Error al deshacer',
+    noUploadUrl: 'No se pudo obtener URL de carga',
+    noDownloadUrl: 'No se pudo obtener la URL de descarga',
+  },
+
+  success: {
+    uploaded: 'Comprobante subido exitosamente',
+    deleted: 'Comprobante eliminado',
+    markedNA: 'Marcado como no aplica',
+    undoneNA: 'Se deshizo la marca de no aplica',
+  },
+
   // Admin page
   admin: {
     title: 'Comprobantes del Inquilino',
     backToPolicy: 'Volver a la protección',
     noTenant: 'Esta protección no tiene inquilino asignado.',
     notApproved: 'Los comprobantes solo están disponibles para protecciones aprobadas.',
+    policyNotFound: 'Protección no encontrada',
+    policySubtitle: (policyNumber: string) => `Protección #${policyNumber}`,
+    viewingAs: 'Vista de administrador',
     filterByMonth: 'Filtrar por mes',
     allMonths: 'Todos los meses',
     summary: {

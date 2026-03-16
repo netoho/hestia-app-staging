@@ -6,6 +6,8 @@ import { OperationProgress } from '@/lib/documentManagement/types';
 import { uploadToS3WithProgress } from '@/lib/documentManagement/upload';
 import { validateFile } from '@/lib/documentManagement/validation';
 import { trpc } from '@/lib/trpc/client';
+import { useToast } from '@/hooks/use-toast';
+import { receipts as t } from '@/lib/i18n/pages/receipts';
 
 // --- Types ---
 
@@ -35,6 +37,7 @@ export function useReceiptOperations({
   refetchData,
 }: UseReceiptOperationsProps) {
   const [operations, setOperations] = useState<Record<string, ReceiptOperation>>({});
+  const { toast } = useToast();
 
   const utils = trpc.useUtils();
 
@@ -93,7 +96,7 @@ export function useReceiptOperations({
     try {
       // 1. Validate
       const validation = validateFile(file);
-      if (!validation.valid) throw new Error(validation.error || 'Archivo inválido');
+      if (!validation.valid) throw new Error(validation.error || t.errors.invalidFile);
 
       // 2. Get presigned URL
       const result = await getUploadUrlMutation.mutateAsync({
@@ -109,7 +112,7 @@ export function useReceiptOperations({
         otherDescription,
       });
 
-      if (!result.uploadUrl) throw new Error('No se pudo obtener URL de carga');
+      if (!result.uploadUrl) throw new Error(t.errors.noUploadUrl);
 
       // 3. Upload to S3
       await uploadToS3WithProgress(
@@ -126,14 +129,16 @@ export function useReceiptOperations({
       });
 
       updateOp(opId, { status: 'success' });
+      toast({ title: t.success.uploaded });
       refetchData();
       removeOp(opId);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error al subir el comprobante';
+      const msg = error instanceof Error ? error.message : t.errors.uploadFailed;
       updateOp(opId, { status: 'error', error: msg });
+      toast({ title: t.errors.uploadFailed, description: msg, variant: 'destructive' });
       removeOp(opId, 5000);
     }
-  }, [tokenParam, policyId, getUploadUrlMutation, confirmUploadMutation, updateOp, removeOp, refetchData]);
+  }, [tokenParam, policyId, getUploadUrlMutation, confirmUploadMutation, updateOp, removeOp, refetchData, toast]);
 
   const deleteReceipt = useCallback(async (receiptId: string) => {
     const opId = `delete-${receiptId}`;
@@ -146,14 +151,16 @@ export function useReceiptOperations({
     try {
       await deleteReceiptMutation.mutateAsync({ token: tokenParam, receiptId });
       updateOp(opId, { status: 'success' });
+      toast({ title: t.success.deleted });
       refetchData();
       removeOp(opId);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error al eliminar';
+      const msg = error instanceof Error ? error.message : t.errors.deleteFailed;
       updateOp(opId, { status: 'error', error: msg });
+      toast({ title: t.errors.deleteFailed, description: msg, variant: 'destructive' });
       removeOp(opId, 5000);
     }
-  }, [tokenParam, deleteReceiptMutation, updateOp, removeOp, refetchData]);
+  }, [tokenParam, deleteReceiptMutation, updateOp, removeOp, refetchData, toast]);
 
   const downloadReceipt = useCallback(async (receiptId: string) => {
     const opId = `download-${receiptId}`;
@@ -170,14 +177,15 @@ export function useReceiptOperations({
         updateOp(opId, { status: 'success' });
         removeOp(opId);
       } else {
-        throw new Error('No se pudo obtener la URL de descarga');
+        throw new Error(t.errors.noDownloadUrl);
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error al descargar';
+      const msg = error instanceof Error ? error.message : t.errors.downloadFailed;
       updateOp(opId, { status: 'error', error: msg });
+      toast({ title: t.errors.downloadFailed, description: msg, variant: 'destructive' });
       removeOp(opId, 5000);
     }
-  }, [tokenParam, utils, updateOp, removeOp]);
+  }, [tokenParam, utils, updateOp, removeOp, toast]);
 
   const markNotApplicable = useCallback(async (
     year: number,
@@ -195,14 +203,16 @@ export function useReceiptOperations({
     try {
       await markNAMutation.mutateAsync({ token: tokenParam, policyId, year, month, receiptType, note });
       updateOp(opId, { status: 'success' });
+      toast({ title: t.success.markedNA });
       refetchData();
       removeOp(opId);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error al marcar como no aplica';
+      const msg = error instanceof Error ? error.message : t.errors.markNAFailed;
       updateOp(opId, { status: 'error', error: msg });
+      toast({ title: t.errors.markNAFailed, description: msg, variant: 'destructive' });
       removeOp(opId, 5000);
     }
-  }, [tokenParam, policyId, markNAMutation, updateOp, removeOp, refetchData]);
+  }, [tokenParam, policyId, markNAMutation, updateOp, removeOp, refetchData, toast]);
 
   const undoNotApplicable = useCallback(async (receiptId: string) => {
     const opId = `undoNA-${receiptId}`;
@@ -215,14 +225,16 @@ export function useReceiptOperations({
     try {
       await undoNAMutation.mutateAsync({ token: tokenParam, receiptId });
       updateOp(opId, { status: 'success' });
+      toast({ title: t.success.undoneNA });
       refetchData();
       removeOp(opId);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error al deshacer';
+      const msg = error instanceof Error ? error.message : t.errors.undoNAFailed;
       updateOp(opId, { status: 'error', error: msg });
+      toast({ title: t.errors.undoNAFailed, description: msg, variant: 'destructive' });
       removeOp(opId, 5000);
     }
-  }, [tokenParam, undoNAMutation, updateOp, removeOp, refetchData]);
+  }, [tokenParam, undoNAMutation, updateOp, removeOp, refetchData, toast]);
 
   const getSlotOperation = useCallback((
     year: number,
