@@ -69,27 +69,9 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
           continue;
         }
 
-        // Determine required receipt types
-        const pd = policy.propertyDetails;
-        const requiredTypes = receiptService.getRequiredReceiptTypes(
-          pd ? {
-            hasElectricity: pd.hasElectricity,
-            hasWater: pd.hasWater,
-            hasGas: pd.hasGas,
-            hasInternet: pd.hasInternet,
-            hasCableTV: pd.hasCableTV,
-            hasPhone: pd.hasPhone,
-            electricityIncludedInRent: pd.electricityIncludedInRent,
-            waterIncludedInRent: pd.waterIncludedInRent,
-            gasIncludedInRent: pd.gasIncludedInRent,
-            internetIncludedInRent: pd.internetIncludedInRent,
-            cableTVIncludedInRent: pd.cableTVIncludedInRent,
-            phoneIncludedInRent: pd.phoneIncludedInRent,
-          } : null,
-          {
-            maintenanceFee: policy.maintenanceFee,
-            maintenanceIncludedInRent: policy.maintenanceIncludedInRent,
-          },
+        // Determine required receipt types (config-aware)
+        const requiredTypes = await receiptService.getEffectiveReceiptTypes(
+          policy.id, year, month,
         );
 
         if (requiredTypes.length === 0) {

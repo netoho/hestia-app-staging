@@ -44,10 +44,11 @@ export default function ReceiptPortalPage() {
 
   return (
     <ReceiptDashboard
+      mode="portal"
       token={token}
       tenantName={data.tenantName}
       policies={data.policies}
-      refetchPortalData={refetch}
+      refetchData={refetch}
     />
   );
 }

@@ -1,29 +1,33 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { ReceiptType, ReceiptStatus } from '@/prisma/generated/prisma-client/enums';
+import { useState, useMemo, useCallback } from 'react';
+import { ReceiptType } from '@/prisma/generated/prisma-client/enums';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, DollarSign, Calendar } from 'lucide-react';
 import { useReceiptOperations } from '@/hooks/useReceiptOperations';
 import { formatAddress } from '@/lib/utils/formatting';
+import { getTypesForMonth, type ReceiptConfigEntry } from '@/lib/utils/receiptConfig';
 import { receipts as t } from '@/lib/i18n/pages/receipts';
 import PolicySelector from './PolicySelector';
 import MonthReceiptCard from './MonthReceiptCard';
 import ReceiptHistoryList from './ReceiptHistoryList';
+import ReceiptConfigEditor from './ReceiptConfigEditor';
 
-// --- Types (inferred from getPortalData output) ---
+// --- Types ---
 
 interface ReceiptRecord {
   id: string;
   year: number;
   month: number;
   receiptType: ReceiptType;
-  status: ReceiptStatus;
+  status: string;
   originalName?: string | null;
   fileName?: string | null;
   uploadedAt?: Date | string | null;
   notApplicableNote?: string | null;
   markedNotApplicableAt?: Date | string | null;
+  otherCategory?: string | null;
+  otherDescription?: string | null;
 }
 
 interface PolicyData {
@@ -43,15 +47,17 @@ interface PolicyData {
     state?: string | null;
   } | null;
   requiredReceiptTypes: ReceiptType[];
+  receiptConfigs?: ReceiptConfigEntry[];
   receipts: ReceiptRecord[];
   activatedAt: string | Date | null;
 }
 
 interface ReceiptDashboardProps {
-  token: string;
+  mode: 'portal' | 'admin';
+  token?: string;
   tenantName: string;
   policies: PolicyData[];
-  refetchPortalData: () => void;
+  refetchData: () => void;
 }
 
 // --- Helpers ---
@@ -86,20 +92,33 @@ function generateMonthRange(activatedAt: string | Date | null): { year: number; 
 // --- Component ---
 
 export default function ReceiptDashboard({
+  mode,
   token,
   tenantName,
   policies,
-  refetchPortalData,
+  refetchData,
 }: ReceiptDashboardProps) {
   const [selectedPolicyId, setSelectedPolicyId] = useState(policies[0]?.policyId || '');
 
   const selectedPolicy = policies.find(p => p.policyId === selectedPolicyId) || policies[0];
 
   const ops = useReceiptOperations({
+    mode,
     token,
     policyId: selectedPolicy?.policyId || '',
-    refetchPortalData,
+    refetchData,
   });
+
+  // Per-month type resolver using config history
+  const resolveTypesForMonth = useCallback((year: number, month: number): ReceiptType[] => {
+    if (!selectedPolicy) return [];
+    return getTypesForMonth(
+      selectedPolicy.receiptConfigs || [],
+      year,
+      month,
+      selectedPolicy.requiredReceiptTypes,
+    );
+  }, [selectedPolicy]);
 
   // Compute month range
   const allMonths = useMemo(
@@ -111,46 +130,60 @@ export default function ReceiptDashboard({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  // Current month is the last entry (or the current date month)
   const currentMonthEntry = allMonths.find(m => m.year === currentYear && m.month === currentMonth);
   const pastMonths = allMonths
     .filter(m => !(m.year === currentYear && m.month === currentMonth))
-    .reverse(); // newest first
+    .reverse();
 
-  // Filter receipts for current month
   const currentMonthReceipts = (selectedPolicy?.receipts || []).filter(
     r => r.year === currentYear && r.month === currentMonth,
   );
 
+  const currentMonthTypes = resolveTypesForMonth(currentYear, currentMonth);
+
   if (!selectedPolicy) return null;
+
+  const isPortal = mode === 'portal';
 
   return (
     <div>
-      {/* Hero */}
-      <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)', borderColor: '#d4dae1' }} className="border-b">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="text-center">
-            <h1 className="font-headline text-3xl md:text-4xl mb-2" style={{ color: '#173459' }}>
-              {t.portal.title}
-            </h1>
-            <p className="text-muted-foreground">
-              Bienvenido, {tenantName}
-            </p>
+      {/* Hero — portal only */}
+      {isPortal && (
+        <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)', borderColor: '#d4dae1' }} className="border-b">
+          <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="text-center">
+              <h1 className="font-headline text-3xl md:text-4xl mb-2" style={{ color: '#173459' }}>
+                {t.portal.title}
+              </h1>
+              <p className="text-muted-foreground">
+                Bienvenido, {tenantName}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-        {/* Policy selector */}
-        <PolicySelector
-          policies={policies.map(p => ({
-            policyId: p.policyId,
-            policyNumber: p.policyNumber,
-            propertyAddress: p.propertyAddress,
-          }))}
-          selectedPolicyId={selectedPolicyId}
-          onSelect={setSelectedPolicyId}
-        />
+      <div className={isPortal ? 'container mx-auto px-4 py-6 max-w-4xl space-y-6' : 'space-y-6'}>
+        {/* Policy selector — portal only (multi-policy) */}
+        {isPortal && policies.length > 1 && (
+          <PolicySelector
+            policies={policies.map(p => ({
+              policyId: p.policyId,
+              policyNumber: p.policyNumber,
+              propertyAddress: p.propertyAddress,
+            }))}
+            selectedPolicyId={selectedPolicyId}
+            onSelect={setSelectedPolicyId}
+          />
+        )}
+
+        {/* Config editor — admin only */}
+        {mode === 'admin' && (
+          <ReceiptConfigEditor
+            policyId={selectedPolicy.policyId}
+            onConfigSaved={refetchData}
+          />
+        )}
 
         {/* Policy info card */}
         <Card className="shadow-sm border-0">
@@ -205,14 +238,14 @@ export default function ReceiptDashboard({
             <MonthReceiptCard
               year={currentYear}
               month={currentMonth}
-              requiredTypes={selectedPolicy.requiredReceiptTypes}
+              requiredTypes={currentMonthTypes}
               receipts={currentMonthReceipts}
-              onUpload={(file, type) => ops.uploadReceipt(file, currentYear, currentMonth, type)}
+              onUpload={(file, type, otherCat, otherDesc) => ops.uploadReceipt(file, currentYear, currentMonth, type, otherCat, otherDesc)}
               onDelete={ops.deleteReceipt}
               onDownload={ops.downloadReceipt}
               onMarkNA={(type, note) => ops.markNotApplicable(currentYear, currentMonth, type, note)}
               onUndoNA={ops.undoNotApplicable}
-              getSlotOperation={(type) => ops.getSlotOperation(currentYear, currentMonth, type)}
+              getSlotOperation={(type, otherCat) => ops.getSlotOperation(currentYear, currentMonth, type, otherCat)}
             />
           </div>
         )}
@@ -225,14 +258,14 @@ export default function ReceiptDashboard({
             </h2>
             <ReceiptHistoryList
               months={pastMonths}
-              requiredTypes={selectedPolicy.requiredReceiptTypes}
+              getRequiredTypes={resolveTypesForMonth}
               receipts={selectedPolicy.receipts}
-              onUpload={(file, year, month, type) => ops.uploadReceipt(file, year, month, type)}
+              onUpload={(file, year, month, type, otherCat, otherDesc) => ops.uploadReceipt(file, year, month, type, otherCat, otherDesc)}
               onDelete={ops.deleteReceipt}
               onDownload={ops.downloadReceipt}
               onMarkNA={(year, month, type, note) => ops.markNotApplicable(year, month, type, note)}
               onUndoNA={ops.undoNotApplicable}
-              getSlotOperation={(year, month, type) => ops.getSlotOperation(year, month, type)}
+              getSlotOperation={(year, month, type, otherCat) => ops.getSlotOperation(year, month, type, otherCat)}
             />
           </div>
         )}

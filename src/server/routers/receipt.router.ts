@@ -9,6 +9,7 @@ import { sendReceiptMagicLink } from '@/lib/services/emailService';
 import { formatFullName } from '@/lib/utils/names';
 import { prisma } from '@/lib/prisma';
 import { getCategoryValidation } from '@/lib/constants/documentCategories';
+import type { Context } from '@/server/trpc';
 
 // ============================================
 // HELPERS
@@ -94,6 +95,55 @@ async function validateTenantReceiptAccess(token: string, receiptId: string) {
   return { tenant: tokenTenant, receipt };
 }
 
+/**
+ * Validate admin receipt access (session-based).
+ * Returns { receipt, userId }.
+ */
+async function validateAdminReceiptAccess(ctx: Context, receiptId: string) {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  const userRole = ctx.session.user.role as string;
+  if (userRole !== 'ADMIN' && userRole !== 'STAFF') {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  const receipt = await prisma.tenantReceipt.findUnique({
+    where: { id: receiptId },
+  });
+  if (!receipt) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
+  }
+  return { receipt, userId: ctx.session.user.id };
+}
+
+/**
+ * Validate admin policy access (session-based).
+ * Returns { tenant, policy, userId }.
+ */
+async function validateAdminPolicyAccess(ctx: Context, policyId: string) {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  const userRole = ctx.session.user.role as string;
+  if (userRole !== 'ADMIN' && userRole !== 'STAFF') {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  const policy = await prisma.policy.findUnique({
+    where: { id: policyId },
+    include: {
+      propertyDetails: { include: { propertyAddressDetails: true } },
+      tenant: true,
+    },
+  });
+  if (!policy) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
+  }
+  if (!policy.tenant) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'La protección no tiene inquilino asignado' });
+  }
+  return { tenant: policy.tenant, policy, userId: ctx.session.user.id };
+}
+
 const ReceiptTypeSchema = z.nativeEnum(ReceiptType);
 
 // ============================================
@@ -176,7 +226,7 @@ export const receiptRouter = createTRPCRouter({
     }),
 
   /**
-   * Get portal data: all policies for the tenant's email with receipts + service config
+   * Get portal data: all policies for the tenant's email with receipts + config history
    */
   getPortalData: publicProcedure
     .input(z.object({
@@ -198,6 +248,9 @@ export const receiptRouter = createTRPCRouter({
               propertyDetails: {
                 include: { propertyAddressDetails: true },
               },
+              receiptConfigs: {
+                orderBy: [{ effectiveYear: 'asc' }, { effectiveMonth: 'asc' }],
+              },
             },
           },
           receipts: {
@@ -212,7 +265,7 @@ export const receiptRouter = createTRPCRouter({
         },
       });
 
-      // For each tenant/policy, compute required receipt types
+      // For each tenant/policy, compute required receipt types (fallback) + return config history
       const policies = allTenants.map(t => {
         const pd = t.policy.propertyDetails;
         const requiredTypes = receiptService.getRequiredReceiptTypes(
@@ -244,6 +297,11 @@ export const receiptRouter = createTRPCRouter({
           contractLength: t.policy.contractLength,
           propertyAddress: pd?.propertyAddressDetails || null,
           requiredReceiptTypes: requiredTypes,
+          receiptConfigs: t.policy.receiptConfigs.map(c => ({
+            effectiveYear: c.effectiveYear,
+            effectiveMonth: c.effectiveMonth,
+            receiptTypes: c.receiptTypes,
+          })),
           receipts: t.receipts,
           activatedAt: t.policy.activatedAt,
         };
@@ -259,12 +317,15 @@ export const receiptRouter = createTRPCRouter({
       };
     }),
 
+  // ========== DUAL-AUTH ENDPOINTS (token OR session) ==========
+
   /**
-   * Get presigned upload URL for a receipt
+   * Get presigned upload URL for a receipt.
+   * Supports both portal (token) and admin (session) access.
    */
   getUploadUrl: publicProcedure
     .input(z.object({
-      token: z.string(),
+      token: z.string().optional(),
       policyId: z.string(),
       year: z.number().int().min(2020).max(2100),
       month: z.number().int().min(1).max(12),
@@ -272,9 +333,30 @@ export const receiptRouter = createTRPCRouter({
       fileName: z.string(),
       contentType: z.string(),
       fileSize: z.number().int().positive(),
+      otherCategory: z.string().optional(),
+      otherDescription: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const tenant = await validateTenantPolicyAccess(input.token, input.policyId);
+    .mutation(async ({ input, ctx }) => {
+      // Validate OTHER requires category
+      if (input.receiptType === ReceiptType.OTHER && !input.otherCategory) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'La categoría es requerida para comprobantes de tipo "Otro"' });
+      }
+
+      // Resolve auth: token or session
+      let tenantId: string;
+      let policyNumber: string;
+      let uploadedByUserId: string | null = null;
+
+      if (input.token) {
+        const tenant = await validateTenantPolicyAccess(input.token, input.policyId);
+        tenantId = tenant.id;
+        policyNumber = tenant.policy.policyNumber;
+      } else {
+        const { tenant, policy, userId } = await validateAdminPolicyAccess(ctx, input.policyId);
+        tenantId = tenant.id;
+        policyNumber = policy.policyNumber;
+        uploadedByUserId = userId;
+      }
 
       // Validate file
       const validation = getCategoryValidation();
@@ -285,14 +367,20 @@ export const receiptRouter = createTRPCRouter({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Tipo de archivo no permitido' });
       }
 
-      // Check if receipt already exists for this period+type
+      // Use empty string for non-OTHER types (PostgreSQL treats NULL as distinct in unique constraints)
+      const otherCategory = input.receiptType === ReceiptType.OTHER
+        ? (input.otherCategory || '')
+        : '';
+
+      // Check if receipt already exists for this period+type+category
       const existing = await prisma.tenantReceipt.findUnique({
         where: {
-          policyId_year_month_receiptType: {
+          policyId_year_month_receiptType_otherCategory: {
             policyId: input.policyId,
             year: input.year,
             month: input.month,
             receiptType: input.receiptType,
+            otherCategory,
           },
         },
       });
@@ -302,24 +390,24 @@ export const receiptRouter = createTRPCRouter({
         await documentService.deleteFile(existing.s3Key);
       }
 
-      const policyNumber = tenant.policy.policyNumber;
       const s3Key = documentService.generateReceiptS3Key(
-        policyNumber, tenant.id, input.year, input.month, input.receiptType, input.fileName
+        policyNumber, tenantId, input.year, input.month, input.receiptType, input.fileName
       );
       const bucket = process.env.AWS_S3_BUCKET || '';
 
       // Upsert a PENDING receipt record
       const receipt = await prisma.tenantReceipt.upsert({
         where: {
-          policyId_year_month_receiptType: {
+          policyId_year_month_receiptType_otherCategory: {
             policyId: input.policyId,
             year: input.year,
             month: input.month,
             receiptType: input.receiptType,
+            otherCategory,
           },
         },
         create: {
-          tenantId: tenant.id,
+          tenantId,
           policyId: input.policyId,
           year: input.year,
           month: input.month,
@@ -332,6 +420,9 @@ export const receiptRouter = createTRPCRouter({
           s3Key,
           s3Bucket: bucket,
           uploadStatus: DocumentUploadStatus.PENDING,
+          otherCategory,
+          otherDescription: input.otherDescription || null,
+          uploadedByUserId,
         },
         update: {
           status: ReceiptStatus.UPLOADED,
@@ -344,6 +435,8 @@ export const receiptRouter = createTRPCRouter({
           uploadStatus: DocumentUploadStatus.PENDING,
           notApplicableNote: null,
           markedNotApplicableAt: null,
+          otherDescription: input.otherDescription || null,
+          uploadedByUserId,
         },
       });
 
@@ -359,15 +452,23 @@ export const receiptRouter = createTRPCRouter({
     }),
 
   /**
-   * Confirm receipt upload
+   * Confirm receipt upload. Supports both portal (token) and admin (session) access.
    */
   confirmUpload: publicProcedure
     .input(z.object({
-      token: z.string(),
+      token: z.string().optional(),
       receiptId: z.string(),
     }))
-    .mutation(async ({ input }) => {
-      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
+    .mutation(async ({ input, ctx }) => {
+      // Validate access
+      let receipt: { s3Key: string | null; id: string };
+      if (input.token) {
+        const result = await validateTenantReceiptAccess(input.token, input.receiptId);
+        receipt = result.receipt;
+      } else {
+        const result = await validateAdminReceiptAccess(ctx, input.receiptId);
+        receipt = result.receipt;
+      }
 
       // Verify file exists in S3
       if (receipt.s3Key) {
@@ -389,31 +490,44 @@ export const receiptRouter = createTRPCRouter({
     }),
 
   /**
-   * Mark a receipt as not applicable for a given month
+   * Mark a receipt as not applicable. Supports both portal (token) and admin (session) access.
+   * NOT allowed for OTHER receipt type.
    */
   markNotApplicable: publicProcedure
     .input(z.object({
-      token: z.string(),
+      token: z.string().optional(),
       policyId: z.string(),
       year: z.number().int().min(2020).max(2100),
       month: z.number().int().min(1).max(12),
       receiptType: ReceiptTypeSchema,
       note: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const tenant = await validateTenantPolicyAccess(input.token, input.policyId);
+    .mutation(async ({ input, ctx }) => {
+      if (input.receiptType === ReceiptType.OTHER) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No se puede marcar como "No aplica" un comprobante de tipo "Otro"' });
+      }
+
+      let tenantId: string;
+      if (input.token) {
+        const tenant = await validateTenantPolicyAccess(input.token, input.policyId);
+        tenantId = tenant.id;
+      } else {
+        const { tenant } = await validateAdminPolicyAccess(ctx, input.policyId);
+        tenantId = tenant.id;
+      }
 
       const receipt = await prisma.tenantReceipt.upsert({
         where: {
-          policyId_year_month_receiptType: {
+          policyId_year_month_receiptType_otherCategory: {
             policyId: input.policyId,
             year: input.year,
             month: input.month,
             receiptType: input.receiptType,
+            otherCategory: '',
           },
         },
         create: {
-          tenantId: tenant.id,
+          tenantId,
           policyId: input.policyId,
           year: input.year,
           month: input.month,
@@ -442,15 +556,23 @@ export const receiptRouter = createTRPCRouter({
     }),
 
   /**
-   * Undo not applicable: delete the NOT_APPLICABLE record
+   * Undo not applicable: delete the NOT_APPLICABLE record.
+   * Supports both portal (token) and admin (session) access.
    */
   undoNotApplicable: publicProcedure
     .input(z.object({
-      token: z.string(),
+      token: z.string().optional(),
       receiptId: z.string(),
     }))
-    .mutation(async ({ input }) => {
-      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
+    .mutation(async ({ input, ctx }) => {
+      let receipt: { status: ReceiptStatus; id: string };
+      if (input.token) {
+        const result = await validateTenantReceiptAccess(input.token, input.receiptId);
+        receipt = result.receipt;
+      } else {
+        const result = await validateAdminReceiptAccess(ctx, input.receiptId);
+        receipt = result.receipt;
+      }
 
       if (receipt.status !== ReceiptStatus.NOT_APPLICABLE) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Solo se puede deshacer el estado "No aplica"' });
@@ -464,15 +586,22 @@ export const receiptRouter = createTRPCRouter({
     }),
 
   /**
-   * Delete an uploaded receipt
+   * Delete an uploaded receipt. Supports both portal (token) and admin (session) access.
    */
   deleteReceipt: publicProcedure
     .input(z.object({
-      token: z.string(),
+      token: z.string().optional(),
       receiptId: z.string(),
     }))
-    .mutation(async ({ input }) => {
-      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
+    .mutation(async ({ input, ctx }) => {
+      let receipt: { s3Key: string | null; id: string };
+      if (input.token) {
+        const result = await validateTenantReceiptAccess(input.token, input.receiptId);
+        receipt = result.receipt;
+      } else {
+        const result = await validateAdminReceiptAccess(ctx, input.receiptId);
+        receipt = result.receipt;
+      }
 
       // Delete from S3 if file exists
       if (receipt.s3Key) {
@@ -487,15 +616,22 @@ export const receiptRouter = createTRPCRouter({
     }),
 
   /**
-   * Get download URL for a receipt
+   * Get download URL for a receipt. Supports both portal (token) and admin (session) access.
    */
   getDownloadUrl: publicProcedure
     .input(z.object({
-      token: z.string(),
+      token: z.string().optional(),
       receiptId: z.string(),
     }))
-    .query(async ({ input }) => {
-      const { receipt } = await validateTenantReceiptAccess(input.token, input.receiptId);
+    .query(async ({ input, ctx }) => {
+      let receipt: { s3Key: string | null; uploadStatus: DocumentUploadStatus | null; originalName: string | null; fileName: string | null; id: string };
+      if (input.token) {
+        const result = await validateTenantReceiptAccess(input.token, input.receiptId);
+        receipt = result.receipt;
+      } else {
+        const result = await validateAdminReceiptAccess(ctx, input.receiptId);
+        receipt = result.receipt;
+      }
 
       if (!receipt.s3Key || receipt.uploadStatus !== DocumentUploadStatus.COMPLETE) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'El archivo no está disponible' });
@@ -510,7 +646,7 @@ export const receiptRouter = createTRPCRouter({
       return { success: true, downloadUrl, fileName: receipt.originalName || receipt.fileName, expiresIn: 300 };
     }),
 
-  // ========== ADMIN-FACING ==========
+  // ========== ADMIN-ONLY ==========
 
   /**
    * List all receipts for a policy (admin)
@@ -523,8 +659,13 @@ export const receiptRouter = createTRPCRouter({
       const policy = await prisma.policy.findUnique({
         where: { id: input.policyId },
         include: {
-          propertyDetails: true,
+          propertyDetails: {
+            include: { propertyAddressDetails: true },
+          },
           tenant: { select: { id: true, firstName: true, paternalLastName: true, companyName: true } },
+          receiptConfigs: {
+            orderBy: [{ effectiveYear: 'asc' }, { effectiveMonth: 'asc' }],
+          },
         },
       });
 
@@ -562,14 +703,134 @@ export const receiptRouter = createTRPCRouter({
       return {
         receipts,
         requiredTypes,
+        receiptConfigs: policy.receiptConfigs.map(c => ({
+          effectiveYear: c.effectiveYear,
+          effectiveMonth: c.effectiveMonth,
+          receiptTypes: c.receiptTypes,
+        })),
         tenant: policy.tenant,
         policyNumber: policy.policyNumber,
+        activatedAt: policy.activatedAt,
+        rentAmount: policy.rentAmount,
+        contractLength: policy.contractLength,
+        propertyAddress: policy.propertyDetails,
       };
     }),
 
   /**
-   * Download a receipt (admin)
+   * Get receipt config for a policy (admin)
    */
+  getConfig: adminProcedure
+    .input(z.object({
+      policyId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const policy = await prisma.policy.findUnique({
+        where: { id: input.policyId },
+        include: { propertyDetails: true },
+      });
+
+      if (!policy) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
+      }
+
+      const configs = await receiptService.getConfigHistory(input.policyId);
+
+      const computedDefaults = receiptService.getRequiredReceiptTypes(
+        policy.propertyDetails ? {
+          hasElectricity: policy.propertyDetails.hasElectricity,
+          hasWater: policy.propertyDetails.hasWater,
+          hasGas: policy.propertyDetails.hasGas,
+          hasInternet: policy.propertyDetails.hasInternet,
+          hasCableTV: policy.propertyDetails.hasCableTV,
+          hasPhone: policy.propertyDetails.hasPhone,
+          electricityIncludedInRent: policy.propertyDetails.electricityIncludedInRent,
+          waterIncludedInRent: policy.propertyDetails.waterIncludedInRent,
+          gasIncludedInRent: policy.propertyDetails.gasIncludedInRent,
+          internetIncludedInRent: policy.propertyDetails.internetIncludedInRent,
+          cableTVIncludedInRent: policy.propertyDetails.cableTVIncludedInRent,
+          phoneIncludedInRent: policy.propertyDetails.phoneIncludedInRent,
+        } : null,
+        {
+          maintenanceFee: policy.maintenanceFee,
+          maintenanceIncludedInRent: policy.maintenanceIncludedInRent,
+        }
+      );
+
+      // Current effective config
+      const now = new Date();
+      const currentTypes = await receiptService.getEffectiveReceiptTypes(
+        input.policyId, now.getFullYear(), now.getMonth() + 1
+      );
+
+      return {
+        currentTypes,
+        computedDefaults,
+        history: configs.map(c => ({
+          id: c.id,
+          effectiveYear: c.effectiveYear,
+          effectiveMonth: c.effectiveMonth,
+          receiptTypes: c.receiptTypes,
+          notes: c.notes,
+          createdAt: c.createdAt,
+        })),
+      };
+    }),
+
+  /**
+   * Update receipt config for a policy (admin only).
+   * Always takes effect from the current month.
+   */
+  updateConfig: adminProcedure
+    .input(z.object({
+      policyId: z.string(),
+      receiptTypes: z.array(ReceiptTypeSchema).min(1),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // RENT must always be included
+      if (!input.receiptTypes.includes(ReceiptType.RENT)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Renta es siempre requerida' });
+      }
+
+      const policy = await prisma.policy.findUnique({
+        where: { id: input.policyId },
+      });
+      if (!policy) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
+      }
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      const config = await prisma.receiptConfig.upsert({
+        where: {
+          policyId_effectiveYear_effectiveMonth: {
+            policyId: input.policyId,
+            effectiveYear: year,
+            effectiveMonth: month,
+          },
+        },
+        create: {
+          policyId: input.policyId,
+          effectiveYear: year,
+          effectiveMonth: month,
+          receiptTypes: input.receiptTypes,
+          createdById: ctx.userId,
+          notes: input.notes || null,
+        },
+        update: {
+          receiptTypes: input.receiptTypes,
+          createdById: ctx.userId,
+          notes: input.notes || null,
+        },
+      });
+
+      return { success: true, config };
+    }),
+
+  // Keep legacy admin download endpoint for backwards compatibility
   getDownloadUrlAdmin: adminProcedure
     .input(z.object({
       receiptId: z.string(),

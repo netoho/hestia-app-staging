@@ -20,17 +20,19 @@ export interface ReceiptOperation {
 }
 
 interface UseReceiptOperationsProps {
-  token: string;
+  mode: 'portal' | 'admin';
+  token?: string;
   policyId: string;
-  refetchPortalData: () => void;
+  refetchData: () => void;
 }
 
 // --- Hook ---
 
 export function useReceiptOperations({
+  mode,
   token,
   policyId,
-  refetchPortalData,
+  refetchData,
 }: UseReceiptOperationsProps) {
   const [operations, setOperations] = useState<Record<string, ReceiptOperation>>({});
 
@@ -45,8 +47,12 @@ export function useReceiptOperations({
 
   // --- Helpers ---
 
-  const slotKey = (year: number, month: number, receiptType: ReceiptType) =>
-    `${year}-${month}-${receiptType}`;
+  const slotKey = (year: number, month: number, receiptType: ReceiptType, otherCategory?: string) =>
+    receiptType === ReceiptType.OTHER && otherCategory
+      ? `${year}-${month}-OTHER-${otherCategory}`
+      : `${year}-${month}-${receiptType}`;
+
+  const tokenParam = mode === 'portal' ? token : undefined;
 
   const updateOp = useCallback((id: string, updates: Partial<ReceiptOperation>) => {
     setOperations(prev => ({ ...prev, [id]: { ...prev[id], ...updates } }));
@@ -69,8 +75,10 @@ export function useReceiptOperations({
     year: number,
     month: number,
     receiptType: ReceiptType,
+    otherCategory?: string,
+    otherDescription?: string,
   ) => {
-    const opId = slotKey(year, month, receiptType);
+    const opId = slotKey(year, month, receiptType, otherCategory);
 
     setOperations(prev => ({
       ...prev,
@@ -89,7 +97,7 @@ export function useReceiptOperations({
 
       // 2. Get presigned URL
       const result = await getUploadUrlMutation.mutateAsync({
-        token,
+        token: tokenParam,
         policyId,
         year,
         month,
@@ -97,6 +105,8 @@ export function useReceiptOperations({
         fileName: file.name,
         contentType: file.type,
         fileSize: file.size,
+        otherCategory,
+        otherDescription,
       });
 
       if (!result.uploadUrl) throw new Error('No se pudo obtener URL de carga');
@@ -111,19 +121,19 @@ export function useReceiptOperations({
 
       // 4. Confirm
       await confirmUploadMutation.mutateAsync({
-        token,
+        token: tokenParam,
         receiptId: result.receiptId,
       });
 
       updateOp(opId, { status: 'success' });
-      refetchPortalData();
+      refetchData();
       removeOp(opId);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error al subir el comprobante';
       updateOp(opId, { status: 'error', error: msg });
       removeOp(opId, 5000);
     }
-  }, [token, policyId, getUploadUrlMutation, confirmUploadMutation, updateOp, removeOp, refetchPortalData]);
+  }, [tokenParam, policyId, getUploadUrlMutation, confirmUploadMutation, updateOp, removeOp, refetchData]);
 
   const deleteReceipt = useCallback(async (receiptId: string) => {
     const opId = `delete-${receiptId}`;
@@ -134,16 +144,16 @@ export function useReceiptOperations({
     }));
 
     try {
-      await deleteReceiptMutation.mutateAsync({ token, receiptId });
+      await deleteReceiptMutation.mutateAsync({ token: tokenParam, receiptId });
       updateOp(opId, { status: 'success' });
-      refetchPortalData();
+      refetchData();
       removeOp(opId);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error al eliminar';
       updateOp(opId, { status: 'error', error: msg });
       removeOp(opId, 5000);
     }
-  }, [token, deleteReceiptMutation, updateOp, removeOp, refetchPortalData]);
+  }, [tokenParam, deleteReceiptMutation, updateOp, removeOp, refetchData]);
 
   const downloadReceipt = useCallback(async (receiptId: string) => {
     const opId = `download-${receiptId}`;
@@ -154,7 +164,7 @@ export function useReceiptOperations({
     }));
 
     try {
-      const result = await utils.receipt.getDownloadUrl.fetch({ token, receiptId });
+      const result = await utils.receipt.getDownloadUrl.fetch({ token: tokenParam, receiptId });
       if (result.downloadUrl) {
         window.open(result.downloadUrl, '_blank');
         updateOp(opId, { status: 'success' });
@@ -167,7 +177,7 @@ export function useReceiptOperations({
       updateOp(opId, { status: 'error', error: msg });
       removeOp(opId, 5000);
     }
-  }, [token, utils, updateOp, removeOp]);
+  }, [tokenParam, utils, updateOp, removeOp]);
 
   const markNotApplicable = useCallback(async (
     year: number,
@@ -183,16 +193,16 @@ export function useReceiptOperations({
     }));
 
     try {
-      await markNAMutation.mutateAsync({ token, policyId, year, month, receiptType, note });
+      await markNAMutation.mutateAsync({ token: tokenParam, policyId, year, month, receiptType, note });
       updateOp(opId, { status: 'success' });
-      refetchPortalData();
+      refetchData();
       removeOp(opId);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error al marcar como no aplica';
       updateOp(opId, { status: 'error', error: msg });
       removeOp(opId, 5000);
     }
-  }, [token, policyId, markNAMutation, updateOp, removeOp, refetchPortalData]);
+  }, [tokenParam, policyId, markNAMutation, updateOp, removeOp, refetchData]);
 
   const undoNotApplicable = useCallback(async (receiptId: string) => {
     const opId = `undoNA-${receiptId}`;
@@ -203,23 +213,24 @@ export function useReceiptOperations({
     }));
 
     try {
-      await undoNAMutation.mutateAsync({ token, receiptId });
+      await undoNAMutation.mutateAsync({ token: tokenParam, receiptId });
       updateOp(opId, { status: 'success' });
-      refetchPortalData();
+      refetchData();
       removeOp(opId);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error al deshacer';
       updateOp(opId, { status: 'error', error: msg });
       removeOp(opId, 5000);
     }
-  }, [token, undoNAMutation, updateOp, removeOp, refetchPortalData]);
+  }, [tokenParam, undoNAMutation, updateOp, removeOp, refetchData]);
 
   const getSlotOperation = useCallback((
     year: number,
     month: number,
     receiptType: ReceiptType,
+    otherCategory?: string,
   ): ReceiptOperation | undefined => {
-    return operations[slotKey(year, month, receiptType)];
+    return operations[slotKey(year, month, receiptType, otherCategory)];
   }, [operations]);
 
   return {

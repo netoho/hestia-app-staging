@@ -94,6 +94,45 @@ export const receipts = {
     },
   },
 
+  // Other receipt categories
+  otherCategories: {
+    gas_tank: 'Tanque de gas',
+    wifi: 'WiFi / Red',
+    security: 'Vigilancia / Seguridad',
+    trash: 'Recolección de basura',
+    parking: 'Estacionamiento',
+    insurance: 'Seguro',
+    hoa: 'Cuota vecinal',
+    other: 'Otro (especificar)',
+  } as Record<string, string>,
+
+  // Other receipt upload
+  otherUpload: {
+    title: 'Agregar otro comprobante',
+    categoryLabel: 'Categoría',
+    categoryPlaceholder: 'Selecciona una categoría',
+    customCategoryLabel: 'Nombre de la categoría',
+    customCategoryPlaceholder: 'Ej: Jardinería, Fumigación...',
+    descriptionLabel: 'Descripción',
+    descriptionPlaceholder: 'Describe el comprobante...',
+    addButton: '+ Agregar otro comprobante',
+    upload: 'Subir comprobante',
+  },
+
+  // Receipt config
+  config: {
+    title: 'Configuración de comprobantes',
+    subtitle: 'Selecciona los tipos de comprobantes requeridos para este mes en adelante',
+    save: 'Guardar configuración',
+    saving: 'Guardando...',
+    saved: 'Configuración guardada',
+    rentLocked: 'Renta es siempre requerida',
+    defaults: 'Según la propiedad',
+    notesLabel: 'Nota del cambio (opcional)',
+    notesPlaceholder: 'Ej: Se eliminó el servicio de cable',
+    noLongerRequired: 'Ya no requerido',
+  },
+
   // Months
   months: {
     1: 'Enero',
