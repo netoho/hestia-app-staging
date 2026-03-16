@@ -131,6 +131,12 @@ export const receipts = {
     notesLabel: 'Nota del cambio (opcional)',
     notesPlaceholder: 'Ej: Se eliminó el servicio de cable',
     noLongerRequired: 'Ya no requerido',
+    latestNote: 'Última nota',
+    history: 'Historial de cambios',
+    noHistory: 'Sin cambios registrados',
+    changedBy: 'por',
+    refresh: 'Actualizar',
+    typesLabel: 'Tipos',
   },
 
   // Months

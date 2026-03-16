@@ -763,6 +763,13 @@ export const receiptRouter = createTRPCRouter({
         input.policyId, now.getFullYear(), now.getMonth() + 1
       );
 
+      // Resolve user names for history entries
+      const userIds = [...new Set(configs.map(c => c.createdById).filter(Boolean))] as string[];
+      const users = userIds.length > 0
+        ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })
+        : [];
+      const userMap = new Map(users.map(u => [u.id, u.name]));
+
       return {
         currentTypes,
         computedDefaults,
@@ -773,6 +780,7 @@ export const receiptRouter = createTRPCRouter({
           receiptTypes: c.receiptTypes,
           notes: c.notes,
           createdAt: c.createdAt,
+          createdByName: c.createdById ? (userMap.get(c.createdById) ?? null) : null,
         })),
       };
     }),

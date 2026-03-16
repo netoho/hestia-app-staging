@@ -12,12 +12,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  DollarSign, Zap, Droplets, Flame, Wifi, Tv, Phone, Wrench, FileText,
+  FileText,
   Download, Trash2, RotateCcw, CheckCircle2, XCircle, Loader2,
 } from 'lucide-react';
 import { ReceiptOperation } from '@/hooks/useReceiptOperations';
 import ReceiptUploader from './ReceiptUploader';
 import NotApplicableModal from './NotApplicableModal';
+import { RECEIPT_TYPE_ICONS } from './receiptTypeIcons';
 import { receipts as t } from '@/lib/i18n/pages/receipts';
 import { formatDate } from '@/lib/utils/formatting';
 
@@ -45,20 +46,6 @@ interface ReceiptSlotProps {
   onMarkNA?: (note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
 }
-
-// --- Icon map ---
-
-const RECEIPT_TYPE_ICONS: Record<ReceiptType, React.ElementType> = {
-  RENT: DollarSign,
-  ELECTRICITY: Zap,
-  WATER: Droplets,
-  GAS: Flame,
-  INTERNET: Wifi,
-  CABLE_TV: Tv,
-  PHONE: Phone,
-  MAINTENANCE: Wrench,
-  OTHER: FileText,
-};
 
 // --- Component ---
 
