@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ReceiptType, ReceiptStatus } from '@/prisma/generated/prisma-client/enums';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home, DollarSign, Calendar } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Home, DollarSign, Calendar, ShieldCheck } from 'lucide-react';
 import { useReceiptOperations } from '@/hooks/useReceiptOperations';
 import { formatAddress } from '@/lib/utils/formatting';
+import { getTypesForMonth, type ReceiptConfigEntry } from '@/lib/utils/receiptConfig';
 import { receipts as t } from '@/lib/i18n/pages/receipts';
 import PolicySelector from './PolicySelector';
 import MonthReceiptCard from './MonthReceiptCard';
 import ReceiptHistoryList from './ReceiptHistoryList';
+import ReceiptConfigEditor from './ReceiptConfigEditor';
 
-// --- Types (inferred from getPortalData output) ---
+// --- Types ---
 
 interface ReceiptRecord {
   id: string;
@@ -24,6 +27,8 @@ interface ReceiptRecord {
   uploadedAt?: Date | string | null;
   notApplicableNote?: string | null;
   markedNotApplicableAt?: Date | string | null;
+  otherCategory?: string | null;
+  otherDescription?: string | null;
 }
 
 interface PolicyData {
@@ -43,15 +48,17 @@ interface PolicyData {
     state?: string | null;
   } | null;
   requiredReceiptTypes: ReceiptType[];
+  receiptConfigs?: ReceiptConfigEntry[];
   receipts: ReceiptRecord[];
   activatedAt: string | Date | null;
 }
 
 interface ReceiptDashboardProps {
-  token: string;
+  mode: 'portal' | 'admin';
+  token?: string;
   tenantName: string;
   policies: PolicyData[];
-  refetchPortalData: () => void;
+  refetchData: () => void;
 }
 
 // --- Helpers ---
@@ -86,20 +93,33 @@ function generateMonthRange(activatedAt: string | Date | null): { year: number; 
 // --- Component ---
 
 export default function ReceiptDashboard({
+  mode,
   token,
   tenantName,
   policies,
-  refetchPortalData,
+  refetchData,
 }: ReceiptDashboardProps) {
   const [selectedPolicyId, setSelectedPolicyId] = useState(policies[0]?.policyId || '');
 
   const selectedPolicy = policies.find(p => p.policyId === selectedPolicyId) || policies[0];
 
   const ops = useReceiptOperations({
+    mode,
     token,
     policyId: selectedPolicy?.policyId || '',
-    refetchPortalData,
+    refetchData,
   });
+
+  // Per-month type resolver using config history
+  const resolveTypesForMonth = useCallback((year: number, month: number): ReceiptType[] => {
+    if (!selectedPolicy) return [];
+    return getTypesForMonth(
+      selectedPolicy.receiptConfigs || [],
+      year,
+      month,
+      selectedPolicy.requiredReceiptTypes,
+    );
+  }, [selectedPolicy]);
 
   // Compute month range
   const allMonths = useMemo(
@@ -111,71 +131,95 @@ export default function ReceiptDashboard({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  // Current month is the last entry (or the current date month)
   const currentMonthEntry = allMonths.find(m => m.year === currentYear && m.month === currentMonth);
   const pastMonths = allMonths
     .filter(m => !(m.year === currentYear && m.month === currentMonth))
-    .reverse(); // newest first
+    .reverse();
 
-  // Filter receipts for current month
   const currentMonthReceipts = (selectedPolicy?.receipts || []).filter(
     r => r.year === currentYear && r.month === currentMonth,
   );
 
+  const currentMonthTypes = resolveTypesForMonth(currentYear, currentMonth);
+
   if (!selectedPolicy) return null;
+
+  const isPortal = mode === 'portal';
 
   return (
     <div>
-      {/* Hero */}
-      <div style={{ background: 'linear-gradient(to bottom, #ffffff, #dbeafe)', borderColor: '#d4dae1' }} className="border-b">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="text-center">
-            <h1 className="font-headline text-3xl md:text-4xl mb-2" style={{ color: '#173459' }}>
-              {t.portal.title}
-            </h1>
-            <p className="text-muted-foreground">
-              Bienvenido, {tenantName}
-            </p>
+      {/* Hero — portal only */}
+      {isPortal && (
+        <div className="border-b bg-gradient-to-b from-white to-blue-50">
+          <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="text-center">
+              <h1 className="font-headline text-3xl md:text-4xl mb-2 text-primary">
+                {t.portal.title}
+              </h1>
+              <p className="text-muted-foreground">
+                {t.portal.welcome(tenantName)}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-        {/* Policy selector */}
-        <PolicySelector
-          policies={policies.map(p => ({
-            policyId: p.policyId,
-            policyNumber: p.policyNumber,
-            propertyAddress: p.propertyAddress,
-          }))}
-          selectedPolicyId={selectedPolicyId}
-          onSelect={setSelectedPolicyId}
-        />
+      <div className={isPortal ? 'container mx-auto px-4 py-6 max-w-4xl space-y-6' : 'space-y-6'}>
+        {/* Admin badge */}
+        {mode === 'admin' && (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs gap-1">
+              <ShieldCheck className="h-3 w-3" />
+              {t.admin.viewingAs}
+            </Badge>
+          </div>
+        )}
+
+        {/* Policy selector — portal only (multi-policy) */}
+        {isPortal && policies.length > 1 && (
+          <PolicySelector
+            policies={policies.map(p => ({
+              policyId: p.policyId,
+              policyNumber: p.policyNumber,
+              propertyAddress: p.propertyAddress,
+            }))}
+            selectedPolicyId={selectedPolicyId}
+            onSelect={setSelectedPolicyId}
+          />
+        )}
+
+        {/* Config editor — admin only */}
+        {mode === 'admin' && (
+          <ReceiptConfigEditor
+            policyId={selectedPolicy.policyId}
+            onConfigSaved={refetchData}
+          />
+        )}
 
         {/* Policy info card */}
         <Card className="shadow-sm border-0">
-          <CardHeader style={{ background: 'linear-gradient(to right, #173459, #2b5a8c)', color: 'white' }}>
+          <CardHeader className="bg-gradient-to-r from-primary to-primary/70 text-white">
             <CardTitle className="font-headline text-lg">
-              Protección #{selectedPolicy.policyNumber}
+              {t.admin.policySubtitle(selectedPolicy.policyNumber)}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-start gap-3">
-                <Home className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
+                <Home className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">{t.portal.propertyLabel}</p>
-                  <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                  <p className="text-sm font-medium text-primary">
                     {formatAddress(selectedPolicy.propertyAddress)}
                   </p>
                 </div>
               </div>
               {selectedPolicy.rentAmount && (
                 <div className="flex items-start gap-3">
-                  <DollarSign className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
+                  <DollarSign className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Renta mensual</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    <p className="text-xs text-muted-foreground mb-0.5">{t.portal.rentAmount}</p>
+                    <p className="text-sm font-medium text-primary">
                       ${selectedPolicy.rentAmount.toLocaleString('es-MX')} MXN
                     </p>
                   </div>
@@ -183,10 +227,10 @@ export default function ReceiptDashboard({
               )}
               {selectedPolicy.contractLength && (
                 <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#173459' }} />
+                  <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Período</p>
-                    <p className="text-sm font-medium" style={{ color: '#173459' }}>
+                    <p className="text-xs text-muted-foreground mb-0.5">{t.portal.period}</p>
+                    <p className="text-sm font-medium text-primary">
                       {selectedPolicy.contractLength} meses
                     </p>
                   </div>
@@ -199,20 +243,21 @@ export default function ReceiptDashboard({
         {/* Current month */}
         {currentMonthEntry && (
           <div>
-            <h2 className="text-lg font-semibold mb-3" style={{ color: '#173459' }}>
+            <h2 className="text-lg font-semibold mb-3 text-primary">
               {t.portal.currentMonth}
             </h2>
             <MonthReceiptCard
               year={currentYear}
               month={currentMonth}
-              requiredTypes={selectedPolicy.requiredReceiptTypes}
+              requiredTypes={currentMonthTypes}
               receipts={currentMonthReceipts}
-              onUpload={(file, type) => ops.uploadReceipt(file, currentYear, currentMonth, type)}
+              onUpload={(file, type, otherCat, otherDesc) => ops.uploadReceipt(file, currentYear, currentMonth, type, otherCat, otherDesc)}
               onDelete={ops.deleteReceipt}
               onDownload={ops.downloadReceipt}
               onMarkNA={(type, note) => ops.markNotApplicable(currentYear, currentMonth, type, note)}
               onUndoNA={ops.undoNotApplicable}
-              getSlotOperation={(type) => ops.getSlotOperation(currentYear, currentMonth, type)}
+              getSlotOperation={(type, otherCat) => ops.getSlotOperation(currentYear, currentMonth, type, otherCat)}
+              getReceiptOperation={ops.getReceiptOperation}
             />
           </div>
         )}
@@ -220,19 +265,20 @@ export default function ReceiptDashboard({
         {/* Past months */}
         {pastMonths.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-3" style={{ color: '#173459' }}>
+            <h2 className="text-lg font-semibold mb-3 text-primary">
               {t.portal.pastMonths}
             </h2>
             <ReceiptHistoryList
               months={pastMonths}
-              requiredTypes={selectedPolicy.requiredReceiptTypes}
+              getRequiredTypes={resolveTypesForMonth}
               receipts={selectedPolicy.receipts}
-              onUpload={(file, year, month, type) => ops.uploadReceipt(file, year, month, type)}
+              onUpload={(file, year, month, type, otherCat, otherDesc) => ops.uploadReceipt(file, year, month, type, otherCat, otherDesc)}
               onDelete={ops.deleteReceipt}
               onDownload={ops.downloadReceipt}
               onMarkNA={(year, month, type, note) => ops.markNotApplicable(year, month, type, note)}
               onUndoNA={ops.undoNotApplicable}
-              getSlotOperation={(year, month, type) => ops.getSlotOperation(year, month, type)}
+              getSlotOperation={(year, month, type, otherCat) => ops.getSlotOperation(year, month, type, otherCat)}
+              getReceiptOperation={ops.getReceiptOperation}
             />
           </div>
         )}

@@ -210,6 +210,119 @@ class ReceiptService extends BaseService {
       orderBy: [{ year: 'desc' }, { month: 'desc' }, { receiptType: 'asc' }],
     });
   }
+
+  /**
+   * Get the effective receipt types for a policy in a given month.
+   * Uses ReceiptConfig if available, falls back to property-based computation.
+   */
+  async getEffectiveReceiptTypes(
+    policyId: string,
+    year: number,
+    month: number,
+  ): Promise<ReceiptType[]> {
+    const config = await this.prisma.receiptConfig.findFirst({
+      where: {
+        policyId,
+        OR: [
+          { effectiveYear: { lt: year } },
+          { effectiveYear: year, effectiveMonth: { lte: month } },
+        ],
+      },
+      orderBy: [{ effectiveYear: 'desc' }, { effectiveMonth: 'desc' }],
+    });
+
+    if (config) return config.receiptTypes;
+
+    // Fallback: compute from property details
+    const policy = await this.prisma.policy.findUnique({
+      where: { id: policyId },
+      include: { propertyDetails: true },
+    });
+
+    if (!policy) return [ReceiptType.RENT];
+
+    return this.getRequiredReceiptTypes(
+      policy.propertyDetails ? {
+        hasElectricity: policy.propertyDetails.hasElectricity,
+        hasWater: policy.propertyDetails.hasWater,
+        hasGas: policy.propertyDetails.hasGas,
+        hasInternet: policy.propertyDetails.hasInternet,
+        hasCableTV: policy.propertyDetails.hasCableTV,
+        hasPhone: policy.propertyDetails.hasPhone,
+        electricityIncludedInRent: policy.propertyDetails.electricityIncludedInRent,
+        waterIncludedInRent: policy.propertyDetails.waterIncludedInRent,
+        gasIncludedInRent: policy.propertyDetails.gasIncludedInRent,
+        internetIncludedInRent: policy.propertyDetails.internetIncludedInRent,
+        cableTVIncludedInRent: policy.propertyDetails.cableTVIncludedInRent,
+        phoneIncludedInRent: policy.propertyDetails.phoneIncludedInRent,
+      } : null,
+      {
+        maintenanceFee: policy.maintenanceFee,
+        maintenanceIncludedInRent: policy.maintenanceIncludedInRent,
+      },
+    );
+  }
+
+  /**
+   * Get all receipt configs for a policy (for frontend per-month resolution).
+   */
+  async getConfigHistory(policyId: string) {
+    return this.prisma.receiptConfig.findMany({
+      where: { policyId },
+      orderBy: [{ effectiveYear: 'asc' }, { effectiveMonth: 'asc' }],
+    });
+  }
+
+  /**
+   * Initialize config from property details. Idempotent — skips if config exists for the month.
+   */
+  async initializeConfig(policyId: string, userId?: string): Promise<void> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const existing = await this.prisma.receiptConfig.findUnique({
+      where: { policyId_effectiveYear_effectiveMonth: { policyId, effectiveYear: year, effectiveMonth: month } },
+    });
+    if (existing) return;
+
+    const policy = await this.prisma.policy.findUnique({
+      where: { id: policyId },
+      include: { propertyDetails: true },
+    });
+    if (!policy) return;
+
+    const types = this.getRequiredReceiptTypes(
+      policy.propertyDetails ? {
+        hasElectricity: policy.propertyDetails.hasElectricity,
+        hasWater: policy.propertyDetails.hasWater,
+        hasGas: policy.propertyDetails.hasGas,
+        hasInternet: policy.propertyDetails.hasInternet,
+        hasCableTV: policy.propertyDetails.hasCableTV,
+        hasPhone: policy.propertyDetails.hasPhone,
+        electricityIncludedInRent: policy.propertyDetails.electricityIncludedInRent,
+        waterIncludedInRent: policy.propertyDetails.waterIncludedInRent,
+        gasIncludedInRent: policy.propertyDetails.gasIncludedInRent,
+        internetIncludedInRent: policy.propertyDetails.internetIncludedInRent,
+        cableTVIncludedInRent: policy.propertyDetails.cableTVIncludedInRent,
+        phoneIncludedInRent: policy.propertyDetails.phoneIncludedInRent,
+      } : null,
+      {
+        maintenanceFee: policy.maintenanceFee,
+        maintenanceIncludedInRent: policy.maintenanceIncludedInRent,
+      },
+    );
+
+    await this.prisma.receiptConfig.create({
+      data: {
+        policyId,
+        effectiveYear: year,
+        effectiveMonth: month,
+        receiptTypes: types,
+        createdById: userId,
+      },
+    });
+  }
 }
 
 export const receiptService = new ReceiptService();

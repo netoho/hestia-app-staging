@@ -199,6 +199,7 @@ model Policy {
   incidents       Incident[]
   validationNotes ReviewNote[]
   tenantReceipts  TenantReceipt[]
+  receiptConfigs  ReceiptConfig[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1526,6 +1527,13 @@ model TenantReceipt {
   notApplicableNote     String?
   markedNotApplicableAt DateTime?
 
+  // "Other" receipt metadata
+  otherCategory    String  @default("") // predefined key or "other_<timestamp>" for freeform; empty string for non-OTHER types
+  otherDescription String?
+
+  // Audit
+  uploadedByUserId String? // tracks admin uploads
+
   // Optional metadata
   notes  String?
   amount Float?
@@ -1537,8 +1545,29 @@ model TenantReceipt {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([policyId, year, month, receiptType])
+  @@unique([policyId, year, month, receiptType, otherCategory])
   @@index([tenantId, year, month])
+  @@index([policyId])
+}
+
+// ============================================
+// RECEIPT CONFIG
+// ============================================
+
+model ReceiptConfig {
+  id             String        @id @default(cuid())
+  policyId       String
+  effectiveYear  Int
+  effectiveMonth Int // 1-12
+  receiptTypes   ReceiptType[]
+  createdById    String?
+  notes          String?
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([policyId, effectiveYear, effectiveMonth])
   @@index([policyId])
 }
 
