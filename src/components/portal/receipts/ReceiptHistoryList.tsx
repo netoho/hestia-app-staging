@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { ReceiptType, ReceiptStatus } from '@/prisma/generated/prisma-client/enums';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ReceiptOperation } from '@/hooks/useReceiptOperations';
@@ -22,6 +21,8 @@ interface ReceiptRecord {
   uploadedAt?: Date | string | null;
   notApplicableNote?: string | null;
   markedNotApplicableAt?: Date | string | null;
+  otherCategory?: string | null;
+  otherDescription?: string | null;
 }
 
 interface MonthEntry {
@@ -31,30 +32,30 @@ interface MonthEntry {
 
 interface ReceiptHistoryListProps {
   months: MonthEntry[];
-  requiredTypes: ReceiptType[];
+  getRequiredTypes: (year: number, month: number) => ReceiptType[];
   receipts: ReceiptRecord[];
-  readOnly?: boolean;
-  onUpload?: (file: File, year: number, month: number, receiptType: ReceiptType) => void;
+  onUpload?: (file: File, year: number, month: number, receiptType: ReceiptType, otherCategory?: string, otherDescription?: string) => void;
   onDelete?: (receiptId: string) => void;
   onDownload?: (receiptId: string) => void;
   onMarkNA?: (year: number, month: number, receiptType: ReceiptType, note?: string) => void;
   onUndoNA?: (receiptId: string) => void;
-  getSlotOperation?: (year: number, month: number, receiptType: ReceiptType) => ReceiptOperation | undefined;
+  getSlotOperation?: (year: number, month: number, receiptType: ReceiptType, otherCategory?: string) => ReceiptOperation | undefined;
+  getReceiptOperation?: (receiptId: string) => ReceiptOperation | undefined;
 }
 
 // --- Component ---
 
 export default function ReceiptHistoryList({
   months,
-  requiredTypes,
+  getRequiredTypes,
   receipts,
-  readOnly = false,
   onUpload,
   onDelete,
   onDownload,
   onMarkNA,
   onUndoNA,
   getSlotOperation,
+  getReceiptOperation,
 }: ReceiptHistoryListProps) {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 
@@ -88,10 +89,12 @@ export default function ReceiptHistoryList({
         const key = `${year}-${month}`;
         const isExpanded = expandedMonths.has(key);
         const monthReceipts = receiptsByMonth.get(key) || [];
-        const completedCount = requiredTypes.filter(type =>
+        const requiredTypes = getRequiredTypes(year, month);
+        const standardRequired = requiredTypes.filter(t => t !== ReceiptType.OTHER);
+        const completedCount = standardRequired.filter(type =>
           monthReceipts.some(r => r.receiptType === type)
         ).length;
-        const allDone = completedCount === requiredTypes.length;
+        const allDone = completedCount === standardRequired.length;
         const monthLabel = `${t.months[month] || month} ${year}`;
 
         return (
@@ -106,7 +109,7 @@ export default function ReceiptHistoryList({
                   ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 }
-                <span className="text-sm font-medium" style={{ color: '#173459' }}>
+                <span className="text-sm font-medium text-primary">
                   {monthLabel}
                 </span>
               </div>
@@ -120,7 +123,7 @@ export default function ReceiptHistoryList({
                 }
                 variant="outline"
               >
-                {t.portal.completionSummary(completedCount, requiredTypes.length)}
+                {t.portal.completionSummary(completedCount, standardRequired.length)}
               </Badge>
             </button>
 
@@ -131,13 +134,13 @@ export default function ReceiptHistoryList({
                   month={month}
                   requiredTypes={requiredTypes}
                   receipts={monthReceipts}
-                  readOnly={readOnly}
-                  onUpload={(file, type) => onUpload?.(file, year, month, type)}
+                  onUpload={(file, type, otherCat, otherDesc) => onUpload?.(file, year, month, type, otherCat, otherDesc)}
                   onDelete={onDelete}
                   onDownload={onDownload}
                   onMarkNA={(type, note) => onMarkNA?.(year, month, type, note)}
                   onUndoNA={onUndoNA}
-                  getSlotOperation={(type) => getSlotOperation?.(year, month, type)}
+                  getSlotOperation={(type, otherCat) => getSlotOperation?.(year, month, type, otherCat)}
+                  getReceiptOperation={getReceiptOperation}
                 />
               </div>
             )}

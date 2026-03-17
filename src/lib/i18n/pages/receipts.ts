@@ -45,6 +45,11 @@ export const receipts = {
     noReceipts: 'No hay comprobantes para este período',
     completionSummary: (uploaded: number, total: number) =>
       `${uploaded}/${total} comprobantes`,
+    validating: 'Validando acceso...',
+    tokenExpired: 'Token inválido o expirado',
+    welcome: (name: string) => `Bienvenido, ${name}`,
+    rentAmount: 'Renta mensual',
+    period: 'Período',
   },
 
   // Receipt slot
@@ -56,6 +61,10 @@ export const receipts = {
     markNotApplicable: 'No aplica este mes',
     undoNotApplicable: 'Deshacer',
     uploadedOn: 'Subido el',
+    deleteConfirmTitle: 'Eliminar comprobante',
+    deleteConfirmDescription: (receiptType: string) =>
+      `¿Estás seguro de que deseas eliminar el comprobante de ${receiptType}? Esta acción no se puede deshacer.`,
+    changeFile: 'Cambiar',
   },
 
   // Not applicable modal
@@ -79,12 +88,34 @@ export const receipts = {
     maxSize: 'Máx 5MB. Formatos: PDF, JPG, PNG, WEBP',
   },
 
+  // Operation feedback
+  errors: {
+    invalidFile: 'Archivo inválido',
+    uploadFailed: 'Error al subir el comprobante',
+    deleteFailed: 'Error al eliminar',
+    downloadFailed: 'Error al descargar',
+    markNAFailed: 'Error al marcar como no aplica',
+    undoNAFailed: 'Error al deshacer',
+    noUploadUrl: 'No se pudo obtener URL de carga',
+    noDownloadUrl: 'No se pudo obtener la URL de descarga',
+  },
+
+  success: {
+    uploaded: 'Comprobante subido exitosamente',
+    deleted: 'Comprobante eliminado',
+    markedNA: 'Marcado como no aplica',
+    undoneNA: 'Se deshizo la marca de no aplica',
+  },
+
   // Admin page
   admin: {
     title: 'Comprobantes del Inquilino',
     backToPolicy: 'Volver a la protección',
     noTenant: 'Esta protección no tiene inquilino asignado.',
     notApproved: 'Los comprobantes solo están disponibles para protecciones aprobadas.',
+    policyNotFound: 'Protección no encontrada',
+    policySubtitle: (policyNumber: string) => `Protección #${policyNumber}`,
+    viewingAs: 'Vista de administrador',
     filterByMonth: 'Filtrar por mes',
     allMonths: 'Todos los meses',
     summary: {
@@ -92,6 +123,51 @@ export const receipts = {
       notApplicable: 'No aplica',
       pending: 'Pendientes',
     },
+  },
+
+  // Other receipt categories
+  otherCategories: {
+    gas_tank: 'Tanque de gas',
+    wifi: 'WiFi / Red',
+    security: 'Vigilancia / Seguridad',
+    trash: 'Recolección de basura',
+    parking: 'Estacionamiento',
+    insurance: 'Seguro',
+    hoa: 'Cuota vecinal',
+    other: 'Otro (especificar)',
+  } as Record<string, string>,
+
+  // Other receipt upload
+  otherUpload: {
+    title: 'Agregar otro comprobante',
+    categoryLabel: 'Categoría',
+    categoryPlaceholder: 'Selecciona una categoría',
+    customCategoryLabel: 'Nombre de la categoría',
+    customCategoryPlaceholder: 'Ej: Jardinería, Fumigación...',
+    descriptionLabel: 'Descripción',
+    descriptionPlaceholder: 'Describe el comprobante...',
+    addButton: '+ Agregar otro comprobante',
+    upload: 'Subir comprobante',
+  },
+
+  // Receipt config
+  config: {
+    title: 'Configuración de comprobantes',
+    subtitle: 'Selecciona los tipos de comprobantes requeridos para este mes en adelante',
+    save: 'Guardar configuración',
+    saving: 'Guardando...',
+    saved: 'Configuración guardada',
+    rentLocked: 'Renta es siempre requerida',
+    defaults: 'Según la propiedad',
+    notesLabel: 'Nota del cambio (opcional)',
+    notesPlaceholder: 'Ej: Se eliminó el servicio de cable',
+    noLongerRequired: 'Ya no requerido',
+    latestNote: 'Última nota',
+    history: 'Historial de cambios',
+    noHistory: 'Sin cambios registrados',
+    changedBy: 'por',
+    refresh: 'Actualizar',
+    typesLabel: 'Tipos',
   },
 
   // Months

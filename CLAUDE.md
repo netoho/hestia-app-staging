@@ -16,3 +16,7 @@
 - For constants use @src/lib/constants/README.md
 - All of our translations should go in the appropriate file within @src/lib/i18n/ (e.g., globals.ts, statuses.ts, layout.ts, wizard.ts, or the pages/ subdirectory).
 
+# Project Architecture
+
+## TRPC
+- We use TRPC for our API, you can find the routers in @src/server/routers/
