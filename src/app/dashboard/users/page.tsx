@@ -35,6 +35,7 @@ function UsersSkeleton() {
         <Table>
             <TableHeader>
                 <TableRow>
+                    <TableHead>ID</TableHead>
                     <TableHead>{t.pages.users.tableHeaders.name}</TableHead>
                     <TableHead>{t.pages.users.tableHeaders.email}</TableHead>
                     <TableHead>{t.pages.users.tableHeaders.role}</TableHead>
@@ -45,6 +46,7 @@ function UsersSkeleton() {
             <TableBody>
                 {[...Array(5)].map((_, i) => (
                     <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
@@ -165,6 +167,7 @@ export default function UsersPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>ID</TableHead>
                                     <TableHead>{t.pages.users.tableHeaders.name}</TableHead>
                                     <TableHead>{t.pages.users.tableHeaders.email}</TableHead>
                                     <TableHead>{t.pages.users.tableHeaders.role}</TableHead>
@@ -175,6 +178,7 @@ export default function UsersPage() {
                             <TableBody>
                                 {users.map((user) => (
                                     <TableRow key={user.id}>
+                                        <TableCell className="text-muted-foreground">{user.internalId ?? '-'}</TableCell>
                                         <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>

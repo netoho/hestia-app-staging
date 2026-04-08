@@ -7,13 +7,19 @@ import { BaseService, ICrudService, ServiceOptions } from './base/BaseService';
 import { Result, AsyncResult } from './types/result';
 import { ServiceError, ErrorCode, Errors } from './types/errors';
 import { hashPassword } from '../auth';
+import prisma from '../prisma';
 
 // Types
 export interface User {
   id: string;
+  internalId: number | null;
   email: string;
   name: string | null;
+  phone: string | null;
+  address: string | null;
+  avatarUrl: string | null;
   role: string;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +36,11 @@ export interface UpdateUserDTO {
   name?: string;
   password?: string;
   role?: 'ADMIN' | 'STAFF' | 'BROKER';
+  phone?: string;
+  address?: string;
+  avatarUrl?: string | null;
+  isActive?: boolean;
+  emailVerified?: Date;
 }
 
 export interface UserFilterDTO {
@@ -54,12 +65,25 @@ export interface PaginatedUsers {
 // Select fields to exclude password
 const userSelect = {
   id: true,
+  internalId: true,
   email: true,
   name: true,
+  phone: true,
+  address: true,
+  avatarUrl: true,
   role: true,
+  isActive: true,
   createdAt: true,
   updatedAt: true,
 } as const;
+
+/**
+ * Get the next consecutive internalId for a new user.
+ */
+export async function getNextInternalId(): Promise<number> {
+  const result = await prisma.user.aggregate({ _max: { internalId: true } });
+  return (result._max.internalId ?? 0) + 1;
+}
 
 class UserService extends BaseService implements ICrudService<User, CreateUserDTO, UpdateUserDTO, UserFilterDTO> {
   constructor(options: ServiceOptions = {}) {
@@ -129,6 +153,8 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
     // Hash password if provided
     const hashedPassword = data.password ? await hashPassword(data.password) : null;
 
+    const internalId = await getNextInternalId();
+
     return this.executeDbOperation(
       () => this.prisma.user.create({
         data: {
@@ -137,6 +163,7 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
           password: hashedPassword,
           role: data.role || 'STAFF',
           isActive: true,
+          internalId,
         },
         select: userSelect,
       }),
@@ -152,6 +179,11 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
     if (data.email !== undefined) updateData.email = data.email;
     if (data.name !== undefined) updateData.name = data.name;
     if (data.role !== undefined) updateData.role = data.role;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.emailVerified !== undefined) updateData.emailVerified = data.emailVerified;
     if (hashedPassword) updateData.password = hashedPassword;
 
     return this.executeDbOperation(
@@ -168,6 +200,19 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
     const result = await this.executeDbOperation(
       () => this.prisma.user.delete({ where: { id } }),
       'delete'
+    );
+
+    if (!result.ok) return result;
+    return Result.ok(true);
+  }
+
+  async softDelete(id: string): AsyncResult<boolean> {
+    const result = await this.executeDbOperation(
+      () => this.prisma.user.update({
+        where: { id },
+        data: { isActive: false },
+      }),
+      'softDelete'
     );
 
     if (!result.ok) return result;
@@ -253,6 +298,12 @@ export const updateUser = async (id: string, data: UpdateUserDTO) => {
 
 export const deleteUser = async (id: string) => {
   const result = await userService.delete(id);
+  if (!result.ok) throw result.error;
+  return result.value;
+};
+
+export const softDeleteUser = async (id: string) => {
+  const result = await userService.softDelete(id);
   if (!result.ok) throw result.error;
   return result.value;
 };

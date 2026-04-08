@@ -26,6 +26,7 @@ model User {
   phone         String?
   address       String?
   isActive      Boolean   @default(true)
+  internalId    Int?      @unique
 
   // Invitation fields
   invitationToken       String?   @unique

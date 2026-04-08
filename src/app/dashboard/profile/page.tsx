@@ -184,6 +184,7 @@ export default function ProfilePage() {
               </p>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p><strong>ID:</strong> {profile?.internalId ?? 'N/A'}</p>
               <p><strong>{t.pages.profile.email}</strong> {profile?.email}</p>
               <p><strong>{t.pages.profile.phone}</strong> {profile?.phone || 'N/A'}</p>
               <p><strong>{t.pages.profile.address}</strong> {profile?.address || 'N/A'}</p>

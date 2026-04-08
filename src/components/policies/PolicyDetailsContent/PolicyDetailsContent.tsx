@@ -133,6 +133,7 @@ export default function PolicyDetailsContent({
     downloadingPdf,
     downloadingDocx,
     pendingAction,
+    isApproving,
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
@@ -154,6 +155,21 @@ export default function PolicyDetailsContent({
   ) ?? [];
   const completedPayments = activePayments.filter((p: { status: string }) => p.status === 'COMPLETED').length;
   const totalPayments = activePayments.length;
+
+  // Check if all actors have their information complete
+  const allActorsComplete = (() => {
+    const tenant = policy.tenant;
+    const landlords = policy.landlords ?? [];
+    const jointObligors = policy.jointObligors ?? [];
+    const avals = policy.avals ?? [];
+
+    if (!tenant?.informationComplete) return false;
+    if (landlords.length === 0 || !landlords.every((l: { informationComplete: boolean }) => l.informationComplete)) return false;
+    if (!jointObligors.every((jo: { informationComplete: boolean }) => jo.informationComplete)) return false;
+    if (!avals.every((a: { informationComplete: boolean }) => a.informationComplete)) return false;
+
+    return true;
+  })();
 
   // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {
@@ -225,6 +241,8 @@ export default function PolicyDetailsContent({
           downloadingPdf={downloadingPdf}
           downloadingDocx={downloadingDocx}
           isRefreshing={isRefreshing}
+          allActorsComplete={allActorsComplete}
+          isApproving={isApproving}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
           onShareClick={() => setShowShareModal(true)}

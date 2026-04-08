@@ -11,7 +11,7 @@ import { addMonths } from 'date-fns';
  * COLLECTING_INFO → PENDING_APPROVAL → ACTIVE → EXPIRED | CANCELLED
  */
 const ALLOWED_TRANSITIONS: Record<PolicyStatus, PolicyStatus[]> = {
-  COLLECTING_INFO: ['PENDING_APPROVAL', 'CANCELLED'],
+  COLLECTING_INFO: ['PENDING_APPROVAL', 'ACTIVE', 'CANCELLED'],
   PENDING_APPROVAL: ['ACTIVE', 'COLLECTING_INFO', 'CANCELLED'],
   ACTIVE: ['EXPIRED', 'CANCELLED'],
   EXPIRED: ['CANCELLED'],
@@ -84,6 +84,37 @@ class PolicyWorkflowService extends BaseService {
   }
 
   /**
+   * Check if all actors (tenant, landlords, joint obligors, avals) have their info complete.
+   */
+  async checkAllActorsInfoComplete(policyId: string): Promise<boolean> {
+    const policy = await this.prisma.policy.findUnique({
+      where: { id: policyId },
+      select: {
+        tenant: { select: { informationComplete: true } },
+        landlords: { select: { informationComplete: true } },
+        jointObligors: { select: { informationComplete: true } },
+        avals: { select: { informationComplete: true } },
+      },
+    });
+
+    if (!policy) return false;
+
+    // Must have at least a tenant
+    if (!policy.tenant) return false;
+    if (!policy.tenant.informationComplete) return false;
+
+    // Must have at least one landlord
+    if (policy.landlords.length === 0) return false;
+    if (!policy.landlords.every(l => l.informationComplete)) return false;
+
+    // All joint obligors and avals must be complete (if any exist)
+    if (!policy.jointObligors.every(jo => jo.informationComplete)) return false;
+    if (!policy.avals.every(a => a.informationComplete)) return false;
+
+    return true;
+  }
+
+  /**
    * Check if all active payments for a policy are settled (COMPLETED).
    * Returns true if no active payments exist or all are COMPLETED.
    */
@@ -105,6 +136,7 @@ class PolicyWorkflowService extends BaseService {
    */
   private async validateStatusRequirements(
     policy: { id: string },
+    fromStatus: PolicyStatus,
     newStatus: PolicyStatus
   ): Promise<{ valid: boolean; error?: string }> {
     switch (newStatus) {
@@ -120,12 +152,24 @@ class PolicyWorkflowService extends BaseService {
       }
 
       case 'ACTIVE': {
-        const settled = await this.areAllPaymentsSettled(policy.id);
-        if (!settled) {
-          return {
-            valid: false,
-            error: 'Todos los pagos deben estar completados antes de activar la protección',
-          };
+        if (fromStatus === 'COLLECTING_INFO') {
+          // Direct approval: only requires all actors' info to be complete
+          const allComplete = await this.checkAllActorsInfoComplete(policy.id);
+          if (!allComplete) {
+            return {
+              valid: false,
+              error: 'Toda la información de los actores debe estar completa antes de aprobar la protección',
+            };
+          }
+        } else {
+          // From PENDING_APPROVAL: requires payments settled
+          const settled = await this.areAllPaymentsSettled(policy.id);
+          if (!settled) {
+            return {
+              valid: false,
+              error: 'Todos los pagos deben estar completados antes de activar la protección',
+            };
+          }
         }
         break;
       }
@@ -166,7 +210,7 @@ class PolicyWorkflowService extends BaseService {
     }
 
     // Additional validation based on status
-    const validation = await this.validateStatusRequirements(policy, newStatus);
+    const validation = await this.validateStatusRequirements(policy, policy.status, newStatus);
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }
@@ -414,6 +458,7 @@ export const policyWorkflowService = new PolicyWorkflowService();
 export const isTransitionAllowed = policyWorkflowService.isTransitionAllowed.bind(policyWorkflowService);
 export const getAllowedNextStatuses = policyWorkflowService.getAllowedNextStatuses.bind(policyWorkflowService);
 export const checkAllInvestigationsApproved = policyWorkflowService.checkAllInvestigationsApproved.bind(policyWorkflowService);
+export const checkAllActorsInfoComplete = policyWorkflowService.checkAllActorsInfoComplete.bind(policyWorkflowService);
 export const transitionPolicyStatus = policyWorkflowService.transitionPolicyStatus.bind(policyWorkflowService);
 export const tryAutoTransition = policyWorkflowService.tryAutoTransition.bind(policyWorkflowService);
 export const expireActivePolicies = policyWorkflowService.expireActivePolicies.bind(policyWorkflowService);
