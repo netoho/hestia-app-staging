@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.error.message },
-        { status: 400 }
+        { error: result.error.getUserMessage?.() ?? result.error.message },
+        { status: result.error.statusCode ?? 400 }
       );
     }
 

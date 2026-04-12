@@ -17,6 +17,7 @@ import { changeGuarantorType } from '@/lib/services/policyService/guarantorTypeC
 import { cancelPolicy } from '@/lib/services/policyService/cancellation';
 import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
+import { actorTokenService } from '@/lib/services/actorTokenService';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
 import { TRPCError } from '@trpc/server';
 import { sendIncompleteActorInfoNotification } from "@/lib/services/notificationService";
@@ -222,14 +223,19 @@ export const policyRouter = createTRPCRouter({
         });
       }
 
+      // Compute actor completeness server-side so the UI doesn't duplicate
+      // the guarantorType / primary-landlord rules.
+      const completeness = await actorTokenService.checkPolicyActorsComplete(input.id);
+      const allActorsComplete = completeness.allComplete;
+
       // Calculate progress if requested
       if (input.includeProgress) {
         const { calculatePolicyProgress } = await import('@/lib/services/progressService');
         const progress = calculatePolicyProgress(policy);
-        return { ...policy, progress };
+        return { ...policy, allActorsComplete, progress };
       }
 
-      return policy;
+      return { ...policy, allActorsComplete };
     }),
 
   /**

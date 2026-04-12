@@ -3,6 +3,7 @@ import { PolicyStatus, PaymentStatus } from "@/prisma/generated/prisma-client/en
 import { logPolicyActivity } from './policyService';
 import { sendPolicyStatusUpdate } from './emailService';
 import { sendPolicyPendingApprovalNotification, sendPolicyExpiryNotification } from './notificationService';
+import { actorTokenService } from './actorTokenService';
 import { ServiceError, ErrorCode } from './types/errors';
 import { addMonths } from 'date-fns';
 
@@ -84,34 +85,20 @@ class PolicyWorkflowService extends BaseService {
   }
 
   /**
-   * Check if all actors (tenant, landlords, joint obligors, avals) have their info complete.
+   * Check if all required actors are present and have their info complete.
+   * Delegates to actorTokenService so the rules (primary landlord, guarantorType-aware
+   * joint obligor / aval requirements) stay in one place.
    */
   async checkAllActorsInfoComplete(policyId: string): Promise<boolean> {
-    const policy = await this.prisma.policy.findUnique({
-      where: { id: policyId },
-      select: {
-        tenant: { select: { informationComplete: true } },
-        landlords: { select: { informationComplete: true } },
-        jointObligors: { select: { informationComplete: true } },
-        avals: { select: { informationComplete: true } },
-      },
-    });
-
-    if (!policy) return false;
-
-    // Must have at least a tenant
-    if (!policy.tenant) return false;
-    if (!policy.tenant.informationComplete) return false;
-
-    // Must have at least one landlord
-    if (policy.landlords.length === 0) return false;
-    if (!policy.landlords.every(l => l.informationComplete)) return false;
-
-    // All joint obligors and avals must be complete (if any exist)
-    if (!policy.jointObligors.every(jo => jo.informationComplete)) return false;
-    if (!policy.avals.every(a => a.informationComplete)) return false;
-
-    return true;
+    try {
+      const result = await actorTokenService.checkPolicyActorsComplete(policyId);
+      return result.allComplete;
+    } catch (error) {
+      if (error instanceof ServiceError && error.code === ErrorCode.POLICY_NOT_FOUND) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   /**

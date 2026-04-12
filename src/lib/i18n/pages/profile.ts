@@ -2,6 +2,7 @@ export const profile = {
     title: "Mi Perfil",
     subtitle: "Ve y gestiona tu información personal.",
     changePhoto: "Cambiar Foto",
+    internalIdLabel: "ID:",
     email: "Email:",
     phone: "Teléfono:",
     address: "Dirección:",

@@ -156,20 +156,7 @@ export default function PolicyDetailsContent({
   const completedPayments = activePayments.filter((p: { status: string }) => p.status === 'COMPLETED').length;
   const totalPayments = activePayments.length;
 
-  // Check if all actors have their information complete
-  const allActorsComplete = (() => {
-    const tenant = policy.tenant;
-    const landlords = policy.landlords ?? [];
-    const jointObligors = policy.jointObligors ?? [];
-    const avals = policy.avals ?? [];
-
-    if (!tenant?.informationComplete) return false;
-    if (landlords.length === 0 || !landlords.every((l: { informationComplete: boolean }) => l.informationComplete)) return false;
-    if (!jointObligors.every((jo: { informationComplete: boolean }) => jo.informationComplete)) return false;
-    if (!avals.every((a: { informationComplete: boolean }) => a.informationComplete)) return false;
-
-    return true;
-  })();
+  const allActorsComplete = policy.allActorsComplete ?? false;
 
   // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {

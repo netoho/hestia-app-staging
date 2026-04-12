@@ -35,7 +35,7 @@ function UsersSkeleton() {
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead>{t.pages.users.tableHeaders.id}</TableHead>
                     <TableHead>{t.pages.users.tableHeaders.name}</TableHead>
                     <TableHead>{t.pages.users.tableHeaders.email}</TableHead>
                     <TableHead>{t.pages.users.tableHeaders.role}</TableHead>
@@ -167,7 +167,7 @@ export default function UsersPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>ID</TableHead>
+                                    <TableHead>{t.pages.users.tableHeaders.id}</TableHead>
                                     <TableHead>{t.pages.users.tableHeaders.name}</TableHead>
                                     <TableHead>{t.pages.users.tableHeaders.email}</TableHead>
                                     <TableHead>{t.pages.users.tableHeaders.role}</TableHead>
