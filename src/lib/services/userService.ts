@@ -5,9 +5,7 @@
 
 import { BaseService, ICrudService, ServiceOptions } from './base/BaseService';
 import { Result, AsyncResult } from './types/result';
-import { ServiceError, ErrorCode, Errors } from './types/errors';
 import { hashPassword } from '../auth';
-import prisma from '../prisma';
 
 // Types
 export interface User {
@@ -77,14 +75,6 @@ const userSelect = {
   updatedAt: true,
 } as const;
 
-/**
- * Get the next consecutive internalId for a new user.
- */
-export async function getNextInternalId(): Promise<number> {
-  const result = await prisma.user.aggregate({ _max: { internalId: true } });
-  return (result._max.internalId ?? 0) + 1;
-}
-
 class UserService extends BaseService implements ICrudService<User, CreateUserDTO, UpdateUserDTO, UserFilterDTO> {
   constructor(options: ServiceOptions = {}) {
     super(options);
@@ -153,8 +143,6 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
     // Hash password if provided
     const hashedPassword = data.password ? await hashPassword(data.password) : null;
 
-    const internalId = await getNextInternalId();
-
     return this.executeDbOperation(
       () => this.prisma.user.create({
         data: {
@@ -163,7 +151,6 @@ class UserService extends BaseService implements ICrudService<User, CreateUserDT
           password: hashedPassword,
           role: data.role || 'STAFF',
           isActive: true,
-          internalId,
         },
         select: userSelect,
       }),

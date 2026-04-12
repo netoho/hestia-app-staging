@@ -5,6 +5,7 @@ export const users = {
     cardDescription: (count: number) => `Hay ${count} usuarios registrados.`,
     newUser: "Crear Usuario",
     tableHeaders: {
+        id: "ID",
         name: "Nombre",
         email: "Correo Electrónico",
         role: "Rol",
