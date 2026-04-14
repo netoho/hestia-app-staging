@@ -6,7 +6,7 @@ import {
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { validateInvitationToken, clearInvitationToken } from '@/lib/services/userTokenService';
-import { hashPassword } from '@/lib/auth';
+import { userService } from '@/lib/services/userService';
 import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -100,19 +100,20 @@ export const onboardRouter = createTRPCRouter({
         });
       }
 
-      // Hash the password
-      const hashedPassword = await hashPassword(password);
-
-      // Update user with password and profile info
-      const updatedUser = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          password: hashedPassword,
-          phone: phone || user.phone,
-          address: address || user.address,
-          emailVerified: new Date(), // Mark email as verified
-        },
+      // Update user with password and profile info (service handles hashing)
+      const result = await userService.update(user.id, {
+        password,
+        phone: phone || user.phone || undefined,
+        address: address || user.address || undefined,
+        emailVerified: new Date(),
       });
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
 
       // Clear the invitation token
       await clearInvitationToken(user.id);
@@ -120,10 +121,10 @@ export const onboardRouter = createTRPCRouter({
       return {
         message: 'Account setup completed successfully',
         user: {
-          id: updatedUser.id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          role: updatedUser.role,
+          id: result.value.id,
+          name: result.value.name,
+          email: result.value.email,
+          role: result.value.role,
         },
       };
     }),
@@ -239,15 +240,18 @@ export const onboardRouter = createTRPCRouter({
       }
 
       // Update user's avatar URL
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: { avatarUrl: avatarUrl },
-        select: { id: true, avatarUrl: true },
-      });
+      const result = await userService.update(userId, { avatarUrl });
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
 
       return {
         success: true,
-        avatarUrl: updatedUser.avatarUrl,
+        avatarUrl: result.value.avatarUrl,
       };
     }),
 });

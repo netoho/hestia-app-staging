@@ -133,6 +133,7 @@ export default function PolicyDetailsContent({
     downloadingPdf,
     downloadingDocx,
     pendingAction,
+    isApproving,
     handleSendInvitations,
     sendIndividualInvitation,
     approvePolicy,
@@ -154,6 +155,8 @@ export default function PolicyDetailsContent({
   ) ?? [];
   const completedPayments = activePayments.filter((p: { status: string }) => p.status === 'COMPLETED').length;
   const totalPayments = activePayments.length;
+
+  const allActorsComplete = policy.allActorsComplete ?? false;
 
   // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {
@@ -225,6 +228,8 @@ export default function PolicyDetailsContent({
           downloadingPdf={downloadingPdf}
           downloadingDocx={downloadingDocx}
           isRefreshing={isRefreshing}
+          allActorsComplete={allActorsComplete}
+          isApproving={isApproving}
           onSendInvitations={handleSendInvitations}
           onApprove={approvePolicy}
           onShareClick={() => setShowShareModal(true)}

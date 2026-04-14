@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { generateInvitationToken } from '@/lib/services/userTokenService';
 import { sendUserInvitation } from '@/lib/services/emailService';
+import { userService } from '@/lib/services/userService';
 
 const ListStaffSchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -57,6 +58,7 @@ export const staffRouter = createTRPCRouter({
           where,
           select: {
             id: true,
+            internalId: true,
             email: true,
             name: true,
             role: true,
@@ -92,6 +94,7 @@ export const staffRouter = createTRPCRouter({
         where: { id: input.id },
         select: {
           id: true,
+          internalId: true,
           email: true,
           name: true,
           role: true,
@@ -133,22 +136,16 @@ export const staffRouter = createTRPCRouter({
       }
 
       // Create user without password - they'll set it via invitation
-      const newUser = await prisma.user.create({
-        data: {
-          email,
-          name,
-          role,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      const result = await userService.create({ email, name, role });
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
+
+      const newUser = result.value;
 
       // Generate invitation token
       const token = await generateInvitationToken(newUser.id);
@@ -207,21 +204,16 @@ export const staffRouter = createTRPCRouter({
         });
       }
 
-      const updatedUser = await prisma.user.update({
-        where: { id },
-        data,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          avatarUrl: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      const result = await userService.update(id, data);
 
-      return updatedUser;
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
+
+      return result.value;
     }),
 
   /**
@@ -252,10 +244,14 @@ export const staffRouter = createTRPCRouter({
       }
 
       // Soft delete - set isActive to false
-      await prisma.user.update({
-        where: { id: input.id },
-        data: { isActive: false },
-      });
+      const result = await userService.softDelete(input.id);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: result.error.message,
+        });
+      }
 
       return { success: true };
     }),

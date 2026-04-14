@@ -6,6 +6,7 @@ import {
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
+import { userService } from '@/lib/services/userService';
 import { v4 as uuidv4 } from 'uuid';
 import {
   throwNotFound,
@@ -44,6 +45,7 @@ export const userRouter = createTRPCRouter({
         where: { id: ctx.userId },
         select: {
           id: true,
+          internalId: true,
           name: true,
           email: true,
           phone: true,
@@ -78,15 +80,12 @@ export const userRouter = createTRPCRouter({
         throwNotFound('User', ctx.userId);
       }
 
-      const dataToUpdate: Record<string, unknown> = { ...profileData };
-
       // Handle email change
       if (email && email !== user.email) {
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
           throwConflict('Email');
         }
-        dataToUpdate.email = email;
       }
 
       // Handle password change
@@ -101,25 +100,19 @@ export const userRouter = createTRPCRouter({
         if (!isPasswordValid) {
           throwValidationError('Invalid current password');
         }
-        dataToUpdate.password = await bcrypt.hash(newPassword, 10);
       }
 
-      const updatedUser = await prisma.user.update({
-        where: { id: ctx.userId },
-        data: dataToUpdate,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          address: true,
-          avatarUrl: true,
-          role: true,
-          createdAt: true,
-        },
+      const result = await userService.update(ctx.userId, {
+        ...profileData,
+        ...(email && email !== user.email ? { email } : {}),
+        ...(newPassword ? { password: newPassword } : {}),
       });
 
-      return updatedUser;
+      if (!result.ok) {
+        throwInternalError(result.error.message);
+      }
+
+      return result.value;
     }),
 
   /**
@@ -200,21 +193,16 @@ export const userRouter = createTRPCRouter({
       }
 
       // Update user's avatar URL
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: { avatarUrl },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
-        },
-      });
+      const result = await userService.update(userId, { avatarUrl });
+
+      if (!result.ok) {
+        throwInternalError('Failed to update avatar');
+      }
 
       return {
         success: true,
-        avatarUrl: updatedUser.avatarUrl,
-        user: updatedUser,
+        avatarUrl: result.value.avatarUrl,
+        user: result.value,
       };
     }),
 
@@ -223,19 +211,13 @@ export const userRouter = createTRPCRouter({
    */
   deleteAvatar: protectedProcedure
     .mutation(async ({ ctx }) => {
-      // TODO: Implement AWS S3 delete when AWS utilities are available
-      const updatedUser = await prisma.user.update({
-        where: { id: ctx.userId },
-        data: { avatarUrl: null },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
-        },
-      });
+      const result = await userService.update(ctx.userId, { avatarUrl: null });
 
-      return updatedUser;
+      if (!result.ok) {
+        throwInternalError('Failed to delete avatar');
+      }
+
+      return result.value;
     }),
 
   /**

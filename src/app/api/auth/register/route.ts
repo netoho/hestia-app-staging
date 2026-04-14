@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword, generateToken } from '@/lib/auth';
+import { generateToken } from '@/lib/auth';
 import { z } from 'zod';
-import { UserRole } from "@/prisma/generated/prisma-client/enums";
+import { userService } from '@/lib/services/userService';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -36,18 +36,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password and create user
     // Public registration only creates BROKER accounts
     // ADMIN/STAFF accounts must be created via admin invitation
-    const hashedPassword = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        role: UserRole.BROKER
-      }
+    const result = await userService.create({
+      email,
+      password,
+      name,
+      role: 'BROKER',
     });
+
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error.getUserMessage?.() ?? result.error.message },
+        { status: result.error.statusCode ?? 400 }
+      );
+    }
+
+    const user = result.value;
 
     // Generate JWT token
     const token = generateToken({
@@ -56,11 +61,8 @@ export async function POST(request: NextRequest) {
       role: user.role
     });
 
-    // Return user data without password
-    const { password: _, ...userWithoutPassword } = user;
-
     return NextResponse.json({
-      user: userWithoutPassword,
+      user,
       token
     }, { status: 201 });
 

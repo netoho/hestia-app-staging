@@ -42,6 +42,8 @@ interface PolicyHeaderProps {
   downloadingPdf: boolean;
   downloadingDocx: boolean;
   isRefreshing?: boolean;
+  allActorsComplete?: boolean;
+  isApproving?: boolean;
   onSendInvitations: () => void;
   onApprove: () => void;
   onShareClick: () => void;
@@ -62,6 +64,8 @@ export function PolicyHeader({
   downloadingPdf,
   downloadingDocx,
   isRefreshing,
+  allActorsComplete,
+  isApproving,
   onSendInvitations,
   onApprove,
   onShareClick,
@@ -97,6 +101,22 @@ export function PolicyHeader({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Prominent Approve Button — staff/admin only, COLLECTING_INFO, all actors complete */}
+        {isStaffOrAdmin && status === 'COLLECTING_INFO' && allActorsComplete && (
+          <Button
+            onClick={onApprove}
+            disabled={isApproving}
+            className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+          >
+            {isApproving ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            )}
+            {t.pages.policies.approvePolicy}
+          </Button>
+        )}
+
         {/* Refresh Button */}
         {onRefresh && (
           <Button

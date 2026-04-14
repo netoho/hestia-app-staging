@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { validateInvitationToken } from '@/lib/services/userTokenService';
 import prisma from '@/lib/prisma';
+import { userService } from '@/lib/services/userService';
 import { v4 as uuidv4 } from 'uuid';
 
 // Maximum file size: 20MB
@@ -129,16 +130,16 @@ export async function POST(request: NextRequest) {
     });
 
     // Update user's avatar URL in database
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { avatarUrl: uploadedUrl },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatarUrl: true,
-      },
-    });
+    const updateResult = await userService.update(userId, { avatarUrl: uploadedUrl });
+
+    if (!updateResult.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to update avatar URL' },
+        { status: 500 }
+      );
+    }
+
+    const updatedUser = updateResult.value;
 
     // Delete old avatar from S3 (if it exists and is an S3 URL)
     if (currentUser?.avatarUrl) {
@@ -221,21 +222,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Clear avatar URL in database
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { avatarUrl: null },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatarUrl: true,
-      },
-    });
+    const updateResult = await userService.update(userId, { avatarUrl: null });
+
+    if (!updateResult.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to clear avatar URL' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Avatar eliminado correctamente',
-      user: updatedUser,
+      user: updateResult.value,
     });
   } catch {
     return NextResponse.json(
