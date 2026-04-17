@@ -40,7 +40,7 @@ env-*
 # local development
 tests/
 .github/
-documents/
+# documents/
 docker-compose.test.yml
 
 # vercel
