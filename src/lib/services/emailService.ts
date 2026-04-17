@@ -1155,6 +1155,70 @@ Este enlace es personal. No lo compartas con nadie.
 };
 
 // ============================================
+// Policy expiration reminder (5 tiers)
+// ============================================
+
+export type PolicyExpirationTier = 60 | 45 | 30 | 14 | 1;
+
+export interface PolicyExpirationReminderData {
+  email: string;
+  recipientName: string;
+  policyNumber: string;
+  propertyAddress: string;
+  expiresAt: Date;
+  tier: PolicyExpirationTier;
+  policyUrl: string;
+  mailtoUrl: string;
+  whatsappUrl?: string | null;
+}
+
+const tierSubjects: Record<PolicyExpirationTier, string> = {
+  60: 'Tu protección vence en 2 meses — ¿renovación?',
+  45: 'Tu protección vence en 1 mes y 2 semanas',
+  30: 'Tu protección vence en 1 mes',
+  14: 'Tu protección vence en 2 semanas',
+  1: '⚠️ Tu protección vence mañana',
+};
+
+export const sendPolicyExpirationReminder = async (
+  data: PolicyExpirationReminderData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyExpirationReminderEmail } = await import(
+      '../../templates/email/react-email/PolicyExpirationReminderEmail'
+    );
+
+    const html = await render(await PolicyExpirationReminderEmail(data));
+    const subject = emailSubject(`${tierSubjects[data.tier]} — #${data.policyNumber}`);
+    const expiresFormatted = formatDateLong(data.expiresAt);
+
+    const text = `
+Hola ${data.recipientName},
+
+${tierSubjects[data.tier]}
+
+Protección: #${data.policyNumber}
+Propiedad: ${data.propertyAddress}
+Vence el: ${expiresFormatted}
+
+Para continuar, visita: ${data.policyUrl}
+
+¿Prefieres hablar con nosotros? Escríbenos a ${SUPPORT_EMAIL}${
+      data.whatsappUrl ? ` o por WhatsApp: ${data.whatsappUrl}` : ''
+    }.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send policy expiration reminder:', error);
+    return false;
+  }
+};
+
+// ============================================
 // Password reset confirmation
 // ============================================
 
