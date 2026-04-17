@@ -1153,3 +1153,122 @@ Este enlace es personal. No lo compartas con nadie.
     return false;
   }
 };
+
+// ============================================
+// Password reset confirmation
+// ============================================
+
+export interface PasswordResetConfirmationData {
+  email: string;
+  name?: string;
+  changedAt: Date;
+}
+
+export const sendPasswordResetConfirmation = async (
+  data: PasswordResetConfirmationData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PasswordResetConfirmationEmail } = await import(
+      '../../templates/email/react-email/PasswordResetConfirmationEmail'
+    );
+
+    const html = await render(await PasswordResetConfirmationEmail(data));
+    const subject = emailSubject('Tu contraseña fue actualizada');
+
+    const text = `
+Hola${data.name ? ` ${data.name}` : ''},
+
+Te confirmamos que tu contraseña se cambió correctamente el ${formatDateTimeLong(data.changedAt)}.
+
+Si no reconoces esta actividad, contáctanos de inmediato a ${SUPPORT_EMAIL}.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send password reset confirmation:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Tenant replacement notification
+// ============================================
+
+export interface TenantReplacementEmailData {
+  email: string;
+  recipientName?: string;
+  policyNumber: string;
+  policyLink: string;
+}
+
+export const sendTenantReplacementEmail = async (
+  data: TenantReplacementEmailData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { TenantReplacementEmail } = await import(
+      '../../templates/email/react-email/TenantReplacementEmail'
+    );
+
+    const html = await render(await TenantReplacementEmail(data));
+    const subject = emailSubject(`Inquilino reemplazado en protección #${data.policyNumber}`);
+
+    const text = `
+Hola${data.recipientName ? ` ${data.recipientName}` : ''},
+
+El inquilino fue reemplazado en la protección #${data.policyNumber}. El proceso de recolección de información se reinició para el nuevo inquilino.
+
+Ver protección: ${data.policyLink}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send tenant replacement email:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Policy pending approval notification
+// ============================================
+
+export interface PolicyPendingApprovalEmailData {
+  email: string;
+  recipientName?: string;
+  policyNumber: string;
+  policyLink: string;
+}
+
+export const sendPolicyPendingApprovalEmail = async (
+  data: PolicyPendingApprovalEmailData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyPendingApprovalEmail } = await import(
+      '../../templates/email/react-email/PolicyPendingApprovalEmail'
+    );
+
+    const html = await render(await PolicyPendingApprovalEmail(data));
+    const subject = emailSubject(`Protección pendiente de aprobación - ${data.policyNumber}`);
+
+    const text = `
+Hola${data.recipientName ? ` ${data.recipientName}` : ''},
+
+La protección #${data.policyNumber} completó todas las investigaciones y está lista para aprobación final.
+
+Revisar protección: ${data.policyLink}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send policy pending approval email:', error);
+    return false;
+  }
+};

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validatePasswordResetToken } from '@/lib/services/userTokenService';
 import { hashPassword } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { sendSimpleNotificationEmail } from '@/lib/services/emailService';
+import { sendPasswordResetConfirmation } from '@/lib/services/emailService';
 
 // Password validation schema with complexity requirements
 const resetPasswordSchema = z.object({
@@ -133,19 +133,16 @@ export async function POST(
       });
     });
 
-    // Send confirmation email
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hestiaplp.com.mx';
-      await sendSimpleNotificationEmail({
-        to: user.email || '',
-        recipientName: user.name || undefined,
-        subject: 'Contraseña restablecida exitosamente',
-        message: 'Tu contraseña ha sido restablecida exitosamente. Si no realizaste este cambio, contacta a soporte inmediatamente.',
-        actionUrl: `${baseUrl}/login`,
-        actionText: 'Iniciar Sesión',
-      });
-    } catch {
-      // Don't fail the reset if confirmation email fails
+    if (user.email) {
+      try {
+        await sendPasswordResetConfirmation({
+          email: user.email,
+          name: user.name || undefined,
+          changedAt: new Date(),
+        });
+      } catch {
+        // Don't fail the reset if confirmation email fails
+      }
     }
 
     return NextResponse.json({
