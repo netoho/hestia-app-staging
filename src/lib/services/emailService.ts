@@ -1219,6 +1219,66 @@ Para continuar, visita: ${data.policyUrl}
 };
 
 // ============================================
+// Policy quarterly follow-up
+// ============================================
+
+export interface PolicyQuarterlyFollowupData {
+  email: string;
+  recipientName: string;
+  policyNumber: string;
+  isCompany: boolean;
+  companyName?: string | null;
+  mailtoUrl: string;
+  whatsappUrl?: string | null;
+}
+
+export const sendPolicyQuarterlyFollowup = async (
+  data: PolicyQuarterlyFollowupData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyQuarterlyFollowupEmail } = await import(
+      '../../templates/email/react-email/PolicyQuarterlyFollowupEmail'
+    );
+
+    const html = await render(await PolicyQuarterlyFollowupEmail(data));
+    const subject = emailSubject(`Seguimiento de tu protección #${data.policyNumber}`);
+
+    const greetingName =
+      data.isCompany && data.companyName
+        ? `${data.recipientName}, como representante legal de ${data.companyName}`
+        : data.recipientName;
+
+    const text = `
+Estimado/a ${greetingName},
+
+Espero que se encuentre muy bien.
+
+Nos ponemos en contacto con usted como parte de nuestro seguimiento periódico del servicio de protección jurídica que tiene contratado con nosotros.
+
+El objetivo de este mensaje es asegurarnos de que todo esté funcionando conforme a sus expectativas y recordarle que seguimos a su disposición para cualquier consulta, revisión o apoyo legal que pueda necesitar en este momento.
+
+Si ha habido algún cambio en su situación o requiere asesoramiento en algún tema en particular, no dude en hacérnoslo saber. Con gusto podemos agendar una llamada o reunión para atenderle de manera más personalizada.
+
+Agradecemos su confianza en nuestros servicios y reiteramos nuestro compromiso de brindarle respaldo oportuno y efectivo.
+
+Quedamos atentos a sus comentarios.
+
+Cordialmente,
+${brandInfo.name}
+${brandInfo.tagline}
+${brandInfo.supportPhone}
+${brandInfo.supportEmail}
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send quarterly follow-up:', error);
+    return false;
+  }
+};
+
+// ============================================
 // Password reset confirmation
 // ============================================
 
