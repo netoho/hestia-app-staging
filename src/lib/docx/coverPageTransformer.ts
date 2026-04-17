@@ -5,8 +5,16 @@
 import type { PDFPolicyData, PDFLandlord, PDFTenant, PDFJointObligor, PDFAval } from '@/lib/pdf/types';
 import type { CoverPageData, CoverActorData, CoverGuarantorProperty, CoverContractTerms } from './types';
 import { amountToSpanishLegal } from './numberToSpanishWords';
+import { dateToSpanishLong } from './dateToSpanishLong';
 
-const BLANK = '________________';
+type RawDates = {
+  activatedAt: Date | string | null;
+  expiresAt: Date | string | null;
+  propertyDeliveryDate: Date | string | null;
+};
+
+const BLANK = '';
+const NA = 'N/A';
 
 function addr(a: { formatted: string } | null | undefined): string {
   return a?.formatted || BLANK;
@@ -243,29 +251,32 @@ function buildPaymentMethodDescription(data: PDFPolicyData): string {
   return `PAGO EN EFECTIVO EN EL INMUEBLE ARRENDADO.`;
 }
 
-function buildContractTerms(data: PDFPolicyData): CoverContractTerms {
+function buildContractTerms(data: PDFPolicyData, rawDates: RawDates): CoverContractTerms {
+  const maintenanceIsNA = !data.maintenanceFee || data.maintenanceIncludedInRent;
+  const parkingIsNA = !data.property?.parkingSpaces;
+
   return {
     propertyAddress: data.property?.address?.formatted || BLANK,
-    parkingSpaces: data.property?.parkingSpaces
-      ? String(data.property.parkingSpaces)
-      : 'N/A',
-    propertyUse: data.property?.typeLabel
-      ? `${data.property.typeLabel}.`
-      : BLANK,
+    parkingSpaces: parkingIsNA ? NA : String(data.property!.parkingSpaces),
+    propertyUse: data.property?.typeLabel ? `${data.property.typeLabel}.` : BLANK,
     rentDisplay: buildRentDisplay(data),
     securityDeposit: val(data.securityDeposit),
-    contractLength: data.contractLengthLabel
-      ? `${data.contractLengthLabel}.`
-      : BLANK,
-    startDate: val(data.activatedAt),
-    endDate: val(data.expiresAt),
-    deliveryDate: data.property?.deliveryDate || BLANK,
-    maintenanceFee: val(data.maintenanceFee),
+    contractLength: data.contractLengthLabel ? `${data.contractLengthLabel}.` : BLANK,
+    startDate: dateToSpanishLong(rawDates.activatedAt),
+    endDate: dateToSpanishLong(rawDates.expiresAt),
+    deliveryDate: dateToSpanishLong(rawDates.propertyDeliveryDate),
+    maintenanceFee: maintenanceIsNA ? NA : val(data.maintenanceFee),
     paymentMethodDescription: buildPaymentMethodDescription(data),
   };
 }
 
-export function buildCoverPageData(data: PDFPolicyData): CoverPageData {
+function toIsoString(d: Date | string | null): string | null {
+  if (!d) return null;
+  if (typeof d === 'string') return d;
+  return d.toISOString();
+}
+
+export function buildCoverPageData(data: PDFPolicyData, rawDates: RawDates): CoverPageData {
   const landlords = data.landlords.map((l, i) => transformLandlord(l, i, data.landlords.length));
   const tenants = data.tenant ? [transformTenant(data.tenant)] : [];
   const jointObligors = data.jointObligors.map((jo, i) => transformJointObligor(jo, i, data.jointObligors.length));
@@ -278,11 +289,12 @@ export function buildCoverPageData(data: PDFPolicyData): CoverPageData {
 
   return {
     policyNumber: data.policyNumber,
+    contractStartDateRaw: toIsoString(rawDates.activatedAt),
     landlords,
     tenants,
     jointObligors,
     avals,
     guarantorProperties,
-    contractTerms: buildContractTerms(data),
+    contractTerms: buildContractTerms(data, rawDates),
   };
 }

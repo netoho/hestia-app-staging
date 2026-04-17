@@ -81,6 +81,7 @@ export interface CoverContractTerms {
 
 export interface CoverPageData {
   policyNumber: string;
+  contractStartDateRaw: string | null; // raw ISO for header YYYYMMDD format
   landlords: CoverActorData[];
   tenants: CoverActorData[];
   jointObligors: CoverActorData[];
