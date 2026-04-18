@@ -18,8 +18,7 @@
 import path from 'node:path';
 import { writeFile, mkdir } from 'node:fs/promises';
 import prisma from '@/lib/prisma';
-import { getPolicyForPDF } from '@/lib/services/policyService';
-import { transformPolicyForPDF } from '@/lib/pdf/policyDataTransformer';
+import { getPolicyForCover } from '@/lib/services/policyService';
 import { buildCoverPageData, renderCoverPageDocx } from '@/lib/docx';
 
 async function main() {
@@ -32,19 +31,13 @@ async function main() {
   const outDir = outDirArg ?? 'dev/fixtures/cover-samples';
   await mkdir(outDir, { recursive: true });
 
-  const policy = await getPolicyForPDF(policyId);
+  const policy = await getPolicyForCover(policyId);
   if (!policy) {
     console.error(`Policy not found: ${policyId}`);
     process.exit(1);
   }
 
-  const pdfData = transformPolicyForPDF(policy);
-  const input = buildCoverPageData(pdfData, {
-    activatedAt: policy.activatedAt,
-    expiresAt: policy.expiresAt,
-    propertyDeliveryDate: policy.propertyDetails?.propertyDeliveryDate ?? null,
-  });
-
+  const input = buildCoverPageData(policy);
   const docx = await renderCoverPageDocx(input);
 
   const slug = `${policy.policyNumber}-${policyId.slice(0, 8)}`;
