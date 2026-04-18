@@ -63,7 +63,7 @@ const createEmptyIndividualLandlord = (isPrimary: boolean = false) => ({
   middleName: '',
   paternalLastName: '',
   maternalLastName: '',
-  // nationality: 'MEXICAN' as const,
+  nationality: 'MEXICAN' as const,
   curp: '',
   rfc: '',
   email: '',
@@ -412,33 +412,33 @@ function LandlordIndividualFields({
         />
       </div>
 
-      {/*<FormField*/}
-      {/*  control={form.control}*/}
-      {/*  name={`landlords.${index}.nationality`}*/}
-      {/*  render={({ field }) => (*/}
-      {/*    <FormItem>*/}
-      {/*      <FormLabel required>Nacionalidad</FormLabel>*/}
-      {/*      <FormControl>*/}
-      {/*        <RadioGroup*/}
-      {/*          value={field.value || 'MEXICAN'}*/}
-      {/*          onValueChange={field.onChange}*/}
-      {/*          disabled={disabled}*/}
-      {/*          className="flex gap-4"*/}
-      {/*        >*/}
-      {/*          <div className="flex items-center space-x-2">*/}
-      {/*            <RadioGroupItem value="MEXICAN" id={`mexican-${index}`} />*/}
-      {/*            <Label htmlFor={`mexican-${index}`}>Mexicana</Label>*/}
-      {/*          </div>*/}
-      {/*          <div className="flex items-center space-x-2">*/}
-      {/*            <RadioGroupItem value="FOREIGN" id={`foreign-${index}`} />*/}
-      {/*            <Label htmlFor={`foreign-${index}`}>Extranjera</Label>*/}
-      {/*          </div>*/}
-      {/*        </RadioGroup>*/}
-      {/*      </FormControl>*/}
-      {/*      <FormMessage />*/}
-      {/*    </FormItem>*/}
-      {/*  )}*/}
-      {/*/>*/}
+      <FormField
+        control={form.control}
+        name={`landlords.${index}.nationality`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel required>Nacionalidad</FormLabel>
+            <FormControl>
+              <RadioGroup
+                value={field.value || 'MEXICAN'}
+                onValueChange={field.onChange}
+                disabled={disabled}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="MEXICAN" id={`mexican-${index}`} />
+                  <Label htmlFor={`mexican-${index}`}>Mexicana</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="FOREIGN" id={`foreign-${index}`} />
+                  <Label htmlFor={`foreign-${index}`}>Extranjera</Label>
+                </div>
+              </RadioGroup>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
       {/* Contact Information */}
       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
