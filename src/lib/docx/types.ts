@@ -54,12 +54,10 @@ export interface CoverGuarantorProperty {
   registryFolio: string;
   registryDate: string;
   registryCity: string;
-  useType: string;
   useHabitacional: boolean;
   useComercial: boolean;
   useIndustrial: boolean;
   address: string;
-  direction: string;
   landArea: string;
   constructionArea: string;
   boundaries: CoverBoundaryEntry[];
