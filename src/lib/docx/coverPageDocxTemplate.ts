@@ -25,6 +25,7 @@ import {
 } from 'docx';
 import type { CoverPageData, CoverActorData, CoverGuarantorProperty } from './types';
 import { yyyymmdd } from './dateToSpanishLong';
+import { BLANK, NA, BOUNDARY_DIRECTIONS } from './coverPageDefaults';
 
 // ─── Styling constants ──────────────────────────────────────────────
 const FONT = 'Arial';
@@ -35,7 +36,6 @@ const SZ_SUBTITLE = 18;
 const SZ_SMALL = 18;
 
 const LABEL_BG = 'D6E4F0'; // light blue
-const BLANK = '';
 
 // Row height — minimum 0.81 cm = 459 twips (1 cm ≈ 567 twips)
 const ROW_HEIGHT_MIN = 459;
@@ -315,11 +315,11 @@ function gpTipoUsoRow(hab: boolean, com: boolean, ind: boolean): TableRow {
     children: [
       lblCell('Tipo de Uso:', GP_COL * 3, 3),
       lblCell('Habitacional.', GP_COL * 2, 2),
-      valCell(hab ? 'X' : 'N/A', GP_COL, 1, { center: true }),
+      valCell(hab ? 'X' : NA, GP_COL, 1, { center: true }),
       lblCell('Comercial.', GP_COL * 2, 2),
-      valCell(com ? 'X' : 'N/A', GP_COL, 1, { center: true }),
+      valCell(com ? 'X' : NA, GP_COL, 1, { center: true }),
       lblCell('Industrial.', GP_COL * 2, 2),
-      valCell(ind ? 'X' : 'N/A', GP_COL, 1, { center: true }),
+      valCell(ind ? 'X' : NA, GP_COL, 1, { center: true }),
     ],
   });
 }
@@ -407,13 +407,15 @@ function guarantorPropertyTable(prop: CoverGuarantorProperty): Table {
     gpRow2('Superficie de Terreno:', prop.landArea, 'Superficie de Construcción:', prop.constructionArea),
   ];
 
-  if (prop.boundaries.length > 0) {
-    prop.boundaries.forEach((b, i) => {
-      rows.push(gpBoundaryRow(i === 0 ? 'Linderos y Colindancias:' : '', b.direction + ':', b.value));
-    });
-  } else {
-    rows.push(gpBoundaryRow('Linderos y Colindancias:', '', BLANK));
-  }
+  // Always render the four cardinal boundaries — matches sample contract convention.
+  BOUNDARY_DIRECTIONS.forEach((dir, i) => {
+    const match = prop.boundaries.find(b => b.direction.toLowerCase() === dir.toLowerCase());
+    rows.push(gpBoundaryRow(
+      i === 0 ? 'Linderos y Colindancias:' : '',
+      `Al ${dir}:`,
+      match?.value ?? BLANK,
+    ));
+  });
 
   return sectionTable('Inmueble del Obligado Solidario y Fiador.', rows);
 }
