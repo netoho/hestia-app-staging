@@ -6,12 +6,8 @@ import type { PDFPolicyData, PDFLandlord, PDFTenant, PDFJointObligor, PDFAval } 
 import type { CoverPageData, CoverActorData, CoverGuarantorProperty, CoverContractTerms } from './types';
 import { amountToSpanishLegal } from './numberToSpanishWords';
 import { dateToSpanishLong } from './dateToSpanishLong';
-import {
-  BLANK,
-  NA,
-  DEFAULT_NATIONALITY,
-  DEFAULT_COMPANY_NATIONALITY,
-} from './coverPageDefaults';
+import { BLANK, NA } from './coverPageDefaults';
+import { t } from '@/lib/i18n';
 
 type RawDates = {
   activatedAt: Date | string | null;
@@ -35,10 +31,11 @@ function formatActorLabel(base: string, index: number, total: number): string {
 }
 
 function resolveNationality(a: AnyPdfActor): string {
-  if (a.isCompany) return DEFAULT_COMPANY_NATIONALITY;
   const nat = 'nationality' in a ? a.nationality : undefined;
-  if (!nat) return DEFAULT_NATIONALITY;
-  return nat === 'Mexicano' ? DEFAULT_NATIONALITY : nat;
+  const cp = t.pages.documents.coverPage.nationality;
+  if (a.isCompany) return cp.companyDefault;
+  if (!nat) return cp.individualDefault;
+  return nat === 'Mexicano' ? cp.individualDefault : nat;
 }
 
 function transformActor(a: AnyPdfActor, label: string): CoverActorData {
@@ -107,25 +104,26 @@ function buildRentDisplay(data: PDFPolicyData): string {
   if (isNaN(num)) return data.rentAmount;
 
   const words = amountToSpanishLegal(num);
-  return `${data.rentAmount} (${words}), mensuales.`;
+  return `${data.rentAmount} (${words}), ${t.pages.documents.coverPage.rent.monthlySuffix}`;
 }
 
 function buildPaymentMethodDescription(data: PDFPolicyData): string {
   const primaryLandlord = data.landlords.find(l => l.isPrimary) || data.landlords[0];
   const method = data.paymentMethod;
+  const mp = t.pages.documents.coverPage.metodoPago;
 
   if (!method) return BLANK;
 
   if (method.toLowerCase().includes('transfer') || primaryLandlord?.bankName) {
-    const parts = ['TRANSFERENCIA ELECTRÓNICA DE FONDOS.'];
-    if (primaryLandlord?.accountHolder) parts.push(`Titular: ${primaryLandlord.accountHolder}.`);
-    if (primaryLandlord?.bankName) parts.push(`Banco: ${primaryLandlord.bankName}.`);
-    if (primaryLandlord?.accountNumber) parts.push(`Cuenta: ${primaryLandlord.accountNumber}.`);
-    if (primaryLandlord?.clabe) parts.push(`CLABE: ${primaryLandlord.clabe}.`);
+    const parts = [mp.bankTransfer];
+    if (primaryLandlord?.accountHolder) parts.push(`${mp.holder}: ${primaryLandlord.accountHolder}.`);
+    if (primaryLandlord?.bankName) parts.push(`${mp.bank}: ${primaryLandlord.bankName}.`);
+    if (primaryLandlord?.accountNumber) parts.push(`${mp.account}: ${primaryLandlord.accountNumber}.`);
+    if (primaryLandlord?.clabe) parts.push(`${mp.clabe}: ${primaryLandlord.clabe}.`);
     return parts.join('\n');
   }
 
-  return `PAGO EN EFECTIVO EN EL INMUEBLE ARRENDADO.`;
+  return mp.cash;
 }
 
 function buildContractTerms(data: PDFPolicyData, rawDates: RawDates): CoverContractTerms {
@@ -154,15 +152,19 @@ function toIsoString(d: Date | string | null): string | null {
 }
 
 export function buildCoverPageData(data: PDFPolicyData, rawDates: RawDates): CoverPageData {
+  const actorLabels = t.pages.documents.coverPage.actorLabels;
+
   const landlords = data.landlords.map((l, i) =>
-    transformActor(l, formatActorLabel('Arrendador', i, data.landlords.length)),
+    transformActor(l, formatActorLabel(actorLabels.landlord, i, data.landlords.length)),
   );
-  const tenants = data.tenant ? [transformActor(data.tenant, 'Arrendatario.')] : [];
+  const tenants = data.tenant
+    ? [transformActor(data.tenant, formatActorLabel(actorLabels.tenant, 0, 1))]
+    : [];
   const jointObligors = data.jointObligors.map((jo, i) =>
-    transformActor(jo, formatActorLabel('Obligado Solidario y Fiador', i, data.jointObligors.length)),
+    transformActor(jo, formatActorLabel(actorLabels.jointObligor, i, data.jointObligors.length)),
   );
   const avals = data.avals.map((a, i) =>
-    transformActor(a, formatActorLabel('Aval', i, data.avals.length)),
+    transformActor(a, formatActorLabel(actorLabels.aval, i, data.avals.length)),
   );
 
   const guarantorProperties: CoverGuarantorProperty[] = [

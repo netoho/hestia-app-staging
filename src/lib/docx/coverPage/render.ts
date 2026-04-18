@@ -15,6 +15,7 @@ import {
 } from 'docx';
 import type { CoverPageData } from '../types';
 import { yyyymmdd } from '../dateToSpanishLong';
+import { t } from '@/lib/i18n';
 import {
   FONT,
   SZ,
@@ -30,20 +31,21 @@ import { guarantorPropertyTable } from './sections/guarantorProperty';
 import { inmuebleTable, condicionesTable, metodoPagoTable } from './sections/contractTerms';
 
 export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> {
+  const cp = t.pages.documents.coverPage;
   const children: (Paragraph | Table)[] = [];
 
   children.push(new Paragraph({
-    children: [txt('CONTRATO DE ARRENDAMIENTO.', true, SZ_TITLE)],
+    children: [txt(cp.titles.contract, true, SZ_TITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.titleAfter },
   }));
   children.push(new Paragraph({
-    children: [txt('CARÁTULA.', true, SZ_SUBTITLE)],
+    children: [txt(cp.titles.caratula, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.titleAfter },
   }));
   children.push(new Paragraph({
-    children: [txt('PARTES.', true, SZ_SUBTITLE)],
+    children: [txt(cp.titles.partes, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.subtitleAfter },
   }));
@@ -65,7 +67,7 @@ export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> 
   }
 
   children.push(new Paragraph({
-    children: [txt('Condiciones del Arrendamiento.', true, SZ_SUBTITLE)],
+    children: [txt(cp.titles.condicionesDelArrendamiento, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { before: SPACING.condicionesBefore, after: SPACING.subtitleAfter },
   }));
@@ -88,9 +90,9 @@ export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> 
   const footer = new Footer({
     children: [new Paragraph({
       children: [
-        txt('Página ', false, SZ_SMALL),
+        txt(cp.footer.pagePrefix, false, SZ_SMALL),
         new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: SZ_SMALL }),
-        txt(' de ', false, SZ_SMALL),
+        txt(cp.footer.pageJoin, false, SZ_SMALL),
         new TextRun({ children: [PageNumber.TOTAL_PAGES], font: FONT, size: SZ_SMALL }),
       ],
       alignment: AlignmentType.RIGHT,

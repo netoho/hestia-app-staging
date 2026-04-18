@@ -12,6 +12,7 @@
 import { TableRow, Table, HeightRule } from 'docx';
 import type { CoverGuarantorProperty } from '../../types';
 import { BLANK, NA, BOUNDARY_DIRECTIONS } from '../../coverPageDefaults';
+import { t } from '@/lib/i18n';
 import { GP_COL, ROW_HEIGHT_MIN } from '../styles';
 import { lblCell, valCell } from '../cells';
 import { sectionTable } from '../sectionTable';
@@ -53,16 +54,17 @@ function gpRow1(label: string, value: string): TableRow {
 }
 
 function gpTipoUsoRow(hab: boolean, com: boolean, ind: boolean): TableRow {
+  const cp = t.pages.documents.coverPage.guarantorProperty;
   return new TableRow({
     cantSplit: true,
     height: { value: ROW_HEIGHT_MIN, rule: HeightRule.ATLEAST },
     children: [
-      lblCell('Tipo de Uso:', GP_COL * 3, 3),
-      lblCell('Habitacional.', GP_COL * 2, 2),
+      lblCell(cp.usage, GP_COL * 3, 3),
+      lblCell(cp.residential, GP_COL * 2, 2),
       valCell(hab ? 'X' : NA, GP_COL, 1, { center: true }),
-      lblCell('Comercial.', GP_COL * 2, 2),
+      lblCell(cp.commercial, GP_COL * 2, 2),
       valCell(com ? 'X' : NA, GP_COL, 1, { center: true }),
-      lblCell('Industrial.', GP_COL * 2, 2),
+      lblCell(cp.industrial, GP_COL * 2, 2),
       valCell(ind ? 'X' : NA, GP_COL, 1, { center: true }),
     ],
   });
@@ -81,25 +83,28 @@ function gpBoundaryRow(label: string, direction: string, description: string): T
 }
 
 export function guarantorPropertyTable(prop: CoverGuarantorProperty): Table {
+  const cp = t.pages.documents.coverPage;
+  const gp = cp.guarantorProperty;
+
   const rows: TableRow[] = [
-    gpRow2('Escritura Número:', prop.deedNumber, 'Fecha de otorgamiento:', prop.deedDate),
-    gpRow3('Notaría No:', prop.notaryNumber, 'Ciudad:', prop.city, 'Notario:', prop.notaryName),
-    gpRow2('Folio del Registro Público de la Propiedad:', prop.registryFolio, 'Fecha de inscripción:', prop.registryDate),
-    gpRow1('Inscrita en el Registro Público de:', prop.registryCity),
+    gpRow2(gp.deedNumber, prop.deedNumber, gp.deedDate, prop.deedDate),
+    gpRow3(gp.notaryNumber, prop.notaryNumber, gp.city, prop.city, gp.notary, prop.notaryName),
+    gpRow2(gp.registryFolio, prop.registryFolio, gp.registryDate, prop.registryDate),
+    gpRow1(gp.registry, prop.registryCity),
     gpTipoUsoRow(prop.useHabitacional, prop.useComercial, prop.useIndustrial),
-    gpRow1('Dirección:', prop.address),
-    gpRow2('Superficie de Terreno:', prop.landArea, 'Superficie de Construcción:', prop.constructionArea),
+    gpRow1(gp.address, prop.address),
+    gpRow2(gp.landArea, prop.landArea, gp.constructionArea, prop.constructionArea),
   ];
 
   // Always render the four cardinal boundaries — matches sample contract convention.
   BOUNDARY_DIRECTIONS.forEach((dir, i) => {
     const match = prop.boundaries.find(b => b.direction.toLowerCase() === dir.toLowerCase());
     rows.push(gpBoundaryRow(
-      i === 0 ? 'Linderos y Colindancias:' : '',
-      `Al ${dir}:`,
+      i === 0 ? gp.boundaries : '',
+      cp.boundaryLabels[dir],
       match?.value ?? BLANK,
     ));
   });
 
-  return sectionTable('Inmueble del Obligado Solidario y Fiador.', rows);
+  return sectionTable(gp.sectionLabel, rows);
 }
