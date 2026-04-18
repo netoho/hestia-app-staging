@@ -90,7 +90,12 @@ export async function sendPolicyExpirationReminders(): Promise<ExpirationReminde
       const policies = await prisma.policy.findMany({
         where: {
           status: PolicyStatus.ACTIVE,
-          renewedToId: null,
+          // Skip policies already renewed, but resume reminders if the
+          // renewal target was cancelled.
+          OR: [
+            { renewedToId: null },
+            { renewedTo: { status: PolicyStatus.CANCELLED } },
+          ],
           expiresAt: { gte: windowStart, lt: windowEnd },
         },
         include: {

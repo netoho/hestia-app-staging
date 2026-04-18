@@ -71,7 +71,11 @@ export async function sendPolicyQuarterlyFollowups(): Promise<QuarterlyFollowupR
     const candidates = await prisma.policy.findMany({
       where: {
         status: PolicyStatus.ACTIVE,
-        renewedToId: null,
+        // Skip already-renewed, but resume follow-up if renewal was cancelled.
+        OR: [
+          { renewedToId: null },
+          { renewedTo: { status: PolicyStatus.CANCELLED } },
+        ],
         landlords: { some: { isPrimary: true, email: { not: '' } } },
       },
       include: {
