@@ -277,6 +277,7 @@ model Landlord {
   middleName       String? // Middle name (optional)
   paternalLastName String? // Father's last name
   maternalLastName String? // Mother's last name
+  nationality      NationalityType? @default(MEXICAN)
   rfc              String?
   curp             String?
 

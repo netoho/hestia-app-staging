@@ -61,6 +61,7 @@ export async function getPolicyForCover(id: string) {
           ...ACTOR_SCALARS,
           isPrimary: true,
           isCompany: true,
+          nationality: true,
           bankName: true,
           accountNumber: true,
           clabe: true,
