@@ -1,1 +1,2 @@
-export { renderCoverPageDocx } from './render';
+export { renderCoverPageDocx, buildCoverPageDocument, composeCoverPage } from './render';
+export type { CoverPageComposed } from './render';
