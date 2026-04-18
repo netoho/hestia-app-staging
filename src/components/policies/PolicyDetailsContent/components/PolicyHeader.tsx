@@ -31,6 +31,7 @@ interface PolicyHeaderProps {
   propertyAddress: string;
   status: PolicyStatus;
   policyId: string;
+  renewedToId?: string | null;
   permissions: {
     canEdit: boolean;
     canApprove: boolean;
@@ -59,6 +60,7 @@ export function PolicyHeader({
   propertyAddress,
   status,
   policyId,
+  renewedToId,
   permissions,
   isStaffOrAdmin,
   sending,
@@ -213,6 +215,18 @@ export function PolicyHeader({
               {t.pages.policies.details.downloadCover}
             </DropdownMenuItem>
           )}
+
+          {/* Renovar - Staff/Admin, ACTIVE or EXPIRED, not already renewed */}
+          {isStaffOrAdmin &&
+            (status === 'ACTIVE' || status === 'EXPIRED') &&
+            !renewedToId && (
+              <DropdownMenuItem
+                onClick={() => router.push(`/dashboard/policies/${policyId}/renew`)}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {t.pages.policyRenewal.cta}
+              </DropdownMenuItem>
+            )}
 
           {/* Cancel Policy - Staff/Admin only */}
           {isStaffOrAdmin && status !== 'CANCELLED' && (

@@ -179,6 +179,12 @@ model Policy {
   cancelledById       String?
   cancelledBy         User?                     @relation("CancelledByUser", fields: [cancelledById], references: [id])
 
+  // Renewal tracking: when the landlord renews, a new Policy is created and this
+  // field is set on the OLD policy to point to the NEW one.
+  renewedToId String? @unique
+  renewedTo   Policy? @relation("PolicyRenewal", fields: [renewedToId], references: [id])
+  renewedFrom Policy? @relation("PolicyRenewal")
+
   // Related Actors
   landlords     Landlord[]
   tenant        Tenant?

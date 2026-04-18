@@ -16,6 +16,8 @@ import { replaceTenantOnPolicy } from '@/lib/services/policyService/tenantReplac
 import { changeGuarantorType } from '@/lib/services/policyService/guarantorTypeChange';
 import { cancelPolicy } from '@/lib/services/policyService/cancellation';
 import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
+import { clonePolicyForRenewal } from '@/lib/services/policyService/renewal';
+import { PolicyRenewInputSchema } from '@/lib/schemas/policy/renewalSelection';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { actorTokenService } from '@/lib/services/actorTokenService';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
@@ -499,5 +501,32 @@ export const policyRouter = createTRPCRouter({
       }
 
       return result;
+    }),
+
+  // Clone/renew an existing policy into a new one
+  renew: protectedProcedure
+    .input(PolicyRenewInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.userRole === 'BROKER') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only admin or staff can renew policies',
+        });
+      }
+
+      try {
+        return await clonePolicyForRenewal({
+          sourcePolicyId: input.sourcePolicyId,
+          selection: input.selection,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          initiatedById: ctx.userId,
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error instanceof Error ? error.message : 'Failed to renew policy',
+        });
+      }
     }),
 });

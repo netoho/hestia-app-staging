@@ -222,6 +222,7 @@ export default function PolicyDetailsContent({
           propertyAddress={policy.propertyAddress}
           status={policy.status}
           policyId={policyId}
+          renewedToId={policy.renewedToId}
           permissions={permissions}
           isStaffOrAdmin={isStaffOrAdmin}
           sending={sending}

@@ -16,6 +16,7 @@ import { joinUs } from './joinUs';
 import { onboard } from './onboard';
 import { createPolicy } from './createPolicy';
 import { receipts } from './receipts';
+import { policyRenewal } from './policyRenewal';
 import { documents } from './documents';
 
 export const pages = {
@@ -38,5 +39,6 @@ export const pages = {
     joinUs,
     onboard,
     receipts,
+    policyRenewal,
     documents,
 };

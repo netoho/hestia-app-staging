@@ -18,6 +18,14 @@
     {
       "path": "/api/cron/policy-expiry",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/policy-expiration-reminder",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/policy-quarterly-followup",
+      "schedule": "30 13 * * *"
     }
   ]
 }

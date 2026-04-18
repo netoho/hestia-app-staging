@@ -1,6 +1,5 @@
 # Important notes
 - We should use 'protección' instead of 'póliza', inside the codebase it is ok to use 'policy' but when talking to the client or in the UI we should use 'protección'.
-
 - We use bun, so you can check the build with `bun run build`.
 - When looking at ENUMs or data that is both on the codebase and on the schema, remember to use always the schema, if there is a conflict always ask for clarification.
 - Remember the primary landlord is then one with `isPrimary` set to true, do not rely on the index.
@@ -17,6 +16,8 @@
 - All of our translations should go in the appropriate file within @src/lib/i18n/ (e.g., globals.ts, statuses.ts, layout.ts, wizard.ts, or the pages/ subdirectory).
 
 # Project Architecture
+- Always use a service, never call save directly to a model
+- When doing complex operations with multuple services use the mediator pattern
 
 ## TRPC
 - We use TRPC for our API, you can find the routers in @src/server/routers/
