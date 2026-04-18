@@ -3,6 +3,10 @@
  *   - Inmueble           (property summary)
  *   - Condiciones del arrendamiento (rent, deposit, term, dates, maintenance)
  *   - Método de pago     (free-form paragraphs describing payment method)
+ *
+ * Inmueble and Condiciones are expressed as `SimpleRowSpec[]`; Método de pago
+ * keeps its bespoke single-cell paragraph block because the content is a
+ * free-form description, not a row list.
  */
 
 import {
@@ -16,41 +20,43 @@ import {
 } from 'docx';
 import type { CoverPageData } from '../../types';
 import { t } from '@/lib/i18n';
-import { S_L, S_V, ROW_HEIGHT_MIN, CELL_MARGINS, SZ, SPACING } from '../styles';
+import { ROW_HEIGHT_MIN, CELL_MARGINS, SZ, SPACING } from '../styles';
 import { txt } from '../helpers';
-import { lblCell, valCell } from '../cells';
 import { sectionTable } from '../sectionTable';
+import { renderSimpleRow, type SimpleRowSpec } from '../rowSpec';
 
-function sRow(label: string, value: string): TableRow {
-  return new TableRow({
-    cantSplit: true,
-    height: { value: ROW_HEIGHT_MIN, rule: HeightRule.ATLEAST },
-    children: [lblCell(label, S_L), valCell(value, S_V)],
-  });
+export function inmuebleRowSpecs(data: CoverPageData): SimpleRowSpec[] {
+  const inm = t.pages.documents.coverPage.inmueble;
+  const ct = data.contractTerms;
+  return [
+    { kind: 'simple.pair', label: inm.location, value: ct.propertyAddress },
+    { kind: 'simple.pair', label: inm.parkingSpaces, value: ct.parkingSpaces },
+    { kind: 'simple.pair', label: inm.usage, value: ct.propertyUse },
+  ];
+}
+
+export function condicionesRowSpecs(data: CoverPageData): SimpleRowSpec[] {
+  const co = t.pages.documents.coverPage.condiciones;
+  const ct = data.contractTerms;
+  return [
+    { kind: 'simple.pair', label: co.rent, value: ct.rentDisplay },
+    { kind: 'simple.pair', label: co.securityDeposit, value: ct.securityDeposit },
+    { kind: 'simple.pair', label: co.term, value: ct.contractLength },
+    { kind: 'simple.pair', label: co.startDate, value: ct.startDate },
+    { kind: 'simple.pair', label: co.endDate, value: ct.endDate },
+    { kind: 'simple.pair', label: co.deliveryDate, value: ct.deliveryDate },
+    { kind: 'simple.pair', label: co.maintenance, value: ct.maintenanceFee },
+  ];
 }
 
 export function inmuebleTable(data: CoverPageData): Table {
   const inm = t.pages.documents.coverPage.inmueble;
-  const ct = data.contractTerms;
-  return sectionTable(inm.sectionLabel, [
-    sRow(inm.location, ct.propertyAddress),
-    sRow(inm.parkingSpaces, ct.parkingSpaces),
-    sRow(inm.usage, ct.propertyUse),
-  ]);
+  return sectionTable(inm.sectionLabel, inmuebleRowSpecs(data).map(renderSimpleRow));
 }
 
 export function condicionesTable(data: CoverPageData): Table {
   const co = t.pages.documents.coverPage.condiciones;
-  const ct = data.contractTerms;
-  return sectionTable(co.sectionLabel, [
-    sRow(co.rent, ct.rentDisplay),
-    sRow(co.securityDeposit, ct.securityDeposit),
-    sRow(co.term, ct.contractLength),
-    sRow(co.startDate, ct.startDate),
-    sRow(co.endDate, ct.endDate),
-    sRow(co.deliveryDate, ct.deliveryDate),
-    sRow(co.maintenance, ct.maintenanceFee),
-  ]);
+  return sectionTable(co.sectionLabel, condicionesRowSpecs(data).map(renderSimpleRow));
 }
 
 export function metodoPagoTable(data: CoverPageData): Table {
