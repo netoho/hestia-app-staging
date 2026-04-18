@@ -30,21 +30,40 @@ import { actorTable } from './sections/actor';
 import { guarantorPropertyTable } from './sections/guarantorProperty';
 import { inmuebleTable, condicionesTable, metodoPagoTable } from './sections/contractTerms';
 
-export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> {
-  const cp = t.pages.documents.coverPage;
-  const children: (Paragraph | Table)[] = [];
+/**
+ * Shape produced by `composeCoverPage`. Holds the document body (ordered list of
+ * paragraphs and tables) plus the resolved header text. This is the object tests
+ * snapshot against — small, deterministic, and focused on the content we produce
+ * rather than the OOXML infrastructure the `docx` library scaffolds inside a
+ * `Document`.
+ */
+export interface CoverPageComposed {
+  body: (Paragraph | Table)[];
+  headerText: string;
+}
 
-  children.push(new Paragraph({
+/**
+ * Build the ordered list of paragraphs and tables that make up the cover page
+ * body (titles → actor tables → guarantor-property tables → condiciones →
+ * inmueble / condiciones / método de pago tables), plus the header text.
+ *
+ * No Document / Header / Footer / Packer — those live in `buildCoverPageDocument`.
+ */
+export function composeCoverPage(data: CoverPageData): CoverPageComposed {
+  const cp = t.pages.documents.coverPage;
+  const body: (Paragraph | Table)[] = [];
+
+  body.push(new Paragraph({
     children: [txt(cp.titles.contract, true, SZ_TITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.titleAfter },
   }));
-  children.push(new Paragraph({
+  body.push(new Paragraph({
     children: [txt(cp.titles.caratula, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.titleAfter },
   }));
-  children.push(new Paragraph({
+  body.push(new Paragraph({
     children: [txt(cp.titles.partes, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.subtitleAfter },
@@ -57,29 +76,40 @@ export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> 
     ...data.avals,
   ];
   for (const actor of allActors) {
-    children.push(actorTable(actor));
-    children.push(gap());
+    body.push(actorTable(actor));
+    body.push(gap());
   }
 
   for (const prop of data.guarantorProperties) {
-    children.push(guarantorPropertyTable(prop));
-    children.push(gap());
+    body.push(guarantorPropertyTable(prop));
+    body.push(gap());
   }
 
-  children.push(new Paragraph({
+  body.push(new Paragraph({
     children: [txt(cp.titles.condicionesDelArrendamiento, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { before: SPACING.condicionesBefore, after: SPACING.subtitleAfter },
   }));
-  children.push(inmuebleTable(data));
-  children.push(gap());
-  children.push(condicionesTable(data));
-  children.push(gap());
-  children.push(metodoPagoTable(data));
+  body.push(inmuebleTable(data));
+  body.push(gap());
+  body.push(condicionesTable(data));
+  body.push(gap());
+  body.push(metodoPagoTable(data));
 
   // Header: "<policyNumber> - <YYYYMMDD>" matching the real sample contracts.
   const headerDate = yyyymmdd(data.contractStartDateRaw);
   const headerText = headerDate ? `${data.policyNumber} - ${headerDate}` : data.policyNumber;
+
+  return { body, headerText };
+}
+
+/**
+ * Build the full `docx` Document (body + header + footer) ready for packing.
+ */
+export function buildCoverPageDocument(data: CoverPageData): Document {
+  const cp = t.pages.documents.coverPage;
+  const { body, headerText } = composeCoverPage(data);
+
   const header = new Header({
     children: [new Paragraph({
       children: [txt(headerText, false, SZ_SMALL)],
@@ -99,12 +129,12 @@ export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> 
     })],
   });
 
-  const doc = new Document({
+  return new Document({
     sections: [{
       properties: { page: { margin: PAGE_MARGINS } },
       headers: { default: header },
       footers: { default: footer },
-      children,
+      children: body,
     }],
     styles: {
       default: {
@@ -112,6 +142,9 @@ export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> 
       },
     },
   });
+}
 
+export async function renderCoverPageDocx(data: CoverPageData): Promise<Buffer> {
+  const doc = buildCoverPageDocument(data);
   return Buffer.from(await Packer.toBuffer(doc));
 }
