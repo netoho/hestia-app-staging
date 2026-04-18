@@ -12,7 +12,11 @@ export async function generateCoverPageDocx(policyId: string): Promise<Buffer> {
   if (!policy) throw new Error(`Policy not found: ${policyId}`);
 
   const pdfData = transformPolicyForPDF(policy);
-  const coverData = buildCoverPageData(pdfData);
+  const coverData = buildCoverPageData(pdfData, {
+    activatedAt: policy.activatedAt,
+    expiresAt: policy.expiresAt,
+    propertyDeliveryDate: policy.propertyDetails?.propertyDeliveryDate ?? null,
+  });
 
   return renderCoverPageDocx(coverData);
 }

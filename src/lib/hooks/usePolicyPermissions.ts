@@ -23,6 +23,7 @@ export interface PolicyPermissions {
   canVerifyDocuments: boolean;
   canViewActivities: boolean;
   canEditActors: boolean;
+  canDownloadContractCover: boolean;
 }
 
 /**
@@ -59,6 +60,7 @@ export function usePolicyPermissions(
         canVerifyDocuments: false,
         canViewActivities: false,
         canEditActors: false,
+        canDownloadContractCover: false,
       };
     }
 
@@ -79,6 +81,7 @@ export function usePolicyPermissions(
         canVerifyDocuments: true,
         canViewActivities: true,
         canEditActors: true,
+        canDownloadContractCover: true,
       };
     }
 
@@ -94,6 +97,7 @@ export function usePolicyPermissions(
         canVerifyDocuments: true,
         canViewActivities: true,
         canEditActors: true,
+        canDownloadContractCover: true,
       };
     }
 
@@ -109,6 +113,7 @@ export function usePolicyPermissions(
         canVerifyDocuments: false,
         canViewActivities: true,
         canEditActors: true,
+        canDownloadContractCover: true,
       };
     }
 
@@ -123,6 +128,7 @@ export function usePolicyPermissions(
       canVerifyDocuments: false,
       canViewActivities: false,
       canEditActors: false,
+      canDownloadContractCover: false,
     };
   }, [user, policy]);
 }
