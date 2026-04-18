@@ -17,6 +17,7 @@ import { onboard } from './onboard';
 import { createPolicy } from './createPolicy';
 import { receipts } from './receipts';
 import { policyRenewal } from './policyRenewal';
+import { documents } from './documents';
 
 export const pages = {
     home,
@@ -39,4 +40,5 @@ export const pages = {
     onboard,
     receipts,
     policyRenewal,
+    documents,
 };

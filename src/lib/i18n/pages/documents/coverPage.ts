@@ -1,0 +1,125 @@
+/**
+ * Spanish strings used by the contract cover-page (.docx) generator.
+ *
+ * Grouped by section so edits match the visual structure of the generated
+ * document. Keys correspond 1:1 to labels and titles rendered inside the
+ * docx; programmatic markers (BLANK, N/A) stay in `src/lib/docx/coverPageDefaults.ts`.
+ */
+
+export const coverPage = {
+    titles: {
+        contract: "CONTRATO DE ARRENDAMIENTO.",
+        caratula: "CARÁTULA.",
+        partes: "PARTES.",
+        condicionesDelArrendamiento: "Condiciones del Arrendamiento.",
+    },
+    actorLabels: {
+        landlord: "Arrendador",
+        tenant: "Arrendatario",
+        jointObligor: "Obligado Solidario y Fiador",
+        aval: "Aval",
+    },
+    actor: {
+        name: "Nombre:",
+        denomination: "Denominación:",
+        nationality: "Nacionalidad:",
+        address: "Domicilio:",
+        identification: "Identificación:",
+        identificationNumber: "Número:",
+        rfc: "RFC:",
+        curp: "CURP:",
+        email: "Correo electrónico:",
+        phone: "Teléfono:",
+    },
+    legalRep: {
+        sectionLabel: "Representante Legal.",
+        name: "Nombre:",
+        position: "Cargo:",
+        identification: "Identificación:",
+        identificationNumber: "Número:",
+        address: "Domicilio:",
+        phone: "Teléfono:",
+        rfc: "RFC:",
+        curp: "CURP:",
+        emailWork: "Correo Electrónico Laboral:",
+        emailPersonal: "Correo Electrónico Personal:",
+    },
+    constitution: {
+        subHeader: "Datos de Constitución de la Persona Moral.",
+        deed: "Escritura:",
+        date: "Fecha:",
+        notary: "Notario:",
+        notaryNumber: "Notaría:",
+        registry: "Registro Público:",
+        registryFolio: "Folio Registro Público:",
+        registryDate: "Fecha Inscripción:",
+    },
+    powerOfAttorney: {
+        subHeader: "Datos de la escritura de poderes",
+        deed: "Escritura:",
+        date: "Fecha:",
+        notary: "Notario:",
+        notaryNumber: "Notaría:",
+    },
+    guarantorProperty: {
+        sectionLabel: "Inmueble del Obligado Solidario y Fiador.",
+        deedNumber: "Escritura Número:",
+        deedDate: "Fecha de otorgamiento:",
+        notaryNumber: "Notaría No:",
+        city: "Ciudad:",
+        notary: "Notario:",
+        registryFolio: "Folio del Registro Público de la Propiedad:",
+        registryDate: "Fecha de inscripción:",
+        registry: "Inscrita en el Registro Público de:",
+        usage: "Tipo de Uso:",
+        residential: "Habitacional.",
+        commercial: "Comercial.",
+        industrial: "Industrial.",
+        address: "Dirección:",
+        landArea: "Superficie de Terreno:",
+        constructionArea: "Superficie de Construcción:",
+        boundaries: "Linderos y Colindancias:",
+    },
+    boundaryLabels: {
+        Norte: "Al Norte:",
+        Poniente: "Al Poniente:",
+        Sur: "Al Sur:",
+        Oriente: "Al Oriente:",
+    },
+    inmueble: {
+        sectionLabel: "Inmueble.",
+        location: "Ubicación:",
+        parkingSpaces: "Cajón(es) de estacionamiento:",
+        usage: "Uso:",
+    },
+    condiciones: {
+        sectionLabel: "Condiciones del arrendamiento.",
+        rent: "Monto de Renta:",
+        securityDeposit: "Depósito en Garantía:",
+        term: "Plazo:",
+        startDate: "Fecha de Inicio:",
+        endDate: "Fecha de Término:",
+        deliveryDate: "Fecha de Entrega Posesión:",
+        maintenance: "Monto Mantenimiento:",
+    },
+    rent: {
+        monthlySuffix: "mensuales.",
+    },
+    metodoPago: {
+        sectionLabel: "Método de pago.",
+        bankTransfer: "TRANSFERENCIA ELECTRÓNICA DE FONDOS.",
+        cash: "PAGO EN EFECTIVO EN EL INMUEBLE ARRENDADO.",
+        holder: "Titular",
+        bank: "Banco",
+        account: "Cuenta",
+        clabe: "CLABE",
+    },
+    nationality: {
+        individualDefault: "Mexicana.",
+        companyDefault: "Sociedad de nacionalidad mexicana.",
+    },
+    footer: {
+        pagePrefix: "Página ",
+        pageJoin: " de ",
+    },
+};

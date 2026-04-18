@@ -2,18 +2,15 @@
  * Orchestrator: fetches policy data, transforms it, and renders the .docx cover page.
  */
 
-import { getPolicyForPDF } from '@/lib/services/policyService';
-import { transformPolicyForPDF } from '@/lib/pdf/policyDataTransformer';
+import { getPolicyForCover } from '@/lib/services/policyService';
 import { buildCoverPageData } from './coverPageTransformer';
-import { renderCoverPageDocx } from './coverPageDocxTemplate';
+import { renderCoverPageDocx } from './coverPage';
 
 export async function generateCoverPageDocx(policyId: string): Promise<Buffer> {
-  const policy = await getPolicyForPDF(policyId);
+  const policy = await getPolicyForCover(policyId);
   if (!policy) throw new Error(`Policy not found: ${policyId}`);
 
-  const pdfData = transformPolicyForPDF(policy);
-  const coverData = buildCoverPageData(pdfData);
-
+  const coverData = buildCoverPageData(policy);
   return renderCoverPageDocx(coverData);
 }
 

@@ -4,6 +4,16 @@ import { PropertyDetailsService } from '../PropertyDetailsService';
 import { CreatePolicyData, logPolicyActivityParams } from './types';
 import { validatePolicyNumberFormat } from "@/lib/utils/policy";
 
+export { getPolicyForCover } from './getPolicyForCover';
+export type {
+  PolicyForCover,
+  CoverLandlord,
+  CoverTenant,
+  CoverJointObligor,
+  CoverAval,
+  CoverPropertyDetails,
+} from './getPolicyForCover';
+
 
 // Helper to sanitize empty objects to null
 function sanitizeAddressDetails(details: any): any | null {
