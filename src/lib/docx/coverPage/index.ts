@@ -1,0 +1,1 @@
+export { renderCoverPageDocx } from './render';
