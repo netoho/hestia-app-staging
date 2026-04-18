@@ -122,6 +122,84 @@ function transformActor(actor: AnyCoverActor, label: string): CoverActorData {
   };
 }
 
+/**
+ * Emit a second cover actor for the spouse of a married guarantor — but only
+ * when the guarantor's property is the basis for the guarantee (community
+ * property regime) and all three spouse identity fields are populated.
+ * The spouse inherits the primary's postal address; everything else falls back
+ * to blanks that the internal review team fills in before sending.
+ */
+function shouldEmitSpouse(actor: PropertyGuarantorActor): boolean {
+  return (
+    actor.hasPropertyGuarantee === true &&
+    actor.maritalStatus === 'MARRIED' &&
+    !!actor.spouseName &&
+    !!actor.spouseRfc &&
+    !!actor.spouseCurp
+  );
+}
+
+function spouseAsCoverActor(primary: PropertyGuarantorActor, label: string): CoverActorData {
+  return {
+    label,
+    isCompany: false,
+    name: primary.spouseName || BLANK,
+    nationality: t.pages.documents.coverPage.nationality.individualDefault,
+    address: addressOf(primary.addressDetails),
+    identificationType: BLANK,
+    identificationNumber: BLANK,
+    rfc: primary.spouseRfc || BLANK,
+    curp: primary.spouseCurp || BLANK,
+    email: BLANK,
+    phone: BLANK,
+    constitutionDeed: BLANK,
+    constitutionDate: BLANK,
+    constitutionNotary: BLANK,
+    constitutionNotaryNumber: BLANK,
+    registryCity: BLANK,
+    registryFolio: BLANK,
+    registryDate: BLANK,
+    legalRepName: BLANK,
+    legalRepPosition: BLANK,
+    legalRepIdentificationType: BLANK,
+    legalRepIdentificationNumber: BLANK,
+    legalRepAddress: BLANK,
+    legalRepPhone: BLANK,
+    legalRepRfc: BLANK,
+    legalRepCurp: BLANK,
+    legalRepEmail: BLANK,
+    legalRepWorkEmail: BLANK,
+    powerDeed: BLANK,
+    powerDate: BLANK,
+    powerNotary: BLANK,
+    powerNotaryNumber: BLANK,
+  };
+}
+
+function expandActorsWithSpouses<T extends PropertyGuarantorActor>(
+  actors: T[],
+  baseLabel: string,
+): CoverActorData[] {
+  // First, materialise the emission order so the total count drives numbering
+  // consistently (`Obligado Solidario y Fiador 1.` / `... 2.`).
+  type Entry = { primary: T; spouseOf?: T };
+  const entries: Entry[] = [];
+  for (const actor of actors) {
+    entries.push({ primary: actor });
+    if (shouldEmitSpouse(actor)) {
+      entries.push({ primary: actor, spouseOf: actor });
+    }
+  }
+
+  const total = entries.length;
+  return entries.map((entry, i) => {
+    const label = formatActorLabel(baseLabel, i, total);
+    return entry.spouseOf
+      ? spouseAsCoverActor(entry.spouseOf, label)
+      : transformActor(entry.primary, label);
+  });
+}
+
 function extractGuarantorProperty(actor: PropertyGuarantorActor): CoverGuarantorProperty | null {
   if (!actor.hasPropertyGuarantee) return null;
   return {
@@ -218,12 +296,8 @@ export function buildCoverPageData(policy: PolicyForCover): CoverPageData {
   const tenants = policy.tenant
     ? [transformActor(policy.tenant, formatActorLabel(actorLabels.tenant, 0, 1))]
     : [];
-  const jointObligors = policy.jointObligors.map((jo, i) =>
-    transformActor(jo, formatActorLabel(actorLabels.jointObligor, i, policy.jointObligors.length)),
-  );
-  const avals = policy.avals.map((a, i) =>
-    transformActor(a, formatActorLabel(actorLabels.aval, i, policy.avals.length)),
-  );
+  const jointObligors = expandActorsWithSpouses(policy.jointObligors, actorLabels.jointObligor);
+  const avals = expandActorsWithSpouses(policy.avals, actorLabels.aval);
 
   const guarantorProperties: CoverGuarantorProperty[] = [
     ...policy.jointObligors.map(extractGuarantorProperty).filter(Boolean) as CoverGuarantorProperty[],
