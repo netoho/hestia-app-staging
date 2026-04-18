@@ -769,7 +769,7 @@ export const sendAllPaymentsCompletedEmail = async (data: AllPaymentsCompletedDa
     const text = `
 Todos los pagos de la poliza han sido completados.
 
-Poliza: ${data.policyNumber}
+Póliza: ${data.policyNumber}
 Total de pagos: ${data.totalPayments}
 Monto total: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.totalAmount)}
 
