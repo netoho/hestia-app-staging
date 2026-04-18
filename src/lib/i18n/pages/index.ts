@@ -16,6 +16,7 @@ import { joinUs } from './joinUs';
 import { onboard } from './onboard';
 import { createPolicy } from './createPolicy';
 import { receipts } from './receipts';
+import { documents } from './documents';
 
 export const pages = {
     home,
@@ -37,4 +38,5 @@ export const pages = {
     joinUs,
     onboard,
     receipts,
+    documents,
 };

@@ -18,6 +18,7 @@ import {
   ShadingType,
 } from 'docx';
 import type { CoverActorData } from '../../types';
+import { t } from '@/lib/i18n';
 import {
   A_L,
   A_V,
@@ -62,48 +63,52 @@ function aRowSubHeader(text: string): TableRow {
 }
 
 function individualActorRows(a: CoverActorData): TableRow[] {
+  const cp = t.pages.documents.coverPage;
   return [
-    aRow2('Nombre:', a.name, 'Nacionalidad:', a.nationality),
-    aRow1('Domicilio:', a.address),
-    aRow2('Identificación:', a.identificationType, 'Número:', a.identificationNumber),
-    aRow2('RFC:', a.rfc, 'CURP:', a.curp),
-    aRow2('Correo electrónico:', a.email, 'Teléfono:', a.phone),
+    aRow2(cp.actor.name, a.name, cp.actor.nationality, a.nationality),
+    aRow1(cp.actor.address, a.address),
+    aRow2(cp.actor.identification, a.identificationType, cp.actor.identificationNumber, a.identificationNumber),
+    aRow2(cp.actor.rfc, a.rfc, cp.actor.curp, a.curp),
+    aRow2(cp.actor.email, a.email, cp.actor.phone, a.phone),
   ];
 }
 
 function companyActorRows(a: CoverActorData): TableRow[] {
+  const cp = t.pages.documents.coverPage;
   return [
-    aRow2('Denominación:', a.name, 'Nacionalidad:', a.nationality),
-    aRow1('Domicilio:', a.address),
-    aRow1('RFC:', a.rfc),
-    aRowSubHeader('Datos de Constitución de la Persona Moral.'),
-    aRow2('Escritura:', a.constitutionDeed, 'Fecha:', a.constitutionDate),
-    aRow2('Notario:', a.constitutionNotary, 'Notaría:', a.constitutionNotaryNumber),
-    aRow1('Registro Público:', a.registryCity),
-    aRow2('Folio Registro Público:', a.registryFolio, 'Fecha Inscripción:', a.registryDate),
+    aRow2(cp.actor.denomination, a.name, cp.actor.nationality, a.nationality),
+    aRow1(cp.actor.address, a.address),
+    aRow1(cp.actor.rfc, a.rfc),
+    aRowSubHeader(cp.constitution.subHeader),
+    aRow2(cp.constitution.deed, a.constitutionDeed, cp.constitution.date, a.constitutionDate),
+    aRow2(cp.constitution.notary, a.constitutionNotary, cp.constitution.notaryNumber, a.constitutionNotaryNumber),
+    aRow1(cp.constitution.registry, a.registryCity),
+    aRow2(cp.constitution.registryFolio, a.registryFolio, cp.constitution.registryDate, a.registryDate),
   ];
 }
 
 function legalRepRows(a: CoverActorData): TableRow[] {
+  const cp = t.pages.documents.coverPage;
   return [
-    aRow2('Nombre:', a.legalRepName, 'Cargo:', a.legalRepPosition),
-    aRow2('Identificación:', a.legalRepIdentificationType, 'Número:', a.legalRepIdentificationNumber),
-    aRow2('Domicilio:', a.legalRepAddress, 'Teléfono:', a.legalRepPhone),
-    aRow2('RFC:', a.legalRepRfc, 'CURP:', a.legalRepCurp),
-    aRow2('Correo Electrónico Laboral:', a.legalRepWorkEmail, 'Correo Electrónico Personal:', a.legalRepEmail),
-    aRowSubHeader('Datos de la escritura de poderes'),
-    aRow2('Escritura:', a.powerDeed, 'Fecha:', a.powerDate),
-    aRow2('Notario:', a.powerNotary, 'Notaría:', a.powerNotaryNumber),
+    aRow2(cp.legalRep.name, a.legalRepName, cp.legalRep.position, a.legalRepPosition),
+    aRow2(cp.legalRep.identification, a.legalRepIdentificationType, cp.legalRep.identificationNumber, a.legalRepIdentificationNumber),
+    aRow2(cp.legalRep.address, a.legalRepAddress, cp.legalRep.phone, a.legalRepPhone),
+    aRow2(cp.legalRep.rfc, a.legalRepRfc, cp.legalRep.curp, a.legalRepCurp),
+    aRow2(cp.legalRep.emailWork, a.legalRepWorkEmail, cp.legalRep.emailPersonal, a.legalRepEmail),
+    aRowSubHeader(cp.powerOfAttorney.subHeader),
+    aRow2(cp.powerOfAttorney.deed, a.powerDeed, cp.powerOfAttorney.date, a.powerDate),
+    aRow2(cp.powerOfAttorney.notary, a.powerNotary, cp.powerOfAttorney.notaryNumber, a.powerNotaryNumber),
   ];
 }
 
 export function actorTable(actor: CoverActorData): Table {
+  const cp = t.pages.documents.coverPage;
   if (actor.isCompany) {
     return companySectionTable(
       actor.label,
       companyActorRows(actor),
-      'Representante Legal.',
-      'Representante Legal.',
+      cp.legalRep.sectionLabel,
+      cp.legalRep.sectionLabel,
       legalRepRows(actor),
     );
   }

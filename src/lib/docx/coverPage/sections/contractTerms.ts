@@ -15,6 +15,7 @@ import {
   HeightRule,
 } from 'docx';
 import type { CoverPageData } from '../../types';
+import { t } from '@/lib/i18n';
 import { S_L, S_V, ROW_HEIGHT_MIN, CELL_MARGINS, SZ, SPACING } from '../styles';
 import { txt } from '../helpers';
 import { lblCell, valCell } from '../cells';
@@ -29,28 +30,31 @@ function sRow(label: string, value: string): TableRow {
 }
 
 export function inmuebleTable(data: CoverPageData): Table {
+  const inm = t.pages.documents.coverPage.inmueble;
   const ct = data.contractTerms;
-  return sectionTable('Inmueble.', [
-    sRow('Ubicación:', ct.propertyAddress),
-    sRow('Cajón(es) de estacionamiento:', ct.parkingSpaces),
-    sRow('Uso:', ct.propertyUse),
+  return sectionTable(inm.sectionLabel, [
+    sRow(inm.location, ct.propertyAddress),
+    sRow(inm.parkingSpaces, ct.parkingSpaces),
+    sRow(inm.usage, ct.propertyUse),
   ]);
 }
 
 export function condicionesTable(data: CoverPageData): Table {
+  const co = t.pages.documents.coverPage.condiciones;
   const ct = data.contractTerms;
-  return sectionTable('Condiciones del arrendamiento.', [
-    sRow('Monto de Renta:', ct.rentDisplay),
-    sRow('Depósito en Garantía:', ct.securityDeposit),
-    sRow('Plazo:', ct.contractLength),
-    sRow('Fecha de Inicio:', ct.startDate),
-    sRow('Fecha de Término:', ct.endDate),
-    sRow('Fecha de Entrega Posesión:', ct.deliveryDate),
-    sRow('Monto Mantenimiento:', ct.maintenanceFee),
+  return sectionTable(co.sectionLabel, [
+    sRow(co.rent, ct.rentDisplay),
+    sRow(co.securityDeposit, ct.securityDeposit),
+    sRow(co.term, ct.contractLength),
+    sRow(co.startDate, ct.startDate),
+    sRow(co.endDate, ct.endDate),
+    sRow(co.deliveryDate, ct.deliveryDate),
+    sRow(co.maintenance, ct.maintenanceFee),
   ]);
 }
 
 export function metodoPagoTable(data: CoverPageData): Table {
+  const mp = t.pages.documents.coverPage.metodoPago;
   const description = data.contractTerms.paymentMethodDescription;
   const lines = description.split('\n');
   const paragraphs = lines.map((line, i) =>
@@ -67,7 +71,7 @@ export function metodoPagoTable(data: CoverPageData): Table {
     margins: CELL_MARGINS,
   });
 
-  return sectionTable('Método de pago.', [new TableRow({
+  return sectionTable(mp.sectionLabel, [new TableRow({
     cantSplit: true,
     height: { value: ROW_HEIGHT_MIN, rule: HeightRule.ATLEAST },
     children: [contentCell],
