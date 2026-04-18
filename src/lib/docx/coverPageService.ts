@@ -5,7 +5,7 @@
 import { getPolicyForPDF } from '@/lib/services/policyService';
 import { transformPolicyForPDF } from '@/lib/pdf/policyDataTransformer';
 import { buildCoverPageData } from './coverPageTransformer';
-import { renderCoverPageDocx } from './coverPageDocxTemplate';
+import { renderCoverPageDocx } from './coverPage';
 
 export async function generateCoverPageDocx(policyId: string): Promise<Buffer> {
   const policy = await getPolicyForPDF(policyId);
