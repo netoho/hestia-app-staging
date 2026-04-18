@@ -12,7 +12,6 @@
 
 import { z } from 'zod';
 import {
-  personNameSchema,
   personWithNationalitySchema,
   curpSchema,
   rfcPersonSchema,
@@ -50,7 +49,7 @@ import { emptyStringsToNull } from '@/lib/utils/dataTransform';
 /**
  * OWNER INFO TAB - Individual Landlord
  */
-export const landlordOwnerInfoIndividualSchema = personNameSchema.extend({
+export const landlordOwnerInfoIndividualSchema = personWithNationalitySchema.extend({
   curp: curpSchema,
   rfc: rfcPersonSchema,
   ...extendedContactSchema.shape,
