@@ -40,9 +40,13 @@ function convertHundreds(n: number): string {
   return parts.join(' ');
 }
 
-function convertNumber(n: number): string {
+/**
+ * Convert an integer to its Spanish cardinal words (all caps).
+ * Example: 2025 → "DOS MIL VEINTICINCO"
+ */
+export function numberToSpanishCardinal(n: number): string {
   if (n === 0) return 'CERO';
-  if (n < 0) return `MENOS ${convertNumber(-n)}`;
+  if (n < 0) return `MENOS ${numberToSpanishCardinal(-n)}`;
 
   const parts: string[] = [];
 
@@ -89,5 +93,5 @@ export function amountToSpanishLegal(amount: number): string {
   }
   const cents = String(decPart).padStart(2, '0');
 
-  return `${convertNumber(intPart)} PESOS ${cents}/100 M.N.`;
+  return `${numberToSpanishCardinal(intPart)} PESOS ${cents}/100 M.N.`;
 }

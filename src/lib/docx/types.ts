@@ -54,12 +54,10 @@ export interface CoverGuarantorProperty {
   registryFolio: string;
   registryDate: string;
   registryCity: string;
-  useType: string;
   useHabitacional: boolean;
   useComercial: boolean;
   useIndustrial: boolean;
   address: string;
-  direction: string;
   landArea: string;
   constructionArea: string;
   boundaries: CoverBoundaryEntry[];
@@ -81,6 +79,7 @@ export interface CoverContractTerms {
 
 export interface CoverPageData {
   policyNumber: string;
+  contractStartDateRaw: string | null; // raw ISO for header YYYYMMDD format
   landlords: CoverActorData[];
   tenants: CoverActorData[];
   jointObligors: CoverActorData[];

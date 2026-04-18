@@ -36,6 +36,7 @@ interface PolicyHeaderProps {
     canApprove: boolean;
     canSendInvitations: boolean;
     canVerifyDocuments: boolean;
+    canDownloadContractCover: boolean;
   };
   isStaffOrAdmin: boolean;
   sending: string | null;
@@ -201,15 +202,17 @@ export function PolicyHeader({
             {t.pages.policies.details.downloadPDF}
           </DropdownMenuItem>
 
-          {/* Download Cover Page (.docx) */}
-          <DropdownMenuItem onClick={onDownloadDocx} disabled={downloadingDocx}>
-            {downloadingDocx ? (
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="mr-2 h-4 w-4" />
-            )}
-            {t.pages.policies.details.downloadCover}
-          </DropdownMenuItem>
+          {/* Download Cover Page (.docx) — ADMIN/STAFF or owning BROKER on ACTIVE/EXPIRED policies */}
+          {permissions.canDownloadContractCover && (status === 'ACTIVE' || status === 'EXPIRED') && (
+            <DropdownMenuItem onClick={onDownloadDocx} disabled={downloadingDocx}>
+              {downloadingDocx ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="mr-2 h-4 w-4" />
+              )}
+              {t.pages.policies.details.downloadCover}
+            </DropdownMenuItem>
+          )}
 
           {/* Cancel Policy - Staff/Admin only */}
           {isStaffOrAdmin && status !== 'CANCELLED' && (

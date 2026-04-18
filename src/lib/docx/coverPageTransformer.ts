@@ -5,8 +5,22 @@
 import type { PDFPolicyData, PDFLandlord, PDFTenant, PDFJointObligor, PDFAval } from '@/lib/pdf/types';
 import type { CoverPageData, CoverActorData, CoverGuarantorProperty, CoverContractTerms } from './types';
 import { amountToSpanishLegal } from './numberToSpanishWords';
+import { dateToSpanishLong } from './dateToSpanishLong';
+import {
+  BLANK,
+  NA,
+  DEFAULT_NATIONALITY,
+  DEFAULT_COMPANY_NATIONALITY,
+} from './coverPageDefaults';
 
-const BLANK = '________________';
+type RawDates = {
+  activatedAt: Date | string | null;
+  expiresAt: Date | string | null;
+  propertyDeliveryDate: Date | string | null;
+};
+
+type AnyPdfActor = PDFLandlord | PDFTenant | PDFJointObligor | PDFAval;
+type PropertyGuarantorActor = PDFJointObligor | PDFAval;
 
 function addr(a: { formatted: string } | null | undefined): string {
   return a?.formatted || BLANK;
@@ -16,126 +30,23 @@ function val(v: string | null | undefined): string {
   return v || BLANK;
 }
 
-function transformLandlord(l: PDFLandlord, index: number, total: number): CoverActorData {
-  const label = total > 1 ? `Arrendador ${index + 1}.` : 'Arrendador.';
-  return {
-    label,
-    isCompany: l.isCompany,
-    name: l.name || BLANK,
-    nationality: 'Mexicana.',
-    address: addr(l.address),
-    identificationType: BLANK,
-    identificationNumber: BLANK,
-    rfc: val(l.rfc),
-    curp: val(l.curp),
-    email: val(l.email),
-    phone: val(l.phone),
-    constitutionDeed: BLANK,
-    constitutionDate: BLANK,
-    constitutionNotary: BLANK,
-    constitutionNotaryNumber: BLANK,
-    registryCity: BLANK,
-    registryFolio: BLANK,
-    registryDate: BLANK,
-    legalRepName: val(l.legalRepName),
-    legalRepPosition: val(l.legalRepPosition),
-    legalRepIdentificationType: BLANK,
-    legalRepIdentificationNumber: BLANK,
-    legalRepAddress: BLANK,
-    legalRepPhone: val(l.legalRepPhone),
-    legalRepRfc: val(l.legalRepRfc),
-    legalRepCurp: BLANK,
-    legalRepEmail: val(l.legalRepEmail),
-    legalRepWorkEmail: BLANK,
-    powerDeed: BLANK,
-    powerDate: BLANK,
-    powerNotary: BLANK,
-    powerNotaryNumber: BLANK,
-  };
+function formatActorLabel(base: string, index: number, total: number): string {
+  return total > 1 ? `${base} ${index + 1}.` : `${base}.`;
 }
 
-function transformTenant(t: PDFTenant): CoverActorData {
-  return {
-    label: 'Arrendatario.',
-    isCompany: t.isCompany,
-    name: t.name || BLANK,
-    nationality: t.isCompany ? 'Sociedad de nacionalidad mexicana.' : (t.nationality === 'Mexicano' ? 'Mexicana.' : val(t.nationality)),
-    address: addr(t.address),
-    identificationType: BLANK,
-    identificationNumber: BLANK,
-    rfc: val(t.rfc),
-    curp: val(t.curp),
-    email: val(t.email),
-    phone: val(t.phone),
-    constitutionDeed: BLANK,
-    constitutionDate: BLANK,
-    constitutionNotary: BLANK,
-    constitutionNotaryNumber: BLANK,
-    registryCity: BLANK,
-    registryFolio: BLANK,
-    registryDate: BLANK,
-    legalRepName: val(t.legalRepName),
-    legalRepPosition: val(t.legalRepPosition),
-    legalRepIdentificationType: BLANK,
-    legalRepIdentificationNumber: BLANK,
-    legalRepAddress: BLANK,
-    legalRepPhone: val(t.legalRepPhone),
-    legalRepRfc: val(t.legalRepRfc),
-    legalRepCurp: BLANK,
-    legalRepEmail: val(t.legalRepEmail),
-    legalRepWorkEmail: BLANK,
-    powerDeed: BLANK,
-    powerDate: BLANK,
-    powerNotary: BLANK,
-    powerNotaryNumber: BLANK,
-  };
+function resolveNationality(a: AnyPdfActor): string {
+  if (a.isCompany) return DEFAULT_COMPANY_NATIONALITY;
+  const nat = 'nationality' in a ? a.nationality : undefined;
+  if (!nat) return DEFAULT_NATIONALITY;
+  return nat === 'Mexicano' ? DEFAULT_NATIONALITY : nat;
 }
 
-function transformJointObligor(jo: PDFJointObligor, index: number, total: number): CoverActorData {
-  const label = total > 1 ? `Obligado Solidario y Fiador ${index + 1}.` : 'Obligado Solidario y Fiador.';
-  return {
-    label,
-    isCompany: jo.isCompany,
-    name: jo.name || BLANK,
-    nationality: 'Mexicana.',
-    address: addr(jo.address),
-    identificationType: BLANK,
-    identificationNumber: BLANK,
-    rfc: val(jo.rfc),
-    curp: val(jo.curp),
-    email: val(jo.email),
-    phone: val(jo.phone),
-    constitutionDeed: BLANK,
-    constitutionDate: BLANK,
-    constitutionNotary: BLANK,
-    constitutionNotaryNumber: BLANK,
-    registryCity: BLANK,
-    registryFolio: BLANK,
-    registryDate: BLANK,
-    legalRepName: val(jo.legalRepName),
-    legalRepPosition: val(jo.legalRepPosition),
-    legalRepIdentificationType: BLANK,
-    legalRepIdentificationNumber: BLANK,
-    legalRepAddress: BLANK,
-    legalRepPhone: val(jo.legalRepPhone),
-    legalRepRfc: val(jo.legalRepRfc),
-    legalRepCurp: BLANK,
-    legalRepEmail: val(jo.legalRepEmail),
-    legalRepWorkEmail: BLANK,
-    powerDeed: BLANK,
-    powerDate: BLANK,
-    powerNotary: BLANK,
-    powerNotaryNumber: BLANK,
-  };
-}
-
-function transformAval(a: PDFAval, index: number, total: number): CoverActorData {
-  const label = total > 1 ? `Aval ${index + 1}.` : 'Aval.';
+function transformActor(a: AnyPdfActor, label: string): CoverActorData {
   return {
     label,
     isCompany: a.isCompany,
     name: a.name || BLANK,
-    nationality: 'Mexicana.',
+    nationality: resolveNationality(a),
     address: addr(a.address),
     identificationType: BLANK,
     identificationNumber: BLANK,
@@ -167,46 +78,21 @@ function transformAval(a: PDFAval, index: number, total: number): CoverActorData
   };
 }
 
-function extractGuarantorProperty(jo: PDFJointObligor): CoverGuarantorProperty | null {
-  if (!jo.hasPropertyGuarantee) return null;
+function extractGuarantorProperty(actor: PropertyGuarantorActor): CoverGuarantorProperty | null {
+  if (!actor.hasPropertyGuarantee) return null;
   return {
-    deedNumber: val(jo.propertyDeedNumber),
+    deedNumber: val(actor.propertyDeedNumber),
     deedDate: BLANK,
     notaryNumber: BLANK,
     notaryName: BLANK,
     city: BLANK,
-    registryFolio: val(jo.propertyRegistry),
+    registryFolio: val(actor.propertyRegistry),
     registryDate: BLANK,
     registryCity: BLANK,
-    useType: BLANK,
     useHabitacional: false,
     useComercial: false,
     useIndustrial: false,
-    address: addr(jo.propertyAddress),
-    direction: BLANK,
-    landArea: BLANK,
-    constructionArea: BLANK,
-    boundaries: [],
-  };
-}
-
-function extractAvalProperty(a: PDFAval): CoverGuarantorProperty | null {
-  if (!a.hasPropertyGuarantee) return null;
-  return {
-    deedNumber: val(a.propertyDeedNumber),
-    deedDate: BLANK,
-    notaryNumber: BLANK,
-    notaryName: BLANK,
-    city: BLANK,
-    registryFolio: val(a.propertyRegistry),
-    registryDate: BLANK,
-    registryCity: BLANK,
-    useType: BLANK,
-    useHabitacional: false,
-    useComercial: false,
-    useIndustrial: false,
-    address: addr(a.propertyAddress),
-    direction: BLANK,
+    address: addr(actor.propertyAddress),
     landArea: BLANK,
     constructionArea: BLANK,
     boundaries: [],
@@ -230,7 +116,6 @@ function buildPaymentMethodDescription(data: PDFPolicyData): string {
 
   if (!method) return BLANK;
 
-  // Check if it's a bank transfer
   if (method.toLowerCase().includes('transfer') || primaryLandlord?.bankName) {
     const parts = ['TRANSFERENCIA ELECTRÓNICA DE FONDOS.'];
     if (primaryLandlord?.accountHolder) parts.push(`Titular: ${primaryLandlord.accountHolder}.`);
@@ -243,46 +128,56 @@ function buildPaymentMethodDescription(data: PDFPolicyData): string {
   return `PAGO EN EFECTIVO EN EL INMUEBLE ARRENDADO.`;
 }
 
-function buildContractTerms(data: PDFPolicyData): CoverContractTerms {
+function buildContractTerms(data: PDFPolicyData, rawDates: RawDates): CoverContractTerms {
+  const maintenanceIsNA = !data.maintenanceFee || data.maintenanceIncludedInRent;
+  const parkingIsNA = !data.property?.parkingSpaces;
+
   return {
     propertyAddress: data.property?.address?.formatted || BLANK,
-    parkingSpaces: data.property?.parkingSpaces
-      ? String(data.property.parkingSpaces)
-      : 'N/A',
-    propertyUse: data.property?.typeLabel
-      ? `${data.property.typeLabel}.`
-      : BLANK,
+    parkingSpaces: parkingIsNA ? NA : String(data.property!.parkingSpaces),
+    propertyUse: data.property?.typeLabel ? `${data.property.typeLabel}.` : BLANK,
     rentDisplay: buildRentDisplay(data),
     securityDeposit: val(data.securityDeposit),
-    contractLength: data.contractLengthLabel
-      ? `${data.contractLengthLabel}.`
-      : BLANK,
-    startDate: val(data.activatedAt),
-    endDate: val(data.expiresAt),
-    deliveryDate: data.property?.deliveryDate || BLANK,
-    maintenanceFee: val(data.maintenanceFee),
+    contractLength: data.contractLengthLabel ? `${data.contractLengthLabel}.` : BLANK,
+    startDate: dateToSpanishLong(rawDates.activatedAt),
+    endDate: dateToSpanishLong(rawDates.expiresAt),
+    deliveryDate: dateToSpanishLong(rawDates.propertyDeliveryDate),
+    maintenanceFee: maintenanceIsNA ? NA : val(data.maintenanceFee),
     paymentMethodDescription: buildPaymentMethodDescription(data),
   };
 }
 
-export function buildCoverPageData(data: PDFPolicyData): CoverPageData {
-  const landlords = data.landlords.map((l, i) => transformLandlord(l, i, data.landlords.length));
-  const tenants = data.tenant ? [transformTenant(data.tenant)] : [];
-  const jointObligors = data.jointObligors.map((jo, i) => transformJointObligor(jo, i, data.jointObligors.length));
-  const avals = data.avals.map((a, i) => transformAval(a, i, data.avals.length));
+function toIsoString(d: Date | string | null): string | null {
+  if (!d) return null;
+  if (typeof d === 'string') return d;
+  return d.toISOString();
+}
+
+export function buildCoverPageData(data: PDFPolicyData, rawDates: RawDates): CoverPageData {
+  const landlords = data.landlords.map((l, i) =>
+    transformActor(l, formatActorLabel('Arrendador', i, data.landlords.length)),
+  );
+  const tenants = data.tenant ? [transformActor(data.tenant, 'Arrendatario.')] : [];
+  const jointObligors = data.jointObligors.map((jo, i) =>
+    transformActor(jo, formatActorLabel('Obligado Solidario y Fiador', i, data.jointObligors.length)),
+  );
+  const avals = data.avals.map((a, i) =>
+    transformActor(a, formatActorLabel('Aval', i, data.avals.length)),
+  );
 
   const guarantorProperties: CoverGuarantorProperty[] = [
     ...data.jointObligors.map(extractGuarantorProperty).filter(Boolean) as CoverGuarantorProperty[],
-    ...data.avals.map(extractAvalProperty).filter(Boolean) as CoverGuarantorProperty[],
+    ...data.avals.map(extractGuarantorProperty).filter(Boolean) as CoverGuarantorProperty[],
   ];
 
   return {
     policyNumber: data.policyNumber,
+    contractStartDateRaw: toIsoString(rawDates.activatedAt),
     landlords,
     tenants,
     jointObligors,
     avals,
     guarantorProperties,
-    contractTerms: buildContractTerms(data),
+    contractTerms: buildContractTerms(data, rawDates),
   };
 }
