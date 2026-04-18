@@ -49,7 +49,7 @@ export const PaymentCompletedEmail: React.FC<PaymentCompletedEmailProps> = ({
           <table style={{ width: '100%' }}>
             <tbody>
               <tr>
-                <td style={{ padding: '8px 0', color: brandColors.textSecondary }}>Poliza:</td>
+                <td style={{ padding: '8px 0', color: brandColors.textSecondary }}>Póliza:</td>
                 <td style={{ padding: '8px 0', fontWeight: 600, color: brandColors.textPrimary, textAlign: 'right' }}>{policyNumber}</td>
               </tr>
               <tr>

@@ -41,7 +41,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
       <EmailHeader title="Protección Cancelada" subtitle="Notificación de cancelación" />
       <EmailSection greeting={`Hola${adminName ? ` ${adminName}` : ''},`}>
         <EmailParagraph>
-          Se ha cancelado una protección en el sistema. A continuacion los detalles:
+          Se ha cancelado una protección en el sistema. A continuación los detalles:
         </EmailParagraph>
 
         <EmailWarningBox title="Detalles de la Cancelación" tone="danger">
@@ -65,7 +65,7 @@ export const PolicyCancellationEmail: React.FC<PolicyCancellationEmailProps> = (
         <Hr style={{ margin: '40px 0 20px 0', borderColor: '#f7fafc' }} />
 
         <EmailParagraph size="small">
-          Este es un mensaje automático del sistema. Si tienes preguntas sobre esta cancelación, contacta al equipo que la realizo.
+          Este es un mensaje automático del sistema. Si tienes preguntas sobre esta cancelación, contacta al equipo que la realizó.
         </EmailParagraph>
       </EmailSection>
       <EmailFooter />

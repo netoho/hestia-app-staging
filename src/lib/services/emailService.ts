@@ -723,7 +723,7 @@ Hola${data.payerName ? ` ${data.payerName}` : ''},
 
 Tu pago ha sido procesado exitosamente.
 
-Poliza: ${data.policyNumber}
+Póliza: ${data.policyNumber}
 Concepto: ${data.paymentType}
 Monto: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.amount)}
 Fecha: ${formatDateLong(data.paidAt)}

@@ -23,8 +23,8 @@ export const AllPaymentsCompletedEmail: React.FC<AllPaymentsCompletedEmailProps>
 
   return (
     <EmailLayout>
-      <EmailHeader title="Pagos Completados" subtitle="Notificacion de administrador" />
-      <EmailSection greeting="Poliza Lista para Activar">
+      <EmailHeader title="Pagos Completados" subtitle="Notificación de administrador" />
+      <EmailSection greeting="Póliza Lista para Activar">
         <EmailParagraph>
           Todos los pagos de la poliza <strong>{policyNumber}</strong> han sido completados.
         </EmailParagraph>
@@ -49,7 +49,7 @@ export const AllPaymentsCompletedEmail: React.FC<AllPaymentsCompletedEmailProps>
           <table style={{ width: '100%' }}>
             <tbody>
               <tr>
-                <td style={{ padding: '8px 0', color: brandColors.textSecondary }}>Poliza:</td>
+                <td style={{ padding: '8px 0', color: brandColors.textSecondary }}>Póliza:</td>
                 <td style={{ padding: '8px 0', fontWeight: 600, color: brandColors.textPrimary, textAlign: 'right' }}>{policyNumber}</td>
               </tr>
               <tr>
@@ -65,11 +65,11 @@ export const AllPaymentsCompletedEmail: React.FC<AllPaymentsCompletedEmailProps>
         </Section>
 
         <EmailButton href={`${appUrl}/dashboard/policies`}>
-          Ver Poliza
+          Ver Póliza
         </EmailButton>
 
         <EmailParagraph size="small">
-          Esta es una notificacion automatica del sistema.
+          Esta es una notificación automática del sistema.
         </EmailParagraph>
       </EmailSection>
       <EmailFooter />
