@@ -10,7 +10,7 @@ import { hashPassword } from '../auth';
 // Types
 export interface User {
   id: string;
-  internalId: number | null;
+  internalId: number;
   email: string;
   name: string | null;
   phone: string | null;

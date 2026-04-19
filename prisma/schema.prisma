@@ -26,7 +26,7 @@ model User {
   phone         String?
   address       String?
   isActive      Boolean   @default(true)
-  internalId    Int?      @unique @default(dbgenerated("nextval('user_internal_id_seq'::regclass)"))
+  internalId    Int       @unique @default(autoincrement())
 
   // Invitation fields
   invitationToken       String?   @unique
