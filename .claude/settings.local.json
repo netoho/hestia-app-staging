@@ -99,7 +99,11 @@
       "Bash(git stash:*)",
       "Bash(git status:*)",
       "Bash(unzip:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(awk '/^function / {fname=$2; line=NR} /^}$/ && fname {print NR-line+1, fname; fname=\"\"}' /Users/neto/Development/hestia/hestia-app/src/lib/docx/coverPageDocxTemplate.ts)",
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(git checkout *)"
     ],
     "deny": [],
     "ask": []
