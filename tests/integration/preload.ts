@@ -32,6 +32,63 @@ if (!dbUrl.endsWith('_test')) {
 // Stub it so server-side modules can be imported in the test runtime.
 mock.module('server-only', () => ({}));
 
+// --- Next.js request scope (for REST route handler tests) -----------------
+// `next/headers` and `next-auth/next` need a request scope to work in
+// production. We expose a global `__testHeaders` and `__testSession` that
+// REST tests can set per-call (see tests/integration/restHelpers.ts).
+const globalAny = globalThis as unknown as {
+  __testHeaders?: Record<string, string>;
+  __testSession?: { user: { id: string; email: string; name: string; role: string } } | null;
+};
+globalAny.__testHeaders = globalAny.__testHeaders ?? {};
+globalAny.__testSession = globalAny.__testSession ?? null;
+
+mock.module('next/headers', () => ({
+  headers: async () => new Headers(globalAny.__testHeaders ?? {}),
+  cookies: async () => ({
+    get: () => undefined,
+    getAll: () => [],
+    has: () => false,
+  }),
+}));
+
+mock.module('next-auth/next', () => ({
+  getServerSession: async () => globalAny.__testSession,
+  default: () => ({}),
+}));
+
+mock.module('next-auth', () => ({
+  default: () => ({}),
+  getServerSession: async () => globalAny.__testSession,
+}));
+
+// --- Reminder services (cron endpoints) -----------------------------------
+// Each cron route delegates to a thin reminder service. Mock at the module
+// boundary so the cron tests assert HTTP shape without exercising real DB
+// queries inside reminder services that depend on production-only timing.
+mock.module('@/services/reminderService', () => ({
+  sendIncompleteActorReminders: mock(async () => ({ policiesProcessed: 0, remindersSent: 0, errors: [] })),
+}));
+mock.module('@/services/policyExpirationReminderService', () => ({
+  sendPolicyExpirationReminders: mock(async () => ({ totalRemindersSent: 0, totalErrors: 0, byTier: {} })),
+}));
+mock.module('@/services/policyQuarterlyFollowupService', () => ({
+  sendPolicyQuarterlyFollowups: mock(async () => ({ policiesProcessed: 0, remindersSent: 0, errors: [] })),
+}));
+mock.module('@/services/receiptReminderService', () => ({
+  sendMonthlyReceiptReminders: mock(async () => ({ policiesProcessed: 0, remindersSent: 0, skipped: 0, errors: [] })),
+}));
+
+// --- DOCX and PDF generation (REST policy routes) -------------------------
+mock.module('@/lib/docx', () => ({
+  generateCoverPageDocx: mock(async () => Buffer.from('fake-docx-buffer')),
+  getCoverPageFilename: mock((policyNumber: string) => `cover-${policyNumber}.docx`),
+}));
+mock.module('@/lib/pdf', () => ({
+  generatePolicyPDF: mock(async () => Buffer.from('fake-pdf-buffer')),
+  getPolicyPDFFilename: mock((policyNumber: string) => `policy-${policyNumber}.pdf`),
+}));
+
 // --- Stripe SDK ------------------------------------------------------------
 // Constructed via `new Stripe(secret)` in paymentService and webhook route.
 // Each method returns a canned object that satisfies the consumer's reads.
