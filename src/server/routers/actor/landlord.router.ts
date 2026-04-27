@@ -12,6 +12,14 @@ import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import { validateLandlordData } from '@/lib/schemas/landlord';
 import { prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
 import { LandlordStrictSchema } from './shared.router';
+import {
+  ActorSaveMultipleLandlordsOutput,
+  ActorSavePropertyDetailsOutput,
+  ActorSavePolicyFinancialOutput,
+  ActorValidateLandlordOutput,
+  ActorGetLandlordsByPolicyOutput,
+  ActorDeleteCoOwnerOutput,
+} from '@/lib/schemas/actor/output';
 
 // ============================================
 // LANDLORD-SPECIFIC ROUTER
@@ -29,6 +37,7 @@ export const landlordRouter = createTRPCRouter({
       propertyDetails: z.any().optional(),
       isPartial: z.boolean().default(false),
     }))
+    .output(ActorSaveMultipleLandlordsOutput)
     .mutation(async ({ input, ctx }) => {
       const service = new LandlordService();
 
@@ -85,6 +94,7 @@ export const landlordRouter = createTRPCRouter({
       identifier: z.string(),
       propertyDetails: z.any(),
     }))
+    .output(ActorSavePropertyDetailsOutput)
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
@@ -130,6 +140,7 @@ export const landlordRouter = createTRPCRouter({
    * Landlord-specific: Save policy financial data
    */
   savePolicyFinancial: dualAuthProcedure
+    .output(ActorSavePolicyFinancialOutput)
     .input(z.object({
       type: z.literal('landlord'),
       identifier: z.string(),
@@ -189,6 +200,7 @@ export const landlordRouter = createTRPCRouter({
       mode: z.enum(['strict', 'partial', 'admin']).default('strict'),
       tabName: z.string().optional(),
     }))
+    .output(ActorValidateLandlordOutput)
     .query(({ input }) => {
       const result = validateLandlordData(input.data, {
         isCompany: input.isCompany,
@@ -219,6 +231,7 @@ export const landlordRouter = createTRPCRouter({
     .input(z.object({
       policyId: z.string(),
     }))
+    .output(ActorGetLandlordsByPolicyOutput)
     .query(async ({ input }) => {
       const service = new LandlordService();
       const result = await service.getAllByPolicyId(input.policyId);
@@ -241,6 +254,7 @@ export const landlordRouter = createTRPCRouter({
       type: z.literal('landlord'),
       id: z.string(),
     }))
+    .output(ActorDeleteCoOwnerOutput)
     .mutation(async ({ input }) => {
       const service = new LandlordService();
       const result = await service.removeLandlord(input.id);

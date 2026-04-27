@@ -37,6 +37,16 @@ import {
 import { personNameSchema } from '@/lib/schemas/shared/person.schema';
 import { partialAddressSchema } from '@/lib/schemas/shared/address.schema';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import {
+  ActorByTokenOutput,
+  ActorGetManyByTokenOutput,
+  ActorUpdateOutput,
+  ActorUpdateDualAuthOutput,
+  ActorPolymorphicOutput,
+  ActorAdminSubmitOutput,
+  ActorListByPolicyOutput,
+  ActorCreateBatchOutput,
+} from '@/lib/schemas/actor/output';
 
 // Import ActorData for type casting
 import { ActorData } from '@/lib/types/actor';
@@ -158,6 +168,7 @@ export const sharedActorRouter = createTRPCRouter({
       token: z.string(),
       type: ActorTypeSchema,
     }))
+    .output(ActorByTokenOutput)
     .query(async ({ input, ctx }) => {
       const service = getActorService(input.type);
       const result = await service.getByToken(input.token);
@@ -185,6 +196,7 @@ export const sharedActorRouter = createTRPCRouter({
       token: z.string(),
       type: ActorTypeSchema,
     }))
+    .output(ActorGetManyByTokenOutput)
     .query(async ({ input, ctx }) => {
 
       if (input.type !== 'landlord') {
@@ -216,6 +228,7 @@ export const sharedActorRouter = createTRPCRouter({
    * Update actor via token (strict validation for self-service)
    */
   updateSelf: publicProcedure
+    .output(ActorUpdateOutput)
     .input(z.discriminatedUnion('type', [
       z.object({
         type: z.literal('tenant'),
@@ -273,6 +286,7 @@ export const sharedActorRouter = createTRPCRouter({
       data: ActorAdminUpdateSchema,
       skipValidation: z.boolean().default(false),
     }))
+    .output(ActorUpdateOutput)
     .mutation(async ({ input, ctx }) => {
       const service = getActorService(input.type);
 
@@ -299,6 +313,7 @@ export const sharedActorRouter = createTRPCRouter({
       type: ActorTypeSchema,
       id: z.string(),
     }))
+    .output(ActorPolymorphicOutput)
     .query(async ({ input, ctx }) => {
       const service = getActorService(input.type);
       const result = await service.getById(input.id);
@@ -325,6 +340,7 @@ export const sharedActorRouter = createTRPCRouter({
       policyId: z.string(),
       type: ActorTypeSchema.optional(),
     }))
+    .output(ActorListByPolicyOutput)
     .query(async ({ input, ctx }) => {
       const results = [];
 
@@ -373,6 +389,7 @@ export const sharedActorRouter = createTRPCRouter({
    * Batch create actors for a policy
    */
   createBatch: adminProcedure
+    .output(ActorCreateBatchOutput)
     .input(z.object({
       policyId: z.string(),
       actors: z.object({
@@ -488,6 +505,7 @@ export const sharedActorRouter = createTRPCRouter({
       identifier: z.string(),
       data: ActorAdminUpdateSchema,
     }))
+    .output(ActorUpdateDualAuthOutput)
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
       const service = getActorService(input.type);
@@ -600,6 +618,7 @@ export const sharedActorRouter = createTRPCRouter({
       type: ActorTypeSchema,
       identifier: z.string(),
     }))
+    .output(ActorPolymorphicOutput)
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
       const service = getActorService(input.type);
@@ -641,6 +660,7 @@ export const sharedActorRouter = createTRPCRouter({
       id: z.string(),
       skipValidation: z.boolean().default(false),
     }))
+    .output(ActorAdminSubmitOutput)
     .mutation(async ({ input, ctx }) => {
       const service = getActorService(input.type);
 
@@ -671,6 +691,7 @@ export const sharedActorRouter = createTRPCRouter({
       type: ActorTypeSchema,
       id: z.string(),
     }))
+    .output(ActorPolymorphicOutput)
     .mutation(async ({ input, ctx }) => {
       const service = getActorService(input.type);
 
