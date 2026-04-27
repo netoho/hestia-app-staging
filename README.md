@@ -29,6 +29,12 @@ bunx prisma studio
 # Run integration tests (boot the test DB once, then run the suite)
 bun run test:db:up
 bun run test:integration
+
+# Fast iteration on a single file or test (skips docker / DB push):
+bun run test:integration:filter tests/integration/routers/policy.test.ts
+bun run test:integration:filter -t "happy path"
+
+# Without docker (local Postgres) — see docs/TESTING.md
 ```
 
 ## Architecture
