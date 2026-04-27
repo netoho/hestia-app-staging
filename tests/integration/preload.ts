@@ -118,6 +118,45 @@ mock.module('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/test-key?X-Amz-Signature=fake'),
 }));
 
+// --- Document service (S3 boundary) -----------------------------------------
+// Wraps S3 presigning + key generation; receipts and actor documents flow
+// through it. Mock at the boundary so tests don't depend on AWS at all.
+mock.module('@/lib/services/documentService', () => ({
+  documentService: {
+    generateReceiptS3Key: mock(
+      (policyNumber: string, tenantId: string, year: number, month: number, type: string, fileName: string) =>
+        `receipts/${policyNumber}/${tenantId}/${year}-${String(month).padStart(2, '0')}-${type}-${fileName}`,
+    ),
+    generateActorDocumentS3Key: mock(
+      (policyNumber: string, actorType: string, actorId: string, category: string, fileName: string) =>
+        `actor-docs/${policyNumber}/${actorType}/${actorId}/${category}-${fileName}`,
+    ),
+    getUploadUrl: mock(async (s3Key: string) => `https://test-bucket.s3.amazonaws.com/${s3Key}?upload=fake`),
+    getDownloadUrl: mock(async (s3Key: string) => `https://test-bucket.s3.amazonaws.com/${s3Key}?download=fake`),
+    getViewUrl: mock(async (s3Key: string) => `https://test-bucket.s3.amazonaws.com/${s3Key}?view=fake`),
+    getPublicUrl: mock((s3Key: string) => `https://test-bucket.s3.amazonaws.com/${s3Key}`),
+    fileExists: mock(async () => true),
+    deleteFile: mock(async () => true),
+    getFileMetadata: mock(async () => ({ ContentLength: 1024, ContentType: 'application/pdf' })),
+    deleteDocument: mock(async () => true),
+    uploadActorDocument: mock(async () => ({ id: 'doc_test_fake' })),
+    uploadPolicyDocument: mock(async () => ({ id: 'doc_test_fake' })),
+    validatePolicyDocuments: mock(async () => ({ valid: true, missing: [] })),
+    getStorageProvider: mock(() => 's3'),
+  },
+  uploadActorDocument: mock(async () => ({ id: 'doc_test_fake' })),
+  uploadPolicyDocument: mock(async () => ({ id: 'doc_test_fake' })),
+  getDocumentUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/fake?view=fake'),
+  getDocumentDownloadUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/fake?download=fake'),
+  deleteDocument: mock(async () => true),
+  verifyDocument: mock(async () => true),
+  getDocumentMetadata: mock(async () => ({ ContentLength: 1024 })),
+  getSignedDownloadUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/fake?download=fake'),
+  validatePolicyDocuments: mock(async () => ({ valid: true, missing: [] })),
+  getPublicDownloadUrl: mock(() => 'https://test-bucket.s3.amazonaws.com/fake'),
+  getCurrentStorageProvider: mock(() => 's3'),
+}));
+
 // --- Google Maps service (HTTP calls go to Google in real impl) -----------
 mock.module('@/lib/services/googleMapsService', () => ({
   googleMapsService: {
