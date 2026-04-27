@@ -63,21 +63,10 @@ mock.module('next-auth', () => ({
 }));
 
 // --- Reminder services (cron endpoints) -----------------------------------
-// Each cron route delegates to a thin reminder service. Mock at the module
-// boundary so the cron tests assert HTTP shape without exercising real DB
-// queries inside reminder services that depend on production-only timing.
-mock.module('@/services/reminderService', () => ({
-  sendIncompleteActorReminders: mock(async () => ({ policiesProcessed: 0, remindersSent: 0, errors: [] })),
-}));
-mock.module('@/services/policyExpirationReminderService', () => ({
-  sendPolicyExpirationReminders: mock(async () => ({ totalRemindersSent: 0, totalErrors: 0, byTier: {} })),
-}));
-mock.module('@/services/policyQuarterlyFollowupService', () => ({
-  sendPolicyQuarterlyFollowups: mock(async () => ({ policiesProcessed: 0, remindersSent: 0, errors: [] })),
-}));
-mock.module('@/services/receiptReminderService', () => ({
-  sendMonthlyReceiptReminders: mock(async () => ({ policiesProcessed: 0, remindersSent: 0, skipped: 0, errors: [] })),
-}));
+// Reminder services are NOT mocked. Cron tests run them against the real
+// (per-test reset+seeded) DB so the test verifies the service actually finds
+// the policies it should. The email sends inside each service are mocked at
+// the emailService boundary above, so no real outbound traffic.
 
 // --- DOCX and PDF generation (REST policy routes) -------------------------
 mock.module('@/lib/docx', () => ({
@@ -312,6 +301,15 @@ mock.module('@/lib/services/notificationService', () => ({
 // 3. Per-test DB lifecycle.
 // ---------------------------------------------------------------------------
 import { prisma, resetDatabase, seedTestData } from '../utils/database';
+import { BaseService } from '@/lib/services/base/BaseService';
+
+// Silence service-level logs during tests unless VERBOSE_TEST_LOGS is set.
+// Service errors are part of the contract under test (NOT_FOUND, expired
+// tokens, validation failures) — logging them as console.error pollutes test
+// output even when the test EXPECTS the throw. Production code is untouched.
+if (!process.env.VERBOSE_TEST_LOGS) {
+  (BaseService.prototype as unknown as { log: () => void }).log = () => {};
+}
 
 beforeEach(async () => {
   await resetDatabase();

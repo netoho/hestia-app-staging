@@ -5,17 +5,25 @@ import prisma from '@/lib/prisma';
 export { prisma };
 
 // Tables in reverse dependency order for safe truncation.
+// ReminderLog has no FK to Policy, so it doesn't cascade — list it explicitly.
+// TenantReceipt / ReceiptConfig / ActorInvestigationDocument / PaymentTransfer
+// cascade from their parents, but listing them keeps intent obvious.
 const TABLES = [
+  'ReminderLog',
   'PolicyActivity',
   'ReviewNote',
   'ActorSectionValidation',
   'DocumentValidation',
   'ActorDocument',
   'PolicyDocument',
+  'TenantReceipt',
+  'ReceiptConfig',
   'PersonalReference',
   'CommercialReference',
+  'PaymentTransfer',
   'Payment',
   'Contract',
+  'ActorInvestigationDocument',
   'ActorInvestigation',
   'Incident',
   'Aval',
