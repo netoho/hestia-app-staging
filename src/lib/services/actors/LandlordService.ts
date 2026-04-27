@@ -336,7 +336,8 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     isPrimary: boolean = false
   ): AsyncResult<LandlordData> {
     return this.executeTransaction(async (tx) => {
-      // data already has addressDetails in Partial<LandlordData>
+      // Local alias used throughout the create payload below.
+      const landlordData = data;
 
       // Handle address if provided
       let addressId: string | undefined;
