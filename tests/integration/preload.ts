@@ -143,7 +143,22 @@ mock.module('@/lib/services/documentService', () => ({
     uploadPolicyDocument: mock(async () => ({ id: 'doc_test_fake' })),
     validatePolicyDocuments: mock(async () => ({ valid: true, missing: [] })),
     getStorageProvider: mock(() => 's3'),
+    // Used by document.router for actor-document flow:
+    getById: mock(async () => null),
+    getByActor: mock(async () => []),
+    generateUploadUrl: mock(async () => ({
+      uploadUrl: 'https://test-bucket.s3.amazonaws.com/fake?upload=fake',
+      documentId: 'doc_test_fake',
+      s3Key: 'fake-s3-key',
+      expiresIn: 60,
+    })),
+    confirmUpload: mock(async () => ({ success: true, document: null })),
   },
+  // Standalone exports used by user.router and onboard.router for avatar uploads.
+  getCurrentStorageProvider: mock(() => ({
+    publicUpload: mock(async () => 'avatars/test/fake.jpg'),
+    delete: mock(async () => true),
+  })),
   uploadActorDocument: mock(async () => ({ id: 'doc_test_fake' })),
   uploadPolicyDocument: mock(async () => ({ id: 'doc_test_fake' })),
   getDocumentUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/fake?view=fake'),
