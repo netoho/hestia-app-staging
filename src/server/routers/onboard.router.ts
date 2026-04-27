@@ -9,6 +9,11 @@ import { validateInvitationToken, clearInvitationToken } from '@/lib/services/us
 import { userService } from '@/lib/services/userService';
 import { getCurrentStorageProvider, getPublicDownloadUrl } from '@/lib/services/documentService';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  OnboardValidateTokenOutput,
+  OnboardCompleteOutput,
+  OnboardUploadAvatarOutput,
+} from '@/lib/schemas/onboard/output';
 
 // Allowed MIME types for avatars
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
@@ -20,6 +25,7 @@ export const onboardRouter = createTRPCRouter({
    */
   validateToken: publicProcedure
     .input(z.object({ token: z.string() }))
+    .output(OnboardValidateTokenOutput)
     .query(async ({ input }) => {
       const { token } = input;
 
@@ -72,6 +78,7 @@ export const onboardRouter = createTRPCRouter({
       phone: z.string().min(1, 'Phone is required'),
       address: z.string().optional(),
     }))
+    .output(OnboardCompleteOutput)
     .mutation(async ({ input }) => {
       const { token, password, phone, address } = input;
 
@@ -140,6 +147,7 @@ export const onboardRouter = createTRPCRouter({
       filename: z.string(),
       contentType: z.string(),
     }))
+    .output(OnboardUploadAvatarOutput)
     .mutation(async ({ input }) => {
       const { userId, file, filename, contentType } = input;
 

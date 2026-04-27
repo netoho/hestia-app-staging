@@ -14,6 +14,13 @@ import {
   throwValidationError,
   throwInternalError,
 } from '@/lib/utils/trpcErrorHandler';
+import {
+  UserGetProfileOutput,
+  UserUpdateProfileOutput,
+  UserUploadAvatarOutput,
+  UserDeleteAvatarOutput,
+  UserGetStatsOutput,
+} from '@/lib/schemas/user/output';
 
 // Allowed MIME types for avatars
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
@@ -40,6 +47,7 @@ export const userRouter = createTRPCRouter({
    * Get current user profile
    */
   getProfile: protectedProcedure
+    .output(UserGetProfileOutput)
     .query(async ({ ctx }) => {
       const user = await prisma.user.findUnique({
         where: { id: ctx.userId },
@@ -68,6 +76,7 @@ export const userRouter = createTRPCRouter({
    */
   updateProfile: protectedProcedure
     .input(UpdateProfileSchema)
+    .output(UserUpdateProfileOutput)
     .mutation(async ({ input, ctx }) => {
       const { currentPassword, newPassword, email, ...profileData } = input;
 
@@ -124,6 +133,7 @@ export const userRouter = createTRPCRouter({
       filename: z.string(),
       contentType: z.string(),
     }))
+    .output(UserUploadAvatarOutput)
     .mutation(async ({ input, ctx }) => {
       const { file, filename, contentType } = input;
       const userId = ctx.userId;
@@ -210,6 +220,7 @@ export const userRouter = createTRPCRouter({
    * Delete user avatar (placeholder - AWS integration needed)
    */
   deleteAvatar: protectedProcedure
+    .output(UserDeleteAvatarOutput)
     .mutation(async ({ ctx }) => {
       const result = await userService.update(ctx.userId, { avatarUrl: null });
 
@@ -224,6 +235,7 @@ export const userRouter = createTRPCRouter({
    * Get user statistics (for dashboard)
    */
   getStats: protectedProcedure
+    .output(UserGetStatsOutput)
     .query(async ({ ctx }) => {
       const [totalPolicies, activePolicies, pendingPolicies] = await Promise.all([
         prisma.policy.count({

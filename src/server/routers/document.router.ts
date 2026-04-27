@@ -4,6 +4,14 @@ import { TRPCError } from '@trpc/server';
 import { DocumentCategory, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { documentService } from '@/lib/services/documentService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
+import {
+  DocumentGetUploadUrlOutput,
+  DocumentConfirmUploadOutput,
+  DocumentListDocumentsOutput,
+  DocumentDeleteOutput,
+  DocumentGetDownloadUrlOutput,
+  DocumentListByPolicyOutput,
+} from '@/lib/schemas/document/output';
 
 // Actor types schema (shared with actor router)
 const ActorTypeSchema = z.enum(['tenant', 'landlord', 'aval', 'jointObligor']);
@@ -23,6 +31,7 @@ export const documentRouter = createTRPCRouter({
       contentType: z.string(),
       fileSize: z.number(),
     }))
+    .output(DocumentGetUploadUrlOutput)
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
@@ -93,6 +102,7 @@ export const documentRouter = createTRPCRouter({
       identifier: z.string(),
       documentId: z.string(),
     }))
+    .output(DocumentConfirmUploadOutput)
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
@@ -151,6 +161,7 @@ export const documentRouter = createTRPCRouter({
       type: ActorTypeSchema,
       identifier: z.string(),
     }))
+    .output(DocumentListDocumentsOutput)
     .query(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
@@ -184,6 +195,7 @@ export const documentRouter = createTRPCRouter({
       identifier: z.string(),
       documentId: z.string(),
     }))
+    .output(DocumentDeleteOutput)
     .mutation(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
@@ -253,6 +265,7 @@ export const documentRouter = createTRPCRouter({
       identifier: z.string(),
       documentId: z.string(),
     }))
+    .output(DocumentGetDownloadUrlOutput)
     .query(async ({ input, ctx }) => {
       const authService = new ActorAuthService();
 
@@ -327,6 +340,7 @@ export const documentRouter = createTRPCRouter({
    */
   getDownloadUrlById: protectedProcedure
     .input(z.object({ documentId: z.string() }))
+    .output(DocumentGetDownloadUrlOutput)
     .query(async ({ input, ctx }) => {
       const document = await documentService.getById(input.documentId);
 
@@ -394,6 +408,7 @@ export const documentRouter = createTRPCRouter({
    */
   listByPolicy: protectedProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(DocumentListByPolicyOutput)
     .query(async ({ input, ctx }) => {
       // Get all actors for this policy and their documents
       const policy = await ctx.prisma.policy.findUnique({

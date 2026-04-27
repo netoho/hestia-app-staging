@@ -8,6 +8,13 @@ import { TRPCError } from '@trpc/server';
 import { generateInvitationToken } from '@/lib/services/userTokenService';
 import { sendUserInvitation } from '@/lib/services/emailService';
 import { userService } from '@/lib/services/userService';
+import {
+  StaffListOutput,
+  StaffGetByIdOutput,
+  StaffCreateOutput,
+  StaffUpdateOutput,
+  StaffDeleteOutput,
+} from '@/lib/schemas/staff/output';
 
 const ListStaffSchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -34,6 +41,7 @@ export const staffRouter = createTRPCRouter({
    */
   list: adminProcedure
     .input(ListStaffSchema)
+    .output(StaffListOutput)
     .query(async ({ input }) => {
       const { page, limit, search, role } = input;
       const skip = (page - 1) * limit;
@@ -89,6 +97,7 @@ export const staffRouter = createTRPCRouter({
    */
   getById: adminProcedure
     .input(z.object({ id: z.string() }))
+    .output(StaffGetByIdOutput)
     .query(async ({ input }) => {
       const user = await prisma.user.findUnique({
         where: { id: input.id },
@@ -120,6 +129,7 @@ export const staffRouter = createTRPCRouter({
    */
   create: adminProcedure
     .input(CreateStaffSchema)
+    .output(StaffCreateOutput)
     .mutation(async ({ input, ctx }) => {
       const { email, name, role } = input;
 
@@ -189,6 +199,7 @@ export const staffRouter = createTRPCRouter({
    */
   update: adminProcedure
     .input(UpdateStaffSchema)
+    .output(StaffUpdateOutput)
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
 
@@ -222,6 +233,7 @@ export const staffRouter = createTRPCRouter({
    */
   delete: adminProcedure
     .input(z.object({ id: z.string() }))
+    .output(StaffDeleteOutput)
     .mutation(async ({ input, ctx }) => {
       // Prevent self-deactivation
       if (ctx.userId === input.id) {
