@@ -18,6 +18,11 @@ import { cancelPolicy } from '@/lib/services/policyService/cancellation';
 import { getShareLinksForPolicy } from '@/lib/services/policyService/shareLinks';
 import { clonePolicyForRenewal } from '@/lib/services/policyService/renewal';
 import { PolicyRenewInputSchema } from '@/lib/schemas/policy/renewalSelection';
+import {
+  PolicyCheckNumberOutput,
+  PolicyCancelOutput,
+  PolicyCreateOutput,
+} from '@/lib/schemas/policy/output';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { actorTokenService } from '@/lib/services/actorTokenService';
 import { PolicyStatus, GuarantorType, PropertyType, TenantType, PolicyCancellationReason } from "@/prisma/generated/prisma-client/enums";
@@ -245,6 +250,7 @@ export const policyRouter = createTRPCRouter({
    */
   create: protectedProcedure
     .input(CreatePolicySchema)
+    .output(PolicyCreateOutput)
     .mutation(async ({ input, ctx }) => {
       try {
         // Create the policy with all related data
@@ -299,6 +305,7 @@ export const policyRouter = createTRPCRouter({
    */
   checkNumber: publicProcedure
     .input(z.object({ number: z.string() }))
+    .output(PolicyCheckNumberOutput)
     .query(async ({ input, ctx }) => {
       const validation = await validatePolicyNumber(input.number);
       return validation;
@@ -426,6 +433,7 @@ export const policyRouter = createTRPCRouter({
       reason: z.nativeEnum(PolicyCancellationReason),
       comment: z.string().min(1, 'Comment is required'),
     }))
+    .output(PolicyCancelOutput)
     .mutation(async ({ input, ctx }) => {
       if (ctx.userRole === 'BROKER') {
         throw new TRPCError({
