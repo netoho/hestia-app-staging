@@ -134,8 +134,12 @@ mock.module('@/lib/services/emailService', () => ({
 }));
 
 // --- Notification service (boundary-level mock — every send is a no-op) ---
+// sendIncompleteActorInfoNotification returns the actual invitations array in
+// production. The empty array satisfies the .output() schema for
+// policy.sendInvitations and reflects "no actors needed an invitation" — tests
+// that care about the invitation list use spyOn to assert call arguments.
 mock.module('@/lib/services/notificationService', () => ({
-  sendIncompleteActorInfoNotification: mock(async () => undefined),
+  sendIncompleteActorInfoNotification: mock(async () => []),
   sendTenantReplacementNotification: mock(async () => undefined),
   sendPolicyCancellationNotification: mock(async () => undefined),
   sendPolicyPendingApprovalNotification: mock(async () => undefined),
