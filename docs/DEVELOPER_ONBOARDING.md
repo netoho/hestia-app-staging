@@ -100,17 +100,28 @@ bunx prisma migrate reset
 bunx prisma generate
 ```
 
-### 3. Testing Actors
+### 3. Running Tests
 
-#### Create Test Token
 ```bash
-# Use the API to create a test actor with token
-curl -X POST http://localhost:3000/api/trpc/policy.create \
-  -H "Content-Type: application/json" \
-  -d '{"propertyAddress": "Test St 123"}'
+# Boot the dockerized Postgres test DB (first time + after a reboot)
+bun run test:db:up
+
+# Integration & contract test suite (provisions hestia_test, runs the suite)
+bun run test:integration
+
+# Pure-unit tests (utility functions colocated under src/**/__tests__/)
+bun run test:unit
+
+# Stop the test DB container
+bun run test:db:down
 ```
 
-#### Access Actor Form
+Every tRPC procedure and in-scope REST handler is covered by a `.output(<zodSchema>)` contract — dropping a field that the frontend uses fails the matching integration test. See [TESTING.md](./TESTING.md) for the full guide and the recipe for adding tests when you build a new feature.
+
+#### Manual actor-portal access (no test DB needed)
+
+Once you have a real token (e.g. from `policy.create` in the dashboard or `staff.list` for an existing actor):
+
 ```
 http://localhost:3000/actor/tenant/[TOKEN]
 http://localhost:3000/actor/landlord/[TOKEN]
@@ -343,8 +354,12 @@ git checkout -b feature/your-feature
 ### 3. Test Locally
 ```bash
 bun run build
-bun run test
+bun run typecheck
+bun run test:unit
+bun run test:integration   # requires `bun run test:db:up` once first
 ```
+
+See [TESTING.md](./TESTING.md) for the integration-test recipe when adding a new procedure or endpoint.
 
 ### 4. Commit Changes
 ```bash
@@ -400,6 +415,20 @@ export class NewActorService extends BaseActorService {
 ```typescript
 // src/server/routers/actor.router.ts
 // Add case for new actor type
+```
+
+### Step 5b: Lock the contract
+```typescript
+// src/lib/schemas/new-actor/output.ts
+// Author Zod output schemas mirroring the service select.
+// Wire .output(YourSchema) on every new procedure in the router.
+```
+
+### Step 5c: Add integration tests
+```typescript
+// tests/integration/routers/new-actor.test.ts
+// Floor coverage per procedure: happy path + auth gate (via expectAuthGate).
+// See docs/TESTING.md for the recipe.
 ```
 
 ### Step 6: Create UI Components

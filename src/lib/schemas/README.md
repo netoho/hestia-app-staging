@@ -239,6 +239,37 @@ references: z.array(referenceSchema).length(3)
 items: z.array(itemSchema).min(1).max(10)
 ```
 
+## Output schemas (`<domain>/output.ts`)
+
+Each tRPC router (and REST endpoint) declares its **response shape** in a `<domain>/output.ts` file inside this directory. The router pipes its return value through Zod via `.output(YourSchema)`, so dropping a column from a service `select` fails the matching integration test before it reaches the frontend. Frontend code can `import` these schemas directly for runtime validation.
+
+Existing per-domain output schemas:
+
+```
+schemas/
+├── policy/output.ts          # 11 policy procedures
+├── payment/output.ts         # 17 payment procedures (PaymentShape mirrors Prisma column-for-column)
+├── actor/output.ts           # 17 actor procedures (4 actor-type shapes)
+├── receipt/output.ts         # 12 receipt procedures
+├── investigation/output.ts   # 15 investigation procedures (sanitized public getByToken)
+├── pricing/output.ts         # 6 pricing procedures
+├── package/output.ts         # 4 package procedures
+├── address/output.ts         # 2 address procedures
+├── contract/output.ts        # contract.getByPolicy (placeholder)
+├── user/output.ts            # 5 user procedures
+├── staff/output.ts           # 5 staff procedures
+├── onboard/output.ts         # 3 onboard procedures
+└── document/output.ts        # 7 document procedures
+```
+
+Conventions:
+
+- **Mirror the actual `service.select` or Prisma model**, not what you guess the frontend wants. Phase 2.2 caught a real drift because `userService.userSelect` excludes `emailVerified` and the schema initially declared it.
+- **Default Zod object mode** — extras stripped, missing required fields fail. That's what catches deletions.
+- Use **`.passthrough()`** for nested includes you haven't yet locked — the `actor/output.ts` polymorphic shape is the canonical example.
+
+Full guide and recipes: [docs/TESTING.md](../../../docs/TESTING.md).
+
 ## Migration Guide
 
 To migrate an existing actor to the new schema system:

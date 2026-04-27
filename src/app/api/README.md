@@ -54,3 +54,9 @@ Avatar upload presigned URL. Supports both authenticated sessions and invitation
 
 ### `webhooks/`
 Stripe webhook receiver. Verifies signature, processes payment events (`payment_intent.succeeded`, etc.), and updates payment/policy state.
+
+## Tests
+
+REST handlers are exercised by the integration suite under `tests/integration/rest/` — one file per area (`cron.test.ts`, `webhooks-stripe.test.ts`, `payments-receipt.test.ts`, `policies-export.test.ts`, `auth.test.ts`, `user-avatar.test.ts`). Tests invoke the route handlers directly with constructed `NextRequest` objects via `tests/integration/restHelpers.ts` (`buildRequest`, `withSession`, `withHeaders`, `readJson`). External services (Stripe, S3, Google Maps, email, `next/headers`, `next-auth`) are mocked at preload, so no test ever hits the real network.
+
+Full guide: [docs/TESTING.md](../../../docs/TESTING.md).
