@@ -153,6 +153,15 @@ mock.module('@/lib/services/documentService', () => ({
       expiresIn: 60,
     })),
     confirmUpload: mock(async () => ({ success: true, document: null })),
+    // Used by investigation.router:
+    generateInvestigationUploadUrl: mock(async () => ({
+      uploadUrl: 'https://test-bucket.s3.amazonaws.com/fake?upload=fake',
+      documentId: 'invdoc_test_fake',
+      s3Key: 'investigations/test/fake.pdf',
+      expiresIn: 60,
+    })),
+    getInvestigationDocument: mock(async () => null),
+    deleteInvestigationDocument: mock(async () => true),
   },
   // Standalone exports used by user.router and onboard.router for avatar uploads.
   getCurrentStorageProvider: mock(() => ({
