@@ -22,6 +22,14 @@ import {
   PolicyCheckNumberOutput,
   PolicyCancelOutput,
   PolicyCreateOutput,
+  PolicyListOutput,
+  PolicyGetByIdOutput,
+  PolicyUpdateStatusOutput,
+  PolicyShareLinksOutput,
+  PolicySendInvitationsOutput,
+  PolicyReplaceTenantOutput,
+  PolicyChangeGuarantorTypeOutput,
+  PolicyRenewOutput,
 } from '@/lib/schemas/policy/output';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { actorTokenService } from '@/lib/services/actorTokenService';
@@ -194,6 +202,7 @@ export const policyRouter = createTRPCRouter({
    */
   list: brokerProcedure
     .input(PolicyListSchema)
+    .output(PolicyListOutput)
     .query(async ({ input, ctx }) => {
       const filters = {
         ...input,
@@ -212,6 +221,7 @@ export const policyRouter = createTRPCRouter({
       id: z.string(),
       includeProgress: z.boolean().optional().default(false)
     }))
+    .output(PolicyGetByIdOutput)
     .query(async ({ input, ctx }) => {
       const policy = await getPolicyById(input.id);
 
@@ -316,6 +326,7 @@ export const policyRouter = createTRPCRouter({
    */
   updateStatus: protectedProcedure
     .input(UpdateStatusSchema)
+    .output(PolicyUpdateStatusOutput)
     .mutation(async ({ input, ctx }) => {
       // Check permissions
       if (ctx.userRole === 'BROKER') {
@@ -347,6 +358,7 @@ export const policyRouter = createTRPCRouter({
    */
   getShareLinks: protectedProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(PolicyShareLinksOutput)
     .query(async ({ input, ctx }) => {
       // Check access for brokers
       const policy = await getPolicyById(input.policyId);
@@ -382,6 +394,7 @@ export const policyRouter = createTRPCRouter({
       actors: z.array(z.string()).optional(),
       resend: z.boolean().optional().default(false),
     }))
+    .output(PolicySendInvitationsOutput)
     .mutation(async ({ input, ctx }) => {
       try {
         const policy = await getPolicyById(input.policyId);
@@ -462,6 +475,7 @@ export const policyRouter = createTRPCRouter({
   // Replace tenant (and optionally guarantors) on a policy
   replaceTenant: protectedProcedure
     .input(ReplaceTenantSchema)
+    .output(PolicyReplaceTenantOutput)
     .mutation(async ({ input, ctx }) => {
       if (ctx.userRole === 'BROKER') {
         throw new TRPCError({
@@ -488,6 +502,7 @@ export const policyRouter = createTRPCRouter({
   // Change guarantor type on a policy
   changeGuarantorType: protectedProcedure
     .input(ChangeGuarantorTypeSchema)
+    .output(PolicyChangeGuarantorTypeOutput)
     .mutation(async ({ input, ctx }) => {
       if (ctx.userRole === 'BROKER') {
         throw new TRPCError({
@@ -514,6 +529,7 @@ export const policyRouter = createTRPCRouter({
   // Clone/renew an existing policy into a new one
   renew: protectedProcedure
     .input(PolicyRenewInputSchema)
+    .output(PolicyRenewOutput)
     .mutation(async ({ input, ctx }) => {
       if (ctx.userRole === 'BROKER') {
         throw new TRPCError({
