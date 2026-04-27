@@ -5,3 +5,4 @@ export * from './landlord.factory';
 export * from './tenant.factory';
 export * from './jointObligor.factory';
 export * from './aval.factory';
+export * from './payment.factory';

@@ -8,6 +8,20 @@ import {
   type PolicyPaymentSessionsResult,
   type PaymentSummary,
 } from '@/lib/services/paymentService';
+import {
+  PaymentListOutput,
+  PaymentSummaryOutput,
+  PaymentBreakdownOutput,
+  PolicyPaymentSessionsOutput,
+  PaymentRecordOutput,
+  PaymentGetByIdOutput,
+  PaymentSessionOutput,
+  PaymentStripeReceiptOutput,
+  PaymentPublicInfoOutput,
+  PaymentCheckoutSessionOutput,
+  PaymentSpeiSessionOutput,
+  PaymentSpeiDetailsOutput,
+} from '@/lib/schemas/payment/output';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 import { PAYMENT_LIMITS } from '@/lib/config/payments';
 import { calculateIVA } from '@/lib/utils/money';
@@ -28,6 +42,7 @@ export const paymentRouter = createTRPCRouter({
    */
   list: protectedProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(PaymentListOutput)
     .query(async ({ input, ctx }) => {
       const { policyId } = input;
       const { userId, userRole } = ctx;
@@ -65,6 +80,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getPaymentDetails: protectedProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(PaymentSummaryOutput)
     .query(async ({ input, ctx }): Promise<PaymentSummary> => {
       const { policyId } = input;
       const { userId, userRole } = ctx;
@@ -99,6 +115,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getBreakdown: protectedProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(PaymentBreakdownOutput)
     .query(async ({ input, ctx }): Promise<PaymentBreakdown> => {
       const { policyId } = input;
       const { userId, userRole } = ctx;
@@ -136,6 +153,7 @@ export const paymentRouter = createTRPCRouter({
     .input(z.object({
       policyId: z.string(),
     }))
+    .output(PolicyPaymentSessionsOutput)
     .mutation(async ({ input }): Promise<PolicyPaymentSessionsResult> => {
       const { policyId } = input;
 
@@ -174,6 +192,7 @@ export const paymentRouter = createTRPCRouter({
       reference: z.string().optional(),
       description: z.string().optional(),
     }))
+    .output(PaymentRecordOutput)
     .mutation(async ({ input, ctx }) => {
       try {
         if (input.paymentId) {
@@ -211,6 +230,7 @@ export const paymentRouter = createTRPCRouter({
       approved: z.boolean(),
       notes: z.string().optional(),
     }))
+    .output(PaymentRecordOutput)
     .mutation(async ({ input, ctx }) => {
       const { paymentId, approved, notes } = input;
       const { userId } = ctx;
@@ -238,6 +258,7 @@ export const paymentRouter = createTRPCRouter({
       receiptS3Key: z.string(),
       receiptFileName: z.string(),
     }))
+    .output(PaymentRecordOutput)
     .mutation(async ({ input }) => {
       const { paymentId, receiptS3Key, receiptFileName } = input;
 
@@ -249,6 +270,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getById: protectedProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentGetByIdOutput)
     .query(async ({ input, ctx }) => {
       const { paymentId } = input;
       const { userId, userRole } = ctx;
@@ -291,6 +313,7 @@ export const paymentRouter = createTRPCRouter({
       paymentId: z.string(),
       reason: z.string().optional(),
     }))
+    .output(PaymentRecordOutput)
     .mutation(async ({ input, ctx }) => {
       const { paymentId, reason } = input;
       const { userId } = ctx;
@@ -348,6 +371,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getStripeReceipt: protectedProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentStripeReceiptOutput)
     .mutation(async ({ input }) => {
       const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);
       return { receiptUrl };
@@ -359,6 +383,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getStripePublicReceipt: publicProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentStripeReceiptOutput)
     .mutation(async ({ input }) => {
       const receiptUrl = await paymentService.getStripeReceiptUrl(input.paymentId);
       return { receiptUrl };
@@ -374,6 +399,7 @@ export const paymentRouter = createTRPCRouter({
       paymentId: z.string(),
       newAmount: z.number().positive().max(PAYMENT_LIMITS.MAX_SUBTOTAL), // Max subtotal so total stays under 1M
     }))
+    .output(PaymentSessionOutput)
     .mutation(async ({ input, ctx }) => {
       const { paymentId, newAmount: subtotal } = input;
       const { userId } = ctx;
@@ -406,6 +432,7 @@ export const paymentRouter = createTRPCRouter({
       paidBy: z.nativeEnum(PayerType),
       description: z.string().optional(),
     }))
+    .output(PaymentSessionOutput)
     .mutation(async ({ input, ctx }) => {
       const { policyId, amount: subtotal, paidBy, description } = input;
       const { userId } = ctx;
@@ -474,6 +501,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getPublicPayment: publicProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentPublicInfoOutput)
     .query(async ({ input }) => {
       const { paymentId } = input;
 
@@ -496,6 +524,7 @@ export const paymentRouter = createTRPCRouter({
    */
   createCheckoutSession: publicProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentCheckoutSessionOutput)
     .mutation(async ({ input }) => {
       const { paymentId } = input;
 
@@ -519,6 +548,7 @@ export const paymentRouter = createTRPCRouter({
    */
   createSpeiSession: publicProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentSpeiSessionOutput)
     .mutation(async ({ input }) => {
       const result = await paymentService.createSpeiPaymentIntent(input.paymentId);
       return result;
@@ -529,6 +559,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getSpeiDetails: publicProcedure
     .input(z.object({ paymentId: z.string() }))
+    .output(PaymentSpeiDetailsOutput)
     .query(async ({ input }) => {
       const result = await paymentService.getSpeiDetails(input.paymentId);
       return result;
