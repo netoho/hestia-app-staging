@@ -42,6 +42,53 @@ CI runs the same flow on every PR — see `.github/workflows/test.yml`. The CI j
 
 `.env.test` lives at the repo root and points `DATABASE_URL` at `postgresql://test:test@localhost:5433/hestia_test`. Bun auto-loads it when `NODE_ENV=test`.
 
+## Running a subset
+
+Once the test DB is up (`bun run test:db:up` once per session):
+
+```bash
+# one file
+bun run test:integration:filter tests/integration/routers/policy.test.ts
+
+# one test by name (Bun's -t accepts a regex)
+bun run test:integration:filter -t "throws NOT_FOUND when policy does not exist"
+
+# combine
+bun run test:integration:filter tests/integration/routers/policy.test.ts -t "happy path"
+
+# watch a file
+bun run test:integration:filter tests/integration/routers/policy.test.ts --watch
+```
+
+`test:integration:filter` deliberately skips the `pretest:integration` hook — no docker spin-up, no `prisma db push`. Run `bun run test:db:up` once at the start of your session, then iterate freely.
+
+## Running without docker (local Postgres)
+
+To point the suite at a Postgres you're already running on `localhost:5432`:
+
+1. Create `.env.test.local` (gitignored via `.env*.local`) with the override:
+   ```
+   DATABASE_URL="postgresql://test:test@localhost:5432/hestia_test"
+   ```
+   The role you specify must be able to `CREATE DATABASE hestia_test`. The `_test` suffix guard in `scripts/test-db.ts` and `tests/integration/preload.ts` will refuse anything else.
+
+2. Provision the schema once per session:
+   ```bash
+   bun run test:db:provision
+   ```
+
+3. Run the full suite without docker:
+   ```bash
+   bun run test:integration:no-docker
+   ```
+   Or filter as above — `test:integration:filter` honors `.env.test.local` the same way.
+
+CI is unaffected — `.github/workflows/test.yml` invokes `scripts/test-db.ts setup` and `bun test --preload ...` directly, never goes through the `test:integration` script, so it ignores all `pretest` hooks and never reads `.env.test.local`.
+
+### Why `.env.test.local` overrides `.env.test`
+
+All test scripts now load `dotenv -e .env.test -e .env.test.local -o`. The `-o` (override) flag is required: dotenv defaults to `override: false`, and without it the *first* file wins for shared keys — meaning `.env.test.local` could not override `.env.test`. With `-o`, each file overrides existing `process.env` values, so the second file wins. Missing `.env.test.local` is a silent no-op (dotenv returns `{ error: ENOENT }` without throwing).
+
 ## Directory tour
 
 ```
