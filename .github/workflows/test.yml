@@ -1,0 +1,57 @@
+# Integration & unit tests for the API surface (tRPC + REST procedures).
+# Runs on every PR. Uses a Postgres service container (no docker-compose in CI).
+
+name: Tests
+
+on:
+  push:
+    branches: [master, main, 'release/**']
+  pull_request:
+    branches: [master, main, 'release/**']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5433/hestia_test
+      NEXTAUTH_SECRET: test-nextauth-secret
+      NEXTAUTH_URL: http://localhost:3000
+      JWT_SECRET: test-jwt-secret-key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Provision test database
+        # Creates `hestia_test` if missing and runs `prisma db push`.
+        run: NODE_ENV=test bun run scripts/test-db.ts setup
+
+      - name: Run unit tests
+        run: bun run test:unit
+
+      - name: Run integration tests
+        # Skip the pretest:db:setup hook since CI already provisioned the DB.
+        run: bun test --preload ./tests/integration/preload.ts tests/integration

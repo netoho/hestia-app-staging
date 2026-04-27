@@ -1,0 +1,156 @@
+/**
+ * Bun preload for integration tests.
+ *
+ * Loaded via: `bun test --preload ./tests/integration/preload.ts ...`
+ *
+ * Responsibilities:
+ *   1. Hard-assert DATABASE_URL ends in `_test` — refuse to run otherwise.
+ *   2. Stub external-service modules (stripe, nodemailer, S3 presigner, google maps,
+ *      emailService, notificationService) with no-op implementations. Per-test
+ *      argument assertions still work via `spyOn`.
+ *   3. beforeEach: truncate + reseed the test DB.
+ *   4. afterAll: disconnect prisma.
+ */
+
+import { mock, beforeEach, afterAll } from 'bun:test';
+
+// ---------------------------------------------------------------------------
+// 1. Safety: never run integration tests against a non-test database.
+// ---------------------------------------------------------------------------
+const dbUrl = process.env.DATABASE_URL ?? '';
+if (!dbUrl.endsWith('_test')) {
+  throw new Error(
+    `[preload] Refusing to run integration tests: DATABASE_URL must end in "_test" (got: ${dbUrl || '<unset>'})`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 2. External-service mocks (hoisted before any test imports source modules).
+// ---------------------------------------------------------------------------
+
+// `server-only` throws at import time when Next's webpack hasn't replaced it.
+// Stub it so server-side modules can be imported in the test runtime.
+mock.module('server-only', () => ({}));
+
+// --- Stripe SDK ------------------------------------------------------------
+// Constructed via `new Stripe(secret)` in paymentService and webhook route.
+class FakeStripe {
+  checkout = {
+    sessions: {
+      create: mock(async () => ({ id: 'cs_test_fake', url: 'https://stripe.test/cs_test_fake' })),
+      retrieve: mock(async () => ({ id: 'cs_test_fake', payment_status: 'paid' })),
+      expire: mock(async () => ({ id: 'cs_test_fake', status: 'expired' })),
+    },
+  };
+  webhooks = {
+    constructEvent: mock((body: string | Buffer) =>
+      typeof body === 'string' ? JSON.parse(body) : JSON.parse(body.toString('utf8')),
+    ),
+  };
+  paymentIntents = {
+    retrieve: mock(async () => ({ id: 'pi_test_fake', status: 'succeeded' })),
+  };
+  refunds = {
+    create: mock(async () => ({ id: 're_test_fake', status: 'succeeded' })),
+  };
+}
+mock.module('stripe', () => ({ default: FakeStripe }));
+
+// --- Nodemailer ------------------------------------------------------------
+mock.module('nodemailer', () => ({
+  default: {
+    createTransport: () => ({
+      sendMail: mock(async () => ({ accepted: ['test@hestia.com'], messageId: 'test-message-id' })),
+      verify: mock(async () => true),
+    }),
+  },
+  createTransport: () => ({
+    sendMail: mock(async () => ({ accepted: ['test@hestia.com'], messageId: 'test-message-id' })),
+    verify: mock(async () => true),
+  }),
+}));
+
+// --- AWS S3 presigner ------------------------------------------------------
+mock.module('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/test-key?X-Amz-Signature=fake'),
+}));
+
+// --- Google Maps service (HTTP calls go to Google in real impl) -----------
+mock.module('@/lib/services/googleMapsService', () => ({
+  googleMapsService: {
+    searchPlaces: mock(async () => [
+      { placeId: 'place-fake', description: 'Test address', mainText: 'Test', secondaryText: 'address', types: [] },
+    ]),
+    getPlaceDetails: mock(async () => ({
+      placeId: 'place-fake',
+      formattedAddress: 'Test address, Mexico',
+      latitude: 19.4326,
+      longitude: -99.1332,
+      addressComponents: {},
+    })),
+    parseGooglePlaceToAddress: mock(async () => ({
+      street: 'Test Street',
+      exteriorNumber: '1',
+      neighborhood: 'Test',
+      postalCode: '00000',
+      municipality: 'Test',
+      city: 'Test',
+      state: 'Test',
+      country: 'México',
+      placeId: 'place-fake',
+      formattedAddress: 'Test address, Mexico',
+    })),
+  },
+}));
+
+// --- Email service (boundary-level mock — every send is a no-op true) ----
+// Bun resolves named imports statically: every function consumed in source
+// must be explicitly listed here.
+const noopEmail = () => mock(async () => true);
+mock.module('@/lib/services/emailService', () => ({
+  sendPolicySubmissionConfirmation: noopEmail(),
+  sendActorInvitation: noopEmail(),
+  sendJoinUsNotification: noopEmail(),
+  sendActorRejectionEmail: noopEmail(),
+  sendUserInvitation: noopEmail(),
+  sendPolicyStatusUpdate: noopEmail(),
+  sendActorIncompleteReminder: noopEmail(),
+  sendPolicyCreatorSummary: noopEmail(),
+  sendPasswordResetEmail: noopEmail(),
+  sendPaymentCompletedEmail: noopEmail(),
+  sendAllPaymentsCompletedEmail: noopEmail(),
+  sendPolicyCancellationEmail: noopEmail(),
+  sendSimpleNotificationEmail: noopEmail(),
+  sendInvestigationSubmittedEmail: noopEmail(),
+  sendInvestigationApprovalRequestEmail: noopEmail(),
+  sendInvestigationResultEmail: noopEmail(),
+  sendReceiptReminder: noopEmail(),
+  sendReceiptMagicLink: noopEmail(),
+  sendPolicyExpirationReminder: noopEmail(),
+  sendPolicyQuarterlyFollowup: noopEmail(),
+  sendPasswordResetConfirmation: noopEmail(),
+  sendTenantReplacementEmail: noopEmail(),
+  sendPolicyPendingApprovalEmail: noopEmail(),
+}));
+
+// --- Notification service (boundary-level mock — every send is a no-op) ---
+mock.module('@/lib/services/notificationService', () => ({
+  sendIncompleteActorInfoNotification: mock(async () => undefined),
+  sendTenantReplacementNotification: mock(async () => undefined),
+  sendPolicyCancellationNotification: mock(async () => undefined),
+  sendPolicyPendingApprovalNotification: mock(async () => undefined),
+}));
+
+// ---------------------------------------------------------------------------
+// 3. Per-test DB lifecycle.
+// ---------------------------------------------------------------------------
+import { prisma, resetDatabase, seedTestData } from '../utils/database';
+
+beforeEach(async () => {
+  await resetDatabase();
+  await seedTestData();
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
