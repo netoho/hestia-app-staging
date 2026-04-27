@@ -34,11 +34,20 @@ mock.module('server-only', () => ({}));
 
 // --- Stripe SDK ------------------------------------------------------------
 // Constructed via `new Stripe(secret)` in paymentService and webhook route.
+// Each method returns a canned object that satisfies the consumer's reads.
 class FakeStripe {
   checkout = {
     sessions: {
-      create: mock(async () => ({ id: 'cs_test_fake', url: 'https://stripe.test/cs_test_fake' })),
-      retrieve: mock(async () => ({ id: 'cs_test_fake', payment_status: 'paid' })),
+      create: mock(async () => ({
+        id: 'cs_test_fake',
+        url: 'https://stripe.test/cs_test_fake',
+        payment_intent: 'pi_test_fake',
+      })),
+      retrieve: mock(async () => ({
+        id: 'cs_test_fake',
+        payment_status: 'paid',
+        payment_intent: 'pi_test_fake',
+      })),
       expire: mock(async () => ({ id: 'cs_test_fake', status: 'expired' })),
     },
   };
@@ -48,7 +57,41 @@ class FakeStripe {
     ),
   };
   paymentIntents = {
-    retrieve: mock(async () => ({ id: 'pi_test_fake', status: 'succeeded' })),
+    create: mock(async (params: { amount?: number; metadata?: Record<string, string> }) => ({
+      id: 'pi_test_fake',
+      status: 'requires_action',
+      amount: params?.amount ?? 0,
+      next_action: {
+        display_bank_transfer_instructions: {
+          financial_addresses: [
+            {
+              spei: {
+                clabe: '646180111811111111',
+                bank_name: 'Citibanamex',
+              },
+            },
+          ],
+          reference: 'REF-TEST-12345',
+          hosted_instructions_url: 'https://stripe.test/spei/instructions',
+        },
+      },
+      metadata: params?.metadata ?? {},
+    })),
+    retrieve: mock(async () => ({
+      id: 'pi_test_fake',
+      status: 'succeeded',
+      latest_charge: {
+        id: 'ch_test_fake',
+        receipt_url: 'https://stripe.test/receipts/ch_test_fake',
+      },
+    })),
+  };
+  customers = {
+    create: mock(async (params: { email?: string; name?: string }) => ({
+      id: 'cus_test_fake',
+      email: params?.email,
+      name: params?.name,
+    })),
   };
   refunds = {
     create: mock(async () => ({ id: 're_test_fake', status: 'succeeded' })),
