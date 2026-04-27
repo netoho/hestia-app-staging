@@ -256,6 +256,8 @@ describe('pricing.calculateWithOverride', () => {
 
     expect(result.isManualOverride).toBe(true);
     expect(result.packagePrice).toBe(5000);
+    // Uniform shape with the calculate fallback branch — ivaRate is required.
+    expect(result.ivaRate).toBeGreaterThan(0);
     expect(result.tenantAmount).toBeCloseTo(result.totalWithIva, 1);
   });
 

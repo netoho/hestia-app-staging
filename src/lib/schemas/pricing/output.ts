@@ -35,10 +35,9 @@ export const PricingCalculateOutput = PricingCalculationShape;
 export type PricingCalculateOutput = z.infer<typeof PricingCalculateOutput>;
 
 // ===========================================================================
-// pricing.calculateWithOverride — manual branch omits ivaRate / calculationSummary
+// pricing.calculateWithOverride — adds isManualOverride on the manual branch
 // ===========================================================================
 export const PricingCalculateWithOverrideOutput = PricingCalculationShape.extend({
-  ivaRate: z.number().optional(),
   isManualOverride: z.boolean().optional(),
 });
 export type PricingCalculateWithOverrideOutput = z.infer<typeof PricingCalculateWithOverrideOutput>;

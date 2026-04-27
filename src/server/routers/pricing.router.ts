@@ -90,6 +90,7 @@ export const pricingRouter = createTRPCRouter({
           investigationFee: 0,
           subtotal: input.manualPrice,
           iva,
+          ivaRate: TAX_CONFIG.IVA_RATE,
           totalWithIva,
           total: totalWithIva,
           tenantPercentage: input.tenantPercentage,
