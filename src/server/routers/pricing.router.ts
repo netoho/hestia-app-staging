@@ -10,6 +10,14 @@ import { TRPCError } from '@trpc/server';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { GuarantorType } from "@/prisma/generated/prisma-client/enums";
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
+import {
+  PricingCalculateOutput,
+  PricingCalculateWithOverrideOutput,
+  PricingGetHistoryOutput,
+  PricingValidateOutput,
+  PricingGetPolicyPricingOutput,
+  PricingUpdatePolicyPricingOutput,
+} from '@/lib/schemas/pricing/output';
 
 // Schema for price calculation
 const CalculatePriceSchema = z.object({
@@ -26,6 +34,7 @@ export const pricingRouter = createTRPCRouter({
    */
   calculate: protectedProcedure
     .input(CalculatePriceSchema)
+    .output(PricingCalculateOutput)
     .mutation(async ({ input }) => {
       // Validate percentages sum to 100
       const percentageSum = input.tenantPercentage + input.landlordPercentage;
@@ -67,6 +76,7 @@ export const pricingRouter = createTRPCRouter({
     .input(CalculatePriceSchema.extend({
       manualPrice: z.number().positive().optional(),
     }))
+    .output(PricingCalculateWithOverrideOutput)
     .mutation(async ({ input }) => {
       // If manual price is provided, use it
       if (input.manualPrice) {
@@ -80,6 +90,7 @@ export const pricingRouter = createTRPCRouter({
           investigationFee: 0,
           subtotal: input.manualPrice,
           iva,
+          ivaRate: TAX_CONFIG.IVA_RATE,
           totalWithIva,
           total: totalWithIva,
           tenantPercentage: input.tenantPercentage,
@@ -99,6 +110,7 @@ export const pricingRouter = createTRPCRouter({
    */
   getPricingHistory: protectedProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(PricingGetHistoryOutput)
     .query(async ({ input }) => {
       const policy = await prisma.policy.findUnique({
         where: { id: input.policyId },
@@ -138,6 +150,7 @@ export const pricingRouter = createTRPCRouter({
       policyId: z.string(),
       expectedPrice: z.number(),
     }))
+    .output(PricingValidateOutput)
     .query(async ({ input }) => {
       const policy = await prisma.policy.findUnique({
         where: { id: input.policyId },
@@ -175,6 +188,7 @@ export const pricingRouter = createTRPCRouter({
    */
   getPolicyPricing: adminProcedure
     .input(z.object({ policyId: z.string() }))
+    .output(PricingGetPolicyPricingOutput)
     .query(async ({ input }) => {
       const policy = await prisma.policy.findUnique({
         where: { id: input.policyId },
@@ -229,6 +243,7 @@ export const pricingRouter = createTRPCRouter({
       landlordPercentage: z.number().min(0).max(100),
       guarantorType: z.nativeEnum(GuarantorType),
     }))
+    .output(PricingUpdatePolicyPricingOutput)
     .mutation(async ({ input, ctx }) => {
       const { policyId, ...data } = input;
 
