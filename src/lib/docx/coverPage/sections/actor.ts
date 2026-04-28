@@ -11,8 +11,9 @@
 import { Table } from 'docx';
 import type { CoverActorData } from '../../types';
 import { t } from '@/lib/i18n';
-import { sectionTable, companySectionTable } from '../sectionTable';
+import { sectionTable, companySectionTable, type SectionTableOpts } from '../sectionTable';
 import { renderActorRow, type ActorRowSpec } from '../rowSpec';
+import { SZ_VLABEL_SMALL } from '../styles';
 
 export function individualActorRowSpecs(a: CoverActorData): ActorRowSpec[] {
   const cp = t.pages.documents.coverPage;
@@ -53,8 +54,19 @@ export function legalRepRowSpecs(a: CoverActorData): ActorRowSpec[] {
   ];
 }
 
+/**
+ * Per-actor-type style overrides. Joint obligors carry the longest vlabel
+ * ("Obligado Solidario y Fiador.") so they shrink to 8pt to keep the rotated
+ * column readable. Other actor types stay at the global 9pt default.
+ */
+function actorOpts(actor: CoverActorData): SectionTableOpts {
+  if (actor.actorType === 'jointObligor') return { vlabelSize: SZ_VLABEL_SMALL };
+  return {};
+}
+
 export function actorTable(actor: CoverActorData): Table {
   const cp = t.pages.documents.coverPage;
+  const opts = actorOpts(actor);
   if (actor.isCompany) {
     return companySectionTable(
       actor.label,
@@ -62,7 +74,8 @@ export function actorTable(actor: CoverActorData): Table {
       cp.legalRep.sectionLabel,
       cp.legalRep.sectionLabel,
       legalRepRowSpecs(actor).map(renderActorRow),
+      opts,
     );
   }
-  return sectionTable(actor.label, individualActorRowSpecs(actor).map(renderActorRow));
+  return sectionTable(actor.label, individualActorRowSpecs(actor).map(renderActorRow), opts);
 }
