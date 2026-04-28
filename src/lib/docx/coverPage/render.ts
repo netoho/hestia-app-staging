@@ -25,7 +25,7 @@ import {
   SPACING,
   PAGE_MARGINS,
 } from './styles';
-import { txt, gap } from './helpers';
+import { txt, gap, blankLine } from './helpers';
 import { actorTable } from './sections/actor';
 import { guarantorPropertyTable } from './sections/guarantorProperty';
 import { inmuebleTable, condicionesTable, metodoPagoTable } from './sections/contractTerms';
@@ -58,11 +58,13 @@ export function composeCoverPage(data: CoverPageData): CoverPageComposed {
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.titleAfter },
   }));
+  body.push(blankLine());
   body.push(new Paragraph({
     children: [txt(cp.titles.caratula, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,
     spacing: { after: SPACING.titleAfter },
   }));
+  body.push(blankLine());
   body.push(new Paragraph({
     children: [txt(cp.titles.partes, true, SZ_SUBTITLE)],
     alignment: AlignmentType.CENTER,

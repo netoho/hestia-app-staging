@@ -16,6 +16,10 @@ export const SZ_TITLE = 18;
 export const SZ_SUBTITLE = 18;
 export const SZ_SMALL = 18;
 
+// 8pt for sections that opt into a smaller vlabel — long rotated labels (e.g.
+// "Obligado Solidario y Fiador.") stay readable in the narrow 5%-width column.
+export const SZ_VLABEL_SMALL = 16;
+
 export const LABEL_BG = 'D6E4F0'; // light blue shading on labels and sub-headers
 
 // Row height — minimum 0.81 cm = 459 twips (1 cm ≈ 567 twips).

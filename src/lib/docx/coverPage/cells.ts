@@ -17,13 +17,13 @@ import {
 import { CELL_MARGINS, LABEL_BG, SZ, W_VL } from './styles';
 import { para, txt } from './helpers';
 
-export function vlabelCell(label: string): TableCell {
+export function vlabelCell(label: string, opts?: { size?: number }): TableCell {
   return new TableCell({
     children: [new Paragraph({
-      children: [txt(label, true, SZ)],
+      children: [txt(label, true, opts?.size ?? SZ)],
       alignment: AlignmentType.CENTER,
     })],
-    textDirection: TextDirection.BOTTOM_TO_TOP_LEFT_TO_RIGHT,
+    textDirection: TextDirection.TOP_TO_BOTTOM_RIGHT_TO_LEFT,
     shading: { fill: LABEL_BG, type: ShadingType.CLEAR },
     verticalAlign: VerticalAlign.CENTER,
     width: { size: W_VL, type: WidthType.PERCENTAGE },

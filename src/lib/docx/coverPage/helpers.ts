@@ -29,3 +29,10 @@ export function gap(after = SPACING.gapAfter): Paragraph {
     spacing: { before: 0, after },
   });
 }
+
+/** Empty paragraph used as a literal blank line between body titles. */
+export function blankLine(): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text: '', font: FONT, size: SZ_SMALL })],
+  });
+}

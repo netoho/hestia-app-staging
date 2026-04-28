@@ -11,6 +11,7 @@ import type {
   CoverAval,
 } from '@/lib/services/policyService';
 import type {
+  ActorType,
   CoverPageData,
   CoverActorData,
   CoverGuarantorProperty,
@@ -84,10 +85,11 @@ function addressOf(details: { formattedAddress?: string | null } | Parameters<ty
   return formatted === '-' ? BLANK : formatted;
 }
 
-function transformActor(actor: AnyCoverActor, label: string): CoverActorData {
+function transformActor(actor: AnyCoverActor, label: string, actorType: ActorType): CoverActorData {
   const isCompany = resolveIsCompany(actor);
   return {
     label,
+    actorType,
     isCompany,
     name: resolveActorName(actor, isCompany),
     nationality: resolveNationality(actor, isCompany),
@@ -139,9 +141,14 @@ function shouldEmitSpouse(actor: PropertyGuarantorActor): boolean {
   );
 }
 
-function spouseAsCoverActor(primary: PropertyGuarantorActor, label: string): CoverActorData {
+function spouseAsCoverActor(
+  primary: PropertyGuarantorActor,
+  label: string,
+  actorType: ActorType,
+): CoverActorData {
   return {
     label,
+    actorType,
     isCompany: false,
     name: primary.spouseName || BLANK,
     nationality: t.pages.documents.coverPage.nationality.individualDefault,
@@ -179,6 +186,7 @@ function spouseAsCoverActor(primary: PropertyGuarantorActor, label: string): Cov
 function expandActorsWithSpouses<T extends PropertyGuarantorActor>(
   actors: T[],
   baseLabel: string,
+  actorType: ActorType,
 ): CoverActorData[] {
   // First, materialise the emission order so the total count drives numbering
   // consistently (`Obligado Solidario y Fiador 1.` / `... 2.`).
@@ -195,8 +203,8 @@ function expandActorsWithSpouses<T extends PropertyGuarantorActor>(
   return entries.map((entry, i) => {
     const label = formatActorLabel(baseLabel, i, total);
     return entry.spouseOf
-      ? spouseAsCoverActor(entry.spouseOf, label)
-      : transformActor(entry.primary, label);
+      ? spouseAsCoverActor(entry.spouseOf, label, actorType)
+      : transformActor(entry.primary, label, actorType);
   });
 }
 
@@ -291,13 +299,13 @@ export function buildCoverPageData(policy: PolicyForCover): CoverPageData {
   const actorLabels = t.pages.documents.coverPage.actorLabels;
 
   const landlords = policy.landlords.map((l, i) =>
-    transformActor(l, formatActorLabel(actorLabels.landlord, i, policy.landlords.length)),
+    transformActor(l, formatActorLabel(actorLabels.landlord, i, policy.landlords.length), 'landlord'),
   );
   const tenants = policy.tenant
-    ? [transformActor(policy.tenant, formatActorLabel(actorLabels.tenant, 0, 1))]
+    ? [transformActor(policy.tenant, formatActorLabel(actorLabels.tenant, 0, 1), 'tenant')]
     : [];
-  const jointObligors = expandActorsWithSpouses(policy.jointObligors, actorLabels.jointObligor);
-  const avals = expandActorsWithSpouses(policy.avals, actorLabels.aval);
+  const jointObligors = expandActorsWithSpouses(policy.jointObligors, actorLabels.jointObligor, 'jointObligor');
+  const avals = expandActorsWithSpouses(policy.avals, actorLabels.aval, 'aval');
 
   const guarantorProperties: CoverGuarantorProperty[] = [
     ...policy.jointObligors.map(extractGuarantorProperty).filter(Boolean) as CoverGuarantorProperty[],
