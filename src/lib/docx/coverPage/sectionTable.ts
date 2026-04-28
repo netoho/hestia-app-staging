@@ -47,10 +47,23 @@ function innerCellOf(inner: Table): TableCell {
   });
 }
 
-export function sectionTable(vlabel: string, innerRows: TableRow[]): Table {
+/**
+ * Per-section style overrides. Add knobs here as future sections need them
+ * (cell margins, label color, etc) — sections are intentionally allowed to
+ * differ heavily, so this opts bag is the single extension point.
+ */
+export interface SectionTableOpts {
+  vlabelSize?: number;
+}
+
+export function sectionTable(
+  vlabel: string,
+  innerRows: TableRow[],
+  opts: SectionTableOpts = {},
+): Table {
   return new Table({
     rows: [new TableRow({
-      children: [vlabelCell(vlabel), innerCellOf(buildInner(innerRows))],
+      children: [vlabelCell(vlabel, { size: opts.vlabelSize }), innerCellOf(buildInner(innerRows))],
     })],
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: OUTER_BORDERS,
@@ -64,9 +77,10 @@ export function companySectionTable(
   bridgeLabel: string,
   bottomLabel: string,
   bottomRows: TableRow[],
+  opts: SectionTableOpts = {},
 ): Table {
   const topRow = new TableRow({
-    children: [vlabelCell(topLabel), innerCellOf(buildInner(topRows))],
+    children: [vlabelCell(topLabel, { size: opts.vlabelSize }), innerCellOf(buildInner(topRows))],
   });
 
   const bridgeRow = new TableRow({
@@ -83,7 +97,7 @@ export function companySectionTable(
   });
 
   const bottomRow = new TableRow({
-    children: [vlabelCell(bottomLabel), innerCellOf(buildInner(bottomRows))],
+    children: [vlabelCell(bottomLabel, { size: opts.vlabelSize }), innerCellOf(buildInner(bottomRows))],
   });
 
   return new Table({

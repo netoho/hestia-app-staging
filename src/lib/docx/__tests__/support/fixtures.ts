@@ -22,7 +22,9 @@ import type {
   CoverContractTerms,
 } from '../../types';
 
-function actor(overrides: Partial<CoverActorData> & Pick<CoverActorData, 'label'>): CoverActorData {
+function actor(
+  overrides: Partial<CoverActorData> & Pick<CoverActorData, 'label' | 'actorType'>,
+): CoverActorData {
   return {
     isCompany: false,
     name: '',
@@ -106,6 +108,7 @@ export const INDIVIDUAL_INDIVIDUAL: CoverPageData = {
   landlords: [
     actor({
       label: 'Arrendador.',
+      actorType: 'landlord',
       name: 'María López Hernández',
       address: 'Av. Reforma #123, Col. Centro, CDMX',
       rfc: 'LOHM800101ABC',
@@ -117,6 +120,7 @@ export const INDIVIDUAL_INDIVIDUAL: CoverPageData = {
   tenants: [
     actor({
       label: 'Arrendatario.',
+      actorType: 'tenant',
       name: 'Juan Pérez García',
       address: 'Calle Falsa #456, CDMX',
       rfc: 'PEGJ850101XYZ',
@@ -137,6 +141,7 @@ export const COMPANY_COMPANY: CoverPageData = {
   landlords: [
     actor({
       label: 'Arrendador.',
+      actorType: 'landlord',
       isCompany: true,
       name: 'Inmobiliaria Ejemplo, S.A. de C.V.',
       nationality: 'Sociedad de nacionalidad mexicana.',
@@ -152,6 +157,7 @@ export const COMPANY_COMPANY: CoverPageData = {
   tenants: [
     actor({
       label: 'Arrendatario.',
+      actorType: 'tenant',
       isCompany: true,
       name: 'Tecnología del Futuro, S.A. de C.V.',
       nationality: 'Sociedad de nacionalidad mexicana.',
@@ -167,6 +173,7 @@ export const COMPANY_COMPANY: CoverPageData = {
   jointObligors: [
     actor({
       label: 'Obligado Solidario y Fiador.',
+      actorType: 'jointObligor',
       name: 'Roberto Sánchez Luna',
       address: 'Av. Universidad #2000, CDMX',
       rfc: 'SALR700101GHI',
@@ -197,6 +204,7 @@ export const JOINT_COUPLE: CoverPageData = {
   landlords: [
     actor({
       label: 'Arrendador.',
+      actorType: 'landlord',
       name: 'Patricia Gómez Ríos',
       address: 'Calle Morelos #77, Cuernavaca, MOR',
       rfc: 'GORP820101JJJ',
@@ -207,6 +215,7 @@ export const JOINT_COUPLE: CoverPageData = {
   tenants: [
     actor({
       label: 'Arrendatario.',
+      actorType: 'tenant',
       name: 'Luis Fernández Aguilar',
       address: 'Calle Sur #12, CDMX',
       rfc: 'FEAL750101KKK',
@@ -217,6 +226,7 @@ export const JOINT_COUPLE: CoverPageData = {
   jointObligors: [
     actor({
       label: 'Obligado Solidario y Fiador 1.',
+      actorType: 'jointObligor',
       name: 'Luis Rubio Barnetche',
       address: 'Calle Paseo de las Bugambilias #2000 Int. B, Depto. 601, CDMX',
       rfc: 'RUBL630520HY3',
@@ -226,6 +236,7 @@ export const JOINT_COUPLE: CoverPageData = {
     }),
     actor({
       label: 'Obligado Solidario y Fiador 2.',
+      actorType: 'jointObligor',
       name: 'María Gabriela Doring Del Río',
       address: 'Calle Paseo de las Bugambilias #2000 Int. B, Depto. 601, CDMX',
       rfc: 'DORG661021953',
