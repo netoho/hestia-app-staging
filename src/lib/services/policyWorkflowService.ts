@@ -2,7 +2,7 @@ import { BaseService } from './base/BaseService';
 import { PolicyStatus, PaymentStatus } from "@/prisma/generated/prisma-client/enums";
 import { logPolicyActivity } from './policyService';
 import { sendPolicyStatusUpdate } from './emailService';
-import { sendPolicyPendingApprovalNotification, sendPolicyExpiryNotification } from './notificationService';
+import { sendPolicyPendingApprovalNotification } from './notificationService';
 import { actorTokenService } from './actorTokenService';
 import { ServiceError, ErrorCode } from './types/errors';
 import { addMonths } from 'date-fns';
@@ -329,9 +329,6 @@ class PolicyWorkflowService extends BaseService {
           },
           performedByType: 'system',
         });
-
-        await sendPolicyExpiryNotification(policy.id)
-          .catch((err) => console.error('Failed to send expiry notification:', err));
 
         expired++;
       } catch (error) {

@@ -73,6 +73,24 @@ export class LocalStorageProvider implements StorageProvider {
     return existed;
   }
 
+  async copyObject(sourceKey: string, destinationKey: string, _isPrivate: boolean): Promise<string> {
+    const file = this.files.get(sourceKey);
+    if (!file) {
+      throw new Error(`File not found: ${sourceKey}`);
+    }
+    this.files.set(destinationKey, {
+      ...file,
+      path: destinationKey,
+      buffer: Buffer.from(file.buffer),
+      metadata: {
+        ...file.metadata,
+        created: new Date(),
+        updated: new Date(),
+      },
+    });
+    return destinationKey;
+  }
+
   async exists(path: string): Promise<boolean> {
     return this.files.has(path);
   }

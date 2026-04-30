@@ -10,6 +10,7 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
+  CopyObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
@@ -126,6 +127,22 @@ export class S3StorageProvider implements StorageProvider {
       console.error('Error deleting file from S3:', error);
       return false;
     }
+  }
+
+  async copyObject(sourceKey: string, destinationKey: string, isPrivate: boolean): Promise<string> {
+    const bucket = isPrivate ? this.bucket : this.publicBucket;
+    const acl = isPrivate ? 'private' : 'public-read';
+    const copySource = `${bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`;
+
+    await this.client.send(new CopyObjectCommand({
+      CopySource: copySource,
+      Bucket: bucket,
+      Key: destinationKey,
+      ACL: acl,
+      MetadataDirective: 'COPY',
+    }));
+
+    return destinationKey;
   }
 
   async exists(path: string): Promise<boolean> {

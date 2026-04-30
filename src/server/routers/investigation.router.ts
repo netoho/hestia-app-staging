@@ -21,6 +21,22 @@ import {
   sendInvestigationResultEmail,
 } from '@/lib/services/emailService';
 import { formatFullName } from '@/lib/utils/names';
+import {
+  InvestigationCreateOutput,
+  InvestigationGetByIdOutput,
+  InvestigationGetApprovalUrlsOutput,
+  InvestigationGetByActorOutput,
+  InvestigationGetByPolicyOutput,
+  InvestigationUpdateOutput,
+  InvestigationArchiveOutput,
+  InvestigationGetDocumentUploadUrlOutput,
+  InvestigationRemoveDocumentOutput,
+  InvestigationGetDocumentDownloadUrlOutput,
+  InvestigationSubmitOutput,
+  InvestigationGetByTokenOutput,
+  InvestigationApproveOutput,
+  InvestigationRejectOutput,
+} from '@/lib/schemas/investigation/output';
 
 // Generate token for approval links
 const generateToken = () => randomBytes(32).toString('hex');
@@ -72,6 +88,7 @@ export const investigationRouter = createTRPCRouter({
       actorType: InvestigatedActorTypeSchema,
       actorId: z.string().cuid('ID de actor inválido'),
     }))
+    .output(InvestigationCreateOutput)
     .mutation(async ({ input, ctx }) => {
       // Verify the actor exists and belongs to the policy
       const policy = await ctx.prisma.policy.findUnique({
@@ -142,6 +159,7 @@ export const investigationRouter = createTRPCRouter({
    */
   getById: adminProcedure
     .input(z.object({ id: z.string().cuid('ID de investigación inválido') }))
+    .output(InvestigationGetByIdOutput)
     .query(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.id },
@@ -184,6 +202,7 @@ export const investigationRouter = createTRPCRouter({
    */
   getApprovalUrls: adminProcedure
     .input(z.object({ id: z.string().cuid('ID de investigación inválido') }))
+    .output(InvestigationGetApprovalUrlsOutput)
     .query(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.id },
@@ -253,6 +272,7 @@ export const investigationRouter = createTRPCRouter({
       actorType: InvestigatedActorTypeSchema,
       actorId: z.string().cuid('ID de actor inválido'),
     }))
+    .output(InvestigationGetByActorOutput)
     .query(async ({ input, ctx }) => {
       const investigations = await ctx.prisma.actorInvestigation.findMany({
         where: {
@@ -278,6 +298,7 @@ export const investigationRouter = createTRPCRouter({
       status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED']).optional(),
       includeArchived: z.boolean().optional().default(false),
     }))
+    .output(InvestigationGetByPolicyOutput)
     .query(async ({ input, ctx }) => {
       // Verify access and get policy with actors for name resolution
       const policy = await ctx.prisma.policy.findUnique({
@@ -348,6 +369,7 @@ export const investigationRouter = createTRPCRouter({
       id: z.string().cuid('ID de investigación inválido'),
       findings: z.string().max(INVESTIGATION_FORM_LIMITS.findings.max).optional(),
     }))
+    .output(InvestigationUpdateOutput)
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.id },
@@ -387,6 +409,7 @@ export const investigationRouter = createTRPCRouter({
       }),
       comment: z.string().max(INVESTIGATION_FORM_LIMITS.archiveComment.max).optional(),
     }))
+    .output(InvestigationArchiveOutput)
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.id },
@@ -450,6 +473,7 @@ export const investigationRouter = createTRPCRouter({
       contentType: z.string().min(1, 'Tipo de contenido requerido'),
       fileSize: z.number().positive('Tamaño de archivo inválido'),
     }))
+    .output(InvestigationGetDocumentUploadUrlOutput)
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.investigationId },
@@ -498,6 +522,7 @@ export const investigationRouter = createTRPCRouter({
       investigationId: z.string().cuid('ID de investigación inválido'),
       documentId: z.string().cuid('ID de documento inválido'),
     }))
+    .output(InvestigationRemoveDocumentOutput)
     .mutation(async ({ input }) => {
       const document = await documentService.getInvestigationDocument(input.documentId);
 
@@ -519,6 +544,7 @@ export const investigationRouter = createTRPCRouter({
    */
   getDocumentDownloadUrl: adminProcedure
     .input(z.object({ documentId: z.string().cuid('ID de documento inválido') }))
+    .output(InvestigationGetDocumentDownloadUrlOutput)
     .query(async ({ input }) => {
       const document = await documentService.getInvestigationDocument(input.documentId);
 
@@ -551,6 +577,7 @@ export const investigationRouter = createTRPCRouter({
         .min(INVESTIGATION_FORM_LIMITS.findings.min, `Los comentarios deben tener al menos ${INVESTIGATION_FORM_LIMITS.findings.min} caracteres`)
         .max(INVESTIGATION_FORM_LIMITS.findings.max),
     }))
+    .output(InvestigationSubmitOutput)
     .mutation(async ({ input, ctx }) => {
       const investigation = await ctx.prisma.actorInvestigation.findUnique({
         where: { id: input.id },
@@ -762,6 +789,7 @@ export const investigationRouter = createTRPCRouter({
    */
   getByToken: publicProcedure
     .input(z.object({ token: z.string().min(1, 'Token requerido') }))
+    .output(InvestigationGetByTokenOutput)
     .query(async ({ input, ctx }) => {
       // Find by either broker or landlord token
       const investigation = await ctx.prisma.actorInvestigation.findFirst({
@@ -878,6 +906,7 @@ export const investigationRouter = createTRPCRouter({
       token: z.string().min(1, 'Token requerido'),
       documentId: z.string().cuid('ID de documento inválido'),
     }))
+    .output(InvestigationGetDocumentDownloadUrlOutput)
     .query(async ({ input, ctx }) => {
       // Verify token is valid
       const investigation = await ctx.prisma.actorInvestigation.findFirst({
@@ -927,6 +956,7 @@ export const investigationRouter = createTRPCRouter({
       token: z.string().min(1, 'Token requerido'),
       notes: z.string().max(INVESTIGATION_FORM_LIMITS.approvalNotes.max).optional(),
     }))
+    .output(InvestigationApproveOutput)
     .mutation(async ({ input, ctx }) => {
       // First, find the investigation to get all data for emails
       const investigation = await ctx.prisma.actorInvestigation.findFirst({
@@ -1138,6 +1168,7 @@ export const investigationRouter = createTRPCRouter({
         .min(INVESTIGATION_FORM_LIMITS.rejectionReason.min, `El motivo debe tener al menos ${INVESTIGATION_FORM_LIMITS.rejectionReason.min} caracteres`)
         .max(INVESTIGATION_FORM_LIMITS.rejectionReason.max),
     }))
+    .output(InvestigationRejectOutput)
     .mutation(async ({ input, ctx }) => {
       // First, find the investigation to get all data for emails
       const investigation = await ctx.prisma.actorInvestigation.findFirst({

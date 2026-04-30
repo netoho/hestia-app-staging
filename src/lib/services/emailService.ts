@@ -723,7 +723,7 @@ Hola${data.payerName ? ` ${data.payerName}` : ''},
 
 Tu pago ha sido procesado exitosamente.
 
-Poliza: ${data.policyNumber}
+Póliza: ${data.policyNumber}
 Concepto: ${data.paymentType}
 Monto: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.amount)}
 Fecha: ${formatDateLong(data.paidAt)}
@@ -769,7 +769,7 @@ export const sendAllPaymentsCompletedEmail = async (data: AllPaymentsCompletedDa
     const text = `
 Todos los pagos de la poliza han sido completados.
 
-Poliza: ${data.policyNumber}
+Póliza: ${data.policyNumber}
 Total de pagos: ${data.totalPayments}
 Monto total: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.totalAmount)}
 
@@ -1150,6 +1150,249 @@ Este enlace es personal. No lo compartas con nadie.
     return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
   } catch (error) {
     console.error('Failed to send receipt magic link:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Policy expiration reminder (5 tiers)
+// ============================================
+
+export type PolicyExpirationTier = 60 | 45 | 30 | 14 | 1;
+
+export interface PolicyExpirationReminderData {
+  email: string;
+  recipientName: string;
+  policyNumber: string;
+  propertyAddress: string;
+  expiresAt: Date;
+  tier: PolicyExpirationTier;
+  policyUrl: string;
+  mailtoUrl: string;
+  whatsappUrl?: string | null;
+}
+
+const tierSubjects: Record<PolicyExpirationTier, string> = {
+  60: 'Tu protección vence en 2 meses — ¿renovación?',
+  45: 'Tu protección vence en 1 mes y 2 semanas',
+  30: 'Tu protección vence en 1 mes',
+  14: 'Tu protección vence en 2 semanas',
+  1: '⚠️ Tu protección vence mañana',
+};
+
+export const sendPolicyExpirationReminder = async (
+  data: PolicyExpirationReminderData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyExpirationReminderEmail } = await import(
+      '../../templates/email/react-email/PolicyExpirationReminderEmail'
+    );
+
+    const html = await render(await PolicyExpirationReminderEmail(data));
+    const subject = emailSubject(`${tierSubjects[data.tier]} — #${data.policyNumber}`);
+    const expiresFormatted = formatDateLong(data.expiresAt);
+
+    const text = `
+Hola ${data.recipientName},
+
+${tierSubjects[data.tier]}
+
+Protección: #${data.policyNumber}
+Propiedad: ${data.propertyAddress}
+Vence el: ${expiresFormatted}
+
+Para continuar, visita: ${data.policyUrl}
+
+¿Prefieres hablar con nosotros? Escríbenos a ${SUPPORT_EMAIL}${
+      data.whatsappUrl ? ` o por WhatsApp: ${data.whatsappUrl}` : ''
+    }.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send policy expiration reminder:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Policy quarterly follow-up
+// ============================================
+
+export interface PolicyQuarterlyFollowupData {
+  email: string;
+  recipientName: string;
+  policyNumber: string;
+  isCompany: boolean;
+  companyName?: string | null;
+  mailtoUrl: string;
+  whatsappUrl?: string | null;
+}
+
+export const sendPolicyQuarterlyFollowup = async (
+  data: PolicyQuarterlyFollowupData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyQuarterlyFollowupEmail } = await import(
+      '../../templates/email/react-email/PolicyQuarterlyFollowupEmail'
+    );
+
+    const html = await render(await PolicyQuarterlyFollowupEmail(data));
+    const subject = emailSubject(`Seguimiento de tu protección #${data.policyNumber}`);
+
+    const greetingName =
+      data.isCompany && data.companyName
+        ? `${data.recipientName}, como representante legal de ${data.companyName}`
+        : data.recipientName;
+
+    const text = `
+Estimado/a ${greetingName},
+
+Espero que se encuentre muy bien.
+
+Nos ponemos en contacto con usted como parte de nuestro seguimiento periódico del servicio de protección jurídica que tiene contratado con nosotros.
+
+El objetivo de este mensaje es asegurarnos de que todo esté funcionando conforme a sus expectativas y recordarle que seguimos a su disposición para cualquier consulta, revisión o apoyo legal que pueda necesitar en este momento.
+
+Si ha habido algún cambio en su situación o requiere asesoramiento en algún tema en particular, no dude en hacérnoslo saber. Con gusto podemos agendar una llamada o reunión para atenderle de manera más personalizada.
+
+Agradecemos su confianza en nuestros servicios y reiteramos nuestro compromiso de brindarle respaldo oportuno y efectivo.
+
+Quedamos atentos a sus comentarios.
+
+Cordialmente,
+${brandInfo.name}
+${brandInfo.tagline}
+${brandInfo.supportPhone}
+${brandInfo.supportEmail}
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send quarterly follow-up:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Password reset confirmation
+// ============================================
+
+export interface PasswordResetConfirmationData {
+  email: string;
+  name?: string;
+  changedAt: Date;
+}
+
+export const sendPasswordResetConfirmation = async (
+  data: PasswordResetConfirmationData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PasswordResetConfirmationEmail } = await import(
+      '../../templates/email/react-email/PasswordResetConfirmationEmail'
+    );
+
+    const html = await render(await PasswordResetConfirmationEmail(data));
+    const subject = emailSubject('Tu contraseña fue actualizada');
+
+    const text = `
+Hola${data.name ? ` ${data.name}` : ''},
+
+Te confirmamos que tu contraseña se cambió correctamente el ${formatDateTimeLong(data.changedAt)}.
+
+Si no reconoces esta actividad, contáctanos de inmediato a ${SUPPORT_EMAIL}.
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send password reset confirmation:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Tenant replacement notification
+// ============================================
+
+export interface TenantReplacementEmailData {
+  email: string;
+  recipientName?: string;
+  policyNumber: string;
+  policyLink: string;
+}
+
+export const sendTenantReplacementEmail = async (
+  data: TenantReplacementEmailData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { TenantReplacementEmail } = await import(
+      '../../templates/email/react-email/TenantReplacementEmail'
+    );
+
+    const html = await render(await TenantReplacementEmail(data));
+    const subject = emailSubject(`Inquilino reemplazado en protección #${data.policyNumber}`);
+
+    const text = `
+Hola${data.recipientName ? ` ${data.recipientName}` : ''},
+
+El inquilino fue reemplazado en la protección #${data.policyNumber}. El proceso de recolección de información se reinició para el nuevo inquilino.
+
+Ver protección: ${data.policyLink}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send tenant replacement email:', error);
+    return false;
+  }
+};
+
+// ============================================
+// Policy pending approval notification
+// ============================================
+
+export interface PolicyPendingApprovalEmailData {
+  email: string;
+  recipientName?: string;
+  policyNumber: string;
+  policyLink: string;
+}
+
+export const sendPolicyPendingApprovalEmail = async (
+  data: PolicyPendingApprovalEmailData,
+): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PolicyPendingApprovalEmail } = await import(
+      '../../templates/email/react-email/PolicyPendingApprovalEmail'
+    );
+
+    const html = await render(await PolicyPendingApprovalEmail(data));
+    const subject = emailSubject(`Protección pendiente de aprobación - ${data.policyNumber}`);
+
+    const text = `
+Hola${data.recipientName ? ` ${data.recipientName}` : ''},
+
+La protección #${data.policyNumber} completó todas las investigaciones y está lista para aprobación final.
+
+Revisar protección: ${data.policyLink}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({ to: data.email, subject, html, text });
+  } catch (error) {
+    console.error('Failed to send policy pending approval email:', error);
     return false;
   }
 };

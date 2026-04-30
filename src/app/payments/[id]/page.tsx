@@ -25,7 +25,7 @@ function PaymentSummary({ payment, typeLabel }: {
         <span className="font-medium">{typeLabel}</span>
       </div>
       <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">Poliza</span>
+        <span className="text-muted-foreground">Póliza</span>
         <span className="font-medium">{payment.policyNumber}</span>
       </div>
       {payment.subtotal && payment.iva && (
@@ -203,7 +203,7 @@ export default function PaymentPage() {
                   <span className="font-medium">{typeLabel}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Poliza</span>
+                  <span className="text-muted-foreground">Póliza</span>
                   <span className="font-medium">{payment.policyNumber}</span>
                 </div>
                 {payment.subtotal && payment.iva && (

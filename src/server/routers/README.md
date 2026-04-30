@@ -50,3 +50,9 @@ The actor router is split to keep files manageable:
 - **`shared.router.ts`** — procedures that work for all four actor types (`tenant`, `landlord`, `aval`, `jointObligor`): token validation, tab save, full save, admin update, document validation.
 - **`landlord.router.ts`** — landlord-only procedures: save multiple landlords for a policy, property details.
 - **`index.ts`** — merges both using `_def.procedures` spread so all procedures appear flat under `actor.*`.
+
+## Tests + output schemas
+
+Every procedure declares `.output(<zodSchema>)` against a schema in `src/lib/schemas/<domain>/output.ts`. The frontend imports the same schemas, so a dropped or renamed field fails the integration test (and the frontend `tsc` check) before it lands. Integration tests live in `tests/integration/routers/<domain>.test.ts`.
+
+When adding a new procedure: author the output schema → wire `.output(...)` → add a test using the existing factories + callers + `expectAuthGate`. Full recipe: [docs/TESTING.md](../../../docs/TESTING.md#recipe-1--add-a-new-trpc-procedure).

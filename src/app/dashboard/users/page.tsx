@@ -178,7 +178,7 @@ export default function UsersPage() {
                             <TableBody>
                                 {users.map((user) => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="text-muted-foreground">{user.internalId ?? '-'}</TableCell>
+                                        <TableCell className="text-muted-foreground">{user.internalId}</TableCell>
                                         <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>

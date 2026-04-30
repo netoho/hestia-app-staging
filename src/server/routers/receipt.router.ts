@@ -9,6 +9,17 @@ import { sendReceiptMagicLink } from '@/lib/services/emailService';
 import { formatFullName } from '@/lib/utils/names';
 import { prisma } from '@/lib/prisma';
 import { getCategoryValidation } from '@/lib/constants/documentCategories';
+import {
+  ReceiptRequestMagicLinkOutput,
+  ReceiptGetPortalDataOutput,
+  ReceiptGetUploadUrlOutput,
+  ReceiptUploadResultOutput,
+  ReceiptDeleteOutput,
+  ReceiptGetDownloadUrlOutput,
+  ReceiptListByPolicyOutput,
+  ReceiptGetConfigOutput,
+  ReceiptUpdateConfigOutput,
+} from '@/lib/schemas/receipt/output';
 import type { Context } from '@/server/trpc';
 
 // ============================================
@@ -181,6 +192,7 @@ export const receiptRouter = createTRPCRouter({
     .input(z.object({
       email: z.string().email(),
     }))
+    .output(ReceiptRequestMagicLinkOutput)
     .mutation(async ({ input }) => {
       // Rate limit: 3 requests per email per hour (silent — same success response)
       if (isMagicLinkRateLimited(input.email)) {
@@ -232,6 +244,7 @@ export const receiptRouter = createTRPCRouter({
     .input(z.object({
       token: z.string(),
     }))
+    .output(ReceiptGetPortalDataOutput)
     .query(async ({ input }) => {
       const tenant = await validateReceiptToken(input.token);
       const email = tenant.email;
@@ -336,6 +349,7 @@ export const receiptRouter = createTRPCRouter({
       otherCategory: z.string().optional(),
       otherDescription: z.string().optional(),
     }))
+    .output(ReceiptGetUploadUrlOutput)
     .mutation(async ({ input, ctx }) => {
       // Validate OTHER requires category
       if (input.receiptType === ReceiptType.OTHER && !input.otherCategory) {
@@ -459,6 +473,7 @@ export const receiptRouter = createTRPCRouter({
       token: z.string().optional(),
       receiptId: z.string(),
     }))
+    .output(ReceiptUploadResultOutput)
     .mutation(async ({ input, ctx }) => {
       // Validate access
       let receipt: { s3Key: string | null; id: string };
@@ -502,6 +517,7 @@ export const receiptRouter = createTRPCRouter({
       receiptType: ReceiptTypeSchema,
       note: z.string().optional(),
     }))
+    .output(ReceiptUploadResultOutput)
     .mutation(async ({ input, ctx }) => {
       if (input.receiptType === ReceiptType.OTHER) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'No se puede marcar como "No aplica" un comprobante de tipo "Otro"' });
@@ -564,6 +580,7 @@ export const receiptRouter = createTRPCRouter({
       token: z.string().optional(),
       receiptId: z.string(),
     }))
+    .output(ReceiptDeleteOutput)
     .mutation(async ({ input, ctx }) => {
       let receipt: { status: ReceiptStatus; id: string };
       if (input.token) {
@@ -593,6 +610,7 @@ export const receiptRouter = createTRPCRouter({
       token: z.string().optional(),
       receiptId: z.string(),
     }))
+    .output(ReceiptDeleteOutput)
     .mutation(async ({ input, ctx }) => {
       let receipt: { s3Key: string | null; id: string };
       if (input.token) {
@@ -623,6 +641,7 @@ export const receiptRouter = createTRPCRouter({
       token: z.string().optional(),
       receiptId: z.string(),
     }))
+    .output(ReceiptGetDownloadUrlOutput)
     .query(async ({ input, ctx }) => {
       let receipt: { s3Key: string | null; uploadStatus: DocumentUploadStatus | null; originalName: string | null; fileName: string | null; id: string };
       if (input.token) {
@@ -655,6 +674,7 @@ export const receiptRouter = createTRPCRouter({
     .input(z.object({
       policyId: z.string(),
     }))
+    .output(ReceiptListByPolicyOutput)
     .query(async ({ input }) => {
       const policy = await prisma.policy.findUnique({
         where: { id: input.policyId },
@@ -724,6 +744,7 @@ export const receiptRouter = createTRPCRouter({
     .input(z.object({
       policyId: z.string(),
     }))
+    .output(ReceiptGetConfigOutput)
     .query(async ({ input }) => {
       const policy = await prisma.policy.findUnique({
         where: { id: input.policyId },
@@ -795,6 +816,7 @@ export const receiptRouter = createTRPCRouter({
       receiptTypes: z.array(ReceiptTypeSchema).min(1),
       notes: z.string().optional(),
     }))
+    .output(ReceiptUpdateConfigOutput)
     .mutation(async ({ input, ctx }) => {
       // RENT must always be included
       if (!input.receiptTypes.includes(ReceiptType.RENT)) {
@@ -843,6 +865,7 @@ export const receiptRouter = createTRPCRouter({
     .input(z.object({
       receiptId: z.string(),
     }))
+    .output(ReceiptGetDownloadUrlOutput)
     .query(async ({ input }) => {
       const receipt = await prisma.tenantReceipt.findUnique({
         where: { id: input.receiptId },

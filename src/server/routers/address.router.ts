@@ -4,6 +4,10 @@ import {
   publicProcedure,
 } from '@/server/trpc';
 import { googleMapsService } from '@/lib/services/googleMapsService';
+import {
+  AddressAutocompleteOutput,
+  AddressDetailsOutput,
+} from '@/lib/schemas/address/output';
 
 export const addressRouter = createTRPCRouter({
   /**
@@ -15,6 +19,7 @@ export const addressRouter = createTRPCRouter({
       sessionToken: z.string().optional(),
       country: z.string().default('mx'),
     }))
+    .output(AddressAutocompleteOutput)
     .query(async ({ input }) => {
       // Return empty if input is too short (Google requires 3+ chars)
       if (input.input.length < 3) {
@@ -39,6 +44,7 @@ export const addressRouter = createTRPCRouter({
       sessionToken: z.string().optional(),
       interiorNumber: z.string().optional(),
     }))
+    .output(AddressDetailsOutput)
     .query(async ({ input }) => {
       const address = await googleMapsService.parseGooglePlaceToAddress(
         input.placeId,

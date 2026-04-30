@@ -9,6 +9,12 @@ import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
 import { PackageService } from '@/lib/services/packageService';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
+import {
+  PackageGetAllOutput,
+  PackageGetByIdOutput,
+  PackageGetStatsOutput,
+  PackageRecommendOutput,
+} from '@/lib/schemas/package/output';
 
 // Schema for creating/updating packages
 const PackageSchema = z.object({
@@ -29,6 +35,7 @@ export const packageRouter = createTRPCRouter({
    * Get all active packages
    */
   getAll: publicProcedure
+    .output(PackageGetAllOutput)
     .query(async () => {
       const result = await packageService.getPackages();
       if (!result.ok) {
@@ -46,6 +53,7 @@ export const packageRouter = createTRPCRouter({
    */
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
+    .output(PackageGetByIdOutput)
     .query(async ({ input }) => {
       const result = await packageService.getPackageById(input.id);
       if (!result.ok) {
@@ -70,6 +78,7 @@ export const packageRouter = createTRPCRouter({
    */
   getStats: protectedProcedure
     .input(z.object({ packageId: z.string() }))
+    .output(PackageGetStatsOutput)
     .query(async ({ input }) => {
       const [totalPolicies, activePolicies, totalRevenue] = await Promise.all([
         // Total policies using this package
@@ -104,6 +113,7 @@ export const packageRouter = createTRPCRouter({
    */
   recommend: publicProcedure
     .input(z.object({ rentAmount: z.number() }))
+    .output(PackageRecommendOutput)
     .query(async ({ input }) => {
       // Get all active packages using service
       const result = await packageService.getPackages();

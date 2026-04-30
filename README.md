@@ -25,6 +25,16 @@ bun run build
 
 # Open Prisma Studio
 bunx prisma studio
+
+# Run integration tests (boot the test DB once, then run the suite)
+bun run test:db:up
+bun run test:integration
+
+# Fast iteration on a single file or test (skips docker / DB push):
+bun run test:integration:filter tests/integration/routers/policy.test.ts
+bun run test:integration:filter -t "happy path"
+
+# Without docker (local Postgres) — see docs/TESTING.md
 ```
 
 ## Architecture
@@ -54,6 +64,7 @@ All actors support both Individual and Company modes:
 
 ### Getting Started
 - [Developer Onboarding](docs/DEVELOPER_ONBOARDING.md) - Setup, common tasks, debugging
+- [Testing Guide](docs/TESTING.md) - Integration & contract tests, output schemas, running locally, CI
 
 ### Architecture
 - [Actor System Architecture](docs/ACTOR_SYSTEM_ARCHITECTURE.md) - Actor types, data flow, auth
@@ -155,6 +166,9 @@ Use `transitionPolicyStatus()` from `policyWorkflowService.ts` - never update st
 
 ### Activity Logging
 Log significant actions with `logPolicyActivity()` from `policyService.ts`.
+
+### Output schemas (contract-locked APIs)
+Every tRPC procedure declares `.output(<schema>)` against a Zod schema in `src/lib/schemas/<domain>/output.ts`. The frontend imports the same schemas, so dropping or renaming a field that the frontend uses breaks the integration test for that procedure before it ever lands. See [docs/TESTING.md](docs/TESTING.md) for the full recipe when adding a new procedure or REST endpoint.
 
 ## Backlog
 

@@ -59,6 +59,13 @@ export interface StorageProvider {
   delete(path: string): Promise<boolean>;
 
   /**
+   * Copy a file server-side from sourceKey to destinationKey.
+   * Used by policy renewal to duplicate ActorDocument files without
+   * downloading and re-uploading.
+   */
+  copyObject(sourceKey: string, destinationKey: string, isPrivate: boolean): Promise<string>;
+
+  /**
    * Check if a file exists
    */
   exists(path: string): Promise<boolean>;

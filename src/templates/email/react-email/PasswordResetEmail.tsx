@@ -1,16 +1,16 @@
 import React from 'react';
+import { Hr, Text } from '@react-email/components';
 import {
-  Html,
-  Head,
-  Body,
-  Container,
-  Section,
-  Text,
-  Heading,
-  Button,
-  Hr,
-} from '@react-email/components';
-import { brandColors, brandInfo, brandUrls } from '@/lib/config/brand';
+  EmailLayout,
+  EmailHeader,
+  EmailSection,
+  EmailFooter,
+  EmailButton,
+  EmailInfoBox,
+  EmailWarningBox,
+  EmailParagraph,
+} from '../components';
+import { brandColors, brandInfo } from '@/lib/config/brand';
 
 export interface PasswordResetEmailProps {
   email: string;
@@ -25,240 +25,65 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
   resetUrl,
   expiryTime,
 }) => {
-  const privacyUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.privacy}`;
-  const termsUrl = `${process.env.NEXT_PUBLIC_APP_URL}${brandUrls.legal.terms}`;
   const supportEmail = brandInfo.supportEmail;
 
   return (
-    <Html>
-      <Head />
-      <Body style={{ backgroundColor: brandColors.background, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-        <Container style={{
-          maxWidth: '600px',
-          margin: '0 auto',
-          padding: '20px'
+    <EmailLayout>
+      <EmailHeader title="Restablecer Contraseña" />
+      <EmailSection greeting={`Hola ${name || 'usuario'},`}>
+        <EmailParagraph>
+          Recibimos una solicitud para restablecer la contraseña de tu cuenta en {brandInfo.name} asociada con el correo electrónico <strong>{email}</strong>.
+        </EmailParagraph>
+
+        <EmailParagraph>
+          Si realizaste esta solicitud, haz clic en el botón de abajo para crear una nueva contraseña:
+        </EmailParagraph>
+
+        <EmailButton href={resetUrl} variant="accent">
+          Restablecer Contraseña
+        </EmailButton>
+
+        <EmailWarningBox title="Información importante:" tone="warning">
+          • Este enlace expirará en <strong>{expiryTime}</strong>
+          <br />
+          • Por seguridad, no compartas este enlace con nadie
+          <br />
+          • Si no solicitaste restablecer tu contraseña, ignora este correo
+        </EmailWarningBox>
+
+        <Hr style={{ borderColor: brandColors.border, margin: '30px 0' }} />
+
+        <EmailParagraph size="small">
+          Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:
+        </EmailParagraph>
+        <Text style={{
+          color: brandColors.primary,
+          fontSize: '14px',
+          lineHeight: '20px',
+          wordBreak: 'break-all',
+          margin: '0 0 20px'
         }}>
-          {/* Header */}
-          <Section style={{
-            background: `linear-gradient(135deg, ${brandColors.email.headerGradientStart} 0%, ${brandColors.email.headerGradientEnd} 100%)`,
-            padding: '30px',
-            textAlign: 'center',
-            borderRadius: '12px 12px 0 0',
-          }}>
-            <img
-              src={`${brandUrls.production}/images/logo-hestia-azul-top.png`}
-              alt={brandInfo.name}
-              width="150"
-              style={{ margin: '0 auto' }}
-            />
-            <Heading style={{
-              margin: 0,
-              color: brandColors.textPrimary,
-              fontSize: '28px',
-              fontWeight: '700',
-              letterSpacing: '-0.025em'
-            }}>
-              Restablecer Contraseña
-            </Heading>
-          </Section>
+          {resetUrl}
+        </Text>
 
-          {/* Main Content */}
-          <Section style={{
-            backgroundColor: brandColors.white,
-            padding: '30px',
-            borderRadius: '0 0 12px 12px'
-          }}>
-            <Text style={{
-              color: brandColors.textSecondary,
-              fontSize: '16px',
-              lineHeight: '24px',
-              margin: '0 0 20px'
-            }}>
-              Hola {name || 'usuario'},
-            </Text>
+        <Hr style={{ borderColor: brandColors.border, margin: '30px 0' }} />
 
-            <Text style={{
-              color: brandColors.textPrimary,
-              fontSize: '16px',
-              lineHeight: '24px',
-              margin: '0 0 20px'
-            }}>
-              Recibimos una solicitud para restablecer la contraseña de tu cuenta en {brandInfo.name}
-              asociada con el correo electrónico <strong>{email}</strong>.
-            </Text>
+        <EmailInfoBox icon="🔐">
+          <strong>Nota de seguridad:</strong> Si no solicitaste restablecer tu contraseña, es posible que alguien esté intentando acceder a tu cuenta. Por favor, asegúrate de que tu cuenta esté segura y contacta a nuestro equipo de soporte si tienes alguna preocupación.
+        </EmailInfoBox>
 
-            <Text style={{
-              color: brandColors.textPrimary,
-              fontSize: '16px',
-              lineHeight: '24px',
-              margin: '0 0 30px'
-            }}>
-              Si realizaste esta solicitud, haz clic en el botón de abajo para crear una nueva contraseña:
-            </Text>
-
-            {/* CTA Button */}
-            <div style={{ textAlign: 'center', margin: '30px 0' }}>
-              <Button
-                href={resetUrl}
-                style={{
-                  backgroundColor: brandColors.accent,
-                  color: brandColors.white,
-                  padding: '14px 28px',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  textDecoration: 'none',
-                  display: 'inline-block'
-                }}
-              >
-                Restablecer Contraseña
-              </Button>
-            </div>
-
-            {/* Warning Box */}
-            <Section style={{
-              backgroundColor: brandColors.email.warningBackground,
-              border: `1px solid ${brandColors.email.warningBorder}`,
-              borderRadius: '8px',
-              padding: '16px',
-              margin: '24px 0'
-            }}>
-              <Text style={{
-                color: brandColors.warning,
-                fontSize: '14px',
-                lineHeight: '20px',
-                margin: '0 0 10px',
-                fontWeight: '600'
-              }}>
-                ⚠️ Información importante:
-              </Text>
-              <Text style={{
-                color: brandColors.warning,
-                fontSize: '14px',
-                lineHeight: '20px',
-                margin: '0'
-              }}>
-                • Este enlace expirará en <strong>{expiryTime}</strong>
-                <br />
-                • Por seguridad, no compartas este enlace con nadie
-                <br />
-                • Si no solicitaste restablecer tu contraseña, ignora este correo
-              </Text>
-            </Section>
-
-            <Hr style={{
-              borderColor: brandColors.border,
-              margin: '30px 0'
-            }} />
-
-            {/* Alternative Link */}
-            <Text style={{
-              color: brandColors.textSecondary,
-              fontSize: '14px',
-              lineHeight: '20px',
-              margin: '0 0 10px'
-            }}>
-              Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:
-            </Text>
-            <Text style={{
-              color: brandColors.primary,
-              fontSize: '14px',
-              lineHeight: '20px',
-              wordBreak: 'break-all',
-              margin: '0 0 20px'
-            }}>
-              {resetUrl}
-            </Text>
-
-            <Hr style={{
-              borderColor: brandColors.border,
-              margin: '30px 0'
-            }} />
-
-            {/* Security Notice */}
-            <Section style={{
-              backgroundColor: brandColors.email.infoBackground,
-              border: `1px solid ${brandColors.email.infoBorder}`,
-              borderRadius: '8px',
-              padding: '16px',
-              margin: '24px 0'
-            }}>
-              <Text style={{
-                color: brandColors.textPrimary,
-                fontSize: '14px',
-                lineHeight: '20px',
-                margin: '0'
-              }}>
-                <strong>🔒 Nota de seguridad:</strong> Si no solicitaste restablecer tu contraseña,
-                es posible que alguien esté intentando acceder a tu cuenta. Por favor, asegúrate de
-                que tu cuenta esté segura y contacta a nuestro equipo de soporte si tienes alguna preocupación.
-              </Text>
-            </Section>
-
-            {/* Support */}
-            <Text style={{
-              color: brandColors.textSecondary,
-              fontSize: '14px',
-              lineHeight: '20px',
-              margin: '20px 0 0'
-            }}>
-              ¿Necesitas ayuda? Contáctanos en{' '}
-              <a
-                href={`mailto:${supportEmail}`}
-                style={{ color: brandColors.primary, textDecoration: 'none' }}
-              >
-                {supportEmail}
-              </a>
-            </Text>
-          </Section>
-
-          {/* Footer */}
-          <Section style={{
-            textAlign: 'center',
-            padding: '24px 0',
-          }}>
-            <Text style={{
-              color: brandColors.textMuted,
-              fontSize: '12px',
-              lineHeight: '18px',
-              margin: '0 0 8px'
-            }}>
-              © {new Date().getFullYear()} {brandInfo.companyLegalName}
-              <br />
-              Todos los derechos reservados
-            </Text>
-
-            <Text style={{
-              color: brandColors.textMuted,
-              fontSize: '12px',
-              lineHeight: '18px',
-              margin: '0'
-            }}>
-              <a href={privacyUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>
-                Política de Privacidad
-              </a>
-              {' | '}
-              <a href={termsUrl} style={{ color: brandColors.secondary, textDecoration: 'none' }}>
-                Términos de Servicio
-              </a>
-            </Text>
-
-            {/* Office Address */}
-            <Text style={{
-              color: brandColors.textMuted,
-              fontSize: '11px',
-              lineHeight: '16px',
-              margin: '16px 0 0',
-              opacity: 0.8
-            }}>
-              {brandInfo.location}
-              <br />
-              Tel: {brandInfo.supportPhone}
-            </Text>
-          </Section>
-        </Container>
-      </Body>
-    </Html>
+        <EmailParagraph size="small">
+          ¿Necesitas ayuda? Contáctanos en{' '}
+          <a
+            href={`mailto:${supportEmail}`}
+            style={{ color: brandColors.primary, textDecoration: 'none' }}
+          >
+            {supportEmail}
+          </a>
+        </EmailParagraph>
+      </EmailSection>
+      <EmailFooter />
+    </EmailLayout>
   );
 };
 
