@@ -11,6 +11,7 @@ import { BLANK, BOUNDARY_DIRECTIONS } from '../../coverPageDefaults';
 import { t } from '@/lib/i18n';
 import { sectionTable } from '../sectionTable';
 import { renderGpRow, type GpRowSpec } from '../rowSpec';
+import { SZ_VLABEL_SMALL } from '../styles';
 
 export function guarantorPropertyRowSpecs(prop: CoverGuarantorProperty): GpRowSpec[] {
   const cp = t.pages.documents.coverPage;
@@ -51,5 +52,11 @@ export function guarantorPropertyRowSpecs(prop: CoverGuarantorProperty): GpRowSp
 
 export function guarantorPropertyTable(prop: CoverGuarantorProperty): Table {
   const gp = t.pages.documents.coverPage.guarantorProperty;
-  return sectionTable(gp.sectionLabel, guarantorPropertyRowSpecs(prop).map(renderGpRow));
+  // 8pt vlabel — section title "Inmueble del Obligado Solidario y Fiador." is
+  // the longest rotated label and would crowd the 5%-width column at 9pt.
+  return sectionTable(
+    gp.sectionLabel,
+    guarantorPropertyRowSpecs(prop).map(renderGpRow),
+    { vlabelSize: SZ_VLABEL_SMALL },
+  );
 }

@@ -2,8 +2,11 @@
  * Types for the contract cover page (.docx) generator
  */
 
+export type ActorType = 'landlord' | 'tenant' | 'jointObligor' | 'aval';
+
 export interface CoverActorData {
   label: string; // "Arrendador.", "Arrendatario.", "Obligado Solidario y Fiador."
+  actorType: ActorType;
   isCompany: boolean;
   name: string;
   nationality: string;

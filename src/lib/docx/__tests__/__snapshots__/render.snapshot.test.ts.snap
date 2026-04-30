@@ -21,6 +21,16 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
       </w:r>
     </w:p>
     <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
+          <w:sz w:val="18"/>
+          <w:szCs w:val="18"/>
+        </w:rPr>
+        <w:t xml:space="preserve"></w:t>
+      </w:r>
+    </w:p>
+    <w:p>
       <w:pPr>
         <w:spacing w:after="80"/>
         <w:jc w:val="center"/>
@@ -34,6 +44,16 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
           <w:szCs w:val="18"/>
         </w:rPr>
         <w:t xml:space="preserve">CARÁTULA.</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
+          <w:sz w:val="18"/>
+          <w:szCs w:val="18"/>
+        </w:rPr>
+        <w:t xml:space="preserve"></w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -80,7 +100,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -700,7 +720,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -1336,7 +1356,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -1611,7 +1631,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -2130,7 +2150,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -2306,6 +2326,16 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
       </w:r>
     </w:p>
     <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
+          <w:sz w:val="18"/>
+          <w:szCs w:val="18"/>
+        </w:rPr>
+        <w:t xml:space="preserve"></w:t>
+      </w:r>
+    </w:p>
+    <w:p>
       <w:pPr>
         <w:spacing w:after="80"/>
         <w:jc w:val="center"/>
@@ -2319,6 +2349,16 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
           <w:szCs w:val="18"/>
         </w:rPr>
         <w:t xml:space="preserve">CARÁTULA.</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
+          <w:sz w:val="18"/>
+          <w:szCs w:val="18"/>
+        </w:rPr>
+        <w:t xml:space="preserve"></w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -2365,7 +2405,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -3150,7 +3190,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -4092,7 +4132,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -4877,7 +4917,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -5819,7 +5859,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -5831,8 +5871,8 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
                 <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
                 <w:b/>
                 <w:bCs/>
-                <w:sz w:val="18"/>
-                <w:szCs w:val="18"/>
+                <w:sz w:val="16"/>
+                <w:szCs w:val="16"/>
               </w:rPr>
               <w:t xml:space="preserve">Obligado Solidario y Fiador.</w:t>
             </w:r>
@@ -6439,7 +6479,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -6451,8 +6491,8 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
                 <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
                 <w:b/>
                 <w:bCs/>
-                <w:sz w:val="18"/>
-                <w:szCs w:val="18"/>
+                <w:sz w:val="16"/>
+                <w:szCs w:val="16"/>
               </w:rPr>
               <w:t xml:space="preserve">Inmueble del Obligado Solidario y Fiador.</w:t>
             </w:r>
@@ -7789,7 +7829,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -8064,7 +8104,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -8583,7 +8623,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -8759,6 +8799,16 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
       </w:r>
     </w:p>
     <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
+          <w:sz w:val="18"/>
+          <w:szCs w:val="18"/>
+        </w:rPr>
+        <w:t xml:space="preserve"></w:t>
+      </w:r>
+    </w:p>
+    <w:p>
       <w:pPr>
         <w:spacing w:after="80"/>
         <w:jc w:val="center"/>
@@ -8772,6 +8822,16 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
           <w:szCs w:val="18"/>
         </w:rPr>
         <w:t xml:space="preserve">CARÁTULA.</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
+          <w:sz w:val="18"/>
+          <w:szCs w:val="18"/>
+        </w:rPr>
+        <w:t xml:space="preserve"></w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -8818,7 +8878,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -9438,7 +9498,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -10058,7 +10118,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -10070,8 +10130,8 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
                 <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
                 <w:b/>
                 <w:bCs/>
-                <w:sz w:val="18"/>
-                <w:szCs w:val="18"/>
+                <w:sz w:val="16"/>
+                <w:szCs w:val="16"/>
               </w:rPr>
               <w:t xml:space="preserve">Obligado Solidario y Fiador 1.</w:t>
             </w:r>
@@ -10678,7 +10738,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -10690,8 +10750,8 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
                 <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
                 <w:b/>
                 <w:bCs/>
-                <w:sz w:val="18"/>
-                <w:szCs w:val="18"/>
+                <w:sz w:val="16"/>
+                <w:szCs w:val="16"/>
               </w:rPr>
               <w:t xml:space="preserve">Obligado Solidario y Fiador 2.</w:t>
             </w:r>
@@ -11298,7 +11358,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -11310,8 +11370,8 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
                 <w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/>
                 <w:b/>
                 <w:bCs/>
-                <w:sz w:val="18"/>
-                <w:szCs w:val="18"/>
+                <w:sz w:val="16"/>
+                <w:szCs w:val="16"/>
               </w:rPr>
               <w:t xml:space="preserve">Inmueble del Obligado Solidario y Fiador.</w:t>
             </w:r>
@@ -12648,7 +12708,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -12923,7 +12983,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
@@ -13442,7 +13502,7 @@ exports[`cover page word/document.xml matches the expected document.xml for fixt
               <w:bottom w:type="dxa" w:w="0"/>
               <w:right w:type="dxa" w:w="108"/>
             </w:tcMar>
-            <w:textDirection w:val="btLr"/>
+            <w:textDirection w:val="tbRl"/>
             <w:vAlign w:val="center"/>
           </w:tcPr>
           <w:p>
