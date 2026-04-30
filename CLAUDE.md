@@ -9,6 +9,11 @@
 - Always look for existing components or utilities before creating new ones.
 - We deploy on vercel so take than into account, for example avoid uploading large files directly to the server. Use the services (s3 presigned urls, etc) instead.
 
+## Testing
+- Look at the main @README.md file for guidance.
+- @docs/DEVELOPER_ONBOARDING.md, @docs/TESTING.md and @tests/integration/README.md will be very helpful as well.
+- We use output schemas, don't forget to add them on the consumer side see @src/lib/schemas/README.md for more details.
+- Other README files will have information about testing for specific parts of the codebase, for example @src/app/api/README.md and @src/server/routers/README.md
 
 ## Utils, Constants and Internationalization
 - Use the utils module @src/lib/utils/ there you will find many utils, for example for dates on @src/lib/utils/formatting.ts
