@@ -52,6 +52,8 @@ export async function createPolicy(data: CreatePolicyData) {
       packageId: policyData.packageId,
       createdById: policyData.createdById,
       status: 'COLLECTING_INFO',
+      contractStartDate: policyData.startDate ? new Date(policyData.startDate) : null,
+      contractEndDate: policyData.endDate ? new Date(policyData.endDate) : null,
       // Create related actors
       landlords: {
         create: {
