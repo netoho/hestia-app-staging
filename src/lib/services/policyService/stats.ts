@@ -2,8 +2,8 @@ import prisma from '@/lib/prisma';
 import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
 export interface DashboardStatsScope {
-  /** Restrict counts to policies created by this user. Used for BROKER. */
-  createdById?: string;
+  /** Restrict counts to policies managed by this user. Used for BROKER. */
+  managedById?: string;
 }
 
 export interface DashboardStats {
@@ -21,7 +21,7 @@ const TERMINAL_OR_KNOWN_BUCKETS: PolicyStatus[] = [
 ];
 
 export async function getDashboardStats(scope: DashboardStatsScope = {}): Promise<DashboardStats> {
-  const baseWhere = scope.createdById ? { createdById: scope.createdById } : {};
+  const baseWhere = scope.managedById ? { managedById: scope.managedById } : {};
 
   const [active, pendingApproval, inProcess, expired] = await Promise.all([
     prisma.policy.count({ where: { ...baseWhere, status: PolicyStatus.ACTIVE } }),
@@ -39,7 +39,7 @@ export interface RecentPoliciesScope extends DashboardStatsScope {
 
 export async function getRecentPolicies(scope: RecentPoliciesScope = {}) {
   const limit = scope.limit ?? 5;
-  const baseWhere = scope.createdById ? { createdById: scope.createdById } : {};
+  const baseWhere = scope.managedById ? { managedById: scope.managedById } : {};
 
   return prisma.policy.findMany({
     where: {
