@@ -372,3 +372,11 @@ export const PolicyRenewOutput = z.object({
   documentsFailed: z.number(),
 });
 export type PolicyRenewOutput = z.infer<typeof PolicyRenewOutput>;
+
+// ===========================================================================
+// policy.assignManager
+// ===========================================================================
+export const PolicyAssignManagerOutput = z.object({
+  success: z.literal(true),
+});
+export type PolicyAssignManagerOutput = z.infer<typeof PolicyAssignManagerOutput>;
