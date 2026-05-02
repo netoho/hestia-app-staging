@@ -1,6 +1,43 @@
 import type { NavItem } from '../types';
 import { Home, Users, Briefcase, Info, FileText, Building2, UserCircle, LayoutDashboard, PackageSearch } from 'lucide-react';
 
+export interface SidebarGroupDef {
+    key: 'operacion' | 'gestion' | 'configuracion';
+    label: string;
+    items: NavItem[];
+}
+
+const operacionItems: NavItem[] = [
+    { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard, matchExact: true },
+    { href: '/dashboard/policies', label: 'Protecciones', icon: FileText },
+];
+
+const gestionItems: NavItem[] = [
+    { href: '/dashboard/users', label: 'Usuarios', icon: Users },
+    { href: '/dashboard/packages', label: 'Paquetes', icon: PackageSearch },
+];
+
+const configuracionItems: NavItem[] = [
+    { href: '/dashboard/profile', label: 'Mi perfil', icon: UserCircle },
+];
+
+const adminGroups: SidebarGroupDef[] = [
+    { key: 'operacion', label: 'OPERACIÓN', items: operacionItems },
+    { key: 'gestion', label: 'GESTIÓN', items: gestionItems },
+    { key: 'configuracion', label: 'CONFIGURACIÓN', items: configuracionItems },
+];
+
+const staffGroups: SidebarGroupDef[] = [
+    { key: 'operacion', label: 'OPERACIÓN', items: operacionItems },
+    { key: 'gestion', label: 'GESTIÓN', items: gestionItems },
+    { key: 'configuracion', label: 'CONFIGURACIÓN', items: configuracionItems },
+];
+
+const brokerGroups: SidebarGroupDef[] = [
+    { key: 'operacion', label: 'OPERACIÓN', items: operacionItems },
+    { key: 'configuracion', label: 'CONFIGURACIÓN', items: configuracionItems },
+];
+
 export const layout = {
     root: {
         metaTitle: "Hestia PLP - Protecciones de Arrendamiento",
@@ -48,36 +85,10 @@ export const layout = {
         copyright: "Todos los derechos reservados.",
     },
     dashboardSidebar: {
-        ownerLinks: [
-            { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, matchExact: true },
-            { href: '/dashboard/policies', label: 'Mis Protecciones', icon: FileText },
-            { href: '/dashboard/profile', label: 'Perfil', icon: UserCircle },
-        ] as NavItem[],
-        renterLinks: [
-            { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, matchExact: true },
-            { href: '/dashboard/my-policy', label: 'Mi Protección', icon: FileText },
-            { href: '/dashboard/profile', label: 'Perfil', icon: UserCircle },
-        ] as NavItem[],
-      brokerLinks: [
-        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
-        { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
-        { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
-      ] as NavItem[],
-      staffLinks: [
-        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
-        { href: '/dashboard/users', label: 'Gestionar Usuarios', icon: Users },
-        { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
-        { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
-        { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
-      ] as NavItem[],
-      adminLinks: [
-        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, matchExact: true },
-        { href: '/dashboard/users', label: 'Gestionar Usuarios', icon: Users },
-        { href: '/dashboard/policies', label: 'Gestionar Protecciones', icon: FileText },
-        { href: '/dashboard/packages', label: 'Gestionar Paquetes', icon: PackageSearch },
-        { href: '/dashboard/profile', label: 'Mi Perfil', icon: UserCircle },
-      ] as NavItem[],
-      userMenu: {
+        adminGroups,
+        staffGroups,
+        brokerGroups,
+        userMenu: {
             profile: "Perfil",
             settings: "Configuración",
             notifications: "Notificaciones",
