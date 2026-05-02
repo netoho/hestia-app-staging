@@ -170,6 +170,15 @@ Log significant actions with `logPolicyActivity()` from `policyService.ts`.
 ### Output schemas (contract-locked APIs)
 Every tRPC procedure declares `.output(<schema>)` against a Zod schema in `src/lib/schemas/<domain>/output.ts`. The frontend imports the same schemas, so dropping or renaming a field that the frontend uses breaks the integration test for that procedure before it ever lands. See [docs/TESTING.md](docs/TESTING.md) for the full recipe when adding a new procedure or REST endpoint.
 
+## Reporting fields not yet modeled
+
+The dashboard CSV report (`/api/reports/policies/csv`) ships several columns that map directly to existing data, plus a few documented gaps. These need product input before they can be added:
+
+1. **% de comisión** — no business definition; not stored anywhere. Open question: per-broker default rate, per-package, per-policy negotiated, or a hybrid? Column is omitted from the CSV today.
+2. **Descuento** — no semantic definition (package discount? broker margin? promotional?). Column is omitted from the CSV today. The pricing service has an `isManualOverride` flag but no separate discount field.
+3. **Vendedor picker UI** — `Policy.managedById` exists and is read by the report (falling back to literal `"CS"` when null), but no UI sets it. Follow-up: add a Hestia-user picker on the policy edit form so ops can attribute the deal to a specific Customer Success rep.
+4. **"En proceso" multi-status URL filter** — `usePoliciesState` (`src/hooks/usePoliciesState.ts`) accepts a single `?status=` value. The dashboard "En proceso" KPI tile points at `?status=COLLECTING_INFO` only. If new intermediate statuses are added between `COLLECTING_INFO` and `PENDING_APPROVAL`, extend the hook to support a multi-value filter (e.g. `?status=in:COLLECTING_INFO,FOO`) and update `KpiTiles.tsx`.
+
 ## Backlog
 
 See [docs/BACKLOG.md](docs/BACKLOG.md) for current work items and priorities.
