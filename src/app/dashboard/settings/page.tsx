@@ -1,4 +1,4 @@
-import { PageTitle } from '@/components/shared/PageTitle';
+import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,12 +9,12 @@ import { t } from '@/lib/i18n';
 export default function SettingsPage() {
   return (
     <div>
-      <PageTitle title={t.pages.settings.title} subtitle={t.pages.settings.subtitle} />
+      <DashboardPageHeader title={t.pages.settings.title} subtitle={t.pages.settings.subtitle} />
 
       <div className="space-y-8">
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><Bell className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.notifications}</CardTitle>
+            <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.notifications}</CardTitle>
             <CardDescription>{t.pages.settings.notificationsDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -50,7 +50,7 @@ export default function SettingsPage() {
 
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.security}</CardTitle>
+            <CardTitle className="flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.security}</CardTitle>
             <CardDescription>{t.pages.settings.securityDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -77,7 +77,7 @@ export default function SettingsPage() {
         
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center"><Globe className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.languageRegion}</CardTitle>
+            <CardTitle className="flex items-center"><Globe className="mr-2 h-5 w-5 text-primary"/> {t.pages.settings.languageRegion}</CardTitle>
             <CardDescription>{t.pages.settings.languageRegionDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

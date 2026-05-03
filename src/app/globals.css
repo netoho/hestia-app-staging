@@ -3,7 +3,7 @@
 
 @layer base {
   :root {
-    --background: 220 20% 90%; /* #dde2e9 - Light Bluish Gray */
+    --background: 220 20% 95%; /* Light Bluish Gray (lightened from 90% for less heaviness) */
     --foreground: 216 25% 25%; /* Dark Blue-Gray for text */
 
     --card: 0 0% 100%;       /* White */
@@ -15,7 +15,9 @@
     --primary: 214 59% 22%;   /* rgb(23, 52, 89) - Dark Blue */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 220 20% 90%; /* Lighter Bluish Gray */
+    /* secondary intentionally darker than --background so secondary surfaces (badges,
+       muted buttons) read as a half-step beneath the page bg instead of vanishing into it */
+    --secondary: 220 20% 90%;
     --secondary-foreground: 216 25% 30%; /* Slightly lighter Dark Blue-Gray */
 
     --muted: 220 20% 92%;     /* Very Light Bluish Gray */

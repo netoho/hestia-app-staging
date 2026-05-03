@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PageTitle } from '@/components/shared/PageTitle';
+import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -117,7 +117,7 @@ export default function UsersPage() {
 
     return (
         <div>
-            <PageTitle title={t.pages.users.title} subtitle={t.pages.users.subtitle} />
+            <DashboardPageHeader title={t.pages.users.title} subtitle={t.pages.users.subtitle} />
 
             <TableFilters
                 searchPlaceholder={t.pages.users.searchPlaceholder}
