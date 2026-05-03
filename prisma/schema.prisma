@@ -169,6 +169,12 @@ model Policy {
   activatedAt DateTime?
   expiresAt   DateTime?
 
+  // Real-world contract dates (from wizard "Fecha de Inicio"/"Fecha de Término").
+  // Distinct from activatedAt/expiresAt: a contract can start before the system
+  // record is created, and the cron uses expiresAt for state, not these.
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+
   // Review Details
   reviewNotes String? @db.Text
 

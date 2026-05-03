@@ -378,10 +378,10 @@ export const documentRouter = createTRPCRouter({
               { avals: { some: { id: actorId } } },
             ],
           },
-          select: { createdById: true },
+          select: { managedById: true },
         });
 
-        if (policy?.createdById !== ctx.userId) {
+        if (policy?.managedById !== ctx.userId) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'You do not have access to this document',
@@ -437,7 +437,7 @@ export const documentRouter = createTRPCRouter({
       }
 
       // Check broker access
-      if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+      if (ctx.userRole === 'BROKER' && policy.managedById !== ctx.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have access to this policy',

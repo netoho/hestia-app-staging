@@ -7,10 +7,12 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
@@ -21,6 +23,7 @@ import { LogOut, ChevronDown, UserCircle } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { t } from '@/lib/i18n';
+import type { SidebarGroupDef } from '@/lib/i18n/layout';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +32,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 
 interface DashboardSidebarProps {
@@ -69,19 +71,18 @@ const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
   );
 };
 
+function getGroupsForRole(role: string | null | undefined): SidebarGroupDef[] {
+  const userRole = role as UserRole;
+  if (userRole === 'BROKER') return t.layout.dashboardSidebar.brokerGroups;
+  if (userRole === 'STAFF') return t.layout.dashboardSidebar.staffGroups;
+  if (userRole === 'ADMIN') return t.layout.dashboardSidebar.adminGroups;
+  return [];
+}
 
 export default function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const { isMobile } = useSidebar();
-  const [navLinks, setNavLinks] = useState<NavItem[]>([]);
+  const { isMobile, state } = useSidebar();
   const router = useRouter();
-
-  useEffect(() => {
-    const userRole = user.role as UserRole;
-    if (userRole === 'BROKER') setNavLinks(t.layout.dashboardSidebar.brokerLinks);
-    else if (userRole === 'STAFF') setNavLinks(t.layout.dashboardSidebar.staffLinks);
-    else if (userRole === 'ADMIN') setNavLinks(t.layout.dashboardSidebar.adminLinks);
-    else setNavLinks(t.layout.dashboardSidebar.renterLinks); // Default for safety
-  }, [user.role]);
+  const groups = getGroupsForRole(user.role);
 
   const handleLogout = async () => {
     await signOut({ redirect: true, callbackUrl: '/login' });
@@ -90,14 +91,23 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
       <SidebarHeader className="h-20 flex items-center justify-center p-2 sticky top-0 bg-sidebar z-10 border-b border-sidebar-border">
-        <Logo iconOnly={!isMobile && useSidebar().state === 'collapsed'} />
+        <Logo iconOnly={!isMobile && state === 'collapsed'} />
       </SidebarHeader>
       <SidebarContent className="flex-1 overflow-y-auto">
-        <SidebarMenu>
-          {navLinks.map((item) => (
-            <NavLink key={item.href} item={item} isMobile={isMobile} />
+        {groups
+          .filter((group) => group.items.length > 0)
+          .map((group) => (
+            <SidebarGroup key={group.key}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <NavLink key={item.href} item={item} isMobile={isMobile} />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           ))}
-        </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter className="p-2 border-t border-sidebar-border sticky bottom-0 bg-sidebar z-10">
