@@ -4,7 +4,9 @@ import {
   publicProcedure,
   protectedProcedure,
   brokerProcedure,
+  adminProcedure,
 } from '@/server/trpc';
+import prisma from '@/lib/prisma';
 import {
   getPolicies,
   createPolicy,
@@ -30,6 +32,7 @@ import {
   PolicyReplaceTenantOutput,
   PolicyChangeGuarantorTypeOutput,
   PolicyRenewOutput,
+  PolicyAssignManagerOutput,
 } from '@/lib/schemas/policy/output';
 import { transitionPolicyStatus } from '@/lib/services/policyWorkflowService';
 import { actorTokenService } from '@/lib/services/actorTokenService';
@@ -206,8 +209,9 @@ export const policyRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const filters = {
         ...input,
-        // Brokers can only see their own policies
-        createdById: ctx.isBroker ? ctx.userId : undefined,
+        // Brokers see only policies they manage (auto-assigned on self-create
+        // or assigned via the picker by ADMIN/STAFF).
+        managedById: ctx.isBroker ? ctx.userId : undefined,
       };
 
       return await getPolicies(filters);
@@ -233,7 +237,7 @@ export const policyRouter = createTRPCRouter({
       }
 
       // Check access for brokers
-      if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+      if (ctx.userRole === 'BROKER' && policy.managedById !== ctx.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have access to this policy',
@@ -368,7 +372,7 @@ export const policyRouter = createTRPCRouter({
           message: 'Policy not found',
         });
       }
-      if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+      if (ctx.userRole === 'BROKER' && policy.managedById !== ctx.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have access to this policy',
@@ -407,7 +411,7 @@ export const policyRouter = createTRPCRouter({
         }
 
         // Check access for brokers
-        if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+        if (ctx.userRole === 'BROKER' && policy.managedById !== ctx.userId) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'You do not have access to this policy',
@@ -552,5 +556,88 @@ export const policyRouter = createTRPCRouter({
           message: error instanceof Error ? error.message : 'Failed to renew policy',
         });
       }
+    }),
+
+  /**
+   * Assign / reassign / unassign the broker (managedBy) on a policy.
+   *
+   * `managedById = null` means "no broker" — the report renders this as the
+   * literal "CS". Only ADMIN/STAFF can call this; the picker UI is hidden
+   * for brokers.
+   */
+  assignManager: adminProcedure
+    .input(z.object({
+      policyId: z.string(),
+      managedById: z.string().nullable(),
+    }))
+    .output(PolicyAssignManagerOutput)
+    .mutation(async ({ input, ctx }) => {
+      const policy = await prisma.policy.findUnique({
+        where: { id: input.policyId },
+        select: {
+          id: true,
+          managedById: true,
+          managedBy: { select: { id: true, name: true } },
+        },
+      });
+
+      if (!policy) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Policy not found' });
+      }
+
+      // No-op skip — fat-finger save with same value.
+      if (policy.managedById === input.managedById) {
+        return { success: true as const };
+      }
+
+      let newManager: { id: string; name: string | null } | null = null;
+      if (input.managedById !== null) {
+        const target = await prisma.user.findUnique({
+          where: { id: input.managedById },
+          select: { id: true, name: true, role: true, isActive: true },
+        });
+        if (!target) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Target user does not exist' });
+        }
+        if (!target.isActive) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Target user is inactive' });
+        }
+        if (target.role !== 'BROKER') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Target user must be a broker' });
+        }
+        newManager = { id: target.id, name: target.name };
+      }
+
+      await prisma.policy.update({
+        where: { id: input.policyId },
+        data: { managedById: input.managedById },
+      });
+
+      const previousName = policy.managedBy?.name ?? null;
+      const newName = newManager?.name ?? null;
+      let description: string;
+      if (policy.managedById === null && newManager) {
+        description = `Broker asignado: ${newName ?? 'sin nombre'}`;
+      } else if (policy.managedById !== null && newManager) {
+        description = `Broker reasignado de ${previousName ?? 'sin nombre'} a ${newName ?? 'sin nombre'}`;
+      } else {
+        description = `Asignación de broker eliminada (era ${previousName ?? 'sin nombre'})`;
+      }
+
+      await logPolicyActivity({
+        policyId: input.policyId,
+        action: 'broker_assigned',
+        description,
+        performedById: ctx.userId,
+        performedByType: 'user',
+        details: {
+          previousBrokerId: policy.managedById,
+          previousBrokerName: previousName,
+          newBrokerId: newManager?.id ?? null,
+          newBrokerName: newName,
+        },
+      });
+
+      return { success: true as const };
     }),
 });

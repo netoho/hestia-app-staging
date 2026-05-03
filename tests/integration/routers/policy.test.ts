@@ -552,3 +552,191 @@ describe('policy.renew', () => {
     });
   });
 });
+
+// ===========================================================================
+// policy.assignManager — adminProcedure (ADMIN + STAFF allowed)
+// ===========================================================================
+describe('policy.assignManager', () => {
+  async function createPolicyAndBroker() {
+    const { policy } = await createPolicyWithActors();
+    const broker = await prisma.user.create({
+      data: {
+        email: `broker-${Math.random().toString(36).slice(2, 6)}@hestia.test`,
+        name: 'Test Broker',
+        role: UserRole.BROKER,
+        isActive: true,
+      },
+    });
+    return { policy, broker };
+  }
+
+  test('assigns a broker to an unassigned policy and logs the activity', async () => {
+    const { policy, broker } = await createPolicyAndBroker();
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.policy.assignManager({
+      policyId: policy.id,
+      managedById: broker.id,
+    });
+    expect(result).toEqual({ success: true });
+
+    const refreshed = await prisma.policy.findUnique({ where: { id: policy.id } });
+    expect(refreshed?.managedById).toBe(broker.id);
+
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'broker_assigned' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(activity).not.toBeNull();
+    expect(activity!.description).toContain('Broker asignado');
+    expect(activity!.description).toContain('Test Broker');
+    const details = activity!.details as Record<string, unknown>;
+    expect(details.previousBrokerId).toBeNull();
+    expect(details.newBrokerId).toBe(broker.id);
+    expect(details.newBrokerName).toBe('Test Broker');
+  });
+
+  test('reassigns from broker A to broker B with reassignment description', async () => {
+    const { policy, broker: brokerA } = await createPolicyAndBroker();
+    const brokerB = await prisma.user.create({
+      data: {
+        email: `broker-b-${Math.random().toString(36).slice(2, 6)}@hestia.test`,
+        name: 'Broker B',
+        role: UserRole.BROKER,
+        isActive: true,
+      },
+    });
+    await prisma.policy.update({ where: { id: policy.id }, data: { managedById: brokerA.id } });
+
+    const { caller } = await createAdminCaller();
+    await caller.policy.assignManager({ policyId: policy.id, managedById: brokerB.id });
+
+    const refreshed = await prisma.policy.findUnique({ where: { id: policy.id } });
+    expect(refreshed?.managedById).toBe(brokerB.id);
+
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'broker_assigned' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(activity!.description).toContain('Broker reasignado');
+    expect(activity!.description).toContain('Test Broker');
+    expect(activity!.description).toContain('Broker B');
+  });
+
+  test('unassigns broker (sets managedById to null) with unassignment description', async () => {
+    const { policy, broker } = await createPolicyAndBroker();
+    await prisma.policy.update({ where: { id: policy.id }, data: { managedById: broker.id } });
+
+    const { caller } = await createAdminCaller();
+    await caller.policy.assignManager({ policyId: policy.id, managedById: null });
+
+    const refreshed = await prisma.policy.findUnique({ where: { id: policy.id } });
+    expect(refreshed?.managedById).toBeNull();
+
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'broker_assigned' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(activity!.description).toContain('Asignación de broker eliminada');
+    expect(activity!.description).toContain('Test Broker');
+  });
+
+  test('no-op skip: same broker → no write, no log entry', async () => {
+    const { policy, broker } = await createPolicyAndBroker();
+    await prisma.policy.update({ where: { id: policy.id }, data: { managedById: broker.id } });
+    const beforeUpdated = (await prisma.policy.findUnique({ where: { id: policy.id } }))!.updatedAt;
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.policy.assignManager({
+      policyId: policy.id,
+      managedById: broker.id,
+    });
+    expect(result).toEqual({ success: true });
+
+    const refreshed = await prisma.policy.findUnique({ where: { id: policy.id } });
+    expect(refreshed!.updatedAt.getTime()).toBe(beforeUpdated.getTime()); // no write
+
+    const activityCount = await prisma.policyActivity.count({
+      where: { policyId: policy.id, action: 'broker_assigned' },
+    });
+    expect(activityCount).toBe(0);
+  });
+
+  test('throws BAD_REQUEST when target user does not exist', async () => {
+    const { policy } = await createPolicyAndBroker();
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.policy.assignManager({ policyId: policy.id, managedById: 'cmnouser1234567890abcd' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('throws BAD_REQUEST when target user is inactive', async () => {
+    const { policy } = await createPolicyAndBroker();
+    const inactive = await prisma.user.create({
+      data: {
+        email: `inactive-${Math.random().toString(36).slice(2, 6)}@hestia.test`,
+        name: 'Inactive Broker',
+        role: UserRole.BROKER,
+        isActive: false,
+      },
+    });
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.policy.assignManager({ policyId: policy.id, managedById: inactive.id }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('throws BAD_REQUEST when target user is not a BROKER', async () => {
+    const { policy } = await createPolicyAndBroker();
+    const staff = await prisma.user.create({
+      data: {
+        email: `staff-${Math.random().toString(36).slice(2, 6)}@hestia.test`,
+        name: 'Staff User',
+        role: UserRole.STAFF,
+        isActive: true,
+      },
+    });
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.policy.assignManager({ policyId: policy.id, managedById: staff.id }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('throws NOT_FOUND when policy does not exist', async () => {
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.policy.assignManager({ policyId: 'cmnopolicy1234567890abcd', managedById: null }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('auth gate: ADMIN/STAFF allowed; BROKER + PUBLIC blocked', async () => {
+    const { policy, broker } = await createPolicyAndBroker();
+    await expectAuthGate({
+      allowed: [UserRole.ADMIN, UserRole.STAFF],
+      invoke: (caller) =>
+        caller.policy.assignManager({ policyId: policy.id, managedById: broker.id }),
+    });
+  });
+});
+
+// ===========================================================================
+// createPolicy auto-assignment of managedById when creator is BROKER
+// ===========================================================================
+describe('policy.create auto-assign managedById', () => {
+  test('broker self-create: managedById === createdById', async () => {
+    const { caller, user } = await createBrokerCaller();
+    const pkg = await packageFactory.create();
+    const input = buildCreatePolicyInput(pkg.id);
+    const result = await caller.policy.create(input);
+    expect(result.policy.createdById).toBe(user.id);
+    expect(result.policy.managedById).toBe(user.id);
+  });
+
+  test('admin/staff create: managedById is null until picker sets it', async () => {
+    const { caller } = await createAdminCaller();
+    const pkg = await packageFactory.create();
+    const input = buildCreatePolicyInput(pkg.id);
+    const result = await caller.policy.create(input);
+    expect(result.policy.managedById).toBeNull();
+  });
+});

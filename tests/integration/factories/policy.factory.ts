@@ -13,6 +13,14 @@ import { prisma } from '../../utils/database';
 type PolicyTransient = {
   createdById: string;
   packageId?: string | null;
+  /**
+   * Override `managedById`. By default the factory mirrors production
+   * behavior: when no override is given, leave it null (mirrors policies
+   * created by ADMIN/STAFF and not yet assigned via the picker). For broker
+   * scenarios, pass `managedById: brokerId` to simulate either self-creation
+   * (auto-assign) or admin assignment.
+   */
+  managedById?: string | null;
 };
 
 export const policyFactory = Factory.define<Policy, PolicyTransient>(
@@ -41,12 +49,14 @@ export const policyFactory = Factory.define<Policy, PolicyTransient>(
       rentIncreasePercentage: null,
       paymentMethod: 'bank_transfer',
       createdById: transientParams.createdById,
-      managedById: null,
+      managedById: transientParams.managedById ?? null,
       status: PolicyStatus.COLLECTING_INFO,
       submittedAt: null,
       approvedAt: null,
       activatedAt: null,
       expiresAt: null,
+      contractStartDate: null,
+      contractEndDate: null,
       reviewNotes: null,
       cancelledAt: null,
       cancellationReason: null,

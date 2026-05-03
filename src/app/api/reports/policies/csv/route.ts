@@ -106,12 +106,15 @@ export async function GET(request: NextRequest) {
       totalPrice: true,
       guarantorType: true,
       package: { select: { name: true } },
-      createdBy: { select: { internalId: true, name: true, role: true } },
-      managedBy: { select: { name: true } },
+      managedBy: { select: { internalId: true, name: true } },
     },
     orderBy: { activatedAt: 'asc' },
   });
 
+  // 10 columns. The "Vendedor / CS" column from the v1 design was redundant
+  // with "Nombre del broker" once `managedById` became "the assigned broker"
+  // (and falls back to "CS" when null). See docs/plan + README "Reporting
+  // fields not yet modeled" section for the model history.
   const fields = [
     'Fecha activación',
     'Nº protección',
@@ -123,11 +126,9 @@ export async function GET(request: NextRequest) {
     'Nombre del broker',
     'Inicio de vigencia',
     'Fin de vigencia',
-    'Vendedor / CS',
   ] as const;
 
   const rows = policies.map((p) => {
-    const isBroker = p.createdBy?.role === 'BROKER';
     const inicio = p.contractStartDate ?? p.activatedAt;
     const fin = p.contractEndDate ?? p.expiresAt;
     return {
@@ -137,11 +138,10 @@ export async function GET(request: NextRequest) {
       'Garantía': GUARANTOR_LABEL[p.guarantorType] ?? p.guarantorType,
       'Monto de renta': p.rentAmount,
       'Costo de la protección': p.totalPrice,
-      'ID del broker': isBroker ? p.createdBy?.internalId ?? '' : '',
-      'Nombre del broker': isBroker ? p.createdBy?.name ?? '' : '',
+      'ID del broker': p.managedBy?.internalId ?? '',
+      'Nombre del broker': p.managedBy?.name ?? 'CS',
       'Inicio de vigencia': formatDDMMYYYY(inicio),
       'Fin de vigencia': formatDDMMYYYY(fin),
-      'Vendedor / CS': p.managedBy?.name ?? 'CS',
     };
   });
 

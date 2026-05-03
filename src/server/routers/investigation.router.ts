@@ -321,8 +321,8 @@ export const investigationRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Policy not found' });
       }
 
-      // Brokers can only see their own policies; ADMIN and STAFF can see all
-      if (ctx.userRole === 'BROKER' && policy.createdById !== ctx.userId) {
+      // Brokers can only see policies they manage; ADMIN and STAFF can see all
+      if (ctx.userRole === 'BROKER' && policy.managedById !== ctx.userId) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
       }
 

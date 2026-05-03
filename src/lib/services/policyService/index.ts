@@ -38,6 +38,15 @@ export async function createPolicy(data: CreatePolicyData) {
   const sanitizedPropertyAddressDetails = sanitizeAddressDetails(policyData.propertyAddressDetails);
   const sanitizedContractSigningAddressDetails = sanitizeAddressDetails(policyData.contractSigningAddressDetails);
 
+  // Auto-assign managedById to the creator when the creator is a BROKER.
+  // Brokers self-managing their own policies is the default; ADMIN/STAFF
+  // creating on behalf of a broker leaves managedById null until the picker sets it.
+  const creator = await prisma.user.findUnique({
+    where: { id: policyData.createdById },
+    select: { role: true },
+  });
+  const autoManagedById = creator?.role === 'BROKER' ? policyData.createdById : null;
+
   // Create the policy with the new schema
   const policy = await prisma.policy.create({
     data: {
@@ -51,6 +60,7 @@ export async function createPolicy(data: CreatePolicyData) {
       guarantorType: policyData.guarantorType || 'NONE',
       packageId: policyData.packageId,
       createdById: policyData.createdById,
+      managedById: autoManagedById,
       status: 'COLLECTING_INFO',
       contractStartDate: policyData.startDate ? new Date(policyData.startDate) : null,
       contractEndDate: policyData.endDate ? new Date(policyData.endDate) : null,
@@ -188,7 +198,7 @@ export async function getPolicies(params?: {
   search?: string;
   page?: number;
   limit?: number;
-  createdById?: string;
+  managedById?: string;
 }) {
   const page = params?.page || 1;
   const limit = params?.limit || 10;
@@ -200,8 +210,8 @@ export async function getPolicies(params?: {
     where.status = params.status;
   }
 
-  if (params?.createdById) {
-    where.createdById = params.createdById;
+  if (params?.managedById) {
+    where.managedById = params.managedById;
   }
 
   if (params?.search) {

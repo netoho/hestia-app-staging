@@ -50,7 +50,7 @@ export const paymentRouter = createTRPCRouter({
       // Verify access to this policy
       const policy = await ctx.prisma.policy.findUnique({
         where: { id: policyId },
-        select: { createdById: true },
+        select: { managedById: true },
       });
 
       if (!policy) {
@@ -60,11 +60,11 @@ export const paymentRouter = createTRPCRouter({
         });
       }
 
-      // Brokers can only see payments for policies they created
-      if (userRole === 'BROKER' && policy.createdById !== userId) {
+      // Brokers can only see payments for policies they manage
+      if (userRole === 'BROKER' && policy.managedById !== userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You can only view payments for policies you created',
+          message: 'You can only view payments for policies you manage',
         });
       }
 
@@ -88,7 +88,7 @@ export const paymentRouter = createTRPCRouter({
       // Verify access to this policy
       const policy = await ctx.prisma.policy.findUnique({
         where: { id: policyId },
-        select: { createdById: true },
+        select: { managedById: true },
       });
 
       if (!policy) {
@@ -98,11 +98,11 @@ export const paymentRouter = createTRPCRouter({
         });
       }
 
-      // Brokers can only see payments for policies they created
-      if (userRole === 'BROKER' && policy.createdById !== userId) {
+      // Brokers can only see payments for policies they manage
+      if (userRole === 'BROKER' && policy.managedById !== userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You can only view payments for policies you created',
+          message: 'You can only view payments for policies you manage',
         });
       }
 
@@ -123,7 +123,7 @@ export const paymentRouter = createTRPCRouter({
       // Verify access to this policy
       const policy = await ctx.prisma.policy.findUnique({
         where: { id: policyId },
-        select: { createdById: true },
+        select: { managedById: true },
       });
 
       if (!policy) {
@@ -133,11 +133,11 @@ export const paymentRouter = createTRPCRouter({
         });
       }
 
-      // Brokers can only see payments for policies they created
-      if (userRole === 'BROKER' && policy.createdById !== userId) {
+      // Brokers can only see payments for policies they manage
+      if (userRole === 'BROKER' && policy.managedById !== userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You can only view payments for policies you created',
+          message: 'You can only view payments for policies you manage',
         });
       }
 
@@ -279,7 +279,7 @@ export const paymentRouter = createTRPCRouter({
         where: { id: paymentId },
         include: {
           policy: {
-            select: { createdById: true },
+            select: { managedById: true },
           },
         },
       });
@@ -291,8 +291,8 @@ export const paymentRouter = createTRPCRouter({
         });
       }
 
-      // Brokers can only see payments for policies they created
-      if (userRole === 'BROKER' && payment.policy.createdById !== userId) {
+      // Brokers can only see payments for policies they manage
+      if (userRole === 'BROKER' && payment.policy.managedById !== userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You can only view payments for policies you created',

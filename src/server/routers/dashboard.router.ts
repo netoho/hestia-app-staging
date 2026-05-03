@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc';
 import { getDashboardStats, getRecentPolicies } from '@/lib/services/policyService/stats';
+import { brokerScopeWhere } from '@/lib/services/policyService/scope';
 import {
   DashboardStatsOutput,
   DashboardRecentPoliciesOutput,
@@ -9,15 +10,15 @@ import {
 /**
  * Dashboard data — KPI counts and recent activity for the landing page.
  *
- * Brokers see only their own policies; admin/staff see global counts.
- * Scoping is applied here based on `ctx.userRole` so the router contract
- * is identical for every caller — the data they get back is filtered.
+ * Brokers see only policies they manage (`managedById = userId`); admin/staff
+ * see global counts. Scoping uses `brokerScopeWhere` so all broker-scoped
+ * queries stay aligned across routers.
  */
 export const dashboardRouter = createTRPCRouter({
   getStats: protectedProcedure
     .output(DashboardStatsOutput)
     .query(async ({ ctx }) => {
-      const scope = ctx.userRole === 'BROKER' ? { createdById: ctx.userId } : {};
+      const scope = brokerScopeWhere(ctx.userRole, ctx.userId);
       return getDashboardStats(scope);
     }),
 
@@ -27,7 +28,7 @@ export const dashboardRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const scope = {
         limit: input?.limit ?? 5,
-        ...(ctx.userRole === 'BROKER' ? { createdById: ctx.userId } : {}),
+        ...brokerScopeWhere(ctx.userRole, ctx.userId),
       };
       const policies = await getRecentPolicies(scope);
       return { policies };
