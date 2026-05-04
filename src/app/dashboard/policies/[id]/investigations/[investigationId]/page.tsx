@@ -263,7 +263,7 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
               <CardTitle>{actorName}</CardTitle>
               <CardDescription>Sujeto de Investigación</CardDescription>
             </div>
-            <Badge>{getInvestigatedActorLabel(investigation.actorType as any)}</Badge>
+            <Badge variant="muted">{getInvestigatedActorLabel(investigation.actorType as any)}</Badge>
           </div>
         </CardHeader>
         {investigation.actor && (

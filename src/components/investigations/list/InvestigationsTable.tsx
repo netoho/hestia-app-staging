@@ -54,7 +54,7 @@ export default function InvestigationsTable({
       case 'REJECTED':
         return 'error';
       case 'ARCHIVED':
-        return 'outline';
+        return 'muted';
       default:
         return 'warning';
     }
@@ -102,7 +102,7 @@ export default function InvestigationsTable({
 
                   {/* Actor Type */}
                   <TableCell>
-                    <Badge variant="outline">
+                    <Badge variant="muted">
                       {getInvestigatedActorLabel(inv.actorType)}
                     </Badge>
                   </TableCell>
