@@ -1,15 +1,30 @@
 import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
+export type PolicyStatusBadgeVariant =
+  | 'default'
+  | 'secondary'
+  | 'destructive'
+  | 'outline'
+  | 'success'
+  | 'warning'
+  | 'info'
+  | 'muted'
+  | 'error';
+
 export const POLICY_STATUS_CONFIG: Record<PolicyStatus, {
   label: string;
-  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+  variant: PolicyStatusBadgeVariant;
   filterVisible?: boolean;
 }> = {
-  [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando Info', variant: 'outline', filterVisible: true },
-  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente Aprobación', variant: 'secondary', filterVisible: true },
-  [PolicyStatus.ACTIVE]: { label: 'Activa', variant: 'default', filterVisible: true },
-  [PolicyStatus.EXPIRED]: { label: 'Expirada', variant: 'secondary', filterVisible: true },
-  [PolicyStatus.CANCELLED]: { label: 'Cancelada', variant: 'destructive', filterVisible: true },
+  // Soft-tinted pills aligned with the KPI tile chip palette
+  // (emerald/amber/sky/slate/rose). Labels shortened to single words —
+  // "Recopilando" and "Pendiente" are unambiguous in this state machine
+  // (the alternative for each is the other, with a different label).
+  [PolicyStatus.COLLECTING_INFO]: { label: 'Recopilando', variant: 'info', filterVisible: true },
+  [PolicyStatus.PENDING_APPROVAL]: { label: 'Pendiente', variant: 'warning', filterVisible: true },
+  [PolicyStatus.ACTIVE]: { label: 'Activa', variant: 'success', filterVisible: true },
+  [PolicyStatus.EXPIRED]: { label: 'Expirada', variant: 'muted', filterVisible: true },
+  [PolicyStatus.CANCELLED]: { label: 'Cancelada', variant: 'error', filterVisible: true },
 };
 
 export const getFilterableStatuses = () =>
