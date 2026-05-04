@@ -20,14 +20,14 @@ import { useTableState } from '@/hooks/use-table-state';
 import { trpc } from '@/lib/trpc/client';
 import { formatDate } from '@/lib/utils/formatting';
 
-const roleVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    admin: 'destructive',
-    staff: 'secondary',
-    owner: 'default',
+const roleVariantMap: Record<string, 'success' | 'warning' | 'info' | 'muted' | 'error' | 'outline'> = {
+    admin: 'error',
+    staff: 'muted',
+    owner: 'info',
     renter: 'outline',
-    broker: 'default',
+    broker: 'info',
     tenant: 'outline',
-    landlord: 'secondary',
+    landlord: 'muted',
 };
 
 function UsersSkeleton() {
