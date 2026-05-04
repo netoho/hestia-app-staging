@@ -39,4 +39,16 @@ export const globals = {
         demoUser: "Usuario Demo",
         error: "Error",
     },
+
+    pagination: {
+        showing: (start: number, end: number, total: number) =>
+            `Mostrando ${start} a ${end} de ${total} resultados`,
+        rowsPerPage: "Filas por página",
+        pageOf: (page: number, totalPages: number) =>
+            `Página ${page} de ${totalPages}`,
+        firstPage: "Primera página",
+        previousPage: "Página anterior",
+        nextPage: "Página siguiente",
+        lastPage: "Última página",
+    },
 };

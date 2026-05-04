@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { t } from '@/lib/i18n';
 
 export interface PaginationInfo {
   page: number;
@@ -42,13 +43,13 @@ export function TablePagination({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2 py-4">
       {/* Results info */}
       <div className="text-sm text-muted-foreground">
-        Showing {startItem} to {endItem} of {total} results
+        {t.pagination.showing(startItem, endItem, total)}
       </div>
 
       <div className="flex items-center gap-6">
         {/* Items per page */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rows per page</span>
+          <span className="text-sm text-muted-foreground">{t.pagination.rowsPerPage}</span>
           <Select
             value={limit.toString()}
             onValueChange={(value) => onLimitChange(Number(value))}
@@ -69,9 +70,9 @@ export function TablePagination({
         {/* Page navigation */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            {t.pagination.pageOf(page, totalPages)}
           </span>
-          
+
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -79,36 +80,40 @@ export function TablePagination({
               onClick={() => onPageChange(1)}
               disabled={!canPreviousPage || isLoading}
               className="h-8 w-8 p-0"
+              aria-label={t.pagination.firstPage}
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
-            
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(page - 1)}
               disabled={!canPreviousPage || isLoading}
               className="h-8 w-8 p-0"
+              aria-label={t.pagination.previousPage}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(page + 1)}
               disabled={!canNextPage || isLoading}
               className="h-8 w-8 p-0"
+              aria-label={t.pagination.nextPage}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-            
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(totalPages)}
               disabled={!canNextPage || isLoading}
               className="h-8 w-8 p-0"
+              aria-label={t.pagination.lastPage}
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
