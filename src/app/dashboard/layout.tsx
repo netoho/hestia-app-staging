@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const user = session.user;
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen>
       <div className="relative min-h-screen bg-background">
         {/* Fixed sidebar */}
         <DashboardSidebar user={user} />

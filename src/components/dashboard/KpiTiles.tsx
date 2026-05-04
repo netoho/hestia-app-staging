@@ -18,7 +18,8 @@ interface TileConfig {
   label: string;
   href: string;
   icon: React.ElementType;
-  accent: string;
+  /** Tailwind classes for the icon chip — bg + foreground tint together. */
+  chip: string;
 }
 
 const TILES: TileConfig[] = [
@@ -27,14 +28,14 @@ const TILES: TileConfig[] = [
     label: t.pages.dashboard.kpis.active,
     href: '/dashboard/policies?status=ACTIVE',
     icon: CheckCircle2,
-    accent: 'text-emerald-600',
+    chip: 'bg-emerald-50 text-emerald-600',
   },
   {
     key: 'pendingApproval',
     label: t.pages.dashboard.kpis.pendingApproval,
     href: '/dashboard/policies?status=PENDING_APPROVAL',
     icon: AlertCircle,
-    accent: 'text-amber-600',
+    chip: 'bg-amber-50 text-amber-600',
   },
   {
     // The "En proceso" tile points at COLLECTING_INFO today (the only intermediate
@@ -46,14 +47,14 @@ const TILES: TileConfig[] = [
     label: t.pages.dashboard.kpis.inProcess,
     href: '/dashboard/policies?status=COLLECTING_INFO',
     icon: Loader2,
-    accent: 'text-sky-600',
+    chip: 'bg-sky-50 text-sky-600',
   },
   {
     key: 'expired',
     label: t.pages.dashboard.kpis.expired,
     href: '/dashboard/policies?status=EXPIRED',
     icon: Clock,
-    accent: 'text-slate-500',
+    chip: 'bg-slate-100 text-slate-600',
   },
 ];
 
@@ -70,13 +71,20 @@ export function KpiTiles({ data, isLoading, isError }: KpiTilesProps) {
             className="group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
           >
             <Card className="h-full transition-shadow group-hover:shadow-md">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{tile.label}</p>
-                  <Icon className={`h-4 w-4 ${tile.accent}`} aria-hidden />
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs uppercase tracking-wide font-semibold text-muted-foreground">
+                    {tile.label}
+                  </p>
+                  <span
+                    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${tile.chip}`}
+                    aria-hidden
+                  >
+                    <Icon className="h-5 w-5" />
+                  </span>
                 </div>
                 {isLoading ? (
-                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-9 w-20" />
                 ) : isError ? (
                   <span
                     className="text-3xl font-semibold text-muted-foreground"

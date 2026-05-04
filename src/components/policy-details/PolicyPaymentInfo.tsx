@@ -32,12 +32,12 @@ export function PolicyPaymentInfo({
   };
 
   const getPaymentStatusDisplay = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      'PENDING': { label: t.pages.policies.details.payment.status.pending, variant: 'outline' },
-      'PROCESSING': { label: t.pages.policies.details.payment.status.processing, variant: 'secondary' },
-      'COMPLETED': { label: t.pages.policies.details.payment.status.completed, variant: 'default' },
-      'FAILED': { label: t.pages.policies.details.payment.status.failed, variant: 'destructive' },
-      'REFUNDED': { label: t.pages.policies.details.payment.status.refunded, variant: 'secondary' }
+    const statusMap: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'error' | 'muted' | 'outline' }> = {
+      'PENDING': { label: t.pages.policies.details.payment.status.pending, variant: 'warning' },
+      'PROCESSING': { label: t.pages.policies.details.payment.status.processing, variant: 'info' },
+      'COMPLETED': { label: t.pages.policies.details.payment.status.completed, variant: 'success' },
+      'FAILED': { label: t.pages.policies.details.payment.status.failed, variant: 'error' },
+      'REFUNDED': { label: t.pages.policies.details.payment.status.refunded, variant: 'muted' }
     };
     return statusMap[status] || { label: status, variant: 'outline' as const };
   };

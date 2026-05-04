@@ -55,12 +55,20 @@ const NavLink = ({ item, isMobile }: { item: NavItem; isMobile: boolean }) => {
   };
 
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem className="relative">
+      {/* Primary-colored bar marks the active item — strongest "you are here" signal. */}
+      {isActive && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-primary"
+        />
+      )}
       <SidebarMenuButton
         asChild
         isActive={isActive}
         tooltip={item.label}
         aria-current={isActive ? "page" : undefined}
+        className={isActive ? "[&>svg]:text-primary" : undefined}
       >
         <Link href={item.href} onClick={handleClick}>
           {item.icon && <item.icon />}

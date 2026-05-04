@@ -36,11 +36,11 @@ export default function InvestigationCard({
       case 'APPROVED':
         return 'success';
       case 'REJECTED':
-        return 'destructive';
+        return 'error';
       case 'ARCHIVED':
-        return 'outline';
+        return 'muted';
       default:
-        return 'secondary';
+        return 'warning';
     }
   };
 
@@ -53,7 +53,7 @@ export default function InvestigationCard({
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base">{inv.actorName}</h3>
-            <Badge variant="outline" className="mt-1">
+            <Badge variant="muted" className="mt-1">
               {getInvestigatedActorLabel(inv.actorType)}
             </Badge>
           </div>

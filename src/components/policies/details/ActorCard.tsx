@@ -94,9 +94,9 @@ export default function ActorCard({
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'APPROVED': return 'default' as const;
-      case 'REJECTED': return 'destructive' as const;
-      default: return 'secondary' as const;
+      case 'APPROVED': return 'success' as const;
+      case 'REJECTED': return 'error' as const;
+      default: return 'warning' as const;
     }
   };
 

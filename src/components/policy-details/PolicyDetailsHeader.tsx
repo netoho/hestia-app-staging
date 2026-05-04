@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileDown, Loader2 } from 'lucide-react';
 import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
-import { POLICY_STATUS_DISPLAY, POLICY_STATUS_COLORS } from '@/lib/types/policy';
+import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 import { t } from '@/lib/i18n';
 
 interface PolicyDetailsHeaderProps {
@@ -20,18 +20,7 @@ export function PolicyDetailsHeader({
   onDownloadPDF, 
   downloadingPDF 
 }: PolicyDetailsHeaderProps) {
-  const getStatusBadgeVariant = (status: PolicyStatus) => {
-    const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      gray: 'secondary',
-      blue: 'default',
-      yellow: 'outline',
-      orange: 'outline',
-      purple: 'default',
-      green: 'default',
-      red: 'destructive',
-    };
-    return colorMap[POLICY_STATUS_COLORS[status]] || 'default';
-  };
+  const statusConfig = POLICY_STATUS_CONFIG[status];
 
   return (
     <div className="mb-6">
@@ -65,8 +54,8 @@ export function PolicyDetailsHeader({
             )}
             {t.pages.policies.details.downloadPDF}
           </Button>
-          <Badge variant={getStatusBadgeVariant(status)} className="text-sm">
-            {POLICY_STATUS_DISPLAY[status]}
+          <Badge variant={statusConfig.variant} className="text-sm">
+            {statusConfig.label}
           </Badge>
         </div>
       </div>

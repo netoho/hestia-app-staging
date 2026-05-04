@@ -55,16 +55,16 @@ interface PaymentCardProps {
 
 const PAYMENT_STATUS_CONFIG: Record<
   PaymentStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string; icon: React.ElementType }
+  { label: string; variant: 'warning' | 'info' | 'success' | 'error' | 'muted' | 'outline'; icon: React.ElementType }
 > = {
-  [PaymentStatus.PENDING]: { label: 'Pendiente', variant: 'secondary', icon: Clock },
-  [PaymentStatus.PROCESSING]: { label: 'Procesando', variant: 'default', className: 'bg-blue-500 hover:bg-blue-600', icon: Loader2 },
-  [PaymentStatus.COMPLETED]: { label: 'Completado', variant: 'default', className: 'bg-green-500 hover:bg-green-600', icon: CheckCircle2 },
-  [PaymentStatus.FAILED]: { label: 'Fallido', variant: 'destructive', icon: XCircle },
-  [PaymentStatus.CANCELLED]: { label: 'Cancelado', variant: 'outline', icon: Ban },
-  [PaymentStatus.REFUNDED]: { label: 'Reembolsado', variant: 'outline', icon: RefreshCw },
-  [PaymentStatus.PARTIAL]: { label: 'Parcial', variant: 'default', className: 'bg-yellow-500 hover:bg-yellow-600', icon: Clock },
-  [PaymentStatus.PENDING_VERIFICATION]: { label: 'Por Verificar', variant: 'default', className: 'bg-orange-500 hover:bg-orange-600', icon: Eye },
+  [PaymentStatus.PENDING]: { label: 'Pendiente', variant: 'warning', icon: Clock },
+  [PaymentStatus.PROCESSING]: { label: 'Procesando', variant: 'info', icon: Loader2 },
+  [PaymentStatus.COMPLETED]: { label: 'Completado', variant: 'success', icon: CheckCircle2 },
+  [PaymentStatus.FAILED]: { label: 'Fallido', variant: 'error', icon: XCircle },
+  [PaymentStatus.CANCELLED]: { label: 'Cancelado', variant: 'muted', icon: Ban },
+  [PaymentStatus.REFUNDED]: { label: 'Reembolsado', variant: 'muted', icon: RefreshCw },
+  [PaymentStatus.PARTIAL]: { label: 'Parcial', variant: 'warning', icon: Clock },
+  [PaymentStatus.PENDING_VERIFICATION]: { label: 'Por Verificar', variant: 'warning', icon: Eye },
 };
 
 export function PaymentCard({
@@ -166,7 +166,7 @@ export function PaymentCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-medium">{typeLabel}</CardTitle>
-          <Badge variant={statusConfig.variant} className={statusConfig.className}>
+          <Badge variant={statusConfig.variant}>
             <StatusIcon className={`h-3.5 w-3.5 mr-1 ${payment.status === PaymentStatus.PROCESSING ? 'animate-spin' : ''}`} />
             {statusConfig.label}
           </Badge>

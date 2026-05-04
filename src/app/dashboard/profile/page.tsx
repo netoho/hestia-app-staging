@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageTitle } from '@/components/shared/PageTitle';
+import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -163,7 +163,7 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <PageTitle title={t.pages.profile.title} subtitle={t.pages.profile.subtitle} />
+      <DashboardPageHeader title={t.pages.profile.title} subtitle={t.pages.profile.subtitle} />
 
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-1">
@@ -177,7 +177,7 @@ export default function ProfilePage() {
                 size="lg"
                 showDelete={!!profile?.avatarUrl}
               />
-              <CardTitle className="text-2xl font-headline mt-4">{profile?.name || 'N/A'}</CardTitle>
+              <CardTitle className="text-2xl mt-4">{profile?.name || 'N/A'}</CardTitle>
               <CardDescription>{profile?.role}</CardDescription>
               <p className="text-xs text-muted-foreground mt-2">
                 Haz clic en el avatar para cambiar la foto
@@ -196,7 +196,7 @@ export default function ProfilePage() {
         <div className="md:col-span-2">
           <Card className="shadow-lg rounded-lg">
             <CardHeader>
-              <CardTitle className="font-headline text-xl">{t.pages.profile.editTitle}</CardTitle>
+              <CardTitle>{t.pages.profile.editTitle}</CardTitle>
               <CardDescription>{t.pages.profile.editSubtitle}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

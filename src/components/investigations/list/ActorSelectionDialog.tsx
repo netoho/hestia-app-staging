@@ -158,7 +158,7 @@ export default function ActorSelectionDialog({
                       {actor.name}
                     </span>
                     <div className="flex gap-1 mt-1">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="muted" className="text-xs">
                         {getInvestigatedActorLabel(actor.type)}
                       </Badge>
                       {hasActiveInvestigation && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { PageTitle } from '@/components/shared/PageTitle';
+import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +38,7 @@ export default function PackagesPage() {
 
   return (
     <div>
-      <PageTitle
+      <DashboardPageHeader
         title="Gestión de Paquetes"
         subtitle="Ver, crear y editar los paquetes de servicio de Hestia."
       />
