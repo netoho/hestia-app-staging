@@ -1,16 +1,14 @@
 /**
  * Integration tests for /api/reports/policies/csv.
  *
- * Under the new model, `managedById` is the broker who tracks the policy:
- *   - Self-created broker policies are auto-assigned (managedById = createdById).
- *   - ADMIN/STAFF-created policies start with managedById = null and are
- *     assigned via the picker (or stay "CS" forever if direct deal).
- * The CSV "ID del broker" / "Nombre del broker" columns source from
- * `managedBy`, with "Nombre del broker" falling back to the literal "CS"
- * when null.
+ * The report includes EVERY policy created in the date window (regardless of
+ * status — pipeline, active, terminal). Each lifecycle timestamp gets its own
+ * column so consumers can re-sort/filter independently in Excel. Filter is
+ * applied to `createdAt`. Sorted by `createdAt DESC`.
  *
- * The legacy "Vendedor / CS" column was dropped — its data is redundant
- * with the new "Nombre del broker" column.
+ * Broker columns derive from `managedBy.*`:
+ *   - `Nombre del broker` falls back to literal `"CS"` when `managedById` is null.
+ *   - `ID del broker` is empty when `managedById` is null.
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -62,7 +60,7 @@ describe('GET /api/reports/policies/csv', () => {
     expect(status).toBe(400);
   });
 
-  test('returns CSV with BOM and 10-column header for ADMIN with no policies', async () => {
+  test('returns CSV with BOM and the 16-column header for ADMIN with no policies', async () => {
     const admin = await adminUser.create();
     const result = await withSession(admin, async () => {
       const res = await GET(
@@ -76,18 +74,33 @@ describe('GET /api/reports/policies/csv', () => {
 
     const body = result.body.slice(BOM.length);
     const firstLine = body.split('\n')[0];
-    expect(firstLine).toContain('Fecha activación');
+
+    // Identity + status
     expect(firstLine).toContain('Nº protección');
+    expect(firstLine).toContain('Estado');
+    // Lifecycle timestamps — every one gets its own column
+    expect(firstLine).toContain('Fecha de creación');
+    expect(firstLine).toContain('Fecha de envío');
+    expect(firstLine).toContain('Fecha de aprobación');
+    expect(firstLine).toContain('Fecha de activación');
+    expect(firstLine).toContain('Fecha de expiración');
+    expect(firstLine).toContain('Fecha de cancelación');
+    // Contract dates (wizard-captured, distinct from system activatedAt/expiresAt)
+    expect(firstLine).toContain('Inicio de contrato');
+    expect(firstLine).toContain('Fin de contrato');
+    // Plan + financial + broker
     expect(firstLine).toContain('Tipo (paquete)');
     expect(firstLine).toContain('Garantía');
     expect(firstLine).toContain('Monto de renta');
     expect(firstLine).toContain('Costo de la protección');
     expect(firstLine).toContain('ID del broker');
     expect(firstLine).toContain('Nombre del broker');
-    expect(firstLine).toContain('Inicio de vigencia');
-    expect(firstLine).toContain('Fin de vigencia');
-    // Vendedor / CS column was dropped under the new managedBy-as-broker model.
+
+    // Legacy column names from earlier iterations should NOT appear.
     expect(firstLine).not.toContain('Vendedor / CS');
+    expect(firstLine).not.toContain('Inicio de vigencia');
+    expect(firstLine).not.toContain('Fin de vigencia');
+    expect(firstLine).not.toContain('Fecha activación');  // current column is "Fecha de activación"
   });
 
   test('STAFF can also download the report', async () => {
@@ -101,9 +114,12 @@ describe('GET /api/reports/policies/csv', () => {
     expect(status).toBe(200);
   });
 
-  test('excludes policies with activatedAt = null', async () => {
+  test('includes pipeline-stage policies (activatedAt may be null)', async () => {
     const admin = await adminUser.create();
     const pkg = await packageFactory.create();
+    // A COLLECTING_INFO policy with no activatedAt — used to be excluded under
+    // the activatedAt filter; should now be included since the filter is on
+    // createdAt and the row was created today (in the currentMonth preset).
     await policyFactory.create(
       { status: PolicyStatus.COLLECTING_INFO, activatedAt: null },
       { transient: { createdById: admin.id, packageId: pkg.id } },
@@ -116,20 +132,85 @@ describe('GET /api/reports/policies/csv', () => {
       return readCsv(res);
     });
     const lines = result.body.slice(BOM.length).split('\n').filter((l) => l.trim());
-    // header only — no data rows
-    expect(lines.length).toBe(1);
+    expect(lines.length).toBe(2); // header + 1 row (the pipeline policy)
+    // Estado column shows the localized status label.
+    expect(lines[1]).toContain('Recopilando');
+  });
+
+  test('Estado column reflects every status', async () => {
+    const admin = await adminUser.create();
+    const pkg = await packageFactory.create();
+
+    const allStatuses = [
+      PolicyStatus.COLLECTING_INFO,
+      PolicyStatus.PENDING_APPROVAL,
+      PolicyStatus.ACTIVE,
+      PolicyStatus.EXPIRED,
+      PolicyStatus.CANCELLED,
+    ];
+    for (const status of allStatuses) {
+      await policyFactory.create(
+        { status, activatedAt: status === PolicyStatus.COLLECTING_INFO || status === PolicyStatus.PENDING_APPROVAL ? null : new Date() },
+        { transient: { createdById: admin.id, packageId: pkg.id } },
+      );
+    }
+
+    const result = await withSession(admin, async () => {
+      const res = await GET(
+        buildRequest('GET', 'http://localhost/api/reports/policies/csv?preset=currentMonth'),
+      );
+      return readCsv(res);
+    });
+    const body = result.body.slice(BOM.length);
+    expect(body).toContain('Recopilando');
+    expect(body).toContain('Pendiente');
+    expect(body).toContain('Activa');
+    expect(body).toContain('Expirada');
+    expect(body).toContain('Cancelada');
+  });
+
+  test('lifecycle timestamps populate their respective columns', async () => {
+    const admin = await adminUser.create();
+    const pkg = await packageFactory.create();
+
+    // A fully-cancelled policy that went through every state — every timestamp set.
+    await policyFactory.create(
+      {
+        status: PolicyStatus.CANCELLED,
+        submittedAt: new Date(2026, 4, 1),
+        approvedAt: new Date(2026, 4, 2),
+        activatedAt: new Date(2026, 4, 3),
+        expiresAt: new Date(2027, 4, 3),
+        cancelledAt: new Date(2026, 4, 15),
+        contractStartDate: new Date(2026, 4, 5),
+        contractEndDate: new Date(2027, 4, 5),
+      },
+      { transient: { createdById: admin.id, packageId: pkg.id } },
+    );
+
+    const result = await withSession(admin, async () => {
+      const res = await GET(
+        buildRequest('GET', 'http://localhost/api/reports/policies/csv?preset=currentMonth'),
+      );
+      return readCsv(res);
+    });
+    const body = result.body.slice(BOM.length);
+    // Spot-check each formatted date is present in the row.
+    expect(body).toContain('01/05/2026'); // submittedAt
+    expect(body).toContain('02/05/2026'); // approvedAt
+    expect(body).toContain('03/05/2026'); // activatedAt
+    expect(body).toContain('15/05/2026'); // cancelledAt
+    expect(body).toContain('05/05/2026'); // contractStartDate
   });
 
   test('"Nombre del broker" falls back to "CS" when managedById is null', async () => {
     const admin = await adminUser.create();
     const pkg = await packageFactory.create();
 
-    const today = new Date();
     await policyFactory.create(
       {
         status: PolicyStatus.ACTIVE,
-        activatedAt: today,
-        expiresAt: new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()),
+        activatedAt: new Date(),
         rentAmount: 18000,
         totalPrice: 5500,
       },
@@ -153,7 +234,6 @@ describe('GET /api/reports/policies/csv', () => {
     const admin = await adminUser.create();
     const pkg = await packageFactory.create();
 
-    // Admin-created and assigned to a broker via the picker (scenario 2).
     await policyFactory.create(
       { status: PolicyStatus.ACTIVE, activatedAt: new Date() },
       { transient: { createdById: admin.id, packageId: pkg.id, managedById: broker.id } },
@@ -182,12 +262,54 @@ describe('GET /api/reports/policies/csv', () => {
       );
       return readCsv(res);
     });
-    // Admin's name should NOT appear in the broker columns under the new model.
     expect(result.body).not.toContain('Admin Person');
     const lines = result.body.slice(BOM.length).split('\n').filter((l) => l.trim());
     expect(lines.length).toBe(2); // header + 1 row
-    // ID del broker is empty, Nombre del broker is "CS".
     expect(lines[1]).toContain('CS');
+  });
+
+  test('rows ordered by createdAt DESC (newest first)', async () => {
+    const admin = await adminUser.create();
+    const pkg = await packageFactory.create();
+
+    // Both dates within the current month and on/before today, so the
+    // currentMonth preset filter (createdAt: gte startOfMonth, lte endOfToday)
+    // includes both rows.
+    const now = new Date();
+    const olderDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    olderDate.setHours(8, 0, 0, 0);
+    const newerDate = new Date(now);
+    newerDate.setHours(now.getHours() - 1, 0, 0, 0);
+
+    const older = await policyFactory.create(
+      {
+        status: PolicyStatus.COLLECTING_INFO,
+        policyNumber: `POL-OLDER-${Math.random().toString(36).slice(2, 6)}`,
+        createdAt: olderDate,
+      },
+      { transient: { createdById: admin.id, packageId: pkg.id } },
+    );
+    const newer = await policyFactory.create(
+      {
+        status: PolicyStatus.COLLECTING_INFO,
+        policyNumber: `POL-NEWER-${Math.random().toString(36).slice(2, 6)}`,
+        createdAt: newerDate,
+      },
+      { transient: { createdById: admin.id, packageId: pkg.id } },
+    );
+
+    const result = await withSession(admin, async () => {
+      const res = await GET(
+        buildRequest('GET', 'http://localhost/api/reports/policies/csv?preset=currentMonth'),
+      );
+      return readCsv(res);
+    });
+    const body = result.body.slice(BOM.length);
+    const newerIdx = body.indexOf(newer.policyNumber);
+    const olderIdx = body.indexOf(older.policyNumber);
+    expect(newerIdx).toBeGreaterThan(-1);
+    expect(olderIdx).toBeGreaterThan(-1);
+    expect(newerIdx).toBeLessThan(olderIdx); // newer appears first
   });
 
   test('Content-Disposition uses preset slug + date in filename', async () => {

@@ -42,8 +42,8 @@ export const dashboard = {
         noTenant: "—",
     },
     report: {
-        title: "Reporte de protecciones activadas",
-        description: "Solo se incluyen protecciones activadas en el rango seleccionado.",
+        title: "Reporte de protecciones",
+        description: "Incluye todas las protecciones creadas en el rango seleccionado, con cada timestamp del ciclo de vida en su propia columna.",
         rangeLabel: "Rango",
         fromLabel: "Desde",
         toLabel: "Hasta",
