@@ -4,7 +4,7 @@ import { usePoliciesState } from '@/hooks/usePoliciesState';
 import PoliciesHeader from '@/components/policies/list/PoliciesHeader';
 import PoliciesFilters from '@/components/policies/list/PoliciesFilters';
 import PoliciesList from '@/components/policies/list/PoliciesList';
-import PoliciesPagination from '@/components/policies/list/PoliciesPagination';
+import { TablePagination } from '@/components/shared/TablePagination';
 import { trpc } from '@/lib/trpc/client';
 import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 
@@ -14,19 +14,17 @@ import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
  * Now using tRPC for type-safe data fetching
  */
 export default function PoliciesPage() {
-  const { search, status, page, setSearch, setStatus, setPage } = usePoliciesState();
+  const { search, status, page, limit, setSearch, setStatus, setPage, setLimit } = usePoliciesState();
 
-  // Use tRPC query with URL state as input
   const { data, isLoading } = trpc.policy.list.useQuery({
     page,
-    limit: 20,
+    limit,
     status: status !== 'all' ? status as PolicyStatus : undefined,
     search: search || undefined,
   });
 
-  // Extract data with defaults
   const policies = data?.policies || [];
-  const totalPages = data?.pagination?.totalPages || 1;
+  const pagination = data?.pagination ?? { page, limit, total: 0, totalPages: 0 };
 
   return (
     <div className="container mx-auto w-full">
@@ -41,10 +39,11 @@ export default function PoliciesPage() {
 
       <PoliciesList policies={policies} loading={isLoading} />
 
-      <PoliciesPagination
-        currentPage={page}
-        totalPages={totalPages}
+      <TablePagination
+        pagination={pagination}
         onPageChange={setPage}
+        onLimitChange={setLimit}
+        isLoading={isLoading}
       />
     </div>
   );
