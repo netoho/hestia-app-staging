@@ -10,6 +10,7 @@ import {
   type ReportPreset,
 } from '@/lib/utils/dateRangePresets';
 import { GuarantorType } from '@/prisma/generated/prisma-client/enums';
+import { POLICY_STATUS_CONFIG } from '@/lib/config/policyStatus';
 
 const VALID_PRESETS: ReportPreset[] = [
   'currentMonth',
@@ -53,8 +54,10 @@ const GUARANTOR_LABEL: Record<GuarantorType, string> = {
 /**
  * GET /api/reports/policies/csv?preset=...&from=...&to=...
  *
- * Returns a CSV of activated policies in the requested date range.
- * Filter applies to `activatedAt`. Rows with `activatedAt = NULL` are excluded.
+ * Returns a CSV of every policy whose `createdAt` falls in the requested
+ * date range — every status (COLLECTING_INFO, PENDING_APPROVAL, ACTIVE,
+ * EXPIRED, CANCELLED) is included. Per-row lifecycle timestamps live in
+ * dedicated columns so consumers can re-sort/filter in Excel.
  *
  * Auth: ADMIN + STAFF.
  */
@@ -94,56 +97,68 @@ export async function GET(request: NextRequest) {
 
   const policies = await prisma.policy.findMany({
     where: {
-      activatedAt: { gte: range.from, lte: range.to, not: null },
+      createdAt: { gte: range.from, lte: range.to },
     },
     select: {
       policyNumber: true,
+      status: true,
+      createdAt: true,
+      submittedAt: true,
+      approvedAt: true,
       activatedAt: true,
+      expiresAt: true,
+      cancelledAt: true,
       contractStartDate: true,
       contractEndDate: true,
-      expiresAt: true,
       rentAmount: true,
       totalPrice: true,
       guarantorType: true,
       package: { select: { name: true } },
       managedBy: { select: { internalId: true, name: true } },
     },
-    orderBy: { activatedAt: 'asc' },
+    orderBy: { createdAt: 'desc' },
   });
 
-  // 10 columns. The "Vendedor / CS" column from the v1 design was redundant
-  // with "Nombre del broker" once `managedById` became "the assigned broker"
-  // (and falls back to "CS" when null). See docs/plan + README "Reporting
-  // fields not yet modeled" section for the model history.
+  // 16 columns. Every lifecycle timestamp is its own column so consumers can
+  // sort/filter independently in Excel — no fallbacks or coalescing in the
+  // export. `Nombre del broker` falls back to "CS" when `managedById` is null.
   const fields = [
-    'Fecha activación',
     'Nº protección',
+    'Estado',
+    'Fecha de creación',
+    'Fecha de envío',
+    'Fecha de aprobación',
+    'Fecha de activación',
+    'Fecha de expiración',
+    'Fecha de cancelación',
+    'Inicio de contrato',
+    'Fin de contrato',
     'Tipo (paquete)',
     'Garantía',
     'Monto de renta',
     'Costo de la protección',
     'ID del broker',
     'Nombre del broker',
-    'Inicio de vigencia',
-    'Fin de vigencia',
   ] as const;
 
-  const rows = policies.map((p) => {
-    const inicio = p.contractStartDate ?? p.activatedAt;
-    const fin = p.contractEndDate ?? p.expiresAt;
-    return {
-      'Fecha activación': formatDDMMYYYY(p.activatedAt),
-      'Nº protección': p.policyNumber,
-      'Tipo (paquete)': p.package?.name ?? 'Personalizado',
-      'Garantía': GUARANTOR_LABEL[p.guarantorType] ?? p.guarantorType,
-      'Monto de renta': p.rentAmount,
-      'Costo de la protección': p.totalPrice,
-      'ID del broker': p.managedBy?.internalId ?? '',
-      'Nombre del broker': p.managedBy?.name ?? 'CS',
-      'Inicio de vigencia': formatDDMMYYYY(inicio),
-      'Fin de vigencia': formatDDMMYYYY(fin),
-    };
-  });
+  const rows = policies.map((p) => ({
+    'Nº protección': p.policyNumber,
+    'Estado': POLICY_STATUS_CONFIG[p.status]?.label ?? p.status,
+    'Fecha de creación': formatDDMMYYYY(p.createdAt),
+    'Fecha de envío': formatDDMMYYYY(p.submittedAt),
+    'Fecha de aprobación': formatDDMMYYYY(p.approvedAt),
+    'Fecha de activación': formatDDMMYYYY(p.activatedAt),
+    'Fecha de expiración': formatDDMMYYYY(p.expiresAt),
+    'Fecha de cancelación': formatDDMMYYYY(p.cancelledAt),
+    'Inicio de contrato': formatDDMMYYYY(p.contractStartDate),
+    'Fin de contrato': formatDDMMYYYY(p.contractEndDate),
+    'Tipo (paquete)': p.package?.name ?? 'Personalizado',
+    'Garantía': GUARANTOR_LABEL[p.guarantorType] ?? p.guarantorType,
+    'Monto de renta': p.rentAmount,
+    'Costo de la protección': p.totalPrice,
+    'ID del broker': p.managedBy?.internalId ?? '',
+    'Nombre del broker': p.managedBy?.name ?? 'CS',
+  }));
 
   // Pass explicit fields so the header row renders even when rows is empty.
   const csv = Papa.unparse({ fields: [...fields], data: rows }, { header: true });
