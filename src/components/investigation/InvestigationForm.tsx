@@ -358,7 +358,7 @@ export function InvestigationForm({
               <CardTitle>{actorName}</CardTitle>
               <CardDescription>{actorTypeLabel}</CardDescription>
             </div>
-            <Badge variant="outline">{actorTypeLabel}</Badge>
+            <Badge variant="muted">{actorTypeLabel}</Badge>
           </div>
         </CardHeader>
         <CardContent>

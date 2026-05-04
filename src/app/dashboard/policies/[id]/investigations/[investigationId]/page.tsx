@@ -248,7 +248,7 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
               <CardTitle>Protección #{investigation.policy.policyNumber}</CardTitle>
               <CardDescription>{propertyAddress}</CardDescription>
             </div>
-            <Badge variant={isProcessed ? (investigation.status === 'APPROVED' ? 'success' : 'destructive') : 'secondary'}>
+            <Badge variant={isProcessed ? (investigation.status === 'APPROVED' ? 'success' : 'error') : 'warning'}>
               {getInvestigationStatusLabel(investigation.status as any)}
             </Badge>
           </div>
@@ -263,7 +263,7 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
               <CardTitle>{actorName}</CardTitle>
               <CardDescription>Sujeto de Investigación</CardDescription>
             </div>
-            <Badge>{getInvestigatedActorLabel(investigation.actorType as any)}</Badge>
+            <Badge variant="muted">{getInvestigatedActorLabel(investigation.actorType as any)}</Badge>
           </div>
         </CardHeader>
         {investigation.actor && (

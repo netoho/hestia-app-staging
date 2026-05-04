@@ -12,12 +12,12 @@ interface VerificationBadgeProps {
 
 const VERIFICATION_CONFIG: Record<VerificationStatus, {
   label: string;
-  variant: 'muted' | 'success' | 'destructive' | 'warning';
+  variant: 'muted' | 'success' | 'error' | 'warning';
   icon: typeof Clock;
 }> = {
   PENDING: { label: 'Pendiente', variant: 'muted', icon: Clock },
   APPROVED: { label: 'Aprobado', variant: 'success', icon: CheckCircle2 },
-  REJECTED: { label: 'Rechazado', variant: 'destructive', icon: XCircle },
+  REJECTED: { label: 'Rechazado', variant: 'error', icon: XCircle },
   IN_REVIEW: { label: 'En Revisión', variant: 'warning', icon: Eye },
 };
 
