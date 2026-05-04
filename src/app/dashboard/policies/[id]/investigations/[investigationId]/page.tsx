@@ -248,7 +248,7 @@ export default function InvestigationDetailPage({ params }: InvestigationDetailP
               <CardTitle>Protección #{investigation.policy.policyNumber}</CardTitle>
               <CardDescription>{propertyAddress}</CardDescription>
             </div>
-            <Badge variant={isProcessed ? (investigation.status === 'APPROVED' ? 'success' : 'destructive') : 'secondary'}>
+            <Badge variant={isProcessed ? (investigation.status === 'APPROVED' ? 'success' : 'error') : 'warning'}>
               {getInvestigationStatusLabel(investigation.status as any)}
             </Badge>
           </div>

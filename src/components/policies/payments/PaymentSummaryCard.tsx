@@ -14,9 +14,9 @@ interface PaymentSummaryCardProps {
 }
 
 const OVERALL_STATUS_CONFIG = {
-  pending: { label: 'Pendiente', variant: 'secondary' as const },
-  partial: { label: 'Pago Parcial', variant: 'default' as const },
-  completed: { label: 'Completado', variant: 'default' as const, className: 'bg-green-500 hover:bg-green-600' },
+  pending: { label: 'Pendiente', variant: 'warning' as const },
+  partial: { label: 'Pago Parcial', variant: 'info' as const },
+  completed: { label: 'Completado', variant: 'success' as const },
 };
 
 export function PaymentSummaryCard({
@@ -35,7 +35,7 @@ export function PaymentSummaryCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl">Resumen de Pagos</CardTitle>
-          <Badge variant={statusConfig.variant} className={statusConfig.className}>
+          <Badge variant={statusConfig.variant}>
             {statusConfig.label}
           </Badge>
         </div>

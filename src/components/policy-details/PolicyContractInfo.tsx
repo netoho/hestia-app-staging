@@ -79,12 +79,12 @@ export function PolicyContractInfo({
 
   const getContractStatus = () => {
     if (!hasContract) {
-      return { label: 'Pendiente', variant: 'outline' as const, color: 'text-muted-foreground' };
+      return { label: 'Pendiente', variant: 'warning' as const, color: 'text-muted-foreground' };
     }
     if (isSigned) {
-      return { label: 'Firmado', variant: 'default' as const, color: 'text-green-600' };
+      return { label: 'Firmado', variant: 'success' as const, color: 'text-green-600' };
     }
-    return { label: 'Subido', variant: 'secondary' as const, color: 'text-blue-600' };
+    return { label: 'Subido', variant: 'info' as const, color: 'text-blue-600' };
   };
 
   const status = getContractStatus();

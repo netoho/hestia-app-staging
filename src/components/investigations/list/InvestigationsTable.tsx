@@ -52,11 +52,11 @@ export default function InvestigationsTable({
       case 'APPROVED':
         return 'success';
       case 'REJECTED':
-        return 'destructive';
+        return 'error';
       case 'ARCHIVED':
         return 'outline';
       default:
-        return 'secondary';
+        return 'warning';
     }
   };
 
