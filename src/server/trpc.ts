@@ -127,6 +127,25 @@ const t = initTRPC.context<Context>().create({
       userMessage = friendlyByTrpcCode[shape.data.code] ?? shape.message;
     }
 
+    // Surface a small allowlist of ServiceError.context keys on the wire so
+    // clients can adapt UX without reading the raw context blob. Today the
+    // force-complete flow uses `requiresForce`, `missingFields`, and
+    // `missingDocuments` (BaseActorService.submitActor); extend as new
+    // structured error patterns land.
+    let requiresForce: boolean | undefined;
+    let missingFields: unknown[] | undefined;
+    let missingDocuments: unknown[] | undefined;
+    if (error.cause instanceof ServiceError && error.cause.context) {
+      const ctx = error.cause.context as {
+        requiresForce?: boolean;
+        missingFields?: unknown[];
+        missingDocuments?: unknown[];
+      };
+      if (ctx.requiresForce === true) requiresForce = true;
+      if (Array.isArray(ctx.missingFields)) missingFields = ctx.missingFields;
+      if (Array.isArray(ctx.missingDocuments)) missingDocuments = ctx.missingDocuments;
+    }
+
     return {
       ...shape,
       data: {
@@ -134,6 +153,9 @@ const t = initTRPC.context<Context>().create({
         zodError: zodFlat,
         userMessage,
         fieldErrorCount,
+        ...(requiresForce !== undefined ? { requiresForce } : {}),
+        ...(missingFields !== undefined ? { missingFields } : {}),
+        ...(missingDocuments !== undefined ? { missingDocuments } : {}),
       },
     };
   },
