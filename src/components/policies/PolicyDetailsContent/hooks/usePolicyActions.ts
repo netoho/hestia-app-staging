@@ -7,6 +7,7 @@ import { ActorType } from '@/lib/utils/actor';
 import { downloadPolicyPdf } from '@/lib/pdf/downloadPdf';
 import { downloadContractCover } from '@/lib/docx/downloadDocx';
 import { t } from '@/lib/i18n';
+import { getFriendlyError } from '@/lib/utils/trpcErrors';
 
 interface UsePolicyActionsProps {
   policyId: string;
@@ -72,9 +73,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     },
     onError: (error) => {
       console.error('Error updating policy status:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error.message || toastKeys.approvalError,
+        title: friendly.title,
+        description: friendly.description,
         variant: 'destructive',
       });
     },
@@ -92,9 +94,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       setMarkCompleteActor(null);
     },
     onError: (error) => {
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error.message || toastKeys.markCompleteError,
+        title: friendly.title,
+        description: friendly.description,
         variant: 'destructive',
       });
     },
@@ -152,9 +155,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       });
     } catch (error) {
       console.error('Error downloading PDF:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error instanceof Error ? error.message : 'Error al descargar PDF',
+        title: friendly.title,
+        description: friendly.description || 'Error al descargar PDF',
         variant: 'destructive',
       });
     } finally {
@@ -172,9 +176,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       });
     } catch (error) {
       console.error('Error downloading cover page:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error instanceof Error ? error.message : 'Error al descargar carátula',
+        title: friendly.title,
+        description: friendly.description || 'Error al descargar carátula',
         variant: 'destructive',
       });
     } finally {
