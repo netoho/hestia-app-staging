@@ -188,7 +188,7 @@ export default function AvalPersonalInfoTab({
                       name="legalRepMaternalLastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel required>Apellido Materno</FormLabel>
+                          <FormLabel optional>Apellido Materno</FormLabel>
                           <FormControl>
                             <Input {...field} disabled={disabled} />
                           </FormControl>
@@ -252,7 +252,7 @@ export default function AvalPersonalInfoTab({
                     name="maternalLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Apellido Materno</FormLabel>
+                        <FormLabel optional>Apellido Materno</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={disabled} />
                         </FormControl>

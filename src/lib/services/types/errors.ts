@@ -55,13 +55,21 @@ export class ServiceError extends Error {
   public readonly context?: ErrorContext;
   public readonly isOperational: boolean;
   public readonly timestamp: Date;
+  /**
+   * Optional caller-supplied user-facing message (Spanish, friendly).
+   * Falls back to the code-based mapping in `getUserMessage()` when omitted.
+   * Used by the tRPC errorFormatter to populate `data.userMessage` on the
+   * wire so the client can show it without translation logic.
+   */
+  public readonly userMessage?: string;
 
   constructor(
     code: ErrorCode,
     message: string,
     statusCode: number = 500,
     context?: ErrorContext,
-    isOperational: boolean = true
+    isOperational: boolean = true,
+    userMessage?: string,
   ) {
     super(message);
     this.name = 'ServiceError';
@@ -70,6 +78,7 @@ export class ServiceError extends Error {
     this.context = context;
     this.isOperational = isOperational;
     this.timestamp = new Date();
+    this.userMessage = userMessage;
 
     // Maintains proper stack trace for where our error was thrown
     Error.captureStackTrace(this, ServiceError);
@@ -82,56 +91,107 @@ export class ServiceError extends Error {
       message: this.message,
       statusCode: this.statusCode,
       context: this.context,
+      userMessage: this.userMessage,
       timestamp: this.timestamp,
       stack: this.stack,
     };
   }
 
   /**
-   * Get user-friendly error message
+   * Get user-friendly Spanish message. Resolution order:
+   *   1. Caller-supplied `userMessage` (most specific)
+   *   2. Code-based default mapping (`userFriendlyMessages`)
+   *   3. The raw `message` (last resort — should already be Spanish if
+   *      the code path was authored after PR-3 of the regression sweep)
    */
   getUserMessage(): string {
+    if (this.userMessage) return this.userMessage;
     return userFriendlyMessages[this.code] || this.message;
   }
 }
 
-// User-friendly error messages
+// Friendly Spanish defaults per error code. Per CLAUDE.md the user-facing
+// language is Spanish (and we say "protección", never "póliza"). These are
+// the fallbacks; callers that need more specificity pass `userMessage` to
+// the ServiceError constructor.
 const userFriendlyMessages: Record<ErrorCode, string> = {
-  [ErrorCode.INTERNAL_ERROR]: 'An internal error occurred. Please try again.',
-  [ErrorCode.UNKNOWN_ERROR]: 'An unexpected error occurred. Please try again.',
-  [ErrorCode.VALIDATION_ERROR]: 'The provided data is invalid.',
-  [ErrorCode.NOT_FOUND]: 'The requested resource was not found.',
-  [ErrorCode.ALREADY_EXISTS]: 'This resource already exists.',
-  [ErrorCode.PERMISSION_DENIED]: 'You do not have permission to perform this action.',
-  [ErrorCode.RATE_LIMITED]: 'Rate limit exceeded. Please try again later.',
-  [ErrorCode.INVALID_REQUEST]: 'Invalid request.',
+  [ErrorCode.INTERNAL_ERROR]: 'Ocurrió un error interno. Intenta nuevamente.',
+  [ErrorCode.UNKNOWN_ERROR]: 'Ocurrió un error inesperado. Intenta nuevamente.',
+  [ErrorCode.VALIDATION_ERROR]: 'La información proporcionada no es válida.',
+  [ErrorCode.NOT_FOUND]: 'No se encontró el recurso solicitado.',
+  [ErrorCode.ALREADY_EXISTS]: 'El recurso ya existe.',
+  [ErrorCode.PERMISSION_DENIED]: 'No tienes permiso para realizar esta acción.',
+  [ErrorCode.RATE_LIMITED]: 'Demasiadas solicitudes. Intenta en unos minutos.',
+  [ErrorCode.INVALID_REQUEST]: 'La solicitud no es válida.',
 
-  [ErrorCode.DATABASE_ERROR]: 'Database access error.',
-  [ErrorCode.DATABASE_CONNECTION_ERROR]: 'Could not connect to the database.',
-  [ErrorCode.DATABASE_QUERY_ERROR]: 'Error executing database query.',
-  [ErrorCode.DATABASE_CONSTRAINT_ERROR]: 'Data violates database constraints.',
+  [ErrorCode.DATABASE_ERROR]: 'Error de acceso a la base de datos. Si persiste, contacta a soporte.',
+  [ErrorCode.DATABASE_CONNECTION_ERROR]: 'No se pudo conectar a la base de datos.',
+  [ErrorCode.DATABASE_QUERY_ERROR]: 'Error al ejecutar la consulta.',
+  [ErrorCode.DATABASE_CONSTRAINT_ERROR]: 'Los datos no cumplen las restricciones requeridas.',
 
-  [ErrorCode.AUTHENTICATION_ERROR]: 'Authentication error.',
-  [ErrorCode.UNAUTHORIZED]: 'Unauthorized access.',
-  [ErrorCode.FORBIDDEN]: 'Access forbidden.',
-  [ErrorCode.INVALID_CREDENTIALS]: 'Invalid credentials.',
-  [ErrorCode.SESSION_EXPIRED]: 'Your session has expired. Please log in again.',
-  [ErrorCode.INVALID_TOKEN]: 'Invalid access token.',
-  [ErrorCode.TOKEN_EXPIRED]: 'Access token has expired.',
+  [ErrorCode.AUTHENTICATION_ERROR]: 'Error de autenticación.',
+  [ErrorCode.UNAUTHORIZED]: 'Acceso no autorizado.',
+  [ErrorCode.FORBIDDEN]: 'Acceso prohibido.',
+  [ErrorCode.INVALID_CREDENTIALS]: 'Credenciales inválidas.',
+  [ErrorCode.SESSION_EXPIRED]: 'Tu sesión ha expirado. Inicia sesión nuevamente.',
+  [ErrorCode.INVALID_TOKEN]: 'El enlace de acceso no es válido.',
+  [ErrorCode.TOKEN_EXPIRED]: 'El enlace de acceso ha expirado. Solicita uno nuevo.',
 
-  [ErrorCode.POLICY_NOT_FOUND]: 'Policy not found.',
-  [ErrorCode.POLICY_ALREADY_EXISTS]: 'A policy with this data already exists.',
-  [ErrorCode.POLICY_INVALID_STATE]: 'Policy is not in the correct state for this operation.',
-  [ErrorCode.ALREADY_COMPLETE]: 'This operation has already been completed.',
-  [ErrorCode.PAYMENT_FAILED]: 'Payment could not be processed.',
-  [ErrorCode.PAYMENT_ALREADY_PROCESSED]: 'This payment has already been processed.',
-  [ErrorCode.INSUFFICIENT_FUNDS]: 'Insufficient funds to complete the transaction.',
+  [ErrorCode.POLICY_NOT_FOUND]: 'No se encontró la protección.',
+  [ErrorCode.POLICY_ALREADY_EXISTS]: 'Ya existe una protección con estos datos.',
+  [ErrorCode.POLICY_INVALID_STATE]: 'La protección no está en el estado correcto para esta operación.',
+  [ErrorCode.ALREADY_COMPLETE]: 'Esta operación ya fue completada.',
+  [ErrorCode.PAYMENT_FAILED]: 'No se pudo procesar el pago.',
+  [ErrorCode.PAYMENT_ALREADY_PROCESSED]: 'Este pago ya fue procesado.',
+  [ErrorCode.INSUFFICIENT_FUNDS]: 'Fondos insuficientes para completar la transacción.',
 
-  [ErrorCode.EMAIL_SEND_FAILED]: 'Failed to send email.',
-  [ErrorCode.STORAGE_UPLOAD_FAILED]: 'Failed to upload file.',
-  [ErrorCode.STRIPE_API_ERROR]: 'Payment processing error.',
-  [ErrorCode.PDF_GENERATION_FAILED]: 'Failed to generate PDF document.',
+  [ErrorCode.EMAIL_SEND_FAILED]: 'No se pudo enviar el correo.',
+  [ErrorCode.STORAGE_UPLOAD_FAILED]: 'No se pudo subir el archivo.',
+  [ErrorCode.STRIPE_API_ERROR]: 'Error al procesar el pago.',
+  [ErrorCode.PDF_GENERATION_FAILED]: 'No se pudo generar el documento PDF.',
 };
+
+/**
+ * Map a ServiceError ErrorCode to the corresponding tRPC error code. Used
+ * by routers via `serviceToTRPCError(...)` to keep tRPC code + ServiceError
+ * cause in sync — the errorFormatter then pulls the Spanish userMessage
+ * straight off the cause and surfaces it as `data.userMessage`.
+ */
+export function serviceErrorCodeToTRPCCode(
+  code: ErrorCode,
+): 'NOT_FOUND' | 'BAD_REQUEST' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'CONFLICT' | 'INTERNAL_SERVER_ERROR' | 'TOO_MANY_REQUESTS' {
+  switch (code) {
+    case ErrorCode.NOT_FOUND:
+    case ErrorCode.POLICY_NOT_FOUND:
+      return 'NOT_FOUND';
+    case ErrorCode.UNAUTHORIZED:
+    case ErrorCode.AUTHENTICATION_ERROR:
+    case ErrorCode.SESSION_EXPIRED:
+    case ErrorCode.INVALID_TOKEN:
+    case ErrorCode.TOKEN_EXPIRED:
+    case ErrorCode.INVALID_CREDENTIALS:
+      return 'UNAUTHORIZED';
+    case ErrorCode.FORBIDDEN:
+    case ErrorCode.PERMISSION_DENIED:
+      return 'FORBIDDEN';
+    case ErrorCode.ALREADY_EXISTS:
+    case ErrorCode.POLICY_ALREADY_EXISTS:
+    case ErrorCode.PAYMENT_ALREADY_PROCESSED:
+    case ErrorCode.ALREADY_COMPLETE:
+      return 'CONFLICT';
+    case ErrorCode.RATE_LIMITED:
+      return 'TOO_MANY_REQUESTS';
+    case ErrorCode.VALIDATION_ERROR:
+    case ErrorCode.INVALID_REQUEST:
+    case ErrorCode.POLICY_INVALID_STATE:
+    case ErrorCode.PAYMENT_FAILED:
+    case ErrorCode.INSUFFICIENT_FUNDS:
+    case ErrorCode.STORAGE_UPLOAD_FAILED:
+      return 'BAD_REQUEST';
+    default:
+      return 'INTERNAL_SERVER_ERROR';
+  }
+}
 
 /**
  * Error factory functions for common scenarios

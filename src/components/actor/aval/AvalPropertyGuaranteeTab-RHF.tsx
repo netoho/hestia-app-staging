@@ -272,7 +272,7 @@ export default function AvalPropertyGuaranteeTab({
                   name="maritalStatus"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>Estado Civil</FormLabel>
+                      <FormLabel optional>Estado Civil</FormLabel>
                       <Select
                         value={field.value || ''}
                         onValueChange={field.onChange}

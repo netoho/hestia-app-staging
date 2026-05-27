@@ -48,9 +48,21 @@ export const DocumentGetUploadUrlOutput = z.object({
 export type DocumentGetUploadUrlOutput = z.infer<typeof DocumentGetUploadUrlOutput>;
 
 // document.confirmUpload
+// documentService.confirmUpload() returns a SUBSET of the ActorDocument shape
+// (id, fileName, category, documentType, fileSize, uploadedAt) — see
+// src/lib/services/documentService.ts:497-507. The schema mirrors what the
+// service actually returns, per the "schemas mirror the service select" rule.
+export const ConfirmUploadDocumentShape = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  category: z.nativeEnum(DocumentCategory),
+  documentType: z.string(),
+  fileSize: z.number(),
+  uploadedAt: z.date(),
+});
 export const DocumentConfirmUploadOutput = z.object({
   success: z.boolean(),
-  document: ActorDocumentShape.nullable(),
+  document: ConfirmUploadDocumentShape.nullable(),
 });
 export type DocumentConfirmUploadOutput = z.infer<typeof DocumentConfirmUploadOutput>;
 

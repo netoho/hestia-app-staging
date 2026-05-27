@@ -8,3 +8,5 @@ export * from './aval.factory';
 export * from './payment.factory';
 export * from './tenantReceipt.factory';
 export * from './actorInvestigation.factory';
+export * from './actorInvestigationDocument.factory';
+export * from './actorDocument.factory';

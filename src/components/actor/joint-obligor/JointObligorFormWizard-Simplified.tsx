@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
 import { trpc } from '@/lib/trpc/client';
+import { getFriendlyError } from '@/lib/utils/trpcErrors';
 import { actorConfig } from '@/lib/constants/actorConfig';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
@@ -98,9 +99,10 @@ export default function JointObligorFormWizardSimplified({
       }
     } catch (error) {
       console.error('Save error:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Error al guardar",
+        title: friendly.title,
+        description: friendly.description,
         variant: "destructive",
       });
     }

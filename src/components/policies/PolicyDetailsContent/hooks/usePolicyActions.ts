@@ -7,6 +7,11 @@ import { ActorType } from '@/lib/utils/actor';
 import { downloadPolicyPdf } from '@/lib/pdf/downloadPdf';
 import { downloadContractCover } from '@/lib/docx/downloadDocx';
 import { t } from '@/lib/i18n';
+import {
+  getFriendlyError,
+  readForceCompleteState,
+  type MissingField,
+} from '@/lib/utils/trpcErrors';
 
 interface UsePolicyActionsProps {
   policyId: string;
@@ -38,6 +43,12 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingActionType>(null);
+  // When the first submit attempt fails with `requiresForce: true`, we
+  // remember what was missing so the dialog can show the confirm-force
+  // step with the exact fields/documents the admin is about to override.
+  const [forceCompleteState, setForceCompleteState] = useState<
+    { missingFields: MissingField[]; missingDocuments: string[] } | null
+  >(null);
 
   // Send invitations mutation
   const sendInvitationsMutation = trpc.policy.sendInvitations.useMutation({
@@ -72,9 +83,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     },
     onError: (error) => {
       console.error('Error updating policy status:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error.message || toastKeys.approvalError,
+        title: friendly.title,
+        description: friendly.description,
         variant: 'destructive',
       });
     },
@@ -90,11 +102,24 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       utils.actor.listByPolicy.invalidate({ policyId });
       onRefresh();
       setMarkCompleteActor(null);
+      setForceCompleteState(null);
     },
     onError: (error) => {
+      // Smart fallback: if the server says `requiresForce`, switch the dialog
+      // into a confirm-force step with the exact missing data. No toast yet.
+      const force = readForceCompleteState(error);
+      if (force.requiresForce) {
+        setForceCompleteState({
+          missingFields: force.missingFields,
+          missingDocuments: force.missingDocuments,
+        });
+        return;
+      }
+      setForceCompleteState(null);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error.message || toastKeys.markCompleteError,
+        title: friendly.title,
+        description: friendly.description,
         variant: 'destructive',
       });
     },
@@ -133,12 +158,25 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
 
   const cancelPendingAction = () => setPendingAction(null);
 
-  const handleMarkComplete = (skipValidation: boolean) => {
+  // First click: try a strict submit. Server may respond with
+  // requiresForce, in which case the mutation's onError populates
+  // forceCompleteState and the dialog adapts to step 2.
+  const handleMarkComplete = () => {
     if (!markCompleteActor) return;
     adminSubmitMutation.mutate({
       type: markCompleteActor.type,
       id: markCompleteActor.actorId,
-      skipValidation,
+      skipValidation: false,
+    });
+  };
+
+  // Step 2: admin confirms after seeing what's missing.
+  const handleConfirmForceComplete = () => {
+    if (!markCompleteActor) return;
+    adminSubmitMutation.mutate({
+      type: markCompleteActor.type,
+      id: markCompleteActor.actorId,
+      skipValidation: true,
     });
   };
 
@@ -152,9 +190,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       });
     } catch (error) {
       console.error('Error downloading PDF:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error instanceof Error ? error.message : 'Error al descargar PDF',
+        title: friendly.title,
+        description: friendly.description || 'Error al descargar PDF',
         variant: 'destructive',
       });
     } finally {
@@ -172,9 +211,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
       });
     } catch (error) {
       console.error('Error downloading cover page:', error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: toastKeys.error,
-        description: error instanceof Error ? error.message : 'Error al descargar carátula',
+        title: friendly.title,
+        description: friendly.description || 'Error al descargar carátula',
         variant: 'destructive',
       });
     } finally {
@@ -192,7 +232,10 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
   };
 
   const closeEditingActor = () => setEditingActor(null);
-  const closeMarkComplete = () => setMarkCompleteActor(null);
+  const closeMarkComplete = () => {
+    setMarkCompleteActor(null);
+    setForceCompleteState(null);
+  };
 
   return {
     // State
@@ -202,6 +245,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     downloadingPdf,
     downloadingDocx,
     pendingAction,
+    forceCompleteState,
 
     // Mutations loading states
     isSending: sendInvitationsMutation.isPending,
@@ -215,6 +259,7 @@ export function usePolicyActions({ policyId, policyNumber, onRefresh }: UsePolic
     confirmPendingAction,
     cancelPendingAction,
     handleMarkComplete,
+    handleConfirmForceComplete,
     handleDownloadPdf,
     handleDownloadDocx,
 

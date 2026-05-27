@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession, type Session } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-config';
 import { UserRole } from "@/prisma/generated/prisma-client/enums";
 import prisma from '@/lib/prisma';
@@ -24,17 +24,24 @@ export class ActorAuthService {
   /**
    * Resolve authentication context for an actor request
    * Determines if request is from admin (using UUID) or actor (using token)
+   *
+   * `session` lets the caller pass an already-resolved next-auth session
+   * (e.g. `ctx.session` from a tRPC procedure). When omitted, falls back
+   * to `getServerSession(authOptions)`. Passing it explicitly avoids
+   * a second session resolution per request and works in contexts where
+   * `next/headers` is not available.
    */
   async resolveActorAuth(
     type: string,
     identifier: string,
-    request: NextRequest | null
+    request: NextRequest | null,
+    session?: Session | null,
   ): Promise<ActorAuthResult> {
     // Check if identifier is UUID (admin access) or token (actor access)
     if (isValidToken(identifier)) {
       return this.handleActorAuth(type, identifier);
     } else {
-      return this.handleAdminAuth(type, identifier, request);
+      return this.handleAdminAuth(type, identifier, request, session);
     }
   }
 
@@ -44,10 +51,13 @@ export class ActorAuthService {
   private async handleAdminAuth(
     type: string,
     actorId: string,
-    request: NextRequest | null
+    request: NextRequest | null,
+    providedSession?: Session | null,
   ): Promise<ActorAuthResult> {
-    // Get session
-    const session = await getServerSession(authOptions);
+    // Prefer the caller-provided session; otherwise resolve from cookies.
+    const session = providedSession !== undefined
+      ? providedSession
+      : await getServerSession(authOptions);
 
     // For document operations, allow access without session if it's a same-origin request
     // This allows dashboard components to access documents

@@ -167,7 +167,14 @@ mock.module('@aws-sdk/s3-request-presigner', () => ({
 // --- Document service (S3 boundary) -----------------------------------------
 // Wraps S3 presigning + key generation; receipts and actor documents flow
 // through it. Mock at the boundary so tests don't depend on AWS at all.
-mock.module('@/lib/services/documentService', () => ({
+// Methods used by the document.* router happy paths (`getById`, `getByActor`,
+// `generateUploadUrl`, `confirmUpload`, `deleteDocument`) defer to the real
+// per-test Postgres so factory-seeded rows are visible end-to-end.
+mock.module('@/lib/services/documentService', () => {
+  // Lazy require so the singleton is initialized after env preload finishes.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { default: prismaSingleton } = require('@/lib/prisma');
+  return ({
   documentService: {
     generateReceiptS3Key: mock(
       (policyNumber: string, tenantId: string, year: number, month: number, type: string, fileName: string) =>
@@ -184,30 +191,116 @@ mock.module('@/lib/services/documentService', () => ({
     fileExists: mock(async () => true),
     deleteFile: mock(async () => true),
     getFileMetadata: mock(async () => ({ ContentLength: 1024, ContentType: 'application/pdf' })),
-    deleteDocument: mock(async () => true),
     uploadActorDocument: mock(async () => ({ id: 'doc_test_fake' })),
     uploadPolicyDocument: mock(async () => ({ id: 'doc_test_fake' })),
     validatePolicyDocuments: mock(async () => ({ valid: true, missing: [] })),
     getStorageProvider: mock(() => 's3'),
-    // Used by document.router for actor-document flow:
-    getById: mock(async () => null),
-    getByActor: mock(async () => []),
-    generateUploadUrl: mock(async () => ({
-      uploadUrl: 'https://test-bucket.s3.amazonaws.com/fake?upload=fake',
-      documentId: 'doc_test_fake',
-      s3Key: 'fake-s3-key',
-      expiresIn: 60,
-    })),
-    confirmUpload: mock(async () => ({ success: true, document: null })),
-    // Used by investigation.router:
-    generateInvestigationUploadUrl: mock(async () => ({
-      uploadUrl: 'https://test-bucket.s3.amazonaws.com/fake?upload=fake',
-      documentId: 'invdoc_test_fake',
-      s3Key: 'investigations/test/fake.pdf',
-      expiresIn: 60,
-    })),
-    getInvestigationDocument: mock(async () => null),
-    deleteInvestigationDocument: mock(async () => true),
+    // Used by document.router for actor-document flow.
+    // Smart mocks: query real prisma so factory-created rows are returned.
+    getById: mock(async (documentId: string) =>
+      prismaSingleton.actorDocument.findUnique({ where: { id: documentId } }),
+    ),
+    getByActor: mock(async (actorId: string, actorType: string) => {
+      const actorField = actorType === 'jointObligor' ? 'jointObligorId' : `${actorType}Id`;
+      return prismaSingleton.actorDocument.findMany({
+        where: { [actorField]: actorId, uploadStatus: 'COMPLETE' },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+    generateUploadUrl: mock(async (input: {
+      policyNumber: string;
+      policyId: string;
+      actorType: string;
+      actorId: string;
+      category: string;
+      documentType: string;
+      fileName: string;
+      contentType: string;
+      fileSize: number;
+      uploadedBy?: string;
+    }) => {
+      const actorField = input.actorType === 'jointObligor' ? 'jointObligorId' : `${input.actorType}Id`;
+      const s3Key = `actor-docs/${input.policyNumber}/${input.actorType}/${input.actorId}/${input.category}-${input.fileName}`;
+      const document = await prismaSingleton.actorDocument.create({
+        data: {
+          category: input.category,
+          documentType: input.documentType,
+          fileName: input.fileName,
+          originalName: input.fileName,
+          fileSize: input.fileSize,
+          mimeType: input.contentType,
+          s3Key,
+          s3Bucket: 'test-bucket',
+          s3Region: 'us-east-1',
+          [actorField]: input.actorId,
+          uploadStatus: 'PENDING',
+          uploadedBy: input.uploadedBy ?? 'self',
+        },
+      });
+      return {
+        uploadUrl: `https://test-bucket.s3.amazonaws.com/${s3Key}?upload=fake`,
+        documentId: document.id,
+        s3Key,
+        expiresIn: 60,
+      };
+    }),
+    confirmUpload: mock(async (documentId: string) => {
+      const updated = await prismaSingleton.actorDocument.update({
+        where: { id: documentId },
+        data: { uploadStatus: 'COMPLETE', uploadedAt: new Date() },
+      });
+      return {
+        success: true,
+        document: {
+          id: updated.id,
+          fileName: updated.fileName,
+          category: updated.category,
+          documentType: updated.documentType,
+          fileSize: updated.fileSize,
+          uploadedAt: updated.uploadedAt ?? new Date(),
+        },
+      };
+    }),
+    deleteDocument: mock(async (documentId: string) => {
+      await prismaSingleton.actorDocument.delete({ where: { id: documentId } }).catch(() => null);
+      return true;
+    }),
+    // Used by investigation.router. Mirrors the actor-document smart pattern.
+    generateInvestigationUploadUrl: mock(async (input: {
+      investigationId: string;
+      fileName: string;
+      contentType: string;
+      fileSize: number;
+    }) => {
+      const s3Key = `investigations/test/${input.investigationId}/${input.fileName}`;
+      const document = await prismaSingleton.actorInvestigationDocument.create({
+        data: {
+          investigationId: input.investigationId,
+          fileName: input.fileName,
+          originalName: input.fileName,
+          fileSize: input.fileSize,
+          mimeType: input.contentType,
+          s3Key,
+          s3Bucket: 'test-bucket',
+          uploadStatus: 'PENDING',
+        },
+      });
+      return {
+        uploadUrl: `https://test-bucket.s3.amazonaws.com/${s3Key}?upload=fake`,
+        documentId: document.id,
+        s3Key,
+        expiresIn: 60,
+      };
+    }),
+    getInvestigationDocument: mock(async (documentId: string) =>
+      prismaSingleton.actorInvestigationDocument.findUnique({ where: { id: documentId } }),
+    ),
+    deleteInvestigationDocument: mock(async (documentId: string) => {
+      await prismaSingleton.actorInvestigationDocument
+        .delete({ where: { id: documentId } })
+        .catch(() => null);
+      return true;
+    }),
   },
   // Standalone exports used by user.router and onboard.router for avatar uploads.
   getCurrentStorageProvider: mock(() => ({
@@ -225,7 +318,8 @@ mock.module('@/lib/services/documentService', () => ({
   validatePolicyDocuments: mock(async () => ({ valid: true, missing: [] })),
   getPublicDownloadUrl: mock(() => 'https://test-bucket.s3.amazonaws.com/fake'),
   getCurrentStorageProvider: mock(() => 's3'),
-}));
+  });
+});
 
 // --- Google Maps service (HTTP calls go to Google in real impl) -----------
 mock.module('@/lib/services/googleMapsService', () => ({
