@@ -209,7 +209,7 @@ export default function JointObligorPersonalInfoTabRHF({
                       name="legalRepMaternalLastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel required>Apellido Materno</FormLabel>
+                          <FormLabel optional>Apellido Materno</FormLabel>
                           <FormControl>
                             <Input {...field} value={field.value || ''} disabled={disabled} />
                           </FormControl>
@@ -239,7 +239,7 @@ export default function JointObligorPersonalInfoTabRHF({
                       name="legalRepRfc"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>RFC del Representante</FormLabel>
+                          <FormLabel required>RFC del Representante</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
@@ -261,7 +261,7 @@ export default function JointObligorPersonalInfoTabRHF({
                       name="legalRepPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>Teléfono Celular del Representante</FormLabel>
+                          <FormLabel required>Teléfono Celular del Representante</FormLabel>
                           <FormControl>
                             <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} placeholder="10 dígitos" />
                           </FormControl>
@@ -275,7 +275,7 @@ export default function JointObligorPersonalInfoTabRHF({
                       name="legalRepEmail"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel optional>Email del Representante</FormLabel>
+                          <FormLabel required>Email del Representante</FormLabel>
                           <FormControl>
                             <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
                           </FormControl>

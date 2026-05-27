@@ -218,7 +218,7 @@ export default function TenantPersonalInfoTabRHF({
                       name="legalRepMaternalLastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel required>Apellido Materno</FormLabel>
+                          <FormLabel optional>Apellido Materno</FormLabel>
                           <FormControl>
                             <Input {...field} disabled={disabled} />
                           </FormControl>
@@ -500,7 +500,7 @@ export default function TenantPersonalInfoTabRHF({
               name="addressDetails"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Dirección Actual</FormLabel>
+                  <FormLabel optional>Dirección Actual</FormLabel>
                   <FormControl>
                     <AddressAutocomplete
                       label=""
