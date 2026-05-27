@@ -101,7 +101,8 @@ export const landlordRouter = createTRPCRouter({
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        null
+        null,
+        ctx.session,
       );
 
       if (!auth) {
@@ -160,7 +161,8 @@ export const landlordRouter = createTRPCRouter({
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        null
+        null,
+        ctx.session,
       );
 
       if (!auth) {

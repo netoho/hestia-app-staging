@@ -513,7 +513,8 @@ export const sharedActorRouter = createTRPCRouter({
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        null
+        null,
+        ctx.session,
       );
 
       if (!auth) {
@@ -626,7 +627,8 @@ export const sharedActorRouter = createTRPCRouter({
       const auth = await authService.resolveActorAuth(
         input.type,
         input.identifier,
-        null
+        null,
+        ctx.session,
       );
 
       if (!auth) {

@@ -13,7 +13,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { UserRole } from '@/prisma/generated/prisma-client/enums';
+import { UserRole, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { prisma } from '../../utils/database';
 import {
   createAdminCaller,
@@ -22,7 +22,8 @@ import {
 } from '../callers';
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
-import { userFactory } from '../factories';
+import { userFactory, actorDocumentFactory } from '../factories';
+import { mintTenantToken } from '../actorTokens';
 import { actorTokenService } from '@/lib/services/actorTokenService';
 
 // ===========================================================================
@@ -415,15 +416,10 @@ describe('onboard.uploadAvatar', () => {
 });
 
 // ===========================================================================
-// document.* (dualAuth) — UNAUTHORIZED gate only.
-//
-// Token-path happy and admin-path happy are deferred: ActorAuthService
-// re-resolves the admin session via next/headers (same constraint the
-// actor router PR documented), and the token path needs a richer
-// documentService boundary mock (currently we mock primitive S3 ops; the
-// router calls `documentService.generateUploadUrl` / `getById` /
-// `getByActor` / `confirmUpload` which our mock doesn't expose). A
-// follow-up PR will widen the documentService mock and unlock those.
+// document.* (dualAuth) — happy paths for both the actor-token and the
+// admin-session flows now that ActorAuthService accepts `ctx.session` and
+// the preload documentService mock defers to real Postgres for the methods
+// the router consumes.
 // ===========================================================================
 describe('document.getUploadUrl', () => {
   test('throws UNAUTHORIZED with no session and no token', async () => {
@@ -441,6 +437,49 @@ describe('document.getUploadUrl', () => {
       }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
+
+  test('admin session: returns presigned URL and persists pending doc', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.document.getUploadUrl({
+      type: 'tenant',
+      identifier: tenant.id,
+      category: 'IDENTIFICATION',
+      documentType: 'INE',
+      fileName: 'ine.pdf',
+      contentType: 'application/pdf',
+      fileSize: 2048,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.uploadUrl).toContain('upload');
+    expect(typeof result.documentId).toBe('string');
+
+    const persisted = await prisma.actorDocument.findUnique({ where: { id: result.documentId } });
+    expect(persisted).not.toBeNull();
+    expect(persisted?.tenantId).toBe(tenant.id);
+    expect(persisted?.uploadStatus).toBe(DocumentUploadStatus.PENDING);
+  });
+
+  test('actor token: returns presigned URL and persists pending doc', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { token, caller } = await mintTenantToken(tenant.id);
+
+    const result = await caller.document.getUploadUrl({
+      type: 'tenant',
+      identifier: token,
+      category: 'IDENTIFICATION',
+      documentType: 'INE',
+      fileName: 'ine-self.pdf',
+      contentType: 'application/pdf',
+      fileSize: 1024,
+    });
+
+    expect(result.success).toBe(true);
+    const persisted = await prisma.actorDocument.findUnique({ where: { id: result.documentId } });
+    expect(persisted?.uploadedBy).toBe('self');
+  });
 });
 
 describe('document.confirmUpload', () => {
@@ -455,6 +494,55 @@ describe('document.confirmUpload', () => {
       }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
+
+  test('admin session: confirms a pending doc and flips upload status', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const doc = await actorDocumentFactory.create(
+      { uploadStatus: DocumentUploadStatus.PENDING, uploadedAt: null },
+      { transient: { tenantId: tenant.id } },
+    );
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.document.confirmUpload({
+      type: 'tenant',
+      identifier: tenant.id,
+      documentId: doc.id,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.document?.id).toBe(doc.id);
+    expect(result.document?.fileName).toBe(doc.fileName);
+
+    const refreshed = await prisma.actorDocument.findUnique({ where: { id: doc.id } });
+    expect(refreshed?.uploadStatus).toBe(DocumentUploadStatus.COMPLETE);
+    expect(refreshed?.uploadedAt).not.toBeNull();
+  });
+
+  test('returns NOT_FOUND when document id does not exist', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.document.confirmUpload({
+        type: 'tenant',
+        identifier: tenant.id,
+        documentId: 'does-not-exist',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('returns FORBIDDEN when doc belongs to a different actor', async () => {
+    const { tenant, landlord } = await createPolicyWithActors();
+    const doc = await actorDocumentFactory.create({}, { transient: { landlordId: landlord.id } });
+    const { caller } = await createAdminCaller();
+
+    await expect(
+      caller.document.confirmUpload({
+        type: 'tenant',
+        identifier: tenant.id,
+        documentId: doc.id,
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
 });
 
 describe('document.listDocuments', () => {
@@ -464,6 +552,22 @@ describe('document.listDocuments', () => {
     await expect(
       caller.document.listDocuments({ type: 'tenant', identifier: tenant.id }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  test('admin session: returns the actor’s uploaded documents', async () => {
+    const { tenant } = await createPolicyWithActors();
+    await actorDocumentFactory.create({}, { transient: { tenantId: tenant.id } });
+    await actorDocumentFactory.create({}, { transient: { tenantId: tenant.id } });
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.document.listDocuments({
+      type: 'tenant',
+      identifier: tenant.id,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.documents).toHaveLength(2);
+    expect(result.documents.every((d) => d.tenantId === tenant.id)).toBe(true);
   });
 });
 
@@ -479,6 +583,22 @@ describe('document.deleteDocument', () => {
       }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
+
+  test('admin session: removes the document row', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const doc = await actorDocumentFactory.create({}, { transient: { tenantId: tenant.id } });
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.document.deleteDocument({
+      type: 'tenant',
+      identifier: tenant.id,
+      documentId: doc.id,
+    });
+
+    expect(result.success).toBe(true);
+    const gone = await prisma.actorDocument.findUnique({ where: { id: doc.id } });
+    expect(gone).toBeNull();
+  });
 });
 
 describe('document.getDownloadUrl', () => {
@@ -492,6 +612,23 @@ describe('document.getDownloadUrl', () => {
         documentId: 'doc-id',
       }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  test('admin session: returns a presigned download URL', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const doc = await actorDocumentFactory.create({}, { transient: { tenantId: tenant.id } });
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.document.getDownloadUrl({
+      type: 'tenant',
+      identifier: tenant.id,
+      documentId: doc.id,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.downloadUrl).toContain('download');
+    expect(result.fileName).toBe(doc.originalName);
+    expect(result.expiresIn).toBe(300);
   });
 });
 

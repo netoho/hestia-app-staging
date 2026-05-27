@@ -33,6 +33,9 @@ import {
   jointObligorFactory,
   avalFactory,
   packageFactory,
+  actorDocumentFactory,
+  propertyDeedDocument,
+  propertyTaxDocument,
 } from '../factories';
 import {
   mintLandlordToken,
@@ -284,15 +287,9 @@ describe('actor.createBatch', () => {
 
 // ===========================================================================
 // actor.update (dualAuth) — session OR token
-//
-// Happy paths deferred:
-//   - session path: ActorAuthService.handleAdminAuth re-resolves the session
-//     via next-auth's getServerSession() which calls next/headers() — that
-//     throws "called outside a request scope" in the bun:test runtime. A
-//     follow-up PR will either refactor the service to accept the resolved
-//     session from ctx or add a next/headers mock to the preload.
-//   - token path: LandlordService.update enforces strict per-type validation
-//     that needs richer landlord-input fixtures than what we have today.
+// Both auth paths are exercised: admin session uses the refactored
+// `ActorAuthService` that now accepts `ctx.session`; token uses a real
+// minted access token.
 // ===========================================================================
 describe('actor.update (dualAuth)', () => {
   test('throws UNAUTHORIZED with no session and no token', async () => {
@@ -306,6 +303,38 @@ describe('actor.update (dualAuth)', () => {
       }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
+
+  test('admin session: patches a tenant field and persists', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.actor.update({
+      type: 'tenant',
+      identifier: tenant.id,
+      data: { phone: '5550999111', partial: true },
+    });
+
+    expect(result.id).toBe(tenant.id);
+    expect(result.submitted).toBe(false);
+
+    const refreshed = await prisma.tenant.findUnique({ where: { id: tenant.id } });
+    expect(refreshed?.phone).toBe('5550999111');
+  });
+
+  test('actor token: patches own phone field and persists', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { token, caller } = await mintTenantToken(tenant.id);
+
+    const result = await caller.actor.update({
+      type: 'tenant',
+      identifier: token,
+      data: { phone: '5550111222', partial: true },
+    });
+
+    expect(result.id).toBe(tenant.id);
+    const refreshed = await prisma.tenant.findUnique({ where: { id: tenant.id } });
+    expect(refreshed?.phone).toBe('5550111222');
+  });
 });
 
 // ===========================================================================
@@ -318,6 +347,28 @@ describe('actor.submitActor (dualAuth)', () => {
     await expect(
       caller.actor.submitActor({ type: 'landlord', identifier: landlord.id }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  test('admin session: admin auto-skips completeness validation and marks complete', async () => {
+    // Admins always have skipValidation = true (per ActorAuthService).
+    // `submitActor` still runs the required-documents check (not yet guarded
+    // by skipValidation — that's PR-2's job). Seed the three landlord-required
+    // categories so the transaction succeeds.
+    const { landlord } = await createPolicyWithActors();
+    await actorDocumentFactory.create({}, { transient: { landlordId: landlord.id } });
+    await propertyDeedDocument.create({}, { transient: { landlordId: landlord.id } });
+    await propertyTaxDocument.create({}, { transient: { landlordId: landlord.id } });
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.actor.submitActor({
+      type: 'landlord',
+      identifier: landlord.id,
+    });
+
+    expect(result.id).toBe(landlord.id);
+    const refreshed = await prisma.landlord.findUnique({ where: { id: landlord.id } });
+    expect(refreshed?.informationComplete).toBe(true);
+    expect(refreshed?.completedAt).not.toBeNull();
   });
 });
 
@@ -336,6 +387,45 @@ describe('actor.adminSubmitActor', () => {
           skipValidation: true,
         }),
     });
+  });
+
+  test('skipValidation: true marks an incomplete actor as complete', async () => {
+    // PR-2 will guard validateRequiredDocuments by skipValidation; today it
+    // still runs unconditionally, so seed the landlord-required docs.
+    const { landlord } = await createPolicyWithActors();
+    await actorDocumentFactory.create({}, { transient: { landlordId: landlord.id } });
+    await propertyDeedDocument.create({}, { transient: { landlordId: landlord.id } });
+    await propertyTaxDocument.create({}, { transient: { landlordId: landlord.id } });
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.actor.adminSubmitActor({
+      type: 'landlord',
+      id: landlord.id,
+      skipValidation: true,
+    });
+
+    expect(result.submitted).toBe(true);
+    expect(result.id).toBe(landlord.id);
+    const refreshed = await prisma.landlord.findUnique({ where: { id: landlord.id } });
+    expect(refreshed?.informationComplete).toBe(true);
+  });
+
+  test('skipValidation: false on an incomplete tenant rejects with BAD_REQUEST', async () => {
+    // Tenants from the default factory are missing many required fields,
+    // so non-skip completeness check should reject.
+    const { tenant } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    await expect(
+      caller.actor.adminSubmitActor({
+        type: 'tenant',
+        id: tenant.id,
+        skipValidation: false,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+
+    const refreshed = await prisma.tenant.findUnique({ where: { id: tenant.id } });
+    expect(refreshed?.informationComplete).toBe(false);
   });
 });
 
