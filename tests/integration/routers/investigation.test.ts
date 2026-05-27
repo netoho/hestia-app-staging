@@ -35,6 +35,7 @@ import {
   actorInvestigationFactory,
   submittedInvestigation,
   archivedInvestigation,
+  actorInvestigationDocumentFactory,
 } from '../factories';
 
 // ===========================================================================
@@ -423,8 +424,8 @@ describe('investigation.getDocumentUploadUrl', () => {
 });
 
 // ===========================================================================
-// investigation.removeDocument — happy path needs investigation document
-// fixtures we don't yet have. Auth + NOT_FOUND only.
+// investigation.removeDocument — now exercises the happy path via the new
+// ActorInvestigationDocument factory.
 // ===========================================================================
 describe('investigation.removeDocument', () => {
   test('throws NOT_FOUND when document does not exist', async () => {
@@ -441,6 +442,28 @@ describe('investigation.removeDocument', () => {
         documentId: 'cmnodoc12345678901234567',
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('removes a real investigation document and persists deletion', async () => {
+    const { tenant, policy } = await createPolicyWithActors();
+    const inv = await actorInvestigationFactory.create(
+      {},
+      { transient: { policyId: policy.id, actorType: 'TENANT', actorId: tenant.id } },
+    );
+    const doc = await actorInvestigationDocumentFactory.create(
+      {},
+      { transient: { investigationId: inv.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.investigation.removeDocument({
+      investigationId: inv.id,
+      documentId: doc.id,
+    });
+
+    expect(result.success).toBe(true);
+    const gone = await prisma.actorInvestigationDocument.findUnique({ where: { id: doc.id } });
+    expect(gone).toBeNull();
   });
 
   test('auth gate: ADMIN/STAFF allowed; BROKER + PUBLIC blocked', async () => {
@@ -473,6 +496,27 @@ describe('investigation.getDocumentDownloadUrl', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
+  test('returns a presigned download URL for a real investigation document', async () => {
+    const { tenant, policy } = await createPolicyWithActors();
+    const inv = await actorInvestigationFactory.create(
+      {},
+      { transient: { policyId: policy.id, actorType: 'TENANT', actorId: tenant.id } },
+    );
+    const doc = await actorInvestigationDocumentFactory.create(
+      {},
+      { transient: { investigationId: inv.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.investigation.getDocumentDownloadUrl({
+      documentId: doc.id,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.downloadUrl).toContain('download');
+    expect(result.fileName).toBe(doc.originalName);
+  });
+
   test('auth gate: ADMIN/STAFF allowed; BROKER + PUBLIC blocked', async () => {
     await expectAuthGate({
       allowed: [UserRole.ADMIN, UserRole.STAFF],
@@ -485,8 +529,8 @@ describe('investigation.getDocumentDownloadUrl', () => {
 });
 
 // ===========================================================================
-// investigation.submit — heavy happy path that requires investigation
-// documents. Auth gate + missing-documents invariant only.
+// investigation.submit — now exercises the happy path via the new
+// ActorInvestigationDocument factory.
 // ===========================================================================
 describe('investigation.submit', () => {
   test('rejects when no investigation documents exist', async () => {
@@ -503,6 +547,33 @@ describe('investigation.submit', () => {
         findings: 'A'.repeat(50),
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('submits with findings and emits broker + landlord tokens', async () => {
+    const { tenant, policy } = await createPolicyWithActors();
+    const inv = await actorInvestigationFactory.create(
+      {},
+      { transient: { policyId: policy.id, actorType: 'TENANT', actorId: tenant.id } },
+    );
+    await actorInvestigationDocumentFactory.create(
+      {},
+      { transient: { investigationId: inv.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.investigation.submit({
+      id: inv.id,
+      findings: 'A'.repeat(50),
+    });
+
+    expect(result.success).toBe(true);
+    expect(typeof result.investigation.brokerToken).toBe('string');
+    expect(typeof result.investigation.landlordToken).toBe('string');
+
+    const refreshed = await prisma.actorInvestigation.findUnique({ where: { id: inv.id } });
+    expect(refreshed?.status).toBe(ActorInvestigationStatus.PENDING);
+    expect(refreshed?.submittedAt).not.toBeNull();
+    expect(refreshed?.findings).toBe('A'.repeat(50));
   });
 
   test('throws NOT_FOUND when investigation does not exist', async () => {
@@ -596,6 +667,28 @@ describe('investigation.getDocumentDownloadUrlByToken', () => {
         documentId: 'cmnodoc12345678901234567',
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('returns presigned download URL for a real document via broker token', async () => {
+    const { tenant, policy } = await createPolicyWithActors();
+    const inv = await submittedInvestigation.create(
+      {},
+      { transient: { policyId: policy.id, actorType: 'TENANT', actorId: tenant.id } },
+    );
+    const doc = await actorInvestigationDocumentFactory.create(
+      {},
+      { transient: { investigationId: inv.id } },
+    );
+
+    const { caller } = createPublicCaller();
+    const result = await caller.investigation.getDocumentDownloadUrlByToken({
+      token: inv.brokerToken!,
+      documentId: doc.id,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.downloadUrl).toContain('download');
+    expect(result.fileName).toBe(doc.originalName);
   });
 });
 
