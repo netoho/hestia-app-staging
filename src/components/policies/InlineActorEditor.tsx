@@ -25,6 +25,7 @@ import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
 import { getActorTypeLabel } from '@/lib/utils/actor';
+import { getFriendlyError } from '@/lib/utils/trpcErrors';
 
 // Import simplified form wizards
 import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
@@ -71,9 +72,10 @@ export default function InlineActorEditor({
       onClose();
     },
     onError: (error) => {
+      const friendly = getFriendlyError(error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al marcar como completo',
+        title: friendly.title,
+        description: friendly.description,
         variant: 'destructive',
       });
     },

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
+import { getFriendlyError } from '@/lib/utils/trpcErrors';
 
 interface Tab {
   id: string;
@@ -133,9 +134,10 @@ export function useFormWizardTabs({
       return true;
     } catch (error: any) {
       console.error(`Error saving ${tabName}:`, error);
+      const friendly = getFriendlyError(error);
       toast({
-        title: t.pages.createPolicy.messages.error,
-        description: error.message || t.pages.createPolicy.messages.savingError,
+        title: friendly.title || t.pages.createPolicy.messages.error,
+        description: friendly.description || t.pages.createPolicy.messages.savingError,
         variant: "destructive"
       });
       return false;

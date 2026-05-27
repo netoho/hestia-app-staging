@@ -7,6 +7,7 @@ import { filterLandlordFieldsByTab } from '@/lib/constants/landlordTabFields';
 import { filterAvalFieldsByTab } from '@/lib/constants/avalTabFields';
 import { filterJointObligorFieldsByTab } from '@/lib/constants/jointObligorTabFields';
 import { trpc } from '@/lib/trpc/client';
+import { getFriendlyError } from '@/lib/utils/trpcErrors';
 import type {
   ActorType,
   FormDataMap,
@@ -217,11 +218,12 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
       }
     } catch (error) {
       console.error('Save error:', error);
+      const friendly = getFriendlyError(error);
       toast({
         ...TOAST_MESSAGES.saveError,
-        description: error instanceof Error ? error.message : TOAST_MESSAGES.saveError.description,
+        description: friendly.description,
       });
-      return { saved: false, submitted: false, error: error instanceof Error ? error.message : 'Error desconocido' };
+      return { saved: false, submitted: false, error: friendly.description };
     }
   }, [actorType, token, isMultiActor, isAdminEdit, toast, updateMutation]);
 
@@ -300,9 +302,10 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
       return true;
     } catch (error) {
       console.error('Submit error:', error);
+      const friendly = getFriendlyError(error);
       toast({
         ...TOAST_MESSAGES.submitError,
-        description: error instanceof Error ? error.message : TOAST_MESSAGES.submitError.description,
+        description: friendly.description,
       });
       return false;
     }
@@ -331,9 +334,10 @@ export function useFormWizardSubmissionTRPC(config: UseFormWizardSubmissionConfi
       return true;
     } catch (error) {
       console.error('Submit error:', error);
+      const friendly = getFriendlyError(error);
       toast({
         title: "Error al enviar",
-        description: error instanceof Error ? error.message : "Error al enviar información",
+        description: friendly.description,
         variant: "destructive" as const,
       });
       return false;
