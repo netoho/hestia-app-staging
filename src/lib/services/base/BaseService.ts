@@ -149,7 +149,14 @@ export abstract class BaseService {
   }
 
   /**
-   * Execute with transaction
+   * Execute with transaction.
+   *
+   * If the operation throws a ServiceError, pass it through verbatim so the
+   * caller (and downstream errorFormatter) sees the original code, message,
+   * userMessage, and `context` — critical for structured errors like
+   * `requiresForce`/`missingFields`/`missingDocuments` raised by
+   * `BaseActorService.submitActor`. Only genuinely unexpected exceptions
+   * get wrapped as a generic `DATABASE_ERROR / Transaction failed`.
    */
   protected async executeTransaction<T>(
     operations: (tx: PrismaClient) => Promise<T>
@@ -160,6 +167,10 @@ export abstract class BaseService {
       });
       return Result.ok(result);
     } catch (error: unknown) {
+      if (error instanceof ServiceError) {
+        this.log('error', 'Transaction failed', error);
+        return Result.error(error);
+      }
       this.log('error', 'Transaction failed', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       return Result.error(
