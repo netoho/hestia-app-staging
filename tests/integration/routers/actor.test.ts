@@ -349,15 +349,12 @@ describe('actor.submitActor (dualAuth)', () => {
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 
-  test('admin session: admin auto-skips completeness validation and marks complete', async () => {
-    // Admins always have skipValidation = true (per ActorAuthService).
-    // `submitActor` still runs the required-documents check (not yet guarded
-    // by skipValidation — that's PR-2's job). Seed the three landlord-required
-    // categories so the transaction succeeds.
+  test('admin session: skipValidation skips both completeness AND required-documents', async () => {
+    // Admins have skipValidation = true (per ActorAuthService). PR-2 guards
+    // BOTH the completeness check AND the required-documents check by
+    // skipValidation, so an admin can force-complete a landlord even with
+    // zero documents on record.
     const { landlord } = await createPolicyWithActors();
-    await actorDocumentFactory.create({}, { transient: { landlordId: landlord.id } });
-    await propertyDeedDocument.create({}, { transient: { landlordId: landlord.id } });
-    await propertyTaxDocument.create({}, { transient: { landlordId: landlord.id } });
     const { caller } = await createAdminCaller();
 
     const result = await caller.actor.submitActor({
@@ -389,13 +386,10 @@ describe('actor.adminSubmitActor', () => {
     });
   });
 
-  test('skipValidation: true marks an incomplete actor as complete', async () => {
-    // PR-2 will guard validateRequiredDocuments by skipValidation; today it
-    // still runs unconditionally, so seed the landlord-required docs.
+  test('skipValidation: true marks an incomplete actor complete and skips docs check', async () => {
+    // PR-2: skipValidation now skips BOTH completeness AND required-documents.
+    // The landlord factory ships zero documents; the call must still succeed.
     const { landlord } = await createPolicyWithActors();
-    await actorDocumentFactory.create({}, { transient: { landlordId: landlord.id } });
-    await propertyDeedDocument.create({}, { transient: { landlordId: landlord.id } });
-    await propertyTaxDocument.create({}, { transient: { landlordId: landlord.id } });
     const { caller } = await createAdminCaller();
 
     const result = await caller.actor.adminSubmitActor({
@@ -410,9 +404,39 @@ describe('actor.adminSubmitActor', () => {
     expect(refreshed?.informationComplete).toBe(true);
   });
 
-  test('skipValidation: false on an incomplete tenant rejects with BAD_REQUEST', async () => {
-    // Tenants from the default factory are missing many required fields,
-    // so non-skip completeness check should reject.
+  test('forced submission records activity log with forcedByAdmin + missing data', async () => {
+    // Validates the audit trail: when skipValidation: true and the actor
+    // actually had missing data, the ACTOR_SUBMITTED PolicyActivity entry
+    // captures `forcedByAdmin: true`, `missingFields`, and `missingDocuments`
+    // so future audits can see exactly what was overridden.
+    const { policy, landlord } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    await caller.actor.adminSubmitActor({
+      type: 'landlord',
+      id: landlord.id,
+      skipValidation: true,
+    });
+
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'ACTOR_SUBMITTED' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(activity).not.toBeNull();
+    const details = activity?.details as {
+      forcedByAdmin?: boolean;
+      missingFields?: unknown[];
+      missingDocuments?: unknown[];
+    } | null;
+    expect(details?.forcedByAdmin).toBe(true);
+    expect(Array.isArray(details?.missingDocuments)).toBe(true);
+    expect((details?.missingDocuments ?? []).length).toBeGreaterThan(0);
+  });
+
+  test('skipValidation: false on an incomplete tenant rejects with BAD_REQUEST + requiresForce', async () => {
+    // PR-2: structured error payload — the TRPCError now carries
+    // `data.requiresForce: true` plus the actual missing fields and
+    // documents so the client can adapt the dialog without a round-trip.
     const { tenant } = await createPolicyWithActors();
     const { caller } = await createAdminCaller();
 
@@ -422,7 +446,14 @@ describe('actor.adminSubmitActor', () => {
         id: tenant.id,
         skipValidation: false,
       }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      cause: expect.objectContaining({
+        context: expect.objectContaining({
+          requiresForce: true,
+        }),
+      }),
+    });
 
     const refreshed = await prisma.tenant.findUnique({ where: { id: tenant.id } });
     expect(refreshed?.informationComplete).toBe(false);

@@ -673,9 +673,15 @@ export const sharedActorRouter = createTRPCRouter({
       });
 
       if (!result.ok) {
+        // Preserve the ServiceError as `cause` so the tRPC errorFormatter
+        // can read `context.requiresForce`/`missingFields`/`missingDocuments`
+        // and surface them on `data.*`. The client uses `requiresForce` to
+        // adapt the dialog into a force-confirm step without a separate
+        // round-trip.
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: result.error?.message || 'Failed to submit actor information',
+          cause: result.error,
         });
       }
 

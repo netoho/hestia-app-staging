@@ -687,6 +687,18 @@ export abstract class BaseActorService<
    * Submit actor information (mark as complete)
    * Called AFTER the last tab has been successfully saved
    * This method only validates completeness and marks the actor as done
+   *
+   * When `skipValidation` is `true` (admin "Forzar Completo" path) BOTH the
+   * completeness check AND the required-documents check are bypassed. The
+   * actor is still marked complete, and the activity log records exactly
+   * which fields + documents were missing at force-time so audits can see
+   * what was overridden.
+   *
+   * When `skipValidation` is `false` and validation fails, the thrown
+   * ServiceError carries `requiresForce: true` plus `missingFields` /
+   * `missingDocuments` arrays in its `context`. The tRPC errorFormatter
+   * surfaces those on `shape.data` so the client can offer a force-confirm
+   * step without a second round-trip.
    */
   public async submitActor(
     id: string,
@@ -713,26 +725,54 @@ export abstract class BaseActorService<
         );
       }
 
-      // 2. Validate completeness (all required fields filled)
+      // 2. Always probe completeness + documents so we can:
+      //    (a) refuse the submission with structured details when not forcing
+      //    (b) record exactly what was missing in the activity log when forcing
+      const completenessResult = this.validateCompleteness(actor);
+      const docsCheckResult = await this.validateRequiredDocuments(id);
+
+      const missingFields = !completenessResult.ok
+        ? (completenessResult.error?.context as { missingFields?: unknown[] } | undefined)?.missingFields ?? []
+        : [];
+      const missingDocuments = !docsCheckResult.ok
+        ? (docsCheckResult.error?.context as { missingDocuments?: unknown[] } | undefined)?.missingDocuments ?? []
+        : [];
+
       if (!options?.skipValidation) {
-        const validationResult = this.validateCompleteness(actor);
-        if (!validationResult.ok) {
-          throw validationResult.error;
+        if (!completenessResult.ok) {
+          // Re-throw the completeness error, enriched with requiresForce so
+          // the router/client can offer the force path.
+          const ce = completenessResult.error;
+          throw new ServiceError(
+            ce?.code ?? ErrorCode.VALIDATION_ERROR,
+            ce?.message ?? 'Información incompleta',
+            ce?.statusCode ?? 400,
+            {
+              ...(ce?.context ?? {}),
+              requiresForce: true,
+              missingFields,
+              missingDocuments,
+            },
+            true,
+            ce instanceof ServiceError ? (ce as any).userMessage : undefined,
+          );
+        }
+        if (!docsCheckResult.ok) {
+          throw new ServiceError(
+            ErrorCode.VALIDATION_ERROR,
+            'Faltan documentos requeridos',
+            400,
+            {
+              requiresForce: true,
+              missingFields,
+              missingDocuments,
+              docsContext: docsCheckResult.error,
+            },
+          );
         }
       }
 
-      // 3. Check required documents
-      const docsCheckResult = await this.validateRequiredDocuments(id);
-      if (!docsCheckResult.ok) {
-        throw new ServiceError(
-          ErrorCode.VALIDATION_ERROR,
-          'Faltan documentos requeridos',
-          400,
-          docsCheckResult.error
-        );
-      }
-
-      // 4. Mark as complete
+      // 3. Mark as complete
       const updatedActor = await delegate.update({
         where: { id },
         data: {
@@ -742,16 +782,29 @@ export abstract class BaseActorService<
         include: this.getIncludes()
       });
 
-      // 5. Log the submission
+      // 4. Log the submission. When the submission is being forced past
+      //    validation, record `forcedByAdmin: true` plus the specific
+      //    missing fields/documents so audits can see what was overridden.
+      const wasForced = !!options?.skipValidation && (missingFields.length > 0 || missingDocuments.length > 0);
       await this.logActivity(
         actor.policyId,
         'ACTOR_SUBMITTED',
         `${this.actorType} información completada`,
         id,
-        { submittedBy: options?.submittedBy ?? 'self' }
+        {
+          submittedBy: options?.submittedBy ?? 'self',
+          ...(wasForced
+            ? {
+                forcedByAdmin: true,
+                forcedByUserId: options?.submittedBy ?? null,
+                missingFields,
+                missingDocuments,
+              }
+            : {}),
+        },
       );
 
-      this.log('info', `${this.actorType} submitted successfully`, { actorId: id });
+      this.log('info', `${this.actorType} submitted successfully`, { actorId: id, forced: wasForced });
 
       return updatedActor as TModel;
     });

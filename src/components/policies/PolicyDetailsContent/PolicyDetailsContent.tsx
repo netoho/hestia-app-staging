@@ -129,6 +129,7 @@ export default function PolicyDetailsContent({
     sending,
     editingActor,
     markCompleteActor,
+    forceCompleteState,
     isMarkingComplete,
     downloadingPdf,
     downloadingDocx,
@@ -140,6 +141,7 @@ export default function PolicyDetailsContent({
     confirmPendingAction,
     cancelPendingAction,
     handleMarkComplete,
+    handleConfirmForceComplete,
     handleDownloadPdf,
     handleDownloadDocx,
     handleEditActor,
@@ -426,7 +428,9 @@ export default function PolicyDetailsContent({
         actorType={markCompleteActor?.type ?? null}
         actorName={markCompleteActor?.name ?? null}
         isPending={isMarkingComplete}
+        forceState={forceCompleteState}
         onMarkComplete={handleMarkComplete}
+        onConfirmForce={handleConfirmForceComplete}
       />
 
       {/* Confirmation dialog for approve */}

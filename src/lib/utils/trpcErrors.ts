@@ -22,12 +22,30 @@ export interface FriendlyError {
   description: string;
 }
 
+export interface MissingField {
+  field?: string;
+  message?: string;
+  code?: string;
+}
+
+export interface ForceCompleteState {
+  /** True when the server signals the error is resolvable by re-trying with skipValidation: true. */
+  requiresForce: boolean;
+  /** List of fields the completeness check rejected (may be empty). */
+  missingFields: MissingField[];
+  /** List of required-document categories that haven't been uploaded yet (may be empty). */
+  missingDocuments: string[];
+}
+
 interface TRPCErrorShape {
   message?: string;
   data?: {
     code?: string;
     userMessage?: string;
     fieldErrorCount?: number;
+    requiresForce?: boolean;
+    missingFields?: unknown[];
+    missingDocuments?: unknown[];
     zodError?: {
       fieldErrors?: Record<string, string[]>;
       formErrors?: string[];
@@ -89,6 +107,35 @@ function fallbackTitle(code: string | undefined): string {
     default:
       return 'Error';
   }
+}
+
+/**
+ * Read the force-complete payload off a tRPC error. The server's
+ * `errorFormatter` surfaces `requiresForce`, `missingFields`, and
+ * `missingDocuments` whenever a ServiceError carries them in `context`
+ * (today: `BaseActorService.submitActor` when validation fails without
+ * `skipValidation`). Returns `requiresForce: false` for any other error
+ * — caller can branch into a normal toast.
+ */
+export function readForceCompleteState(err: AnyError): ForceCompleteState {
+  if (!isObject(err)) {
+    return { requiresForce: false, missingFields: [], missingDocuments: [] };
+  }
+  const data = (err as TRPCErrorShape).data;
+  if (!data) {
+    return { requiresForce: false, missingFields: [], missingDocuments: [] };
+  }
+  const missingFields = Array.isArray(data.missingFields)
+    ? (data.missingFields as MissingField[])
+    : [];
+  const missingDocuments = Array.isArray(data.missingDocuments)
+    ? (data.missingDocuments.filter((d) => typeof d === 'string') as string[])
+    : [];
+  return {
+    requiresForce: data.requiresForce === true,
+    missingFields,
+    missingDocuments,
+  };
 }
 
 /**

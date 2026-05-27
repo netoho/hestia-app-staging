@@ -1,6 +1,6 @@
 'use client';
 
-import { useDialogState } from '@/lib/hooks/useDialogState';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trpc } from '@/lib/trpc/client';
 import { getActorTypeLabel } from '@/lib/utils/actor';
-import { getFriendlyError } from '@/lib/utils/trpcErrors';
+import { getFriendlyError, readForceCompleteState } from '@/lib/utils/trpcErrors';
 
 // Import simplified form wizards
 import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
@@ -54,7 +54,13 @@ export default function InlineActorEditor({
 }: InlineActorEditorProps) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
-  const completeConfirmDialog = useDialogState();
+
+  // When the server returns `requiresForce: true`, we surface a confirm-
+  // force dialog instead of toasting an error. Null = no force needed.
+  const [forceState, setForceState] = useState<{
+    missingFields: { field?: string; message?: string }[];
+    missingDocuments: string[];
+  } | null>(null);
 
   // Admin submit mutation
   const adminSubmitMutation = trpc.actor.adminSubmitActor.useMutation({
@@ -63,6 +69,7 @@ export default function InlineActorEditor({
         title: 'Actor marcado como completo',
         description: `El ${getActorTypeLabel(actorType).toLowerCase()} ha sido marcado como completo exitosamente`,
       });
+      setForceState(null);
       // Invalidate queries
       utils.actor.listByPolicy.invalidate({ policyId });
       if (actorType !== 'landlord') {
@@ -72,6 +79,17 @@ export default function InlineActorEditor({
       onClose();
     },
     onError: (error) => {
+      const force = readForceCompleteState(error);
+      if (force.requiresForce) {
+        // Show the confirm-force dialog with what's actually missing.
+        setForceState({
+          missingFields: force.missingFields,
+          missingDocuments: force.missingDocuments,
+        });
+        return;
+      }
+      // Genuine error — clear any pending force prompt and toast.
+      setForceState(null);
       const friendly = getFriendlyError(error);
       toast({
         title: friendly.title,
@@ -145,14 +163,28 @@ export default function InlineActorEditor({
     ? landlordsQuery.data?.some(l => l.actor?.informationComplete)
     : singleActorQuery.data?.informationComplete;
 
-  // Handle mark as complete
-  const handleMarkComplete = (skipValidation: boolean) => {
+  // First attempt: try a normal submit. If the server says
+  // `requiresForce`, the mutation's onError populates forceState and the
+  // user gets a confirm-force dialog with the exact missing data.
+  const handleMarkComplete = () => {
     adminSubmitMutation.mutate({
       type: actorType,
       id: actorId,
-      skipValidation,
+      skipValidation: false,
     });
-    completeConfirmDialog.close();
+  };
+
+  // Second attempt: user confirmed they want to force past validation.
+  const handleConfirmForce = () => {
+    adminSubmitMutation.mutate({
+      type: actorType,
+      id: actorId,
+      skipValidation: true,
+    });
+  };
+
+  const handleCancelForce = () => {
+    setForceState(null);
   };
 
   const getFormWizard = () => {
@@ -209,11 +241,14 @@ export default function InlineActorEditor({
                     Marcar como completo cuando toda la información este lista
                   </div>
                   <Button
-                    variant="outline"
-                    onClick={completeConfirmDialog.open}
+                    onClick={handleMarkComplete}
                     disabled={adminSubmitMutation.isPending}
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {adminSubmitMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
                     Marcar como Completo
                   </Button>
                 </div>
@@ -236,41 +271,80 @@ export default function InlineActorEditor({
         )}
       </DialogContent>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={completeConfirmDialog.isOpen} onOpenChange={(open) => !open && completeConfirmDialog.close()}>
+      {/* Force-confirm Dialog — only opens when the first attempt failed with
+          requiresForce: true. Lists what's missing so the admin sees exactly
+          what they're overriding before they confirm. */}
+      <AlertDialog
+        open={forceState !== null}
+        onOpenChange={(open) => {
+          if (!open) handleCancelForce();
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Marcar {getActorTypeLabel(actorType)} como Completo</AlertDialogTitle>
+            <AlertDialogTitle>
+              ¿Marcar como completo con información faltante?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción marcará al {getActorTypeLabel(actorType).toLowerCase()} como completo.
-              Si faltan documentos requeridos, puede elegir continuar de todas formas.
+              Este {getActorTypeLabel(actorType).toLowerCase()} aún tiene
+              información faltante. Si confirmas, será marcado como completo y
+              la falta de información quedará registrada en el historial de la
+              protección.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <Alert className="border-yellow-200 bg-yellow-50">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
-                Si hay documentos faltantes, se mostrará un error. Use &quot;Forzar Completo&quot; para omitir la validación.
-              </AlertDescription>
-            </Alert>
+          <div className="py-2 space-y-3">
+            {forceState && forceState.missingFields.length > 0 && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800">
+                  <div className="font-medium mb-1">
+                    Campos faltantes ({forceState.missingFields.length})
+                  </div>
+                  <ul className="list-disc list-inside text-sm">
+                    {forceState.missingFields.slice(0, 10).map((mf, idx) => (
+                      <li key={idx}>
+                        {mf.field ?? 'Campo'}
+                        {mf.message ? `: ${mf.message}` : ''}
+                      </li>
+                    ))}
+                    {forceState.missingFields.length > 10 && (
+                      <li>… y {forceState.missingFields.length - 10} más</li>
+                    )}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+            {forceState && forceState.missingDocuments.length > 0 && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800">
+                  <div className="font-medium mb-1">
+                    Documentos faltantes ({forceState.missingDocuments.length})
+                  </div>
+                  <ul className="list-disc list-inside text-sm">
+                    {forceState.missingDocuments.slice(0, 10).map((doc, idx) => (
+                      <li key={idx}>{doc}</li>
+                    ))}
+                    {forceState.missingDocuments.length > 10 && (
+                      <li>… y {forceState.missingDocuments.length - 10} más</li>
+                    )}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={() => handleMarkComplete(true)}
-              disabled={adminSubmitMutation.isPending}
-            >
-              Forzar Completo
-            </Button>
+            <AlertDialogCancel onClick={handleCancelForce}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => handleMarkComplete(false)}
+              onClick={handleConfirmForce}
               disabled={adminSubmitMutation.isPending}
             >
               {adminSubmitMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              Marcar Completo
+              Confirmar y Forzar Completo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
