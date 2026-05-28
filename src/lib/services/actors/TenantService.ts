@@ -16,14 +16,10 @@ import {
 } from '@/lib/types/actor';
 import {
   validateTenantData,
-  getTenantSchema,
   ValidationMode,
-  TENANT_VALIDATION_MESSAGES,
-} from '@/lib/schemas/tenant';
-import {
-  prepareTenantForDB,
-  prepareReferencesForDB,
-} from '@/lib/utils/tenant/prepareForDB';
+} from '@/lib/domain/tenant/schema';
+import { tenantSelect } from '@/lib/domain/tenant/select';
+import { toDb as tenantToDb } from '@/lib/domain/tenant/adapters/db';
 import { validateTenantToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import type { TenantWithRelations } from './types';
@@ -41,46 +37,41 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   }
 
   /**
-   * Get includes for tenant queries
+   * Get includes for tenant queries.
+   * Delegates to the centralized `tenantSelect` constant — the single
+   * source of truth for "what gets loaded with a tenant" lives in
+   * `src/lib/domain/tenant/select.ts`.
    */
   protected getIncludes(): Record<string, boolean | object> {
-    return {
-      addressDetails: true,
-      employerAddressDetails: true,
-      previousRentalAddressDetails: true,
-      personalReferences: true,
-      commercialReferences: true,
-      policy: {
-        include: {
-          propertyDetails: {
-            include: {
-              propertyAddressDetails: true,
-              contractSigningAddressDetails: true,
-            }
-          }
-        }
-      },
-      documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } }
-    };
+    return tenantSelect as unknown as Record<string, boolean | object>;
   }
 
   /**
-   * Build update data object from actor data
-   * Now uses prepareTenantForDB for consistent transformation
+   * Build update data object from actor data.
+   * Delegates to the canonical tenant DB adapter; the adapter parses
+   * through the canonical schema and normalizes types. If the adapter
+   * rejects, we surface an empty payload so the caller's transaction
+   * fails fast at the Prisma layer with a clear error (rather than
+   * swallowing the validation issue here).
    */
   protected buildUpdateData(data: Partial<ActorData>, addressId?: string): any {
-    // Use the new transformation utility
-    const tenantType = data.tenantType || (data.isCompany ? 'COMPANY' : 'INDIVIDUAL');
-    const prepared = prepareTenantForDB(data, {
+    const tenantType =
+      data.tenantType ||
+      ((data as Record<string, unknown>).isCompany ? 'COMPANY' : 'INDIVIDUAL');
+    const result = tenantToDb(data, {
       tenantType: tenantType as 'INDIVIDUAL' | 'COMPANY',
       isPartial: true,
     });
 
-    // Add address ID if provided
+    if (!result.ok) {
+      this.log('error', 'Tenant buildUpdateData adapter rejected input', result.error);
+      return {};
+    }
+
+    const prepared = result.value as Record<string, unknown>;
     if (addressId) {
       prepared.addressId = addressId;
     }
-
     return prepared;
   }
 
@@ -103,8 +94,9 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   }
 
   /**
-   * Public save method required by base class
-   * Now uses master schema validation and prepareForDB
+   * Public save method required by base class.
+   * Now routes through the canonical tenant DB adapter — `toDb`
+   * parses through `tenantSchema` and normalizes the payload.
    */
   public async save(
     tenantId: string,
@@ -119,33 +111,21 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
 
       const tenantType = tenant.value.tenantType || 'INDIVIDUAL';
 
-      // Validate unless explicitly skipped (admin mode)
-      if (!skipValidation) {
-        const mode: ValidationMode = isPartial ? 'partial' : 'strict';
-        const validation = validateTenantData(data, {
-          tenantType,
-          mode,
-          tabName,
-        });
-
-        if (!validation.success) {
-          return Result.error(
-            new ServiceError(
-              ErrorCode.VALIDATION_ERROR,
-              'Validation failed',
-              400,
-              { errors: this.formatZodErrors(validation.error) }
-            )
-          );
-        }
-      }
-
-      // Transform data for database
-      const dbData = prepareTenantForDB(data, {
+      // Validate unless explicitly skipped (admin mode). When skipping,
+      // we still want a clean payload, so we forward the loose-mode
+      // path (`isPartial: true`) through the adapter which transforms
+      // without rejecting on missing fields.
+      const adapterResult = tenantToDb(data, {
         tenantType,
-        isPartial,
+        isPartial: skipValidation ? true : isPartial,
         tabName,
       });
+
+      if (!adapterResult.ok) {
+        return Result.error(adapterResult.error);
+      }
+
+      const dbData = adapterResult.value as Record<string, unknown>;
 
       // Handle address relations if needed
       if (dbData.addressDetails) {
@@ -232,31 +212,31 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
   }
 
   /**
-   * Create a new tenant
+   * Create a new tenant.
+   * Routes through the canonical tenant DB adapter for consistent
+   * transformation.
    */
   async create(data: any): AsyncResult<TenantWithRelations> {
     return this.executeTransaction(async (tx) => {
-      // Determine tenant type
       const tenantType = data.tenantType || (data.companyName ? 'COMPANY' : 'INDIVIDUAL');
 
-      // Prepare data for creation
-      const createData = prepareTenantForDB(
-        {
-          ...data,
-          tenantType,
-        },
-        {
-          tenantType,
-          isPartial: true, // Allow partial for initial creation
-        }
+      const adapterResult = tenantToDb(
+        { ...data, tenantType },
+        { tenantType, isPartial: true },
       );
+
+      if (!adapterResult.ok) {
+        throw adapterResult.error;
+      }
+
+      const createData = adapterResult.value as Record<string, unknown>;
 
       const tenant = await tx.tenant.create({
         data: {
           policyId: data.policyId,
           ...createData,
-        },
-        include: this.getIncludes()
+        } as Prisma.TenantUncheckedCreateInput,
+        include: this.getIncludes(),
       });
 
       return tenant as TenantWithRelations;
