@@ -14,7 +14,7 @@ import TenantEmploymentTabRHF from './TenantEmploymentTab-RHF';
 import TenantRentalHistoryTabRHF from './TenantRentalHistoryTab-RHF';
 import TenantReferencesTabRHF from './TenantReferencesTab-RHF';
 import TenantDocumentsSection from './TenantDocumentsSection';
-import type { TenantType } from '@/lib/schemas/tenant';
+import type { TenantType } from '@/lib/domain/tenant/schema';
 
 interface TenantFormWizardProps {
   token: string;
@@ -40,9 +40,15 @@ export default function TenantFormWizardSimplified({
   const tenantType: TenantType = initialData?.tenantType || 'INDIVIDUAL';
   const isCompany = tenantType === 'COMPANY';
 
-  // Tab configuration
+  // Tab configuration. actorConfig's two tab lists infer as different
+  // readonly tuple shapes; cast to a writable array of the union so
+  // useFormWizardTabs accepts either. Goes away when T3's
+  // ActorWizard factory establishes a single tab-config type.
   const config = actorConfig.tenant;
-  const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
+  type WizardTab =
+    | (typeof config.personTabs)[number]
+    | (typeof config.companyTabs)[number];
+  const tabs = (isCompany ? config.companyTabs : config.personTabs) as WizardTab[];
 
   // Wizard tabs for navigation
   const wizard = useFormWizardTabs({

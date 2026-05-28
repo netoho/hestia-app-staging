@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
-import { getTenantTabSchema } from '@/lib/schemas/tenant';
+import { getTenantTabSchema } from '@/lib/domain/tenant/schema';
 
 interface TenantRentalHistoryTabProps {
   initialData: any;
@@ -33,7 +33,7 @@ export default function TenantRentalHistoryTabRHF({
   const schema = getTenantTabSchema('INDIVIDUAL', 'rental');
 
   const form = useForm({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
     defaultValues: {
       previousLandlordName: initialData?.previousLandlordName || '',

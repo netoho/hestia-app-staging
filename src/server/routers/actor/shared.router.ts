@@ -15,11 +15,12 @@ import { ActorAuthService } from '@/lib/services/ActorAuthService';
 import { TenantType } from "@/prisma/generated/prisma-client/enums";
 import { getTabFields } from '@/lib/constants/actorTabFields';
 
-// Import master schemas
+// Import master schemas. Tenant now lives in the hexagonal domain layer
+// (S1); other actors follow in subsequent slices.
 import {
   tenantIndividualCompleteSchema,
   tenantCompanyCompleteSchema,
-} from '@/lib/schemas/tenant';
+} from '@/lib/domain/tenant/schema';
 import {
   landlordIndividualCompleteSchema,
   landlordCompanyCompleteSchema,

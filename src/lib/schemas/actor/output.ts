@@ -50,28 +50,12 @@ const ActorBaseShape = z.object({
 // ---------------------------------------------------------------------------
 // Per-actor-type shapes
 // ---------------------------------------------------------------------------
-export const TenantOutputShape = ActorBaseShape.extend({
-  tenantType: z.nativeEnum(TenantType),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  passport: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  legalRepFirstName: z.string().nullable(),
-  legalRepPaternalLastName: z.string().nullable(),
-  legalRepEmail: z.string().nullable(),
-  legalRepPhone: z.string().nullable(),
-  workPhone: z.string().nullable(),
-  personalEmail: z.string().nullable(),
-  workEmail: z.string().nullable(),
-  currentAddress: z.string().nullable(),
-  addressId: z.string().nullable(),
-  employmentStatus: z.nativeEnum(EmploymentStatus).nullable(),
-  occupation: z.string().nullable(),
-  employerName: z.string().nullable(),
-  monthlyIncome: z.number().nullable(),
-  paymentMethod: z.string().nullable(),
-  requiresCFDI: z.boolean(),
-});
+
+// Tenant is migrated to the hexagonal domain layer (S1). The canonical
+// API output now lives in `@/lib/domain/tenant/adapters/api`; this
+// file just re-exports it under the legacy name so existing callers
+// (router-imports, frontend type-imports) keep working.
+export { tenantApiOutput as TenantOutputShape } from '@/lib/domain/tenant/adapters/api';
 
 export const LandlordOutputShape = ActorBaseShape.extend({
   isPrimary: z.boolean(),
