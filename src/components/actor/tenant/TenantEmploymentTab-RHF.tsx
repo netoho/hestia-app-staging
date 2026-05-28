@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
-import { getTenantTabSchema } from '@/lib/schemas/tenant';
+import { getTenantTabSchema } from '@/lib/domain/tenant/schema';
 
 interface TenantEmploymentTabProps {
   initialData: any;
@@ -48,7 +48,7 @@ export default function TenantEmploymentTabRHF({
   const schema = getTenantTabSchema('INDIVIDUAL', 'employment');
 
   const form = useForm({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
     defaultValues: {
       employmentStatus: initialData?.employmentStatus || '',

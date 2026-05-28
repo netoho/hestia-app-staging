@@ -16,7 +16,8 @@ import {
   FormMessage
 } from '@/components/ui/form';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
-import { getTenantTabSchema, type TenantType } from '@/lib/schemas/tenant';
+import { getTenantTabSchema, type TenantType } from '@/lib/domain/tenant/schema';
+import { tenantFormDefaults } from '@/lib/domain/tenant/adapters/form';
 
 interface TenantPersonalInfoTabProps {
   tenantType: TenantType;
@@ -34,15 +35,18 @@ export default function TenantPersonalInfoTabRHF({
   // Get appropriate schema based on tenant type
   const schema = getTenantTabSchema(tenantType, 'personal');
 
-  // Initialize form with RHF + Zod validation
+  // Initialize form with RHF + Zod validation.
+  // Defaults come from the canonical tenant form adapter so a future
+  // field addition only needs to touch `src/lib/domain/tenant/`.
   const form = useForm({
-    resolver: zodResolver(schema as any),
+    // Cast through ZodTypeAny so we don't have to special-case the
+    // individual-vs-company union at the resolver type position.
+    // RHF's `Resolver<T>` is invariant; the inferred union of the two
+    // tab schemas confuses the resolver-type inference. The runtime
+    // behavior is identical to passing the raw schema.
+    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
-    defaultValues: {
-      tenantType,
-      nationality: 'MEXICAN',
-      ...initialData,
-    },
+    defaultValues: tenantFormDefaults({ tenantType, initialData }),
   });
 
   // Watch tenantType and nationality for dynamic UI
