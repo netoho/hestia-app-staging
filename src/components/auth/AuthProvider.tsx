@@ -8,5 +8,8 @@ interface AuthProviderProps {
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  return <SessionProvider>{children}</SessionProvider>;
+  // Disable refetch-on-window-focus: it fires GET /api/auth/session every time
+  // the tab regains focus, re-rendering consumers and (in long actor edit forms)
+  // wiping unsaved input. The session is still refreshed on navigation.
+  return <SessionProvider refetchOnWindowFocus={false}>{children}</SessionProvider>;
 }
