@@ -50,8 +50,7 @@ export async function sendIncompleteActorReminders(): Promise<ReminderResult> {
             firstName: true,
             paternalLastName: true,
             companyName: true,
-            informationComplete: true,
-            isPrimary: true
+            informationComplete: true
           }
         },
         tenant: true,
@@ -75,18 +74,19 @@ export async function sendIncompleteActorReminders(): Promise<ReminderResult> {
       try {
         const incompleteActors: IncompleteActor[] = [];
 
-        // Check primary landlord only
-        const primaryLandlord = policy.landlords.find(l => l.isPrimary);
-        if (primaryLandlord && !primaryLandlord.informationComplete) {
-          incompleteActors.push({
-            type: 'landlord' as ActorType,
-            id: primaryLandlord.id,
-            email: primaryLandlord.email,
-            firstName: primaryLandlord.firstName,
-            paternalLastName: primaryLandlord.paternalLastName,
-            companyName: primaryLandlord.companyName
-          });
-        }
+        // Check all landlords (primary + co-owners), mirroring joint obligors / avals
+        policy.landlords.forEach(landlord => {
+          if (!landlord.informationComplete) {
+            incompleteActors.push({
+              type: 'landlord' as ActorType,
+              id: landlord.id,
+              email: landlord.email,
+              firstName: landlord.firstName,
+              paternalLastName: landlord.paternalLastName,
+              companyName: landlord.companyName
+            });
+          }
+        });
 
         // Check tenant (singular)
         if (policy.tenant && !policy.tenant.informationComplete) {

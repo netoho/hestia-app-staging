@@ -421,12 +421,12 @@ class ActorTokenService extends BaseService {
    */
   async checkPolicyActorsComplete(policyId: string): Promise<{
     allComplete: boolean;
-    primaryLandlord: boolean;
+    landlords: boolean;
     tenant: boolean;
     jointObligors: boolean;
     avals: boolean;
     details: {
-      primaryLandlordComplete?: boolean;
+      landlordsComplete?: { [id: string]: boolean };
       tenantComplete?: boolean;
       jointObligorsComplete?: { [id: string]: boolean };
       avalsComplete?: { [id: string]: boolean };
@@ -438,7 +438,6 @@ class ActorTokenService extends BaseService {
         landlords: {
           select: {
             id: true,
-            isPrimary: true,
             informationComplete: true,
           }
         },
@@ -453,23 +452,28 @@ class ActorTokenService extends BaseService {
     }
 
     const details: {
-      primaryLandlordComplete?: boolean;
+      landlordsComplete?: { [id: string]: boolean };
       tenantComplete?: boolean;
       jointObligorsComplete?: { [id: string]: boolean };
       avalsComplete?: { [id: string]: boolean };
     } = {};
-    let primaryLandlordComplete = false;
+    let landlordsComplete = true;
     let tenantComplete = true;
     let jointObligorsComplete = true;
     let avalsComplete = true;
 
-    // Check primary landlord
-    const primaryLandlord = policy.landlords.find(l => l.isPrimary);
-    if (primaryLandlord) {
-      primaryLandlordComplete = primaryLandlord.informationComplete;
+    // Check landlords — every landlord (primary + co-owners) must be complete,
+    // matching the joint obligor / aval handling below.
+    if (policy.landlords.length > 0) {
+      details.landlordsComplete = {};
+      for (const landlord of policy.landlords) {
+        details.landlordsComplete[landlord.id] = landlord.informationComplete;
+        if (!landlord.informationComplete) {
+          landlordsComplete = false;
+        }
+      }
     } else {
-      details.primaryLandlordComplete = false;
-      primaryLandlordComplete = false;
+      landlordsComplete = false;
     }
 
     // Check tenant
@@ -515,8 +519,8 @@ class ActorTokenService extends BaseService {
     }
 
     return {
-      allComplete: primaryLandlordComplete && tenantComplete && jointObligorsComplete && avalsComplete,
-      primaryLandlord: primaryLandlordComplete,
+      allComplete: landlordsComplete && tenantComplete && jointObligorsComplete && avalsComplete,
+      landlords: landlordsComplete,
       tenant: tenantComplete,
       jointObligors: jointObligorsComplete,
       avals: avalsComplete,

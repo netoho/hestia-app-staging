@@ -33,6 +33,15 @@ CANCELLED        → (none)
 ### COLLECTING_INFO → PENDING_APPROVAL
 - All investigated actors (tenant, joint obligors, avals — not landlords) must have at least one `APPROVED` investigation.
 
+### Actor information completeness (direct COLLECTING_INFO → ACTIVE approval)
+`checkAllActorsInfoComplete` (delegating to `actorTokenService.checkPolicyActorsComplete`) gates the direct approval path. Every **required** actor must have `informationComplete = true`, and all actor types are treated **uniformly** — a single incomplete record of a required type blocks activation:
+- **All landlords** — primary **and** co-owners.
+- **The tenant.**
+- **All joint obligors** — only when `guarantorType` is `JOINT_OBLIGOR` or `BOTH`.
+- **All avales** — only when `guarantorType` is `AVAL` or `BOTH`.
+
+Joint obligors and avals already enforced "every record"; landlords were previously gated on the **primary only** and now match that same rule (the daily reminder + info-request links likewise go to every landlord). This parity is what keeps co-owners from being silently skipped.
+
 ### PENDING_APPROVAL → ACTIVE
 - All active payments (excluding CANCELLED/FAILED) must be `COMPLETED`.
 - On transition: sets `approvedAt`, `activatedAt`, and `expiresAt` (now + `contractLength` months).

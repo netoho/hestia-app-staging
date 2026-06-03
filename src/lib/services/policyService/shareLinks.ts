@@ -34,9 +34,9 @@ export async function getShareLinksForPolicy(
   // Build share links for all actors
   const shareLinks: ShareLink[] = [];
 
-  // Landlords (only primary)
+  // Landlords (all of them — every landlord gets a share link)
   for (const landlord of policy.landlords || []) {
-    if (landlord.accessToken && landlord.isPrimary) {
+    if (landlord.accessToken) {
       shareLinks.push({
         actorId: landlord.id,
         actorType: 'landlord',
