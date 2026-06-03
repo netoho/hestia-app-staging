@@ -29,7 +29,7 @@ import {
 } from '../callers';
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
-import { packageFactory, policyFactory } from '../factories';
+import { packageFactory, policyFactory, landlordFactory } from '../factories';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -506,6 +506,63 @@ describe('policy.changeGuarantorType', () => {
 // gate here and defer the happy path until renewal-specific factories exist.
 // ===========================================================================
 describe('policy.renew', () => {
+  test('clones every landlord (primary + co-owners), preserving isPrimary', async () => {
+    const { policy } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    // Add a co-owner (non-primary) landlord, no documents → no S3 copy.
+    await landlordFactory.create(
+      { firstName: 'CoOwner', paternalLastName: 'Renew' },
+      { transient: { policyId: policy.id } },
+    );
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.policy.renew({
+      sourcePolicyId: policy.id,
+      startDate: '2027-01-01',
+      endDate: '2028-01-01',
+      selection: {
+        property: { address: false, typeAndDescription: true, features: true, services: true },
+        policyTerms: {
+          guarantorType: GuarantorType.NONE,
+          financial: true,
+          contract: true,
+          packageAndPricing: true,
+        },
+        landlord: {
+          include: true,
+          basicInfo: true,
+          contact: true,
+          address: false,
+          banking: true,
+          propertyDeed: true,
+          cfdi: true,
+          documents: false,
+        },
+        tenant: {
+          include: false,
+          basicInfo: false,
+          contact: false,
+          address: false,
+          employment: false,
+          rentalHistory: false,
+          references: false,
+          paymentPreferences: false,
+          documents: false,
+        },
+        jointObligors: [],
+        avals: [],
+      },
+    });
+
+    const newLandlords = await prisma.landlord.findMany({
+      where: { policyId: result.newPolicyId },
+      orderBy: { isPrimary: 'desc' },
+    });
+    expect(newLandlords).toHaveLength(2);
+    expect(newLandlords.filter((l) => l.isPrimary)).toHaveLength(1);
+    // The co-owner carried over alongside the primary.
+    expect(newLandlords.map((l) => l.firstName)).toContain('CoOwner');
+  });
+
   test('auth gate: ADMIN/STAFF allowed; BROKER and PUBLIC blocked', async () => {
     const { policy } = await createPolicyWithActors();
 
