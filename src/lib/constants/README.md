@@ -116,41 +116,23 @@ export function getTenantTabFields(
 
 ## Form Messages (`formMessages.ts`)
 
-Centralized messages for consistency:
+Centralized validation strings and toast payloads. UI labels live in `src/lib/i18n/`, not
+here — only `VALIDATION_MESSAGES` and `TOAST_MESSAGES` remain (consumed by the validation
+utils and the wizard submission hook):
 
 ```typescript
-export const formMessages = {
-  validation: {
-    required: 'Este campo es requerido',
-    email: 'Ingrese un email válido',
-    phone: 'Ingrese un teléfono válido',
-    rfc: 'Ingrese un RFC válido',
-    curp: 'Ingrese un CURP válido',
-    minLength: 'Mínimo {min} caracteres',
-    maxLength: 'Máximo {max} caracteres',
-    minValue: 'El valor mínimo es {min}',
-    maxValue: 'El valor máximo es {max}',
-  },
+export const VALIDATION_MESSAGES = {
+  required: 'Este campo es requerido',
+  invalidEmail: 'Correo electrónico inválido',
+  invalidRFC: 'RFC inválido',
+  // ...
+} as const;
 
-  success: {
-    saved: 'Información guardada exitosamente',
-    submitted: 'Formulario enviado exitosamente',
-    uploaded: 'Documento cargado exitosamente',
-  },
-
-  error: {
-    generic: 'Ocurrió un error. Intente nuevamente',
-    network: 'Error de conexión',
-    validation: 'Por favor corrija los errores en el formulario',
-    unauthorized: 'No autorizado',
-  },
-
-  info: {
-    saving: 'Guardando...',
-    loading: 'Cargando...',
-    uploading: 'Subiendo archivo...',
-  },
-};
+export const TOAST_MESSAGES = {
+  saved: { title: '✓ Guardado', description: 'Información guardada exitosamente' },
+  saveError: { title: 'Error', description: 'Error al guardar la información', variant: 'destructive' },
+  // ...
+} as const;
 ```
 
 ## Document Upload Validation (`documentCategories.ts`)
