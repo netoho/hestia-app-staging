@@ -126,6 +126,20 @@ export const landlordStepSchema = z.discriminatedUnion('isCompany', [
 ]);
 
 /**
+ * Step 3: Landlords (primary + co-owners)
+ * The first entry is always the primary landlord; the rest are co-owners.
+ * Each co-owner receives an info-request link to complete their full details.
+ */
+export const LANDLORD_STEP_LIMITS = { MIN: 1, MAX: 5 } as const;
+
+export const landlordsStepSchema = z.object({
+  landlords: z
+    .array(landlordStepSchema)
+    .min(LANDLORD_STEP_LIMITS.MIN, 'Al menos un arrendador es requerido')
+    .max(LANDLORD_STEP_LIMITS.MAX, 'Máximo 5 arrendadores permitidos'),
+});
+
+/**
  * Step 4: Tenant
  */
 export const tenantStepSchema = z.object({
@@ -185,7 +199,7 @@ export function getPolicyStepSchema(step: string) {
     case 'pricing':
       return pricingStepSchema;
     case 'landlord':
-      return landlordStepSchema;
+      return landlordsStepSchema;
     case 'tenant':
       return tenantStepSchema;
     case 'guarantors':
@@ -201,5 +215,6 @@ export function getPolicyStepSchema(step: string) {
 export type PropertyStepData = z.infer<typeof propertyStepSchema>;
 export type PricingStepData = z.infer<typeof pricingStepSchema>;
 export type LandlordStepData = z.infer<typeof landlordStepSchema>;
+export type LandlordsStepData = z.infer<typeof landlordsStepSchema>;
 export type TenantStepData = z.infer<typeof tenantStepSchema>;
 export type GuarantorStepData = z.infer<typeof guarantorStepSchema>;

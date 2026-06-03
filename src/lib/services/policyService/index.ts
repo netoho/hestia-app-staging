@@ -64,29 +64,31 @@ export async function createPolicy(data: CreatePolicyData) {
       status: 'COLLECTING_INFO',
       contractStartDate: policyData.startDate ? new Date(policyData.startDate) : null,
       contractEndDate: policyData.endDate ? new Date(policyData.endDate) : null,
-      // Create related actors
+      // Create related actors.
+      // The first entry is the primary landlord; the rest are co-owners,
+      // each of whom will receive an info-request link to complete their data.
       landlords: {
-        create: {
-          isPrimary: true, // First landlord is always primary
-          isCompany: policyData.landlord.isCompany || false,
+        create: policyData.landlords.map((landlord, index) => ({
+          isPrimary: index === 0,
+          isCompany: landlord.isCompany || false,
           // Personal fields
-          firstName: policyData.landlord.firstName,
-          middleName: policyData.landlord.middleName,
-          paternalLastName: policyData.landlord.paternalLastName,
-          maternalLastName: policyData.landlord.maternalLastName,
+          firstName: landlord.firstName,
+          middleName: landlord.middleName,
+          paternalLastName: landlord.paternalLastName,
+          maternalLastName: landlord.maternalLastName,
           // Company fields
-          companyName: policyData.landlord.companyName,
-          companyRfc: policyData.landlord.companyRfc,
-          legalRepFirstName: policyData.landlord.legalRepFirstName,
-          legalRepMiddleName: policyData.landlord.legalRepMiddleName,
-          legalRepPaternalLastName: policyData.landlord.legalRepPaternalLastName,
-          legalRepMaternalLastName: policyData.landlord.legalRepMaternalLastName,
+          companyName: landlord.companyName,
+          companyRfc: landlord.companyRfc,
+          legalRepFirstName: landlord.legalRepFirstName,
+          legalRepMiddleName: landlord.legalRepMiddleName,
+          legalRepPaternalLastName: landlord.legalRepPaternalLastName,
+          legalRepMaternalLastName: landlord.legalRepMaternalLastName,
           // Contact
-          email: policyData.landlord.email,
-          phone: policyData.landlord.phone || '',
-          rfc: policyData.landlord.rfc || '',
+          email: landlord.email,
+          phone: landlord.phone || '',
+          rfc: landlord.rfc || '',
           address: '', // Will be updated when landlord fills their info
-        }
+        })),
       },
       tenant: {
         create: {

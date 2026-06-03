@@ -49,14 +49,16 @@ function buildCreatePolicyInput(packageId: string, overrides: Partial<Record<str
     landlordPercentage: 0,
     totalPrice: 4100,
     guarantorType: GuarantorType.NONE,
-    landlord: {
-      isCompany: false,
-      firstName: 'Ana',
-      paternalLastName: 'Test',
-      maternalLastName: 'Landlord',
-      email: 'landlord@hestia.test',
-      phone: '5555555555',
-    },
+    landlords: [
+      {
+        isCompany: false,
+        firstName: 'Ana',
+        paternalLastName: 'Test',
+        maternalLastName: 'Landlord',
+        email: 'landlord@hestia.test',
+        phone: '5555555555',
+      },
+    ],
     tenant: {
       tenantType: TenantType.INDIVIDUAL,
       firstName: 'Beto',
@@ -190,7 +192,7 @@ describe('policy.create', () => {
     expect(result.policy.packageId).toBe(pkg.id);
     expect(result.policy.landlords).toHaveLength(1);
     expect(result.policy.landlords[0]!.isPrimary).toBe(true);
-    expect(result.policy.landlords[0]!.email).toBe(input.landlord.email);
+    expect(result.policy.landlords[0]!.email).toBe(input.landlords[0]!.email);
     expect(result.policy.tenant).not.toBeNull();
     expect(result.policy.tenant!.email).toBe(input.tenant.email);
 
@@ -203,6 +205,34 @@ describe('policy.create', () => {
     expect(persisted!.landlords).toHaveLength(1);
     expect(persisted!.tenant).not.toBeNull();
     expect(persisted!.propertyDetails).not.toBeNull();
+  });
+
+  test('creates primary + co-owner landlords; only the first is primary', async () => {
+    const pkg = await packageFactory.create();
+    const { caller } = await createAdminCaller();
+    const input = buildCreatePolicyInput(pkg.id);
+    input.landlords = [
+      input.landlords[0]!,
+      {
+        isCompany: false,
+        firstName: 'Carlos',
+        paternalLastName: 'Co',
+        maternalLastName: 'Owner',
+        email: 'co-owner@hestia.test',
+        phone: '5555555557',
+      },
+    ];
+
+    const result = await caller.policy.create(input);
+
+    expect(result.policy.landlords).toHaveLength(2);
+    const primaries = result.policy.landlords.filter((l) => l.isPrimary);
+    expect(primaries).toHaveLength(1);
+    // The first entry is the primary; co-owners are not.
+    const primary = result.policy.landlords.find((l) => l.email === input.landlords[0]!.email);
+    const coOwner = result.policy.landlords.find((l) => l.email === 'co-owner@hestia.test');
+    expect(primary!.isPrimary).toBe(true);
+    expect(coOwner!.isPrimary).toBe(false);
   });
 
   test('rejects invalid input (validation smoke)', async () => {

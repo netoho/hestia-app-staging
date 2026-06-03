@@ -35,7 +35,8 @@ export interface CreatePolicyData {
   landlordPercentage?: number;
   totalPrice?: number;
   createdById: string;
-  landlord: {
+  // First entry is the primary landlord; the rest are co-owners.
+  landlords: Array<{
     firstName?: string;
     middleName?: string;
     paternalLastName?: string;
@@ -47,11 +48,16 @@ export interface CreatePolicyData {
     isCompany?: boolean;
     companyName?: string;
     companyRfc?: string;
+    legalRepName?: string;
+    legalRepPosition?: string;
+    legalRepRfc?: string;
+    legalRepPhone?: string;
+    legalRepEmail?: string;
     legalRepFirstName?: string;
     legalRepMiddleName?: string;
     legalRepPaternalLastName?: string;
     legalRepMaternalLastName?: string;
-  };
+  }>;
   tenant: {
     tenantType?: TenantType;
     firstName?: string;
