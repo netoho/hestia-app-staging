@@ -76,10 +76,10 @@ export async function sendPolicyQuarterlyFollowups(): Promise<QuarterlyFollowupR
           { renewedToId: null },
           { renewedTo: { status: PolicyStatus.CANCELLED } },
         ],
-        landlords: { some: { isPrimary: true, email: { not: '' } } },
+        landlords: { some: { email: { not: '' } } },
       },
       include: {
-        landlords: { where: { isPrimary: true }, take: 1 },
+        landlords: { where: { email: { not: '' } } },
       },
       take: BATCH_LIMIT,
       orderBy: { activatedAt: 'asc' },
@@ -91,8 +91,8 @@ export async function sendPolicyQuarterlyFollowups(): Promise<QuarterlyFollowupR
       result.policiesProcessed++;
 
       try {
-        const primary = policy.landlords[0];
-        if (!primary || !primary.email) {
+        const policyLandlords = policy.landlords.filter((l) => l.email);
+        if (policyLandlords.length === 0) {
           result.skipped++;
           continue;
         }
@@ -111,7 +111,6 @@ export async function sendPolicyQuarterlyFollowups(): Promise<QuarterlyFollowupR
           continue;
         }
 
-        const name = recipientName(primary);
         const mailtoUrl = `mailto:${brandInfo.supportEmail}?subject=${encodeURIComponent(
           `Consulta sobre mi protección ${policy.policyNumber}`,
         )}`;
@@ -119,31 +118,35 @@ export async function sendPolicyQuarterlyFollowups(): Promise<QuarterlyFollowupR
           `Hola, tengo una consulta sobre mi protección #${policy.policyNumber}.`,
         );
 
-        const payload: PolicyQuarterlyFollowupData = {
-          email: primary.email,
-          recipientName: name,
-          policyNumber: policy.policyNumber,
-          isCompany: primary.isCompany,
-          companyName: primary.companyName,
-          mailtoUrl,
-          whatsappUrl,
-        };
-
-        const ok = await sendPolicyQuarterlyFollowup(payload);
-
-        await prisma.reminderLog.create({
-          data: {
-            reminderType: REMINDER_TYPE,
-            recipientEmail: primary.email,
+        // Every landlord (primary + co-owners) gets the quarterly follow-up.
+        for (const landlord of policyLandlords) {
+          const name = recipientName(landlord);
+          const payload: PolicyQuarterlyFollowupData = {
+            email: landlord.email,
             recipientName: name,
-            policyId: policy.id,
-            status: ok ? 'sent' : 'failed',
-            metadata: { isCompany: primary.isCompany },
-          },
-        });
+            policyNumber: policy.policyNumber,
+            isCompany: landlord.isCompany,
+            companyName: landlord.companyName,
+            mailtoUrl,
+            whatsappUrl,
+          };
 
-        if (ok) result.remindersSent++;
-        else result.errors.push(`${primary.email}: send returned false`);
+          const ok = await sendPolicyQuarterlyFollowup(payload);
+
+          await prisma.reminderLog.create({
+            data: {
+              reminderType: REMINDER_TYPE,
+              recipientEmail: landlord.email,
+              recipientName: name,
+              policyId: policy.id,
+              status: ok ? 'sent' : 'failed',
+              metadata: { isCompany: landlord.isCompany },
+            },
+          });
+
+          if (ok) result.remindersSent++;
+          else result.errors.push(`${landlord.email}: send returned false`);
+        }
       } catch (err) {
         const msg = `Policy ${policy.policyNumber}: ${err instanceof Error ? err.message : err}`;
         console.error(`[QUARTERLY-FOLLOWUP] ${msg}`);
