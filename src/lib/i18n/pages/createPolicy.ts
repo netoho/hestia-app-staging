@@ -119,6 +119,11 @@ export const createPolicy = {
       repRfc: 'RFC del Representante',
       repPhone: 'Teléfono del Representante',
       repEmail: 'Email del Representante',
+      primaryTitle: 'Arrendador Principal',
+      coOwnerTitle: (index: number) => `Copropietario ${index}`,
+      coOwnerHelp: 'Agregue copropietarios si la propiedad tiene múltiples dueños. Cada uno recibirá un enlace para completar su información.',
+      addCoOwner: 'Agregar copropietario',
+      removeCoOwner: 'Eliminar',
     },
     tenant: {
       title: 'Información del Inquilino',

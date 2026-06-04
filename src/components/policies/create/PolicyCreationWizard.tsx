@@ -21,7 +21,7 @@ import TenantStepRHF from './steps/TenantStep-RHF';
 import GuarantorStepRHF from './steps/GuarantorStep-RHF';
 import ReviewStep from './steps/ReviewStep';
 
-import type { PropertyStepData, PricingStepData, LandlordStepData, TenantStepData, GuarantorStepData } from '@/lib/schemas/policy/wizard';
+import type { PropertyStepData, PricingStepData, LandlordsStepData, TenantStepData, GuarantorStepData } from '@/lib/schemas/policy/wizard';
 import type { PolicyCreationFormData } from './types';
 import { t } from '@/lib/i18n';
 
@@ -81,16 +81,18 @@ const initialFormData: PolicyCreationFormData = {
     isManualOverride: false,
     calculatedPrice: null,
   },
-  landlord: {
-    isCompany: false,
-    firstName: '',
-    middleName: '',
-    paternalLastName: '',
-    maternalLastName: '',
-    email: '',
-    phone: '',
-    rfc: '',
-  },
+  landlords: [
+    {
+      isCompany: false,
+      firstName: '',
+      middleName: '',
+      paternalLastName: '',
+      maternalLastName: '',
+      email: '',
+      phone: '',
+      rfc: '',
+    },
+  ],
   tenant: {
     tenantType: TenantType.INDIVIDUAL,
     firstName: '',
@@ -176,10 +178,10 @@ export default function PolicyCreationWizard() {
     wizard.goToNextTab({ ...wizard.tabSaved, pricing: true });
   }, [wizard]);
 
-  const handleLandlordSave = useCallback(async (data: LandlordStepData) => {
+  const handleLandlordSave = useCallback(async (data: LandlordsStepData) => {
     setFormData(prev => ({
       ...prev,
-      landlord: data as any,
+      landlords: data.landlords as any,
     }));
     wizard.markTabSaved('landlord');
     wizard.goToNextTab({ ...wizard.tabSaved, landlord: true });
@@ -289,7 +291,7 @@ export default function PolicyCreationWizard() {
       guarantorType: formData.guarantorType,
 
       // Actors
-      landlord: formData.landlord,
+      landlords: formData.landlords,
       tenant: formData.tenant,
       jointObligors: formData.guarantorType === GuarantorType.JOINT_OBLIGOR || formData.guarantorType === GuarantorType.BOTH
         ? formData.jointObligors
@@ -392,7 +394,7 @@ export default function PolicyCreationWizard() {
           {/* Landlord Step */}
           {wizard.activeTab === 'landlord' && (
             <LandlordStepRHF
-              initialData={formData.landlord}
+              initialData={formData.landlords as any}
               onSave={handleLandlordSave}
             />
           )}

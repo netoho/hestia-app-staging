@@ -133,46 +133,57 @@ export default function ReviewStep({
         {/* Landlord Summary */}
         <div>
           <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.landlord}</h3>
-          <dl className="space-y-1 text-sm">
-            {formData.landlord.isCompany ? (
-              <>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.company}</dt>
-                  <dd>{formData.landlord.companyName}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.rfc}</dt>
-                  <dd>{formData.landlord.companyRfc}</dd>
-                </div>
-                {formData.landlord.legalRepName && (
+          <div className="space-y-4">
+            {formData.landlords.map((landlord, index) => (
+              <dl key={index} className="space-y-1 text-sm">
+                {formData.landlords.length > 1 && (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {index === 0
+                      ? t.pages.createPolicy.steps.landlord.primaryTitle
+                      : t.pages.createPolicy.steps.landlord.coOwnerTitle(index)}
+                  </p>
+                )}
+                {landlord.isCompany ? (
+                  <>
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.company}</dt>
+                      <dd>{landlord.companyName}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.rfc}</dt>
+                      <dd>{landlord.companyRfc}</dd>
+                    </div>
+                    {landlord.legalRepName && (
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.representative}</dt>
+                        <dd>{landlord.legalRepName}</dd>
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <div className="flex justify-between">
-                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.representative}</dt>
-                    <dd>{formData.landlord.legalRepName}</dd>
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.name}</dt>
+                    <dd>{formatFullName(
+                      landlord.firstName || '',
+                      landlord.paternalLastName || '',
+                      landlord.maternalLastName || '',
+                      landlord.middleName
+                    )}</dd>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.name}</dt>
-                <dd>{formatFullName(
-                  formData.landlord.firstName || '',
-                  formData.landlord.paternalLastName || '',
-                  formData.landlord.maternalLastName || '',
-                  formData.landlord.middleName
-                )}</dd>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.email}</dt>
-              <dd>{formData.landlord.email}</dd>
-            </div>
-            {formData.landlord.phone && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.phone}</dt>
-                <dd>{formData.landlord.phone}</dd>
-              </div>
-            )}
-          </dl>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.email}</dt>
+                  <dd>{landlord.email}</dd>
+                </div>
+                {landlord.phone && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.phone}</dt>
+                    <dd>{landlord.phone}</dd>
+                  </div>
+                )}
+              </dl>
+            ))}
+          </div>
         </div>
 
         {/* Tenant Summary */}
