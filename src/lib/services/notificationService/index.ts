@@ -49,10 +49,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
           propertyAddressDetails: true,
         }
       },
-      landlords: {
-        where: {isPrimary: true},
-        take: 1,
-      },
+      landlords: true,
       tenant: true,
       jointObligors: true,
       avals: true,
@@ -65,39 +62,40 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
   const invitations = [];
 
-  // Generate token for primary landlord only
-  const primaryLandlord = policy.landlords![0]; // We already filtered for isPrimary=true
+  // Generate tokens for all landlords (primary + co-owners), mirroring the
+  // joint obligor / aval loops below.
+  for (const landlord of policy.landlords) {
+    if (shouldProcessActor('landlord', actors) && landlord.email && (resend || !landlord.informationComplete)) {
+      const tokenData = await generateLandlordToken(landlord.id);
 
-  if (shouldProcessActor('landlord', actors) && primaryLandlord && primaryLandlord.email && (resend || !primaryLandlord.informationComplete)) {
-    const tokenData = await generateLandlordToken(primaryLandlord.id);
+      const sent = await sendActorInvitation({
+        actorType: 'landlord' as any,
+        isCompany: landlord.isCompany,
+        email: landlord.email,
+        name: landlord.companyName ||
+          (landlord.firstName ? formatFullName(
+            landlord.firstName,
+            landlord.paternalLastName || '',
+            landlord.maternalLastName || '',
+            landlord.middleName || undefined
+          ) : 'Arrendador'),
+        token: tokenData.token,
+        url: tokenData.url,
+        policyNumber: policy.policyNumber,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
+        expiryDate: tokenData.expiresAt,
+        initiatorName,
+      });
 
-    const sent = await sendActorInvitation({
-      actorType: 'landlord' as any,
-      isCompany: primaryLandlord.isCompany,
-      email: primaryLandlord.email,
-      name: primaryLandlord.companyName ||
-        (primaryLandlord.firstName ? formatFullName(
-          primaryLandlord.firstName,
-          primaryLandlord.paternalLastName || '',
-          primaryLandlord.maternalLastName || '',
-          primaryLandlord.middleName || undefined
-        ) : 'Arrendador'),
-      token: tokenData.token,
-      url: tokenData.url,
-      policyNumber: policy.policyNumber,
-      propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
-      expiryDate: tokenData.expiresAt,
-      initiatorName,
-    });
-
-    invitations.push({
-      actorType: 'landlord',
-      email: primaryLandlord.email,
-      sent,
-      token: tokenData.token,
-      url: tokenData.url,
-      expiresAt: tokenData.expiresAt,
-    });
+      invitations.push({
+        actorType: 'landlord',
+        email: landlord.email,
+        sent,
+        token: tokenData.token,
+        url: tokenData.url,
+        expiresAt: tokenData.expiresAt,
+      });
+    }
   }
 
   // Generate token for tenant

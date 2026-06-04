@@ -245,7 +245,7 @@ export const policyRouter = createTRPCRouter({
       }
 
       // Compute actor completeness server-side so the UI doesn't duplicate
-      // the guarantorType / primary-landlord rules.
+      // the guarantorType / landlord rules.
       const completeness = await actorTokenService.checkPolicyActorsComplete(input.id);
       const allActorsComplete = completeness.allComplete;
 
