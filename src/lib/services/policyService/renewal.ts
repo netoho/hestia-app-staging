@@ -83,7 +83,7 @@ export async function clonePolicyForRenewal(
     where: { id: sourcePolicyId },
     include: {
       landlords: {
-        where: { isPrimary: true },
+        orderBy: { isPrimary: 'desc' },
         include: {
           addressDetails: true,
           documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
@@ -137,8 +137,7 @@ export async function clonePolicyForRenewal(
     // Overwriting is allowed per product decision; continue but we'll update renewedToId.
   }
 
-  const sourceLandlord = source.landlords[0];
-  if (!sourceLandlord) throw new Error('Source policy has no primary landlord');
+  if (source.landlords.length === 0) throw new Error('Source policy has no landlords');
 
   const selectedJOs = source.jointObligors.filter((jo) =>
     selection.jointObligors.find((s) => s.sourceId === jo.id && s.include),
@@ -152,12 +151,6 @@ export async function clonePolicyForRenewal(
   // ============================================================
   const txResult = await prisma.$transaction(
     async (tx) => {
-      // ---- Landlord address ----
-      const newLandlordAddressId =
-        selection.landlord.include && selection.landlord.address
-          ? await duplicateAddress(tx, sourceLandlord.addressId)
-          : null;
-
       // ---- Tenant addresses ----
       const newTenantAddressId =
         selection.tenant.include && selection.tenant.address
@@ -191,16 +184,21 @@ export async function clonePolicyForRenewal(
       const suffix = Math.random().toString(36).substring(2, 5).toUpperCase();
       const policyNumber = `POL-${stamp}-${suffix}`;
 
-      // ---- Landlord field picks (gated by sub-checkboxes) ----
-      const ld = sourceLandlord;
+      // ---- Landlord field picks (gated by sub-checkboxes; applied to every landlord) ----
       const keepBasic = selection.landlord.include && selection.landlord.basicInfo;
       const keepContact = selection.landlord.include && selection.landlord.contact;
       const keepBanking = selection.landlord.include && selection.landlord.banking;
       const keepPropertyDeed = selection.landlord.include && selection.landlord.propertyDeed;
       const keepCfdi = selection.landlord.include && selection.landlord.cfdi;
+      const keepLandlordAddress = selection.landlord.include && selection.landlord.address;
 
-      const landlordData = {
-        isPrimary: true,
+      // Co-owners inherit the primary's selection checkboxes (per-co-owner UI
+      // selection is a deferred follow-up). isPrimary is preserved per record.
+      const buildLandlordData = (
+        ld: (typeof source.landlords)[number],
+        newAddressId: string | null,
+      ) => ({
+        isPrimary: ld.isPrimary,
         isCompany: keepBasic ? ld.isCompany : false,
         firstName: keepBasic ? ld.firstName : null,
         middleName: keepBasic ? ld.middleName : null,
@@ -226,7 +224,7 @@ export async function clonePolicyForRenewal(
         personalEmail: keepContact ? ld.personalEmail : null,
         workEmail: keepContact ? ld.workEmail : null,
         address: '',
-        addressId: newLandlordAddressId,
+        addressId: newAddressId,
         bankName: keepBanking ? ld.bankName : null,
         accountNumber: keepBanking ? ld.accountNumber : null,
         clabe: keepBanking ? ld.clabe : null,
@@ -241,7 +239,7 @@ export async function clonePolicyForRenewal(
         additionalInfo: keepBasic ? ld.additionalInfo : null,
         informationComplete: false,
         verificationStatus: 'PENDING' as const,
-      };
+      });
 
       // ---- Tenant field picks ----
       const t = source.tenant;
@@ -343,11 +341,25 @@ export async function clonePolicyForRenewal(
           status: PolicyStatus.COLLECTING_INFO,
           activatedAt: startDate,
           expiresAt: endDate,
-          landlords: { create: landlordData },
           ...(tenantData ? { tenant: { create: tenantData } } : {}),
         },
-        include: { landlords: true, tenant: true },
+        include: { tenant: true },
       });
+
+      // ---- Landlords (primary + co-owners) ----
+      // Created individually (like JO/aval) so we can map source → new ids for
+      // the document copy below. orderBy on the fetch keeps the primary first.
+      const landlordIdMap: Array<{ sourceId: string; newId: string }> = [];
+      for (const ld of source.landlords) {
+        const addrId = keepLandlordAddress ? await duplicateAddress(tx, ld.addressId) : null;
+        const created = await tx.landlord.create({
+          data: {
+            policyId: newPolicy.id,
+            ...buildLandlordData(ld, addrId),
+          },
+        });
+        landlordIdMap.push({ sourceId: ld.id, newId: created.id });
+      }
 
       // ---- Property details ----
       const prop = source.propertyDetails;
@@ -713,6 +725,7 @@ export async function clonePolicyForRenewal(
 
       return {
         newPolicy,
+        landlordIdMap,
         joIdMap,
         avalIdMap,
       };
@@ -720,7 +733,7 @@ export async function clonePolicyForRenewal(
     { maxWait: 10000, timeout: 60000 },
   );
 
-  const { newPolicy, joIdMap, avalIdMap } = txResult;
+  const { newPolicy, landlordIdMap, joIdMap, avalIdMap } = txResult;
 
   // ============================================================
   // 2. POST-COMMIT WORK — S3 copies, tokens, activity log
@@ -785,14 +798,16 @@ export async function clonePolicyForRenewal(
     }
   };
 
-  // Landlord docs
+  // Landlord docs (every landlord: primary + co-owners)
   if (selection.landlord.include && selection.landlord.documents) {
-    const newLandlord = newPolicy.landlords[0];
-    await copyDocsFor({
-      actorType: 'landlord',
-      newActorId: newLandlord.id,
-      sourceDocs: sourceLandlord.documents,
-    });
+    for (const { sourceId, newId } of landlordIdMap) {
+      const src = source.landlords.find((x) => x.id === sourceId)!;
+      await copyDocsFor({
+        actorType: 'landlord',
+        newActorId: newId,
+        sourceDocs: src.documents,
+      });
+    }
   }
 
   // Tenant docs
