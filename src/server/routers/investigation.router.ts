@@ -587,7 +587,7 @@ export const investigationRouter = createTRPCRouter({
               tenant: true,
               jointObligors: true,
               avals: true,
-              landlords: { where: { isPrimary: true } },
+              landlords: true,
               createdBy: { select: { id: true, email: true, name: true } },
               propertyDetails: {
                 include: { propertyAddressDetails: true },
@@ -621,7 +621,9 @@ export const investigationRouter = createTRPCRouter({
         });
       }
 
-      const primaryLandlord = investigation.policy.landlords[0];
+      const policyLandlords = investigation.policy.landlords.filter((l) => l.email);
+      const representativeLandlord =
+        investigation.policy.landlords.find((l) => l.isPrimary) ?? investigation.policy.landlords[0];
       const broker = investigation.policy.createdBy;
 
       // Validate that we have broker and landlord
@@ -632,10 +634,10 @@ export const investigationRouter = createTRPCRouter({
         });
       }
 
-      if (!primaryLandlord?.email) {
+      if (policyLandlords.length === 0) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'La protección no tiene un arrendador principal con email',
+          message: 'La protección no tiene ningún arrendador con email',
         });
       }
 
@@ -729,24 +731,34 @@ export const investigationRouter = createTRPCRouter({
         expiryDate: tokenExpiry,
       });
 
-      // Send email to landlord
-      const landlordName = primaryLandlord.companyName || formatFullName({
-        firstName: primaryLandlord.firstName,
-        middleName: primaryLandlord.middleName,
-        paternalLastName: primaryLandlord.paternalLastName,
-        maternalLastName: primaryLandlord.maternalLastName,
-      });
+      // Send the approval request to every landlord (primary + co-owners).
+      // They share the same landlordToken; whoever acts first decides.
+      for (const landlord of policyLandlords) {
+        const name = landlord.companyName || formatFullName({
+          firstName: landlord.firstName,
+          middleName: landlord.middleName,
+          paternalLastName: landlord.paternalLastName,
+          maternalLastName: landlord.maternalLastName,
+        });
 
-      await sendInvestigationApprovalRequestEmail({
-        email: primaryLandlord.email,
-        recipientName: landlordName || undefined,
-        recipientType: 'LANDLORD',
-        policyNumber: investigation.policy.policyNumber,
-        propertyAddress,
-        actorType: investigation.actorType,
-        actorName,
-        approvalUrl: `${baseUrl}/investigation/approve/${landlordToken}`,
-        expiryDate: tokenExpiry,
+        await sendInvestigationApprovalRequestEmail({
+          email: landlord.email,
+          recipientName: name || undefined,
+          recipientType: 'LANDLORD',
+          policyNumber: investigation.policy.policyNumber,
+          propertyAddress,
+          actorType: investigation.actorType,
+          actorName,
+          approvalUrl: `${baseUrl}/investigation/approve/${landlordToken}`,
+          expiryDate: tokenExpiry,
+        });
+      }
+
+      const landlordName = representativeLandlord?.companyName || formatFullName({
+        firstName: representativeLandlord?.firstName,
+        middleName: representativeLandlord?.middleName,
+        paternalLastName: representativeLandlord?.paternalLastName,
+        maternalLastName: representativeLandlord?.maternalLastName,
       });
 
       // Send notification to admins
@@ -777,7 +789,7 @@ export const investigationRouter = createTRPCRouter({
           broker: `${baseUrl}/investigation/approve/${brokerToken}`,
           landlord: `${baseUrl}/investigation/approve/${landlordToken}`,
           brokerPhone: broker.email, // For WhatsApp - broker doesn't have phone in User model
-          landlordPhone: primaryLandlord?.phone || null,
+          landlordPhone: representativeLandlord?.phone || null,
           brokerName: broker.name || 'Broker',
           landlordName: landlordName,
         },
@@ -972,7 +984,7 @@ export const investigationRouter = createTRPCRouter({
               tenant: true,
               jointObligors: true,
               avals: true,
-              landlords: { where: { isPrimary: true } },
+              landlords: true,
               createdBy: { select: { id: true, email: true, name: true } },
               propertyDetails: {
                 include: { propertyAddressDetails: true },
@@ -1119,12 +1131,12 @@ export const investigationRouter = createTRPCRouter({
         });
       }
 
-      // Send to landlord
-      if (primaryLandlord?.email) {
-        const landlordName = getActorName(primaryLandlord);
+      // Notify every landlord (primary + co-owners) of the result
+      for (const landlord of investigation.policy.landlords) {
+        if (!landlord.email) continue;
         await sendInvestigationResultEmail({
-          email: primaryLandlord.email,
-          recipientName: landlordName || undefined,
+          email: landlord.email,
+          recipientName: getActorName(landlord) || undefined,
           recipientType: 'LANDLORD',
           policyNumber: investigation.policy.policyNumber,
           propertyAddress,
@@ -1184,7 +1196,7 @@ export const investigationRouter = createTRPCRouter({
               tenant: true,
               jointObligors: true,
               avals: true,
-              landlords: { where: { isPrimary: true } },
+              landlords: true,
               createdBy: { select: { id: true, email: true, name: true } },
               propertyDetails: {
                 include: { propertyAddressDetails: true },
@@ -1332,12 +1344,12 @@ export const investigationRouter = createTRPCRouter({
         });
       }
 
-      // Send to landlord
-      if (primaryLandlord?.email) {
-        const landlordName = getActorName(primaryLandlord);
+      // Notify every landlord (primary + co-owners) of the result
+      for (const landlord of investigation.policy.landlords) {
+        if (!landlord.email) continue;
         await sendInvestigationResultEmail({
-          email: primaryLandlord.email,
-          recipientName: landlordName || undefined,
+          email: landlord.email,
+          recipientName: getActorName(landlord) || undefined,
           recipientType: 'LANDLORD',
           policyNumber: investigation.policy.policyNumber,
           propertyAddress,
