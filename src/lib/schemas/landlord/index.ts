@@ -332,10 +332,7 @@ export function isLandlordComplete(
     });
   }
 
-  // Additional business rule checks
-  if (data.isPrimary && !data.bankName) {
-    errors.push('Información bancaria requerida para arrendador principal');
-  }
+  // Banking information is optional for every landlord (primary and co-owners).
 
   return {
     valid: errors.length === 0,
