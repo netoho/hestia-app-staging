@@ -30,6 +30,7 @@ import {
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
 import { packageFactory, policyFactory, landlordFactory } from '../factories';
+import { actorTokenService } from '@/lib/services/actorTokenService';
 
 // ---------------------------------------------------------------------------
 // Helpers
