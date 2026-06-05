@@ -96,20 +96,28 @@ export function RenewalPreview({
         <Row label={copy.propertyServices} copied={selection.property.services} />
       </Section>
 
-      <Section
-        title={`${copy.landlordTitle}${source.landlord.displayName ? ` — ${source.landlord.displayName}` : ''}`}
-      >
-        <Row label={copy.landlordBasicInfo} copied={selection.landlord.include && selection.landlord.basicInfo} />
-        <Row label={copy.landlordContact} copied={selection.landlord.include && selection.landlord.contact} />
-        <Row label={copy.landlordAddress} copied={selection.landlord.include && selection.landlord.address} />
-        <Row label={copy.landlordBanking} copied={selection.landlord.include && selection.landlord.banking} />
-        <Row label={copy.landlordPropertyDeed} copied={selection.landlord.include && selection.landlord.propertyDeed} />
-        <Row label={copy.landlordCfdi} copied={selection.landlord.include && selection.landlord.cfdi} />
-        <Row
-          label={`${copy.landlordDocuments} (${copy.previewDocuments(source.landlord.documentCount)})`}
-          copied={selection.landlord.include && selection.landlord.documents}
-        />
-      </Section>
+      {source.landlords.map((ld) => {
+        const sel = selection.landlords.find((s) => s.sourceId === ld.id);
+        if (!sel) return null;
+        const suffix = ld.displayName ? ` — ${ld.displayName}` : '';
+        return (
+          <Section
+            key={ld.id}
+            title={`${ld.isPrimary ? copy.landlordTitle : copy.landlordCoOwnerTitle}${suffix}`}
+          >
+            <Row label={copy.landlordBasicInfo} copied={sel.include && sel.basicInfo} />
+            <Row label={copy.landlordContact} copied={sel.include && sel.contact} />
+            <Row label={copy.landlordAddress} copied={sel.include && sel.address} />
+            <Row label={copy.landlordBanking} copied={sel.include && sel.banking} />
+            <Row label={copy.landlordPropertyDeed} copied={sel.include && sel.propertyDeed} />
+            <Row label={copy.landlordCfdi} copied={sel.include && sel.cfdi} />
+            <Row
+              label={`${copy.landlordDocuments} (${copy.previewDocuments(ld.documentCount)})`}
+              copied={sel.include && sel.documents}
+            />
+          </Section>
+        );
+      })}
 
       {source.tenant ? (
         <Section

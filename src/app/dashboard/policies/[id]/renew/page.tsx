@@ -82,17 +82,16 @@ export default function PolicyRenewPage({ params }: RenewPageProps) {
     return null;
   }
 
-  const primaryLandlord = policy.landlords.find((l: any) => l.isPrimary) || policy.landlords[0];
-
   const source: RenewalSourceSummary = {
     policyId: policy.id,
     policyNumber: policy.policyNumber,
     guarantorType: policy.guarantorType as GuarantorType,
-    landlord: {
-      id: primaryLandlord.id,
-      displayName: displayNameFor(primaryLandlord, 'Arrendador'),
-      documentCount: primaryLandlord.documents?.length ?? 0,
-    },
+    landlords: (policy.landlords ?? []).map((l: any) => ({
+      id: l.id,
+      displayName: displayNameFor(l, 'Arrendador'),
+      documentCount: l.documents?.length ?? 0,
+      isPrimary: !!l.isPrimary,
+    })),
     tenant: policy.tenant
       ? {
           id: policy.tenant.id,

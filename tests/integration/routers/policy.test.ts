@@ -648,6 +648,7 @@ describe('policy.renew', () => {
       { firstName: 'CoOwner', paternalLastName: 'Renew' },
       { transient: { policyId: policy.id } },
     );
+    const sourceLandlords = await prisma.landlord.findMany({ where: { policyId: policy.id } });
     const { caller } = await createAdminCaller();
 
     const result = await caller.policy.renew({
@@ -662,7 +663,8 @@ describe('policy.renew', () => {
           contract: true,
           packageAndPricing: true,
         },
-        landlord: {
+        landlords: sourceLandlords.map((l) => ({
+          sourceId: l.id,
           include: true,
           basicInfo: true,
           contact: true,
@@ -671,7 +673,7 @@ describe('policy.renew', () => {
           propertyDeed: true,
           cfdi: true,
           documents: false,
-        },
+        })),
         tenant: {
           include: false,
           basicInfo: false,
@@ -698,8 +700,49 @@ describe('policy.renew', () => {
     expect(newLandlords.map((l) => l.firstName)).toContain('CoOwner');
   });
 
+  test('drops a co-owner whose include is false (per-landlord selection)', async () => {
+    const { policy, landlord } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    const coOwner = await landlordFactory.create(
+      { firstName: 'Dropped', paternalLastName: 'CoOwner' },
+      { transient: { policyId: policy.id } },
+    );
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.policy.renew({
+      sourcePolicyId: policy.id,
+      startDate: '2027-01-01',
+      endDate: '2028-01-01',
+      selection: {
+        property: { address: true, typeAndDescription: true, features: true, services: true },
+        policyTerms: {
+          guarantorType: GuarantorType.NONE,
+          financial: true,
+          contract: true,
+          packageAndPricing: true,
+        },
+        landlords: [
+          { sourceId: landlord.id, include: true, basicInfo: true, contact: true, address: true, banking: true, propertyDeed: true, cfdi: true, documents: false },
+          { sourceId: coOwner.id, include: false, basicInfo: true, contact: true, address: true, banking: true, propertyDeed: true, cfdi: true, documents: false },
+        ],
+        tenant: {
+          include: false, basicInfo: false, contact: false, address: false, employment: false,
+          rentalHistory: false, references: false, paymentPreferences: false, documents: false,
+        },
+        jointObligors: [],
+        avals: [],
+      },
+    });
+
+    const newLandlords = await prisma.landlord.findMany({
+      where: { policyId: result.newPolicyId },
+    });
+    // Only the included landlord carried over; the excluded co-owner was dropped.
+    expect(newLandlords).toHaveLength(1);
+    expect(newLandlords.map((l) => l.firstName)).not.toContain('Dropped');
+  });
+
   test('auth gate: ADMIN/STAFF allowed; BROKER and PUBLIC blocked', async () => {
-    const { policy } = await createPolicyWithActors();
+    const { policy, landlord } = await createPolicyWithActors();
 
     await expectAuthGate({
       allowed: [UserRole.ADMIN, UserRole.STAFF],
@@ -716,16 +759,19 @@ describe('policy.renew', () => {
               contract: true,
               packageAndPricing: true,
             },
-            landlord: {
-              include: true,
-              basicInfo: true,
-              contact: true,
-              address: true,
-              banking: true,
-              propertyDeed: true,
-              cfdi: true,
-              documents: true,
-            },
+            landlords: [
+              {
+                sourceId: landlord.id,
+                include: true,
+                basicInfo: true,
+                contact: true,
+                address: true,
+                banking: true,
+                propertyDeed: true,
+                cfdi: true,
+                documents: true,
+              },
+            ],
             tenant: {
               include: false,
               basicInfo: false,

@@ -34,7 +34,8 @@ function defaultSelection(source: RenewalSourceSummary): PolicyRenewalSelection 
       contract: true,
       packageAndPricing: true,
     },
-    landlord: {
+    landlords: source.landlords.map((ld) => ({
+      sourceId: ld.id,
       include: true,
       basicInfo: true,
       contact: true,
@@ -43,7 +44,7 @@ function defaultSelection(source: RenewalSourceSummary): PolicyRenewalSelection 
       propertyDeed: true,
       cfdi: true,
       documents: true,
-    },
+    })),
     tenant: {
       include: !!source.tenant,
       basicInfo: true,
