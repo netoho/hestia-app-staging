@@ -139,6 +139,13 @@ export async function clonePolicyForRenewal(
 
   if (source.landlords.length === 0) throw new Error('Source policy has no landlords');
 
+  const selectedLandlords = source.landlords.filter((ld) =>
+    selection.landlords.find((s) => s.sourceId === ld.id && s.include),
+  );
+  if (selectedLandlords.length === 0) {
+    throw new Error('Debe incluir al menos un arrendador en la renovación');
+  }
+
   const selectedJOs = source.jointObligors.filter((jo) =>
     selection.jointObligors.find((s) => s.sourceId === jo.id && s.include),
   );
@@ -184,20 +191,19 @@ export async function clonePolicyForRenewal(
       const suffix = Math.random().toString(36).substring(2, 5).toUpperCase();
       const policyNumber = `POL-${stamp}-${suffix}`;
 
-      // ---- Landlord field picks (gated by sub-checkboxes; applied to every landlord) ----
-      const keepBasic = selection.landlord.include && selection.landlord.basicInfo;
-      const keepContact = selection.landlord.include && selection.landlord.contact;
-      const keepBanking = selection.landlord.include && selection.landlord.banking;
-      const keepPropertyDeed = selection.landlord.include && selection.landlord.propertyDeed;
-      const keepCfdi = selection.landlord.include && selection.landlord.cfdi;
-      const keepLandlordAddress = selection.landlord.include && selection.landlord.address;
-
-      // Co-owners inherit the primary's selection checkboxes (per-co-owner UI
-      // selection is a deferred follow-up). isPrimary is preserved per record.
+      // ---- Landlord field picks — each landlord carries over per its own selection ----
+      // isPrimary is preserved per record.
       const buildLandlordData = (
         ld: (typeof source.landlords)[number],
         newAddressId: string | null,
-      ) => ({
+        sel: (typeof selection.landlords)[number],
+      ) => {
+        const keepBasic = sel.basicInfo;
+        const keepContact = sel.contact;
+        const keepBanking = sel.banking;
+        const keepPropertyDeed = sel.propertyDeed;
+        const keepCfdi = sel.cfdi;
+        return {
         isPrimary: ld.isPrimary,
         isCompany: keepBasic ? ld.isCompany : false,
         firstName: keepBasic ? ld.firstName : null,
@@ -239,7 +245,8 @@ export async function clonePolicyForRenewal(
         additionalInfo: keepBasic ? ld.additionalInfo : null,
         informationComplete: false,
         verificationStatus: 'PENDING' as const,
-      });
+        };
+      };
 
       // ---- Tenant field picks ----
       const t = source.tenant;
@@ -350,12 +357,13 @@ export async function clonePolicyForRenewal(
       // Created individually (like JO/aval) so we can map source → new ids for
       // the document copy below. orderBy on the fetch keeps the primary first.
       const landlordIdMap: Array<{ sourceId: string; newId: string }> = [];
-      for (const ld of source.landlords) {
-        const addrId = keepLandlordAddress ? await duplicateAddress(tx, ld.addressId) : null;
+      for (const ld of selectedLandlords) {
+        const sel = selection.landlords.find((s) => s.sourceId === ld.id)!;
+        const addrId = sel.address ? await duplicateAddress(tx, ld.addressId) : null;
         const created = await tx.landlord.create({
           data: {
             policyId: newPolicy.id,
-            ...buildLandlordData(ld, addrId),
+            ...buildLandlordData(ld, addrId, sel),
           },
         });
         landlordIdMap.push({ sourceId: ld.id, newId: created.id });
@@ -798,16 +806,16 @@ export async function clonePolicyForRenewal(
     }
   };
 
-  // Landlord docs (every landlord: primary + co-owners)
-  if (selection.landlord.include && selection.landlord.documents) {
-    for (const { sourceId, newId } of landlordIdMap) {
-      const src = source.landlords.find((x) => x.id === sourceId)!;
-      await copyDocsFor({
-        actorType: 'landlord',
-        newActorId: newId,
-        sourceDocs: src.documents,
-      });
-    }
+  // Landlord docs — each landlord per its own `documents` selection.
+  for (const { sourceId, newId } of landlordIdMap) {
+    const sel = selection.landlords.find((s) => s.sourceId === sourceId);
+    if (!sel?.documents) continue;
+    const src = source.landlords.find((x) => x.id === sourceId)!;
+    await copyDocsFor({
+      actorType: 'landlord',
+      newActorId: newId,
+      sourceDocs: src.documents,
+    });
   }
 
   // Tenant docs
