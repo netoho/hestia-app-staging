@@ -24,6 +24,40 @@ const PAYMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
   LANDLORD_PORTION: 'Pago del Arrendador',
 };
 
+type EmailRecipient = { email: string; name: string };
+
+type LandlordEmailFields = {
+  email: string;
+  isCompany?: boolean | null;
+  companyName?: string | null;
+  firstName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+};
+
+function landlordEmailName(l: LandlordEmailFields): string {
+  if (l.isCompany && l.companyName) return l.companyName;
+  return `${l.firstName || ''} ${l.paternalLastName || ''} ${l.maternalLastName || ''}`.trim();
+}
+
+/** Payment confirmation for a tenant payment: goes to the payer (Stripe email or tenant email). */
+function buildTenantRecipient(
+  tenant: { email?: string | null; firstName?: string | null; paternalLastName?: string | null; maternalLastName?: string | null } | null,
+  customerEmail: string | null,
+): EmailRecipient[] {
+  const email = customerEmail || tenant?.email;
+  if (!email) return [];
+  const name = `${tenant?.firstName || ''} ${tenant?.paternalLastName || ''} ${tenant?.maternalLastName || ''}`.trim();
+  return [{ email, name }];
+}
+
+/** Payment confirmation for a landlord payment: notifies every landlord (primary + co-owners). */
+function buildLandlordRecipients(landlords: LandlordEmailFields[]): EmailRecipient[] {
+  return landlords
+    .filter((l) => l.email)
+    .map((l) => ({ email: l.email, name: landlordEmailName(l) }));
+}
+
 /**
  * Check if all active payments for a policy are complete and notify admins.
  * Excludes CANCELLED/FAILED payments from the check.
@@ -162,24 +196,27 @@ export async function POST(request: NextRequest) {
             select: {
               policyNumber: true,
               tenant: { select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
-              landlords: { where: { isPrimary: true }, select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } }
+              landlords: { where: { email: { not: '' } }, select: { email: true, isCompany: true, companyName: true, firstName: true, paternalLastName: true, maternalLastName: true } }
             }
           });
 
-          // Send payment confirmation email to payer
-          if (policy && session.customer_email) {
-            const payerName = paidBy === 'TENANT'
-              ? `${policy.tenant?.firstName || ''} ${policy.tenant?.paternalLastName || ''} ${policy.tenant?.maternalLastName || ''}`.trim()
-              : policy.landlords?.[0] ? `${policy.landlords[0].firstName || ''} ${policy.landlords[0].paternalLastName || ''} ${policy.landlords[0].maternalLastName || ''}`.trim() : undefined;
+          // Send payment confirmation. Tenant payments go to the payer; landlord
+          // payments notify every landlord (primary + co-owners) of the policy.
+          if (policy) {
+            const recipients = paidBy === 'TENANT'
+              ? buildTenantRecipient(policy.tenant, session.customer_email)
+              : buildLandlordRecipients(policy.landlords);
 
-            await sendPaymentCompletedEmail({
-              email: session.customer_email || policy.tenant?.email,
-              payerName: payerName || undefined,
-              policyNumber: policy.policyNumber,
-              paymentType: typeDescription,
-              amount,
-              paidAt: new Date()
-            });
+            for (const recipient of recipients) {
+              await sendPaymentCompletedEmail({
+                email: recipient.email,
+                payerName: recipient.name || undefined,
+                policyNumber: policy.policyNumber,
+                paymentType: typeDescription,
+                amount,
+                paidAt: new Date()
+              });
+            }
           }
 
           // Check if all active payments are complete and notify admins
@@ -497,21 +534,21 @@ export async function POST(request: NextRequest) {
             select: {
               policyNumber: true,
               tenant: { select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
-              landlords: { where: { isPrimary: true }, select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
+              landlords: { where: { email: { not: '' } }, select: { email: true, isCompany: true, companyName: true, firstName: true, paternalLastName: true, maternalLastName: true } },
             },
           });
 
-          // Send payment confirmation email
+          // Send payment confirmation. Tenant payments go to the payer; landlord
+          // payments notify every landlord (primary + co-owners) of the policy.
           if (policy) {
-            const payerEmail = paidBy === 'TENANT' ? policy.tenant?.email : policy.landlords?.[0]?.email;
-            const payerName = paidBy === 'TENANT'
-              ? `${policy.tenant?.firstName || ''} ${policy.tenant?.paternalLastName || ''} ${policy.tenant?.maternalLastName || ''}`.trim()
-              : policy.landlords?.[0] ? `${policy.landlords[0].firstName || ''} ${policy.landlords[0].paternalLastName || ''} ${policy.landlords[0].maternalLastName || ''}`.trim() : undefined;
+            const recipients = paidBy === 'TENANT'
+              ? buildTenantRecipient(policy.tenant, null)
+              : buildLandlordRecipients(policy.landlords);
 
-            if (payerEmail) {
+            for (const recipient of recipients) {
               await sendPaymentCompletedEmail({
-                email: payerEmail,
-                payerName: payerName || undefined,
+                email: recipient.email,
+                payerName: recipient.name || undefined,
                 policyNumber: policy.policyNumber,
                 paymentType: typeDescription,
                 amount,
