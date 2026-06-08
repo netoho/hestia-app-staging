@@ -57,28 +57,11 @@ const ActorBaseShape = z.object({
 // (router-imports, frontend type-imports) keep working.
 export { tenantApiOutput as TenantOutputShape } from '@/lib/domain/tenant/adapters/api';
 
-export const LandlordOutputShape = ActorBaseShape.extend({
-  isPrimary: z.boolean(),
-  isCompany: z.boolean(),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  businessType: z.string().nullable(),
-  legalRepFirstName: z.string().nullable(),
-  legalRepPaternalLastName: z.string().nullable(),
-  legalRepPosition: z.string().nullable(),
-  legalRepEmail: z.string().nullable(),
-  legalRepPhone: z.string().nullable(),
-  address: z.string(),
-  addressId: z.string().nullable(),
-  bankName: z.string().nullable(),
-  accountNumber: z.string().nullable(),
-  clabe: z.string().nullable(),
-  accountHolder: z.string().nullable(),
-  occupation: z.string().nullable(),
-  monthlyIncome: z.number().nullable(),
-  requiresCFDI: z.boolean(),
-});
+// Landlord is migrated to the hexagonal domain layer (S2). The canonical
+// API output now lives in `@/lib/domain/landlord/adapters/api`; aliased
+// here under the legacy name (used locally below + by external callers).
+import { landlordApiOutput } from '@/lib/domain/landlord/adapters/api';
+export const LandlordOutputShape = landlordApiOutput;
 
 export const JointObligorOutputShape = ActorBaseShape.extend({
   jointObligorType: z.nativeEnum(JointObligorType).nullable(),

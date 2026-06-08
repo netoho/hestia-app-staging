@@ -73,11 +73,11 @@ Each actor has specific requirements:
 | **JointObligor** | Flexible guarantee (income vs property), Prisma relations |
 
 ```typescript
-// Landlord
-import { prepareLandlordForDB, extractPolicyFields } from '@/lib/utils/landlord/prepareForDB';
+// Landlord — migrated to the hexagonal domain layer (S2)
+import { toDb, toDbMultiple } from '@/lib/domain/landlord/adapters/db';
 
-// Tenant
-import { prepareTenantForDB, prepareReferencesForDB } from '@/lib/utils/tenant/prepareForDB';
+// Tenant — migrated to the hexagonal domain layer (S1)
+import { toDb } from '@/lib/domain/tenant/adapters/db';
 
 // Aval
 import { prepareAvalForDB } from '@/lib/utils/aval/prepareForDB';
