@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
+import { useFormWizardTabs, type Tab } from '@/hooks/useFormWizardTabs';
 import { trpc } from '@/lib/trpc/client';
 import { getFriendlyError } from '@/lib/utils/trpcErrors';
 import { actorConfig } from '@/lib/constants/actorConfig';
@@ -39,7 +39,7 @@ export default function AvalFormWizard({
 
   // Tab configuration
   const config = actorConfig.aval;
-  const tabs = (isCompany ? config.companyTabs : config.personTabs) as any;
+  const tabs: Tab[] = [...(isCompany ? config.companyTabs : config.personTabs)];
 
   // Wizard tabs for navigation
   const wizard = useFormWizardTabs({

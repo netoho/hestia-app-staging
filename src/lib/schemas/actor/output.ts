@@ -76,18 +76,11 @@ export const JointObligorOutputShape = ActorBaseShape.extend({
   monthlyIncome: z.number().nullable(),
 });
 
-export const AvalOutputShape = ActorBaseShape.extend({
-  avalType: z.nativeEnum(AvalType),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  passport: z.string().nullable(),
-  relationshipToTenant: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  guaranteeMethod: z.string().nullable(),
-  hasPropertyGuarantee: z.boolean(),
-  propertyValue: z.number().nullable(),
-  monthlyIncome: z.number().nullable(),
-});
+// Aval is migrated to the hexagonal domain layer (S3). The canonical API
+// output now lives in `@/lib/domain/aval/adapters/api`; aliased here under
+// the legacy name so existing callers keep working.
+import { avalApiOutput } from '@/lib/domain/aval/adapters/api';
+export const AvalOutputShape = avalApiOutput;
 
 /**
  * Polymorphic actor — accepted by procedures that take `type` in input and

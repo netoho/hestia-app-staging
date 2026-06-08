@@ -10,7 +10,7 @@ import { DocumentCategory as DocumentCategoryEnum } from "@/prisma/generated/pri
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
-import {ActorData, AddressDetails, CompanyActorData, PersonActorData} from '@/lib/types/actor';
+import {ActorData, AddressDetails, AddressWithMetadata, CompanyActorData, PersonActorData} from '@/lib/types/actor';
 import type {AvalWithRelations} from './types';
 import {
   avalStrictSchema,
@@ -20,7 +20,8 @@ import {
   validateAvalData,
   type AvalFormData
 } from '@/lib/schemas/aval';
-import { prepareAvalForDB } from '@/lib/utils/aval/prepareForDB';
+import { avalSelect } from '@/lib/domain/aval/select';
+import { toDb as avalToDb } from '@/lib/domain/aval/adapters/db';
 
 export class AvalService extends BaseActorService<AvalWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
@@ -38,23 +39,9 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
    * Get includes for aval queries
    */
   protected getIncludes(): Record<string, boolean | object> {
-    return {
-      addressDetails: true,
-      employerAddressDetails: true,
-      guaranteePropertyDetails: true,
-      personalReferences: true,
-      commercialReferences: true,
-      policy: {
-        include: {
-          propertyDetails: {
-            include: {
-              propertyAddressDetails: true,
-              contractSigningAddressDetails: true,
-            }
-          }
-        }
-      },
-    };
+    // Single source of truth for aval relations — see
+    // `@/lib/domain/aval/select`.
+    return avalSelect;
   }
 
   /**
@@ -114,12 +101,16 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
         throw new ServiceError(ErrorCode.NOT_FOUND, 'Aval not found', 404, { avalId: id });
       }
 
-      // Prepare data for database using the new utility
-      const preparedData = prepareAvalForDB(data, {
+      // Prepare data for database via the domain db adapter.
+      const preparedResult = avalToDb(data, {
         avalType: existingAval.avalType,
         isPartial,
-        tabName
+        tabName,
       });
+      if (!preparedResult.ok) {
+        throw preparedResult.error;
+      }
+      const preparedData = preparedResult.value;
 
       // Validate unless explicitly skipped
       if (!skipValidation) {
@@ -140,7 +131,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       // Upsert current address
       if (preparedData.addressDetails) {
         const addressResult = await this.upsertAddress(
-          preparedData.addressDetails,
+          preparedData.addressDetails as AddressWithMetadata,
           existingAval?.addressId
         );
         if (!addressResult.ok) {
@@ -152,7 +143,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       // Upsert employer address (if individual)
       if (preparedData.employerAddressDetails) {
         const employerAddressResult = await this.upsertAddress(
-          preparedData.employerAddressDetails,
+          preparedData.employerAddressDetails as AddressWithMetadata,
           existingAval?.employerAddressId
         );
         if (!employerAddressResult.ok) {
@@ -164,7 +155,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       // Upsert guarantee property address (MANDATORY for Aval)
       if (preparedData.guaranteePropertyDetails) {
         const propertyAddressResult = await this.upsertAddress(
-          preparedData.guaranteePropertyDetails,
+          preparedData.guaranteePropertyDetails as AddressWithMetadata,
           existingAval?.guaranteePropertyAddressId
         );
         if (!propertyAddressResult.ok) {
@@ -276,7 +267,11 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
         select: { guaranteePropertyAddressId: true }
       });
 
-      const { id, createdAt, updatedAt, ...cleanAddress } = addressData as any;
+      const { id, createdAt, updatedAt, ...cleanAddress } = addressData as AddressDetails & {
+        id?: string;
+        createdAt?: Date;
+        updatedAt?: Date;
+      };
 
       const address = await this.prisma.propertyAddress.upsert({
         where: { id: existingAval?.guaranteePropertyAddressId || '' },
