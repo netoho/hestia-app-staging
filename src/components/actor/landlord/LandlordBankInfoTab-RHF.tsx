@@ -1,5 +1,6 @@
 'use client';
 
+import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,9 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
-import { getLandlordTabSchema } from '@/lib/schemas/landlord';
+import { landlordBankInfoTabSchema } from '@/lib/domain/landlord/schema';
+
+type BankInfoFormData = z.infer<typeof landlordBankInfoTabSchema>;
 
 interface LandlordBankInfoTabRHFProps {
   initialData: any;
@@ -27,10 +30,8 @@ export default function LandlordBankInfoTabRHF({
   disabled = false,
 }: LandlordBankInfoTabRHFProps) {
   // Bank info is only for primary landlord (first one)
-  const schema = getLandlordTabSchema(false, 'bank-info');
-
-  const form = useForm({
-    resolver: zodResolver(schema as any),
+  const form = useForm<BankInfoFormData>({
+    resolver: zodResolver(landlordBankInfoTabSchema),
     mode: 'onChange',
     defaultValues: {
       bankName: initialData?.bankName || '',

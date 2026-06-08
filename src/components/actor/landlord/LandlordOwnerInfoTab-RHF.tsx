@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,7 +123,7 @@ export default function LandlordOwnerInfoTabRHF({
     landlords[0] = [createEmptyIndividualLandlord(true)]
   }
   const form = useForm<LandlordsFormData>({
-    resolver: zodResolver(landlordsFormSchema as any),
+    resolver: zodResolver(landlordsFormSchema) as Resolver<LandlordsFormData>,
     mode: 'onChange',
     defaultValues: {
       landlords,
@@ -192,7 +192,7 @@ export default function LandlordOwnerInfoTabRHF({
       ? createEmptyCompanyLandlord(isPrimary)
       : createEmptyIndividualLandlord(isPrimary);
 
-    form.setValue(`landlords.${index}`, newData as any, {
+    form.setValue(`landlords.${index}`, newData as LandlordsFormData['landlords'][number], {
       shouldValidate: true,
       shouldDirty: true,
     });

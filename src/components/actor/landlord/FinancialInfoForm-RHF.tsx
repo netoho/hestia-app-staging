@@ -26,7 +26,6 @@ import {
 import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
-import { getLandlordTabSchema } from '@/lib/schemas/landlord';
 
 // Combined schema for financial form (landlord + policy financial data)
 const financialFormSchema = z.object({
@@ -79,8 +78,8 @@ export default function FinancialInfoFormRHF({
     isAdminEdit,
   });
 
-  const form = useForm({
-    resolver: zodResolver(financialFormSchema as any),
+  const form = useForm<z.input<typeof financialFormSchema>>({
+    resolver: zodResolver(financialFormSchema),
     mode: 'onChange',
     defaultValues: {
       // Banking
