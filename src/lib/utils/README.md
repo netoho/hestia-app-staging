@@ -79,8 +79,8 @@ import { toDb, toDbMultiple } from '@/lib/domain/landlord/adapters/db';
 // Tenant — migrated to the hexagonal domain layer (S1)
 import { toDb } from '@/lib/domain/tenant/adapters/db';
 
-// Aval
-import { prepareAvalForDB } from '@/lib/utils/aval/prepareForDB';
+// Aval — migrated to the hexagonal domain layer (S3)
+import { toDb } from '@/lib/domain/aval/adapters/db';
 
 // JointObligor (uses Prisma relation format)
 import { prepareJointObligorForDB } from '@/lib/utils/joint-obligor/prepareForDB';
