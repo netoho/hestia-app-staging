@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,8 +43,12 @@ export default function PropertyDetailsFormRHF({
   onSave,
   disabled = false,
 }: PropertyDetailsFormRHFProps) {
+  // This form collects a superset of `propertyDetailsSchema` (utilities-
+  // included flags live on the form but are validated elsewhere), so the
+  // resolver is typed against generic FieldValues rather than the schema's
+  // inferred shape.
   const form = useForm({
-    resolver: zodResolver(propertyDetailsSchema as any),
+    resolver: zodResolver(propertyDetailsSchema) as Resolver<FieldValues>,
     mode: 'onChange',
     defaultValues: {
       // Addresses
