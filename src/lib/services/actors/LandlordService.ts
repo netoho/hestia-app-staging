@@ -26,6 +26,7 @@ import {
   type LandlordIndividual,
   type LandlordCompany,
 } from '@/lib/schemas/landlord';
+import { landlordSelect } from '@/lib/domain/landlord/select';
 import { validateLandlordToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
@@ -65,19 +66,9 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
    * Get includes for landlord queries
    */
   protected getIncludes(): Record<string, boolean | object> {
-    return {
-      addressDetails: true,
-      policy: {
-        include: {
-          propertyDetails: {
-            include: {
-              propertyAddressDetails: true,
-              contractSigningAddressDetails: true,
-            }
-          }
-        }
-      }
-    };
+    // Single source of truth for landlord relations — see
+    // `@/lib/domain/landlord/select`.
+    return landlordSelect;
   }
 
   /**

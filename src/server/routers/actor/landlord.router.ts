@@ -10,7 +10,8 @@ import { LandlordService } from '@/lib/services/actors/LandlordService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
 import { PropertyDetailsService } from '@/lib/services/PropertyDetailsService';
 import { validateLandlordData } from '@/lib/schemas/landlord';
-import { prepareMultiLandlordsForDB } from '@/lib/utils/landlord/prepareForDB';
+import { toDbMultiple } from '@/lib/domain/landlord/adapters/db';
+import type { LandlordData } from '@/lib/types/actor';
 import { LandlordStrictSchema } from './shared.router';
 import {
   ActorSaveMultipleLandlordsOutput,
@@ -41,23 +42,23 @@ export const landlordRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const service = new LandlordService();
 
-      const { landlords, policyData, error } = prepareMultiLandlordsForDB(
-        input.landlords,
-        { isPartial: input.isPartial }
-      );
+      const prepared = toDbMultiple(input.landlords, { isPartial: input.isPartial });
 
-      if (error) {
+      if (!prepared.ok) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: error,
+          message: prepared.error.message,
         });
       }
 
+      const { landlords, policyData } = prepared.value;
+
       const results = [];
       for (const landlordData of landlords) {
+        const id = typeof landlordData.id === 'string' ? landlordData.id : '';
         const result = await service.save(
-          landlordData.id || '',
-          landlordData,
+          id,
+          landlordData as unknown as LandlordData,
           input.isPartial,
           false
         );
