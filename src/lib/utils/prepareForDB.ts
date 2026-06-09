@@ -291,6 +291,6 @@ export function enforceAvalRequirements(data: Record<string, unknown>): Record<s
   return {
     ...data,
     hasPropertyGuarantee: true,
-    guaranteeMethod: 'property',
+    guaranteeMethod: 'PROPERTY',
   };
 }

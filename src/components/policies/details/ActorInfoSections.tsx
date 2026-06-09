@@ -239,13 +239,13 @@ function GuaranteeSection({ actor }: { actor: any }) {
   return (
     <Section title="Garantía">
       <Field label="Método de Garantía" value={translateGuaranteeMethod(actor.guaranteeMethod)} />
-      {actor.guaranteeMethod === 'income' && (
+      {actor.guaranteeMethod === 'INCOME' && (
         <>
           <InfoField label="Banco" value={actor.bankName} />
           <InfoField label="Titular de Cuenta" value={actor.accountHolder} />
         </>
       )}
-      {(actor.guaranteeMethod === 'property' || actor.hasPropertyGuarantee) && (
+      {(actor.guaranteeMethod === 'PROPERTY' || actor.hasPropertyGuarantee) && (
         <>
           <AddressDisplay label="Dirección de la Propiedad" address={actor.guaranteePropertyDetails} />
           <InfoField label="Valor de la Propiedad" value={actor.propertyValue ? formatCurrency(actor.propertyValue) : null} />

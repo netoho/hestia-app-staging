@@ -303,7 +303,7 @@ export function isJointObligorTabComplete(
   // Additional validation for guarantee tab
   if (tab === 'guarantee') {
     const guaranteeMethod = (data as any).guaranteeMethod;
-    if (guaranteeMethod === 'property') {
+    if (guaranteeMethod === 'PROPERTY') {
       // Property guarantee requires property fields
       if (!(data as any).guaranteePropertyDetails || !(data as any).propertyValue) {
         return false;

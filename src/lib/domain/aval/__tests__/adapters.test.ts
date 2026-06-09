@@ -19,7 +19,7 @@ describe('aval db adapter — toDb', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.hasPropertyGuarantee).toBe(true);
-      expect(result.value.guaranteeMethod).toBe('property');
+      expect(result.value.guaranteeMethod).toBe('PROPERTY');
     }
   });
 
@@ -135,7 +135,7 @@ describe('aval api adapter — drift', () => {
       verifiedAt: null, verifiedBy: null, rejectionReason: null, rejectedAt: null,
       additionalInfo: null, createdAt: new Date(), updatedAt: new Date(),
       avalType: 'INDIVIDUAL', nationality: 'MEXICAN', curp: null, passport: null,
-      relationshipToTenant: 'Hermano', companyRfc: null, guaranteeMethod: 'property',
+      relationshipToTenant: 'Hermano', companyRfc: null, guaranteeMethod: 'PROPERTY',
       hasPropertyGuarantee: true, propertyValue: 1000000, monthlyIncome: null,
     };
     expect(avalApiOutput.safeParse(fixture).success).toBe(true);
@@ -147,7 +147,7 @@ describe('aval form adapter', () => {
     const d = avalFormDefaults();
     expect(d.avalType).toBe('INDIVIDUAL');
     expect(d.hasPropertyGuarantee).toBe(true);
-    expect(d.guaranteeMethod).toBe('property');
+    expect(d.guaranteeMethod).toBe('PROPERTY');
   });
 
   it('derives the property tab field list from the base schema', () => {

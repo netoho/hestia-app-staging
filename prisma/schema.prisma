@@ -535,7 +535,7 @@ model JointObligor {
   incomeSource           String?
 
   // Guarantee Method
-  guaranteeMethod      String? // property or income
+  guaranteeMethod      GuaranteeMethod? // INCOME | PROPERTY
   hasPropertyGuarantee Boolean @default(false)
 
   // Property Guarantee Information (for property-based guarantee)
@@ -663,7 +663,7 @@ model Aval {
   spouseCurp    String?
 
   // Guarantee Method
-  guaranteeMethod      String? // property or income
+  guaranteeMethod      GuaranteeMethod? // INCOME | PROPERTY
   hasPropertyGuarantee Boolean @default(true) // Avals typically have property
 
   // Access Token for self-service
@@ -1324,6 +1324,14 @@ enum AvalType {
 enum JointObligorType {
   INDIVIDUAL
   COMPANY
+}
+
+/// Guarantee method for Aval / JointObligor. UPPERCASE to match the enum
+/// convention used across the rest of the schema. The migration uppercases
+/// existing lowercase column data as part of the conversion.
+enum GuaranteeMethod {
+  INCOME
+  PROPERTY
 }
 
 enum GuarantorType {

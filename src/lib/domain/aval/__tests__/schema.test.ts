@@ -34,7 +34,7 @@ const validRef = (firstName: string) => ({
 
 const propertyBase = {
   hasPropertyGuarantee: true as const,
-  guaranteeMethod: 'property' as const,
+  guaranteeMethod: 'PROPERTY' as const,
   guaranteePropertyDetails: validAddress,
   propertyValue: 1_000_000,
   propertyDeedNumber: 'DEED-1',

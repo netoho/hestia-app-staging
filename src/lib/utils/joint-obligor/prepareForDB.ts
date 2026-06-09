@@ -23,7 +23,7 @@ export function prepareJointObligorForDB(
   // Determine the type of Joint Obligor
   const jointObligorType = (data as any).jointObligorType || 'INDIVIDUAL';
   const isCompany = jointObligorType === 'COMPANY';
-  const guaranteeMethod = (data as any).guaranteeMethod || 'income';
+  const guaranteeMethod = (data as any).guaranteeMethod || 'INCOME';
 
   // Start with base fields
   const dbData: any = {
@@ -43,7 +43,7 @@ export function prepareJointObligorForDB(
 
     // Guarantee method
     guaranteeMethod,
-    hasPropertyGuarantee: guaranteeMethod === 'property',
+    hasPropertyGuarantee: guaranteeMethod === 'PROPERTY',
   };
 
   // Handle Individual-specific fields
@@ -124,7 +124,7 @@ export function prepareJointObligorForDB(
   }
 
   // Handle Income Guarantee specific fields
-  if (guaranteeMethod === 'income') {
+  if (guaranteeMethod === 'INCOME') {
     dbData.bankName = (data as any).bankName || null;
     dbData.accountHolder = (data as any).accountHolder || null;
     dbData.hasProperties = (data as any).hasProperties || false;
@@ -136,7 +136,7 @@ export function prepareJointObligorForDB(
   }
 
   // Handle Property Guarantee specific fields
-  if (guaranteeMethod === 'property') {
+  if (guaranteeMethod === 'PROPERTY') {
     dbData.propertyValue = (data as any).propertyValue || null;
     dbData.propertyDeedNumber = (data as any).propertyDeedNumber || null;
     dbData.propertyRegistry = (data as any).propertyRegistry || null;
@@ -219,7 +219,7 @@ export function prepareJointObligorForPartialUpdate(
   existingData?: any
 ): Prisma.JointObligorUpdateInput {
   const dbData: any = {};
-  const guaranteeMethod = data.guaranteeMethod || existingData?.guaranteeMethod || 'income';
+  const guaranteeMethod = data.guaranteeMethod || existingData?.guaranteeMethod || 'INCOME';
 
   // Only update fields that are present in the input
   Object.keys(data).forEach(key => {
@@ -269,7 +269,7 @@ export function prepareJointObligorForPartialUpdate(
       case 'guaranteeMethod':
         // Update guarantee method and related flag
         dbData.guaranteeMethod = value;
-        dbData.hasPropertyGuarantee = value === 'property';
+        dbData.hasPropertyGuarantee = value === 'PROPERTY';
         break;
 
       default:

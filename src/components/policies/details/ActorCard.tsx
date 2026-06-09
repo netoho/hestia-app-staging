@@ -152,7 +152,7 @@ export default function ActorCard({
   const allDocumentCategories = useMemo(() => {
     const isCompany = getIsCompany(actorType, actor);
 
-    const options: { nationality?: 'MEXICAN' | 'FOREIGN'; guaranteeMethod?: 'property' | 'income' } = {};
+    const options: { nationality?: 'MEXICAN' | 'FOREIGN'; guaranteeMethod?: 'PROPERTY' | 'INCOME' } = {};
     if (actor.nationality) options.nationality = actor.nationality;
     if (actor.guaranteeMethod) options.guaranteeMethod = actor.guaranteeMethod;
 

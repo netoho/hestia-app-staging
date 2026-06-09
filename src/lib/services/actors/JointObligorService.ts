@@ -82,7 +82,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     tab: string,
     data: any,
     jointObligorType: 'INDIVIDUAL' | 'COMPANY',
-    guaranteeMethod?: 'income' | 'property',
+    guaranteeMethod?: 'INCOME' | 'PROPERTY',
     isPartial: boolean = false
   ): Result<any> {
     const validation = validateJointObligorTab(tab, data, jointObligorType, guaranteeMethod, isPartial);
@@ -454,12 +454,12 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       }
 
       // Additional docs for property guarantee
-      if (jointObligor.guaranteeMethod === 'property' || jointObligor.hasPropertyGuarantee) {
+      if (jointObligor.guaranteeMethod === 'PROPERTY' || jointObligor.hasPropertyGuarantee) {
         requiredDocs.push('property_deed', 'property_tax_statement');
       }
 
       // Additional docs for income guarantee
-      if (jointObligor.guaranteeMethod === 'income') {
+      if (jointObligor.guaranteeMethod === 'INCOME') {
         requiredDocs.push('proof_of_income', 'bank_statement');
       }
 
@@ -480,7 +480,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     const jointObligor = jointObligorResult.value;
 
     // Check based on guarantee method
-    if (jointObligor.guaranteeMethod === 'property') {
+    if (jointObligor.guaranteeMethod === 'PROPERTY') {
       // Verify property information is complete
       const hasPropertyInfo = !!(
         jointObligor.propertyAddress &&
@@ -490,7 +490,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       return Result.ok(hasPropertyInfo);
     }
 
-    if (jointObligor.guaranteeMethod === 'income') {
+    if (jointObligor.guaranteeMethod === 'INCOME') {
       // Verify income information is complete
       const hasIncomeInfo = !!(
         jointObligor.occupation &&
@@ -562,13 +562,13 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     // Joint obligor specific - must have guarantee method
     if (!jointObligor.guaranteeMethod) errors.push('Método de garantía requerido');
 
-    if (jointObligor.guaranteeMethod === 'property') {
+    if (jointObligor.guaranteeMethod === 'PROPERTY') {
       // Property guarantee validation
       if (!jointObligor.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
       if (!jointObligor.propertyDeedNumber) errors.push('Número de escritura de garantía requerido');
       if (!jointObligor.propertyRegistry) errors.push('Folio de registro de garantía requerido');
       if (!jointObligor.propertyValue) errors.push('Valor de propiedad de garantía requerido');
-    } else if (jointObligor.guaranteeMethod === 'income') {
+    } else if (jointObligor.guaranteeMethod === 'INCOME') {
       // Income guarantee validation
       if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');
       // TODO: Validate minimum income rule with business before enabling
@@ -607,7 +607,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     if (!obligor.ok) return obligor;
 
     const isCompany = obligor.value.jointObligorType === 'COMPANY';
-    const guaranteeMethod = obligor.value.guaranteeMethod as 'income' | 'property' | undefined;
+    const guaranteeMethod = obligor.value.guaranteeMethod as 'INCOME' | 'PROPERTY' | undefined;
     const nationality = obligor.value.nationality;
 
     const requiredDocs = getRequiredDocuments('jointObligor', isCompany, {

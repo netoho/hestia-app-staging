@@ -31,7 +31,7 @@ import { JointObligorType } from "@/prisma/generated/prisma-client/enums";
 export const JOINT_OBLIGOR_TYPES = ['INDIVIDUAL', 'COMPANY'] as const;
 export type JointObligorTypeEnum = typeof JOINT_OBLIGOR_TYPES[number];
 
-export const GUARANTEE_METHODS = ['income', 'property'] as const;
+export const GUARANTEE_METHODS = ['INCOME', 'PROPERTY'] as const;
 export type GuaranteeMethodEnum = typeof GUARANTEE_METHODS[number];
 
 // Tab names for the Joint Obligor flow
@@ -108,14 +108,14 @@ const jointObligorEmploymentTabSchema = z.object({
 
 // Base guarantee schema with common fields
 const guaranteeBaseSchema = z.object({
-  guaranteeMethod: z.enum(['income', 'property']),
+  guaranteeMethod: z.enum(['INCOME', 'PROPERTY']),
   hasPropertyGuarantee: z.boolean().optional(),
   hasProperties: z.boolean().optional(),
 });
 
 // Income-based guarantee schema
 const incomeGuaranteeSchema = guaranteeBaseSchema.extend({
-  guaranteeMethod: z.literal('income'),
+  guaranteeMethod: z.literal('INCOME'),
   hasPropertyGuarantee: z.literal(false).optional(),
 
   // Bank information (required for income guarantee)
@@ -131,7 +131,7 @@ const incomeGuaranteeSchema = guaranteeBaseSchema.extend({
 
 // Property-based guarantee schema
 const propertyGuaranteeSchema = guaranteeBaseSchema.extend({
-  guaranteeMethod: z.literal('property'),
+  guaranteeMethod: z.literal('PROPERTY'),
   hasPropertyGuarantee: z.literal(true).default(true),
 
   // Property details (required for property guarantee)
@@ -276,7 +276,7 @@ export function getJointObligorTabSchema(
       if (!guaranteeMethod) {
         return jointObligorGuaranteeTabSchema;
       }
-      return guaranteeMethod === 'income' ? incomeGuaranteeSchema : propertyGuaranteeSchema;
+      return guaranteeMethod === 'INCOME' ? incomeGuaranteeSchema : propertyGuaranteeSchema;
 
     case 'references':
       return isCompany ? jointObligorReferencesCompanyTabSchema : jointObligorReferencesIndividualTabSchema;

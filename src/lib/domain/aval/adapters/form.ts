@@ -30,7 +30,7 @@ export function avalFormDefaults(opts: FormDefaultsOptions = {}): Record<string,
     nationality: 'MEXICAN',
     // Aval's guarantee is mandatory and always property-based.
     hasPropertyGuarantee: true,
-    guaranteeMethod: 'property',
+    guaranteeMethod: 'PROPERTY',
     propertyUnderLegalProceeding: false,
   };
 
