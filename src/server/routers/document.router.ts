@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { DocumentCategory, DocumentUploadStatus } from '@/prisma/generated/prisma-client/enums';
 import { documentService } from '@/lib/services/documentService';
 import { ActorAuthService } from '@/lib/services/ActorAuthService';
+import { actorFieldFor } from '@/lib/domain/document/adapters/db';
 import {
   DocumentGetUploadUrlOutput,
   DocumentConfirmUploadOutput,
@@ -132,8 +133,8 @@ export const documentRouter = createTRPCRouter({
       }
 
       // Check ownership
-      const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
-      if ((document as any)[actorField] !== auth.actor.id) {
+      const actorField = actorFieldFor(input.type);
+      if (document[actorField] !== auth.actor.id) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Document does not belong to this actor',
@@ -236,8 +237,8 @@ export const documentRouter = createTRPCRouter({
 
       // Check ownership for actor auth
       if (auth.authType === 'actor') {
-        const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
-        if ((document as any)[actorField] !== auth.actor.id) {
+        const actorField = actorFieldFor(input.type);
+        if (document[actorField] !== auth.actor.id) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'This document does not belong to this actor',
@@ -305,8 +306,8 @@ export const documentRouter = createTRPCRouter({
 
       // Check ownership for actor auth
       if (auth.authType === 'actor') {
-        const actorField = input.type === 'jointObligor' ? 'jointObligorId' : `${input.type}Id`;
-        if ((document as any)[actorField] !== auth.actor.id) {
+        const actorField = actorFieldFor(input.type);
+        if (document[actorField] !== auth.actor.id) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'This document does not belong to this actor',
