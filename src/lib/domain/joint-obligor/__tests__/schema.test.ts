@@ -15,7 +15,7 @@ import {
   composeJointObligorVariant,
   decomposeJointObligorVariant,
   type JointObligorVariant,
-} from '../index';
+} from '../schema';
 
 const validAddress = {
   street: 'Av. Reforma',
