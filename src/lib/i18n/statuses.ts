@@ -51,8 +51,8 @@ export const statuses = {
     } as Record<string, string>,
 
     guaranteeMethod: {
-        property: 'Propiedad',
-        income: 'Ingreso',
+        PROPERTY: 'Propiedad',
+        INCOME: 'Ingreso',
     } as Record<string, string>,
 
     nationality: {

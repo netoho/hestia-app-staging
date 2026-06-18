@@ -56,7 +56,7 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
         </Text>
         {jointObligor.guaranteeMethod && (
           <View style={[styles.badge, styles.badgePrimary]}>
-            <Text>{jointObligor.guaranteeMethod === 'property' ? 'Inmueble' : 'Ingresos'}</Text>
+            <Text>{jointObligor.guaranteeMethod === 'PROPERTY' ? 'Inmueble' : 'Ingresos'}</Text>
           </View>
         )}
       </View>
@@ -134,7 +134,7 @@ function JointObligorCard({ jointObligor, index }: JointObligorCardProps) {
       </View>
 
       {/* Income Guarantee - banking info */}
-      {jointObligor.guaranteeMethod === 'income' && (jointObligor.bankName || jointObligor.accountHolder) && (
+      {jointObligor.guaranteeMethod === 'INCOME' && (jointObligor.bankName || jointObligor.accountHolder) && (
         <View style={[styles.highlightBox, styles.mt5]}>
           <Text style={[styles.bold, styles.mb5, { fontSize: 8 }]}>Garantía por Ingresos</Text>
           <View style={styles.twoColumn}>

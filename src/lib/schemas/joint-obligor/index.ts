@@ -31,8 +31,39 @@ import { JointObligorType } from "@/prisma/generated/prisma-client/enums";
 export const JOINT_OBLIGOR_TYPES = ['INDIVIDUAL', 'COMPANY'] as const;
 export type JointObligorTypeEnum = typeof JOINT_OBLIGOR_TYPES[number];
 
-export const GUARANTEE_METHODS = ['income', 'property'] as const;
+export const GUARANTEE_METHODS = ['INCOME', 'PROPERTY'] as const;
 export type GuaranteeMethodEnum = typeof GUARANTEE_METHODS[number];
+
+// Synthetic discriminator combining the two stored axes (jointObligorType ×
+// guaranteeMethod) into a single literal, so the canonical schema can be one
+// z.discriminatedUnion. Derived on read / decomposed on write — NOT a DB column.
+export const JOINT_OBLIGOR_VARIANTS = [
+  'INDIVIDUAL_INCOME',
+  'INDIVIDUAL_PROPERTY',
+  'COMPANY_INCOME',
+  'COMPANY_PROPERTY',
+] as const;
+export type JointObligorVariant = typeof JOINT_OBLIGOR_VARIANTS[number];
+
+/** Compose the discriminator from the two stored axes. */
+export function composeJointObligorVariant(
+  jointObligorType: JointObligorTypeEnum,
+  guaranteeMethod: GuaranteeMethodEnum,
+): JointObligorVariant {
+  return `${jointObligorType}_${guaranteeMethod}` as JointObligorVariant;
+}
+
+/** Decompose the discriminator back into the two stored axes. */
+export function decomposeJointObligorVariant(variant: JointObligorVariant): {
+  jointObligorType: JointObligorTypeEnum;
+  guaranteeMethod: GuaranteeMethodEnum;
+} {
+  const [jointObligorType, guaranteeMethod] = variant.split('_') as [
+    JointObligorTypeEnum,
+    GuaranteeMethodEnum,
+  ];
+  return { jointObligorType, guaranteeMethod };
+}
 
 // Tab names for the Joint Obligor flow
 export const JOINT_OBLIGOR_TABS = {
@@ -108,14 +139,14 @@ const jointObligorEmploymentTabSchema = z.object({
 
 // Base guarantee schema with common fields
 const guaranteeBaseSchema = z.object({
-  guaranteeMethod: z.enum(['income', 'property']),
+  guaranteeMethod: z.enum(['INCOME', 'PROPERTY']),
   hasPropertyGuarantee: z.boolean().optional(),
   hasProperties: z.boolean().optional(),
 });
 
 // Income-based guarantee schema
 const incomeGuaranteeSchema = guaranteeBaseSchema.extend({
-  guaranteeMethod: z.literal('income'),
+  guaranteeMethod: z.literal('INCOME'),
   hasPropertyGuarantee: z.literal(false).optional(),
 
   // Bank information (required for income guarantee)
@@ -131,7 +162,7 @@ const incomeGuaranteeSchema = guaranteeBaseSchema.extend({
 
 // Property-based guarantee schema
 const propertyGuaranteeSchema = guaranteeBaseSchema.extend({
-  guaranteeMethod: z.literal('property'),
+  guaranteeMethod: z.literal('PROPERTY'),
   hasPropertyGuarantee: z.literal(true).default(true),
 
   // Property details (required for property guarantee)
@@ -191,6 +222,7 @@ const jointObligorBaseFields = {
 
 // Complete Individual Joint Obligor with Income Guarantee
 export const jointObligorIndividualIncomeCompleteSchema = z.object({
+  jointObligorVariant: z.literal('INDIVIDUAL_INCOME'),
   ...jointObligorBaseFields,
   ...jointObligorPersonalIndividualTabSchema.shape,
   ...jointObligorEmploymentTabSchema.shape,
@@ -201,6 +233,7 @@ export const jointObligorIndividualIncomeCompleteSchema = z.object({
 
 // Complete Individual Joint Obligor with Property Guarantee
 export const jointObligorIndividualPropertyCompleteSchema = z.object({
+  jointObligorVariant: z.literal('INDIVIDUAL_PROPERTY'),
   ...jointObligorBaseFields,
   ...jointObligorPersonalIndividualTabSchema.shape,
   ...jointObligorEmploymentTabSchema.shape,
@@ -211,6 +244,7 @@ export const jointObligorIndividualPropertyCompleteSchema = z.object({
 
 // Complete Company Joint Obligor with Income Guarantee
 export const jointObligorCompanyIncomeCompleteSchema = z.object({
+  jointObligorVariant: z.literal('COMPANY_INCOME'),
   ...jointObligorBaseFields,
   ...jointObligorPersonalCompanyTabSchema.shape,
   ...incomeGuaranteeSchema.shape,
@@ -220,6 +254,7 @@ export const jointObligorCompanyIncomeCompleteSchema = z.object({
 
 // Complete Company Joint Obligor with Property Guarantee
 export const jointObligorCompanyPropertyCompleteSchema = z.object({
+  jointObligorVariant: z.literal('COMPANY_PROPERTY'),
   ...jointObligorBaseFields,
   ...jointObligorPersonalCompanyTabSchema.shape,
   ...propertyGuaranteeSchema.shape,
@@ -231,13 +266,38 @@ export const jointObligorCompanyPropertyCompleteSchema = z.object({
 // VALIDATION MODES
 // ============================================
 
-// Strict validation (all required fields must be present)
-export const jointObligorStrictSchema = z.union([
+// Canonical discriminated union keyed on the synthetic `jointObligorVariant`.
+// S4b's db adapter narrows on this for an exhaustive, cast-free switch.
+export const jointObligorCanonicalSchema = z.discriminatedUnion('jointObligorVariant', [
   jointObligorIndividualIncomeCompleteSchema,
   jointObligorIndividualPropertyCompleteSchema,
   jointObligorCompanyIncomeCompleteSchema,
   jointObligorCompanyPropertyCompleteSchema,
 ]);
+
+// Strict validation. Wraps the canonical union in a preprocess that derives the
+// `jointObligorVariant` discriminator from the two stored axes, so the existing
+// wire shape (jointObligorType + guaranteeMethod, no explicit variant) validates
+// unchanged — zero change to the router input contract.
+export const jointObligorStrictSchema = z.preprocess((val) => {
+  if (val && typeof val === 'object' && !Array.isArray(val)) {
+    const v = val as Record<string, unknown>;
+    if (
+      v.jointObligorVariant == null &&
+      typeof v.jointObligorType === 'string' &&
+      typeof v.guaranteeMethod === 'string'
+    ) {
+      return {
+        ...v,
+        jointObligorVariant: composeJointObligorVariant(
+          v.jointObligorType as JointObligorTypeEnum,
+          v.guaranteeMethod as GuaranteeMethodEnum,
+        ),
+      };
+    }
+  }
+  return val;
+}, jointObligorCanonicalSchema);
 
 // Partial validation for tab-by-tab saves
 export const jointObligorPartialSchema = z.union([
@@ -276,7 +336,7 @@ export function getJointObligorTabSchema(
       if (!guaranteeMethod) {
         return jointObligorGuaranteeTabSchema;
       }
-      return guaranteeMethod === 'income' ? incomeGuaranteeSchema : propertyGuaranteeSchema;
+      return guaranteeMethod === 'INCOME' ? incomeGuaranteeSchema : propertyGuaranteeSchema;
 
     case 'references':
       return isCompany ? jointObligorReferencesCompanyTabSchema : jointObligorReferencesIndividualTabSchema;

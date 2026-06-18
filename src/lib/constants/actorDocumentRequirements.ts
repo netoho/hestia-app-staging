@@ -9,7 +9,7 @@ import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 
 export type ActorType = 'landlord' | 'tenant' | 'aval' | 'jointObligor';
 export type NationalityType = 'MEXICAN' | 'FOREIGN';
-export type GuaranteeMethod = 'property' | 'income';
+export type GuaranteeMethod = 'PROPERTY' | 'INCOME';
 
 export interface DocumentRequirement {
   category: DocumentCategory;
@@ -127,9 +127,9 @@ export function getDocumentRequirements(
       case 'foreign':
         return options?.nationality === 'FOREIGN';
       case 'propertyGuarantee':
-        return options?.guaranteeMethod === 'property';
+        return options?.guaranteeMethod === 'PROPERTY';
       case 'incomeGuarantee':
-        return options?.guaranteeMethod === 'income';
+        return options?.guaranteeMethod === 'INCOME';
       default:
         return true;
     }

@@ -80,7 +80,7 @@ const avalEmploymentTabSchema = z.object({
 // aggregate schemas can spread its shape.
 const avalPropertyTabBaseSchema = z.object({
   hasPropertyGuarantee: z.literal(true).default(true),
-  guaranteeMethod: z.literal('property').default('property'),
+  guaranteeMethod: z.literal('PROPERTY').default('PROPERTY'),
   guaranteePropertyDetails: addressSchema,
   propertyValue: z.number().positive('Property value is required'),
   propertyDeedNumber: z.string().min(1, 'Property deed number is required'),

@@ -51,7 +51,7 @@ export default function AvalPropertyGuaranteeTab({
     mode: 'onChange',
     defaultValues: {
       hasPropertyGuarantee: true,
-      guaranteeMethod: 'property',
+      guaranteeMethod: 'PROPERTY',
       propertyUnderLegalProceeding: false,
       ...initialData,
     },

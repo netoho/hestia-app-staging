@@ -162,7 +162,7 @@ function filterByTab(
   if (tabName === 'property') {
     if (data.guaranteePropertyDetails) filtered.guaranteePropertyDetails = data.guaranteePropertyDetails;
     filtered.hasPropertyGuarantee = true;
-    filtered.guaranteeMethod = 'property';
+    filtered.guaranteeMethod = 'PROPERTY';
   }
   if (tabName === 'references') {
     if (data.personalReferences) filtered.personalReferences = data.personalReferences;
@@ -180,7 +180,7 @@ function mapAvalFields(
 
   // Aval ALWAYS has a property guarantee.
   out.hasPropertyGuarantee = true;
-  out.guaranteeMethod = 'property';
+  out.guaranteeMethod = 'PROPERTY';
 
   // Legacy isCompany → avalType.
   if ('isCompany' in out) {
