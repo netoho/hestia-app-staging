@@ -63,18 +63,11 @@ export { tenantApiOutput as TenantOutputShape } from '@/lib/domain/tenant/adapte
 import { landlordApiOutput } from '@/lib/domain/landlord/adapters/api';
 export const LandlordOutputShape = landlordApiOutput;
 
-export const JointObligorOutputShape = ActorBaseShape.extend({
-  jointObligorType: z.nativeEnum(JointObligorType).nullable(),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  passport: z.string().nullable(),
-  relationshipToTenant: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  guaranteeMethod: z.string().nullable(),
-  hasPropertyGuarantee: z.boolean(),
-  propertyValue: z.number().nullable(),
-  monthlyIncome: z.number().nullable(),
-});
+// JointObligor is migrated to the hexagonal domain layer (S4b). The canonical
+// API output now lives in `@/lib/domain/joint-obligor/adapters/api`; aliased
+// here under the legacy name so existing callers keep working.
+import { jointObligorApiOutput } from '@/lib/domain/joint-obligor/adapters/api';
+export const JointObligorOutputShape = jointObligorApiOutput;
 
 // Aval is migrated to the hexagonal domain layer (S3). The canonical API
 // output now lives in `@/lib/domain/aval/adapters/api`; aliased here under

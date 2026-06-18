@@ -639,3 +639,103 @@ describe('actor.deleteCoOwner (landlord)', () => {
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 });
+
+// ===========================================================================
+// JointObligor save — S4b domain toDb + address upsert (#132)
+// Exercises the rewired write path: jointObligorToDb → address upsert →
+// buildJointObligorUpdateData → tx.update (replaces the deleted prepareForDB).
+// ===========================================================================
+describe('actor.update (jointObligor) — domain toDb rewire', () => {
+  async function makeJointObligor() {
+    const { policy } = await createPolicyWithActors();
+    const jo = await jointObligorFactory.create({}, { transient: { policyId: policy.id } });
+    const { token, caller } = await mintJointObligorToken(jo.id);
+    return { jo, token, caller };
+  }
+
+  test('personal tab persists names and upserts the address relation', async () => {
+    const { jo, token, caller } = await makeJointObligor();
+    await caller.actor.update({
+      type: 'jointObligor',
+      identifier: token,
+      data: {
+        tabName: 'personal',
+        partial: true,
+        jointObligorType: 'INDIVIDUAL',
+        firstName: 'Carlos',
+        paternalLastName: 'Ruiz',
+        email: 'carlos.jo@hestia.test',
+        phone: '5551112233',
+        addressDetails: {
+          street: 'Av. Insurgentes',
+          exteriorNumber: '500',
+          neighborhood: 'Roma',
+          municipality: 'Cuauhtémoc',
+          city: 'CDMX',
+          state: 'CDMX',
+          postalCode: '06700',
+        },
+      },
+    });
+
+    const refreshed = await prisma.jointObligor.findUnique({ where: { id: jo.id } });
+    expect(refreshed?.firstName).toBe('Carlos');
+    expect(refreshed?.paternalLastName).toBe('Ruiz');
+    expect(refreshed?.addressId).toBeTruthy();
+  });
+
+  test('guarantee tab (INCOME) persists method + bank; hasPropertyGuarantee=false', async () => {
+    const { jo, token, caller } = await makeJointObligor();
+    await caller.actor.update({
+      type: 'jointObligor',
+      identifier: token,
+      data: {
+        tabName: 'guarantee',
+        partial: true,
+        jointObligorType: 'INDIVIDUAL',
+        guaranteeMethod: 'INCOME',
+        bankName: 'Banorte',
+        accountHolder: 'Carlos Ruiz',
+        monthlyIncome: 60000,
+      },
+    });
+
+    const refreshed = await prisma.jointObligor.findUnique({ where: { id: jo.id } });
+    expect(refreshed?.guaranteeMethod).toBe('INCOME');
+    expect(refreshed?.hasPropertyGuarantee).toBe(false);
+    expect(refreshed?.bankName).toBe('Banorte');
+    expect(refreshed?.monthlyIncome).toBe(60000);
+  });
+
+  test('guarantee tab (PROPERTY) persists property fields + upserts guarantee address; hasPropertyGuarantee=true', async () => {
+    const { jo, token, caller } = await makeJointObligor();
+    await caller.actor.update({
+      type: 'jointObligor',
+      identifier: token,
+      data: {
+        tabName: 'guarantee',
+        partial: true,
+        jointObligorType: 'INDIVIDUAL',
+        guaranteeMethod: 'PROPERTY',
+        propertyValue: 2500000,
+        propertyDeedNumber: 'DEED-9',
+        propertyRegistry: 'REG-9',
+        guaranteePropertyDetails: {
+          street: 'Calle Luna',
+          exteriorNumber: '10',
+          neighborhood: 'Centro',
+          municipality: 'Cuauhtémoc',
+          city: 'CDMX',
+          state: 'CDMX',
+          postalCode: '06000',
+        },
+      },
+    });
+
+    const refreshed = await prisma.jointObligor.findUnique({ where: { id: jo.id } });
+    expect(refreshed?.guaranteeMethod).toBe('PROPERTY');
+    expect(refreshed?.hasPropertyGuarantee).toBe(true);
+    expect(refreshed?.propertyValue).toBe(2500000);
+    expect(refreshed?.guaranteePropertyAddressId).toBeTruthy();
+  });
+});
