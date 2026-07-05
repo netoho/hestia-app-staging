@@ -1,8 +1,8 @@
 # Integration tests
 
-311 tests across the tRPC + REST API surface. Real Postgres, mocks at preload, contract-locked via `.output(<zodSchema>)` schemas in `src/lib/schemas/<domain>/output.ts`.
+385 tests across 15 files covering the tRPC + REST API surface (108 procedures, all `.output()`-locked, + 20 REST handler exports). Real Postgres, mocks at preload, contract-locked via `.output(<zodSchema>)` schemas in `src/lib/schemas/<domain>/output.ts`.
 
-**Full guide: [docs/TESTING.md](../../docs/TESTING.md)** — recipes, conventions, gotchas, follow-ups.
+**Full guide: [docs/TESTING.md](../../docs/TESTING.md)** — recipes, conventions, gotchas.
 
 ## Run
 

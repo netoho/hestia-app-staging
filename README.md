@@ -17,11 +17,14 @@ bunx prisma migrate deploy
 # Seed database
 bunx prisma db seed
 
-# Start development server
+# Start development server (http://localhost:9002)
 bun run dev
 
 # Run build
 bun run build
+
+# Type-error ratchet (CI gate: tracked-file tsc error count must not grow)
+bun run typecheck:ratchet
 
 # Open Prisma Studio
 bunx prisma studio
@@ -56,7 +59,7 @@ All actors support both Individual and Company modes:
 - **Database**: PostgreSQL + Prisma ORM
 - **API**: tRPC + REST endpoints
 - **Auth**: NextAuth.js
-- **Storage**: AWS S3 / Firebase / Local
+- **Storage**: AWS S3 / Local
 - **Email**: SMTP / Resend / Mailgun
 - **Runtime**: Bun
 
@@ -67,9 +70,11 @@ All actors support both Individual and Company modes:
 - [Testing Guide](docs/TESTING.md) - Integration & contract tests, output schemas, running locally, CI
 
 ### Architecture
+- [Architecture Overview](docs/ARCHITECTURE.md) - The hexagonal domain layer: canonical Zod schemas + adapters
+- [Domain Layer Recipe](src/lib/domain/README.md) - How to port/author an entity slice
 - [Actor System Architecture](docs/ACTOR_SYSTEM_ARCHITECTURE.md) - Actor types, data flow, auth
 - [Policy Status Model](docs/POLICY_STATUS.md) - Status transitions, validation gates, cron
-- [Code Quality Plan](docs/CODE_QUALITY_PLAN.md) - Type safety, refactoring progress
+- [Release Runbook](docs/RELEASE_RUNBOOK.md) - How releases deploy (manual prod migrations!)
 
 ### API & Services
 - [tRPC Routers](src/server/routers/README.md) - Type-safe API endpoints
@@ -95,19 +100,23 @@ src/
 │   ├── dashboard/         # Internal dashboard pages
 │   └── actor/             # Actor self-service portals
 ├── components/            # React components
+├── hooks/                 # Shared React hooks
 ├── lib/
+│   ├── domain/            # CANONICAL Zod schemas + db/api/form adapters per entity
 │   ├── services/          # Business logic layer
-│   ├── schemas/           # Zod validation schemas
+│   ├── schemas/           # Output schemas per router + legacy re-export shims
 │   ├── constants/         # Configuration constants
 │   ├── utils/             # Utility functions
+│   ├── i18n/              # Translations
 │   └── storage/           # File storage abstraction
 ├── server/
 │   └── routers/           # tRPC routers
-├── prisma/                # Generated Prisma client
+├── prisma/                # Generated Prisma client (gitignored, regenerated on install)
 └── templates/             # Email templates
 
 prisma/
 ├── schema.prisma          # Database schema
+├── migrations/            # SQL migrations (run manually on prod — see docs/RELEASE_RUNBOOK.md)
 └── seed.ts                # Seed data
 
 docs/                      # Extended documentation
@@ -129,7 +138,7 @@ EMAIL_PROVIDER="smtp|resend|mailgun"
 EMAIL_FROM="noreply@domain.com"
 
 # Storage (choose one provider)
-STORAGE_PROVIDER="s3|firebase|local"
+STORAGE_PROVIDER="s3|local"
 
 # Google Maps
 GOOGLE_MAPS_API_KEY="..."
@@ -176,10 +185,10 @@ The dashboard CSV report (`/api/reports/policies/csv`) ships several columns tha
 
 1. **% de comisión** — no business definition; not stored anywhere. Open question: per-broker default rate, per-package, per-policy negotiated, or a hybrid? Column is omitted from the CSV today.
 2. **Descuento** — no semantic definition (package discount? broker margin? promotional?). Column is omitted from the CSV today. The pricing service has an `isManualOverride` flag but no separate discount field.
-3. **Vendedor picker UI** — `Policy.managedById` exists and is read by the report (falling back to literal `"CS"` when null), but no UI sets it. Follow-up: add a Hestia-user picker on the policy edit form so ops can attribute the deal to a specific Customer Success rep.
+3. ~~**Vendedor picker UI**~~ — resolved: `AssignBrokerModal` → `policy.assignManager` sets `Policy.managedById`; the report reads it (falling back to `"CS"` when null).
 4. **"En proceso" multi-status URL filter** — `usePoliciesState` (`src/hooks/usePoliciesState.ts`) accepts a single `?status=` value. The dashboard "En proceso" KPI tile points at `?status=COLLECTING_INFO` only. If new intermediate statuses are added between `COLLECTING_INFO` and `PENDING_APPROVAL`, extend the hook to support a multi-value filter (e.g. `?status=in:COLLECTING_INFO,FOO`) and update `KpiTiles.tsx`.
 
 ## Backlog
 
-See [docs/BACKLOG.md](docs/BACKLOG.md) for current work items and priorities.
+Work items live in [GitHub issues](https://github.com/netoho/hestia-app/issues) — the maintainability initiative is tracked under umbrella [#123](https://github.com/netoho/hestia-app/issues/123). (The old `docs/BACKLOG.md` rotted and was deleted; don't track work in docs.)
 

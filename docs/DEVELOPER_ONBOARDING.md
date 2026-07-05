@@ -31,27 +31,30 @@ bunx prisma migrate deploy
 bun run dev
 ```
 
-Visit http://localhost:3000
+Visit http://localhost:9002 (the dev script runs `next dev --turbopack -p 9002`)
 
 ## Project Structure
 
 ```
 hestia-app/
 ├── src/
-│   ├── app/                 # Next.js 13+ app directory
+│   ├── app/                 # Next.js App Router
 │   │   ├── actor/           # Actor self-service pages
 │   │   └── dashboard/       # Admin dashboard
 │   ├── components/
 │   │   └── actor/          # Actor UI components
 │   ├── lib/
-│   │   ├── schemas/        # Zod validation schemas
+│   │   ├── domain/         # CANONICAL Zod schemas + db/api/form adapters (source of truth)
+│   │   ├── schemas/        # Router output schemas + legacy re-export shims
 │   │   ├── services/       # Business logic
 │   │   ├── utils/          # Utility functions
 │   │   └── constants/      # Configuration
 │   └── server/
 │       └── routers/        # tRPC API routers
 ├── prisma/
-│   └── schema.prisma       # Database schema
+│   ├── schema.prisma       # Database schema
+│   └── migrations/         # Run manually — never auto-applied (docs/RELEASE_RUNBOOK.md)
+├── tests/                  # Integration suite (+ e2e being rebuilt, #161)
 └── docs/                   # Documentation
 ```
 
@@ -77,10 +80,13 @@ bun run dev
 bun run build
 bun run start
 
-# Type checking
-bun run type-check
+# Type checking (full — the legacy error baseline is being burned down)
+bun run typecheck
 
-# Linting
+# Type-error ratchet (what CI enforces: tracked-file error count must not grow)
+bun run typecheck:ratchet
+
+# Linting (ESLint flat config; no-explicit-any is warn for now)
 bun run lint
 ```
 
@@ -123,10 +129,10 @@ Every tRPC procedure and in-scope REST handler is covered by a `.output(<zodSche
 Once you have a real token (e.g. from `policy.create` in the dashboard or `staff.list` for an existing actor):
 
 ```
-http://localhost:3000/actor/tenant/[TOKEN]
-http://localhost:3000/actor/landlord/[TOKEN]
-http://localhost:3000/actor/aval/[TOKEN]
-http://localhost:3000/actor/joint-obligor/[TOKEN]
+http://localhost:9002/actor/tenant/[TOKEN]
+http://localhost:9002/actor/landlord/[TOKEN]
+http://localhost:9002/actor/aval/[TOKEN]
+http://localhost:9002/actor/joint-obligor/[TOKEN]
 ```
 
 ## Understanding the Actor System
@@ -152,32 +158,23 @@ Actors are participants in a rental policy:
 
 ### Creating a New Actor Schema
 
+Canonical schemas live in `src/lib/domain/<entity>/` — **not** in `src/lib/schemas/` (those are output schemas + legacy re-export shims). Follow the porting recipe in [src/lib/domain/README.md](../src/lib/domain/README.md); tenant is the worked example:
+
 ```typescript
-// src/lib/schemas/new-actor/index.ts
-import { z } from 'zod';
-
-// Define tab schemas
-const personalTabSchema = z.object({
-  actorType: z.enum(['INDIVIDUAL', 'COMPANY']),
-  name: z.string().min(1),
-  email: z.string().email(),
-});
-
-// Create complete schema
-export const newActorCompleteSchema = z.object({
-  ...personalTabSchema.shape,
-  // ... other tabs
-});
-
-// Export validation modes
-export const newActorStrictSchema = newActorCompleteSchema;
-export const newActorPartialSchema = newActorCompleteSchema.partial();
+// src/lib/domain/new-actor/schema.ts — canonical Zod, tab schemas + master schema
+// src/lib/domain/new-actor/select.ts — the single Prisma select/include
+// src/lib/domain/new-actor/adapters/db.ts   — toDb(): normalize → validate → transform
+// src/lib/domain/new-actor/adapters/api.ts  — <entity>ApiOutput via .pick/.omit
+// src/lib/domain/new-actor/adapters/form.ts — RHF defaults + per-tab fields via .keyof()
+// src/lib/domain/new-actor/__tests__/       — schema + adapter drift tests (mandatory)
 ```
+
+Every other shape (service writes, router outputs, form defaults, tab-field lists) derives from the canonical schema — never hand-write a parallel representation.
 
 ### Adding an API Endpoint
 
 ```typescript
-// src/server/routers/actor.router.ts
+// src/server/routers/actor/shared.router.ts (the actor router is split: actor/{shared,landlord}.router.ts)
 
 // Add to router
 export const actorRouter = createTRPCRouter({
@@ -245,15 +242,18 @@ if (actorType === 'aval') {
   data.hasPropertyGuarantee = true; // Always true
 }
 
-// Joint Obligor - Flexible guarantee
-if (data.guaranteeMethod === 'income') {
-  // Validate income fields
+// Joint Obligor - flexible guarantee. GuaranteeMethod is an UPPERCASE enum,
+// and the canonical schema discriminates on the synthetic jointObligorVariant
+// (INDIVIDUAL|COMPANY × INCOME|PROPERTY) — see src/lib/domain/joint-obligor/schema.ts
+if (data.guaranteeMethod === 'INCOME') {
+  // Income-backed: bank + income fields
 } else {
-  // Validate property fields
+  // 'PROPERTY': property guarantee fields
 }
 
-// Landlord - Multiple support
-const primaryLandlord = landlords.find(l => l.isPrimary);
+// Landlord - multiple support. Every landlord is first-class; "primary" is a
+// legacy concept — never special-case by isPrimary or array index.
+const landlords = policy.landlords; // iterate ALL of them (links, gates, notifications)
 ```
 
 ## Debugging Tips
@@ -300,8 +300,11 @@ SELECT * FROM "Actor" WHERE id = '...';
 ### 4. Type Checking
 
 ```bash
-# Check for type errors
-bun run type-check
+# Check for type errors (full — legacy baseline being burned down)
+bun run typecheck
+
+# What CI enforces: the tracked-file error count must not grow
+bun run typecheck:ratchet
 
 # Generate types from schema
 bunx prisma generate
@@ -310,7 +313,7 @@ bunx prisma generate
 ## Common Issues & Solutions
 
 ### Issue: "Token is invalid or expired"
-**Solution**: Tokens expire after 48 hours. Generate a new token.
+**Solution**: Actor portal tokens currently expire after **1000 days** (`TOKEN_CONFIG.EXPIRATION_DAYS` in `src/lib/constants/businessConfig.ts`; being reduced to 180 days — [#165](https://github.com/netoho/hestia-app/issues/165)). Resend the link from the dashboard to re-mint/extend.
 
 ### Issue: "Type error: Property does not exist"
 **Solution**: Run `bunx prisma generate` to sync types with database.
@@ -413,7 +416,7 @@ export class NewActorService extends BaseActorService {
 
 ### Step 5: Update Router
 ```typescript
-// src/server/routers/actor.router.ts
+// src/server/routers/actor/shared.router.ts (the actor router is split: actor/{shared,landlord}.router.ts)
 // Add case for new actor type
 ```
 
