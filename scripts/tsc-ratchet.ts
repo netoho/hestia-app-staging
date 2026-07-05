@@ -27,7 +27,9 @@ function trackedFiles(): Set<string> {
 }
 
 function tscErrors(): Map<string, number> {
-  const out = spawnSync('bunx', ['tsc', '--noEmit', '--pretty', 'false'], {
+  // tsconfig.ratchet.json pins a deterministic program (no .next/types, no
+  // untracked e2e scaffold, no incremental cache) so local and CI counts agree.
+  const out = spawnSync('bunx', ['tsc', '-p', 'tsconfig.ratchet.json', '--noEmit', '--pretty', 'false'], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });

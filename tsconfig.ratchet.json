@@ -1,0 +1,20 @@
+{
+  // Deterministic program for scripts/tsc-ratchet.ts: the main tsconfig includes
+  // .next/types/** (dev-server artifacts that exist only on machines that ran
+  // `next dev`) which shifts the error count between local runs and CI. The
+  // ratchet must measure the same program everywhere, so generated output and
+  // the untracked e2e scaffold (replaced by #161) are excluded and the
+  // incremental cache is disabled.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "exclude": [
+    "node_modules",
+    ".next",
+    "tests/e2e",
+    "tests/setup",
+    "tests/fixtures",
+    "tests/playwright.config.ts"
+  ]
+}
