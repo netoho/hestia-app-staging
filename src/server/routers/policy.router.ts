@@ -131,7 +131,8 @@ const CreatePolicySchema = z.object({
   guarantorType: z.nativeEnum(GuarantorType),
 
   // Actors
-  landlord: z.object({
+  // First entry is the primary landlord; the rest are co-owners.
+  landlords: z.array(z.object({
     isCompany: z.boolean().optional(),
     firstName: z.string().optional(),
     middleName: z.string().optional(),
@@ -147,7 +148,7 @@ const CreatePolicySchema = z.object({
     legalRepRfc: z.string().optional(),
     legalRepPhone: z.string().optional(),
     legalRepEmail: z.string().optional(),
-  }),
+  })).min(1).max(5),
 
   tenant: z.object({
     tenantType: z.nativeEnum(TenantType),
@@ -245,7 +246,7 @@ export const policyRouter = createTRPCRouter({
       }
 
       // Compute actor completeness server-side so the UI doesn't duplicate
-      // the guarantorType / primary-landlord rules.
+      // the guarantorType / landlord rules.
       const completeness = await actorTokenService.checkPolicyActorsComplete(input.id);
       const allActorsComplete = completeness.allComplete;
 

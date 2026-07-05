@@ -101,8 +101,11 @@ export function RenewalSelector({
 
   const setProperty = (patch: Partial<PropertyRenewalSelection>) =>
     onSelectionChange({ ...selection, property: { ...selection.property, ...patch } });
-  const setLandlord = (patch: Partial<LandlordRenewalSelection>) =>
-    onSelectionChange({ ...selection, landlord: { ...selection.landlord, ...patch } });
+  const setLandlord = (idx: number, patch: Partial<LandlordRenewalSelection>) => {
+    const next = [...selection.landlords];
+    next[idx] = { ...next[idx], ...patch };
+    onSelectionChange({ ...selection, landlords: next });
+  };
   const setTenant = (patch: Partial<TenantRenewalSelection>) =>
     onSelectionChange({ ...selection, tenant: { ...selection.tenant, ...patch } });
   const setJO = (idx: number, patch: Partial<JointObligorRenewalSelection>) => {
@@ -174,15 +177,24 @@ export function RenewalSelector({
         onChange={(k, v) => setProperty({ [k]: v } as Partial<PropertyRenewalSelection>)}
       />
 
-      {/* Landlord */}
-      <SectionCard
-        title={`${copy.landlordTitle}${source.landlord.displayName ? ` — ${source.landlord.displayName}` : ''}`}
-        included={selection.landlord.include}
-        onIncludedChange={(v) => setLandlord({ include: v })}
-        subs={landlordSubs(copy)}
-        values={selection.landlord}
-        onChange={(k, v) => setLandlord({ [k]: v } as Partial<LandlordRenewalSelection>)}
-      />
+      {/* Landlords (primary + co-owners) */}
+      {source.landlords.map((ld) => {
+        const sel = selection.landlords.find((s) => s.sourceId === ld.id);
+        if (!sel) return null;
+        const selIdx = selection.landlords.indexOf(sel);
+        const suffix = ld.displayName ? ` — ${ld.displayName}` : '';
+        return (
+          <SectionCard
+            key={ld.id}
+            title={`${ld.isPrimary ? copy.landlordTitle : copy.landlordCoOwnerTitle}${suffix}`}
+            included={sel.include}
+            onIncludedChange={(v) => setLandlord(selIdx, { include: v })}
+            subs={landlordSubs(copy)}
+            values={sel as unknown as Record<string, boolean>}
+            onChange={(k, v) => setLandlord(selIdx, { [k]: v } as Partial<LandlordRenewalSelection>)}
+          />
+        );
+      })}
 
       {/* Tenant */}
       {source.tenant ? (

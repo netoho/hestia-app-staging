@@ -50,77 +50,30 @@ const ActorBaseShape = z.object({
 // ---------------------------------------------------------------------------
 // Per-actor-type shapes
 // ---------------------------------------------------------------------------
-export const TenantOutputShape = ActorBaseShape.extend({
-  tenantType: z.nativeEnum(TenantType),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  passport: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  legalRepFirstName: z.string().nullable(),
-  legalRepPaternalLastName: z.string().nullable(),
-  legalRepEmail: z.string().nullable(),
-  legalRepPhone: z.string().nullable(),
-  workPhone: z.string().nullable(),
-  personalEmail: z.string().nullable(),
-  workEmail: z.string().nullable(),
-  currentAddress: z.string().nullable(),
-  addressId: z.string().nullable(),
-  employmentStatus: z.nativeEnum(EmploymentStatus).nullable(),
-  occupation: z.string().nullable(),
-  employerName: z.string().nullable(),
-  monthlyIncome: z.number().nullable(),
-  paymentMethod: z.string().nullable(),
-  requiresCFDI: z.boolean(),
-});
 
-export const LandlordOutputShape = ActorBaseShape.extend({
-  isPrimary: z.boolean(),
-  isCompany: z.boolean(),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  businessType: z.string().nullable(),
-  legalRepFirstName: z.string().nullable(),
-  legalRepPaternalLastName: z.string().nullable(),
-  legalRepPosition: z.string().nullable(),
-  legalRepEmail: z.string().nullable(),
-  legalRepPhone: z.string().nullable(),
-  address: z.string(),
-  addressId: z.string().nullable(),
-  bankName: z.string().nullable(),
-  accountNumber: z.string().nullable(),
-  clabe: z.string().nullable(),
-  accountHolder: z.string().nullable(),
-  occupation: z.string().nullable(),
-  monthlyIncome: z.number().nullable(),
-  requiresCFDI: z.boolean(),
-});
+// Tenant is migrated to the hexagonal domain layer (S1). The canonical
+// API output now lives in `@/lib/domain/tenant/adapters/api`; this
+// file just re-exports it under the legacy name so existing callers
+// (router-imports, frontend type-imports) keep working.
+export { tenantApiOutput as TenantOutputShape } from '@/lib/domain/tenant/adapters/api';
 
-export const JointObligorOutputShape = ActorBaseShape.extend({
-  jointObligorType: z.nativeEnum(JointObligorType).nullable(),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  passport: z.string().nullable(),
-  relationshipToTenant: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  guaranteeMethod: z.string().nullable(),
-  hasPropertyGuarantee: z.boolean(),
-  propertyValue: z.number().nullable(),
-  monthlyIncome: z.number().nullable(),
-});
+// Landlord is migrated to the hexagonal domain layer (S2). The canonical
+// API output now lives in `@/lib/domain/landlord/adapters/api`; aliased
+// here under the legacy name (used locally below + by external callers).
+import { landlordApiOutput } from '@/lib/domain/landlord/adapters/api';
+export const LandlordOutputShape = landlordApiOutput;
 
-export const AvalOutputShape = ActorBaseShape.extend({
-  avalType: z.nativeEnum(AvalType),
-  nationality: z.nativeEnum(NationalityType).nullable(),
-  curp: z.string().nullable(),
-  passport: z.string().nullable(),
-  relationshipToTenant: z.string().nullable(),
-  companyRfc: z.string().nullable(),
-  guaranteeMethod: z.string().nullable(),
-  hasPropertyGuarantee: z.boolean(),
-  propertyValue: z.number().nullable(),
-  monthlyIncome: z.number().nullable(),
-});
+// JointObligor is migrated to the hexagonal domain layer (S4b). The canonical
+// API output now lives in `@/lib/domain/joint-obligor/adapters/api`; aliased
+// here under the legacy name so existing callers keep working.
+import { jointObligorApiOutput } from '@/lib/domain/joint-obligor/adapters/api';
+export const JointObligorOutputShape = jointObligorApiOutput;
+
+// Aval is migrated to the hexagonal domain layer (S3). The canonical API
+// output now lives in `@/lib/domain/aval/adapters/api`; aliased here under
+// the legacy name so existing callers keep working.
+import { avalApiOutput } from '@/lib/domain/aval/adapters/api';
+export const AvalOutputShape = avalApiOutput;
 
 /**
  * Polymorphic actor — accepted by procedures that take `type` in input and

@@ -240,18 +240,25 @@ function buildRentDisplay(policy: PolicyForCover): string {
 }
 
 function buildPaymentMethodDescription(policy: PolicyForCover): string {
-  const primaryLandlord = policy.landlords.find((l) => l.isPrimary) ?? policy.landlords[0];
   const method = policy.paymentMethod;
   const mp = t.pages.documents.coverPage.metodoPago;
 
   if (!method) return BLANK;
 
-  if (method.toLowerCase().includes('transfer') || primaryLandlord?.bankName) {
+  // Banking is optional per landlord; render every account that has data
+  // (the relevant deposit account is whichever landlord filled it in).
+  const landlordsWithBanking = policy.landlords.filter(
+    (l) => l.accountHolder || l.bankName || l.accountNumber || l.clabe,
+  );
+
+  if (method.toLowerCase().includes('transfer') || landlordsWithBanking.length > 0) {
     const parts = [mp.bankTransfer];
-    if (primaryLandlord?.accountHolder) parts.push(`${mp.holder}: ${primaryLandlord.accountHolder}.`);
-    if (primaryLandlord?.bankName) parts.push(`${mp.bank}: ${primaryLandlord.bankName}.`);
-    if (primaryLandlord?.accountNumber) parts.push(`${mp.account}: ${primaryLandlord.accountNumber}.`);
-    if (primaryLandlord?.clabe) parts.push(`${mp.clabe}: ${primaryLandlord.clabe}.`);
+    for (const l of landlordsWithBanking) {
+      if (l.accountHolder) parts.push(`${mp.holder}: ${l.accountHolder}.`);
+      if (l.bankName) parts.push(`${mp.bank}: ${l.bankName}.`);
+      if (l.accountNumber) parts.push(`${mp.account}: ${l.accountNumber}.`);
+      if (l.clabe) parts.push(`${mp.clabe}: ${l.clabe}.`);
+    }
     return parts.join('\n');
   }
 

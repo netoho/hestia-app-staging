@@ -86,7 +86,7 @@ class PolicyWorkflowService extends BaseService {
 
   /**
    * Check if all required actors are present and have their info complete.
-   * Delegates to actorTokenService so the rules (primary landlord, guarantorType-aware
+   * Delegates to actorTokenService so the rules (all landlords, guarantorType-aware
    * joint obligor / aval requirements) stay in one place.
    */
   async checkAllActorsInfoComplete(policyId: string): Promise<boolean> {

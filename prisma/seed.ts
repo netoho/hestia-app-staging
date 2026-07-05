@@ -316,7 +316,7 @@ async function main() {
       position: 'Gerente',
       monthlyIncome: 45000,
       incomeSource: 'salary',
-      guaranteeMethod: 'income',
+      guaranteeMethod: 'INCOME',
       hasPropertyGuarantee: false,
       maritalStatus: 'single',
     }
@@ -481,7 +481,7 @@ async function main() {
       propertyRegistry: 'Registro Público CDMX',
       propertyTaxAccount: 'PRED-123456',
       propertyUnderLegalProceeding: false,
-      guaranteeMethod: 'property',
+      guaranteeMethod: 'PROPERTY',
       hasPropertyGuarantee: true,
       // Marriage info
       maritalStatus: 'married_separate',

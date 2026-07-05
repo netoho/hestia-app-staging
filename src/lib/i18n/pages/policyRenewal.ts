@@ -50,6 +50,7 @@ export const policyRenewal = {
 
   // Landlord
   landlordTitle: "Arrendador",
+  landlordCoOwnerTitle: "Copropietario",
   landlordBasicInfo: "Datos generales (nombre, RFC, CURP, empresa, representante legal)",
   landlordContact: "Contacto (email, teléfonos)",
   landlordAddress: "Domicilio",

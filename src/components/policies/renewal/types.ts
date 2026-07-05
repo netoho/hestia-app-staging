@@ -4,11 +4,12 @@ export interface RenewalSourceSummary {
   policyId: string;
   policyNumber: string;
   guarantorType: GuarantorType;
-  landlord: {
+  landlords: Array<{
     id: string;
     displayName: string;
     documentCount: number;
-  };
+    isPrimary: boolean;
+  }>;
   tenant: {
     id: string;
     displayName: string;

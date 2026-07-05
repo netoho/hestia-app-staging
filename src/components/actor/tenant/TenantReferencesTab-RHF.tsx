@@ -15,7 +15,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
-import { getTenantTabSchema, type TenantType } from '@/lib/schemas/tenant';
+import { getTenantTabSchema, type TenantType } from '@/lib/domain/tenant/schema';
 
 // Constants for reference limits
 const REFERENCE_LIMITS = {
@@ -64,7 +64,7 @@ export default function TenantReferencesTabRHF({
   const schema = getTenantTabSchema(tenantType, 'references');
 
   const form = useForm({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
     defaultValues: isCompany
       ? {

@@ -99,7 +99,7 @@ export async function sendPolicyExpirationReminders(): Promise<ExpirationReminde
           expiresAt: { gte: windowStart, lt: windowEnd },
         },
         include: {
-          landlords: { where: { isPrimary: true }, take: 1 },
+          landlords: { where: { email: { not: '' } } },
           managedBy: { select: { id: true, email: true, name: true } },
           propertyDetails: {
             include: { propertyAddressDetails: true },
@@ -113,8 +113,8 @@ export async function sendPolicyExpirationReminders(): Promise<ExpirationReminde
         tierResult.policiesProcessed++;
 
         try {
-          const primary = policy.landlords[0];
-          if (!primary || !primary.email) {
+          const policyLandlords = policy.landlords.filter((l) => l.email);
+          if (policyLandlords.length === 0) {
             tierResult.skipped++;
             continue;
           }
@@ -145,9 +145,10 @@ export async function sendPolicyExpirationReminders(): Promise<ExpirationReminde
 
           const recipients: Array<{ email: string; name: string }> = [];
 
-          // Tier 1-60: always primary landlord
-          const landlordName = landlordDisplayName(primary);
-          recipients.push({ email: primary.email, name: landlordName });
+          // Tier 1-60: every landlord (primary + co-owners) is notified
+          for (const landlord of policyLandlords) {
+            recipients.push({ email: landlord.email, name: landlordDisplayName(landlord) });
+          }
 
           // Tier 1 (1-day): also broker + admins
           if (tier === 1) {

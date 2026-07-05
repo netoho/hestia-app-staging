@@ -3,7 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
 import { getFriendlyError } from '@/lib/utils/trpcErrors';
 
-interface Tab {
+export interface Tab {
   id: string;
   label: string;
   needsSave?: boolean;

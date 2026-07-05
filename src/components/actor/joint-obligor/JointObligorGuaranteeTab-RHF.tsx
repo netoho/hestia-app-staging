@@ -52,7 +52,7 @@ export default function JointObligorGuaranteeTab({
     resolver: zodResolver(jointObligorGuaranteeTabSchema),
     mode: 'onChange',
     defaultValues: {
-      guaranteeMethod: 'income', // Default to income
+      guaranteeMethod: 'INCOME', // Default to income
       hasPropertyGuarantee: false,
       propertyUnderLegalProceeding: false,
       ...initialData,
@@ -61,8 +61,8 @@ export default function JointObligorGuaranteeTab({
 
   // Watch guarantee method for conditional rendering
   const guaranteeMethod = form.watch('guaranteeMethod');
-  const isIncomeGuarantee = guaranteeMethod === 'income';
-  const isPropertyGuarantee = guaranteeMethod === 'property';
+  const isIncomeGuarantee = guaranteeMethod === 'INCOME';
+  const isPropertyGuarantee = guaranteeMethod === 'PROPERTY';
 
   // Watch marital status for spouse fields (property guarantee)
   const maritalStatus = form.watch('maritalStatus');
@@ -131,7 +131,7 @@ export default function JointObligorGuaranteeTab({
                         onValueChange={(value) => {
                           field.onChange(value);
                           // Reset relevant fields when switching
-                          if (value === 'income') {
+                          if (value === 'INCOME') {
                             form.setValue('hasPropertyGuarantee', false);
                           } else {
                             form.setValue('hasPropertyGuarantee', true);
@@ -140,14 +140,14 @@ export default function JointObligorGuaranteeTab({
                         disabled={disabled}
                       >
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="income" id="income-guarantee" />
+                          <RadioGroupItem value="INCOME" id="income-guarantee" />
                           <Label htmlFor="income-guarantee" className="flex items-center cursor-pointer">
                             <CreditCard className="h-4 w-4 mr-2" />
                             Garantía por Ingresos
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="property" id="property-guarantee" />
+                          <RadioGroupItem value="PROPERTY" id="property-guarantee" />
                           <Label htmlFor="property-guarantee" className="flex items-center cursor-pointer">
                             <Home className="h-4 w-4 mr-2" />
                             Garantía con Propiedad

@@ -17,7 +17,7 @@ interface JointObligorDocumentsSectionProps {
   obligorId?: string;
   token: string;
   isCompany: boolean;
-  guaranteeMethod?: 'income' | 'property';
+  guaranteeMethod?: 'INCOME' | 'PROPERTY';
   nationality?: 'MEXICAN' | 'FOREIGN';
   allTabsSaved: boolean;
   initialDocuments?: any[];
@@ -31,7 +31,7 @@ export default function JointObligorDocumentsSection({
   obligorId,
   token,
   isCompany,
-  guaranteeMethod = 'income',
+  guaranteeMethod = 'INCOME',
   nationality = 'MEXICAN',
   allTabsSaved,
   initialDocuments = [],
@@ -89,7 +89,7 @@ export default function JointObligorDocumentsSection({
   const getGuaranteeDocuments = () => {
     const guaranteeDocs = [];
 
-    if (guaranteeMethod === 'income') {
+    if (guaranteeMethod === 'INCOME') {
       const incomeDocs = documents[DocumentCategory.INCOME_PROOF] || [];
       if (incomeDocs.length > 0) {
         guaranteeDocs.push({
@@ -98,7 +98,7 @@ export default function JointObligorDocumentsSection({
           documents: incomeDocs
         });
       }
-    } else if (guaranteeMethod === 'property') {
+    } else if (guaranteeMethod === 'PROPERTY') {
       const propertyDeedDocs = documents[DocumentCategory.PROPERTY_DEED] || [];
       const propertyTaxDocs = documents[DocumentCategory.PROPERTY_TAX_STATEMENT] || [];
 

@@ -29,7 +29,8 @@ import {
 } from '../callers';
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
-import { packageFactory, policyFactory } from '../factories';
+import { packageFactory, policyFactory, landlordFactory } from '../factories';
+import { actorTokenService } from '@/lib/services/actorTokenService';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,14 +49,16 @@ function buildCreatePolicyInput(packageId: string, overrides: Partial<Record<str
     landlordPercentage: 0,
     totalPrice: 4100,
     guarantorType: GuarantorType.NONE,
-    landlord: {
-      isCompany: false,
-      firstName: 'Ana',
-      paternalLastName: 'Test',
-      maternalLastName: 'Landlord',
-      email: 'landlord@hestia.test',
-      phone: '5555555555',
-    },
+    landlords: [
+      {
+        isCompany: false,
+        firstName: 'Ana',
+        paternalLastName: 'Test',
+        maternalLastName: 'Landlord',
+        email: 'landlord@hestia.test',
+        phone: '5555555555',
+      },
+    ],
     tenant: {
       tenantType: TenantType.INDIVIDUAL,
       firstName: 'Beto',
@@ -189,7 +192,7 @@ describe('policy.create', () => {
     expect(result.policy.packageId).toBe(pkg.id);
     expect(result.policy.landlords).toHaveLength(1);
     expect(result.policy.landlords[0]!.isPrimary).toBe(true);
-    expect(result.policy.landlords[0]!.email).toBe(input.landlord.email);
+    expect(result.policy.landlords[0]!.email).toBe(input.landlords[0]!.email);
     expect(result.policy.tenant).not.toBeNull();
     expect(result.policy.tenant!.email).toBe(input.tenant.email);
 
@@ -202,6 +205,34 @@ describe('policy.create', () => {
     expect(persisted!.landlords).toHaveLength(1);
     expect(persisted!.tenant).not.toBeNull();
     expect(persisted!.propertyDetails).not.toBeNull();
+  });
+
+  test('creates primary + co-owner landlords; only the first is primary', async () => {
+    const pkg = await packageFactory.create();
+    const { caller } = await createAdminCaller();
+    const input = buildCreatePolicyInput(pkg.id);
+    input.landlords = [
+      input.landlords[0]!,
+      {
+        isCompany: false,
+        firstName: 'Carlos',
+        paternalLastName: 'Co',
+        maternalLastName: 'Owner',
+        email: 'co-owner@hestia.test',
+        phone: '5555555557',
+      },
+    ];
+
+    const result = await caller.policy.create(input);
+
+    expect(result.policy.landlords).toHaveLength(2);
+    const primaries = result.policy.landlords.filter((l) => l.isPrimary);
+    expect(primaries).toHaveLength(1);
+    // The first entry is the primary; co-owners are not.
+    const primary = result.policy.landlords.find((l) => l.email === input.landlords[0]!.email);
+    const coOwner = result.policy.landlords.find((l) => l.email === 'co-owner@hestia.test');
+    expect(primary!.isPrimary).toBe(true);
+    expect(coOwner!.isPrimary).toBe(false);
   });
 
   test('rejects invalid input (validation smoke)', async () => {
@@ -379,6 +410,81 @@ describe('policy.updateStatus', () => {
 });
 
 // ===========================================================================
+// multi-landlord completion gate + progress (PR-1)
+// Every landlord (primary + co-owners) must complete their info; all of them
+// count toward progress and gate activation — matching joint obligor / aval.
+// ===========================================================================
+describe('multi-landlord completion gate', () => {
+  test('a single complete landlord + complete tenant → allComplete', async () => {
+    const { policy, landlord } = await createPolicyWithActors();
+    await prisma.landlord.update({ where: { id: landlord.id }, data: { informationComplete: true } });
+    await prisma.tenant.updateMany({ where: { policyId: policy.id }, data: { informationComplete: true } });
+
+    const result = await actorTokenService.checkPolicyActorsComplete(policy.id);
+    expect(result.landlords).toBe(true);
+    expect(result.allComplete).toBe(true);
+  });
+
+  test('an incomplete co-owner blocks completion even when primary is complete', async () => {
+    const { policy, landlord } = await createPolicyWithActors();
+    await prisma.landlord.update({ where: { id: landlord.id }, data: { informationComplete: true } });
+    await prisma.tenant.updateMany({ where: { policyId: policy.id }, data: { informationComplete: true } });
+    // Add a second, incomplete landlord (co-owner)
+    const coOwner = await landlordFactory.create(
+      { informationComplete: false },
+      { transient: { policyId: policy.id } },
+    );
+
+    const blocked = await actorTokenService.checkPolicyActorsComplete(policy.id);
+    expect(blocked.landlords).toBe(false);
+    expect(blocked.allComplete).toBe(false);
+
+    // Completing the co-owner unblocks
+    await prisma.landlord.update({ where: { id: coOwner.id }, data: { informationComplete: true } });
+    const unblocked = await actorTokenService.checkPolicyActorsComplete(policy.id);
+    expect(unblocked.landlords).toBe(true);
+    expect(unblocked.allComplete).toBe(true);
+  });
+
+  test('getById.allActorsComplete reflects every landlord (co-owner gates it)', async () => {
+    const { policy, landlord } = await createPolicyWithActors();
+    await prisma.landlord.update({ where: { id: landlord.id }, data: { informationComplete: true } });
+    await prisma.tenant.updateMany({ where: { policyId: policy.id }, data: { informationComplete: true } });
+    const coOwner = await landlordFactory.create(
+      { informationComplete: false },
+      { transient: { policyId: policy.id } },
+    );
+    const { caller } = await createAdminCaller();
+
+    const blocked = await caller.policy.getById({ id: policy.id });
+    expect(blocked.allActorsComplete).toBe(false);
+
+    await prisma.landlord.update({ where: { id: coOwner.id }, data: { informationComplete: true } });
+    const unblocked = await caller.policy.getById({ id: policy.id });
+    expect(unblocked.allActorsComplete).toBe(true);
+  });
+
+  test('progress counts all landlords — an incomplete co-owner lowers overall', async () => {
+    const { policy, landlord } = await createPolicyWithActors();
+    await prisma.landlord.update({ where: { id: landlord.id }, data: { informationComplete: true } });
+    await prisma.tenant.updateMany({ where: { policyId: policy.id }, data: { informationComplete: true } });
+    const { caller } = await createAdminCaller();
+
+    // 1 complete landlord + 1 complete tenant (guarantorType NONE) → 100%
+    const before = await caller.policy.getById({ id: policy.id, includeProgress: true });
+    expect(before.progress!.overall).toBe(100);
+
+    // Adding an incomplete co-owner pulls completedActors/totalActors below 100
+    await landlordFactory.create(
+      { informationComplete: false },
+      { transient: { policyId: policy.id } },
+    );
+    const after = await caller.policy.getById({ id: policy.id, includeProgress: true });
+    expect(after.progress!.overall).toBeLessThan(100);
+  });
+});
+
+// ===========================================================================
 // policy.getShareLinks — protectedProcedure with BROKER ownership check
 // ===========================================================================
 describe('policy.getShareLinks', () => {
@@ -401,6 +507,35 @@ describe('policy.getShareLinks', () => {
     const tenantLink = result.shareLinks.find((l) => l.actorType === 'tenant');
     expect(tenantLink).toBeDefined();
     expect(tenantLink!.url).toContain('tok-tenant-test');
+  });
+
+  test('returns a link for every landlord, not just the primary', async () => {
+    const { policy, landlord } = await createPolicyWithActors();
+    // Primary landlord token
+    await prisma.landlord.update({
+      where: { id: landlord.id },
+      data: {
+        accessToken: 'tok-landlord-primary',
+        tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+    // Co-owner with its own token
+    await landlordFactory.create(
+      {
+        accessToken: 'tok-landlord-coowner',
+        tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+      { transient: { policyId: policy.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.policy.getShareLinks({ policyId: policy.id });
+
+    const landlordLinks = result.shareLinks.filter((l) => l.actorType === 'landlord');
+    expect(landlordLinks).toHaveLength(2);
+    const urls = landlordLinks.map((l) => l.url);
+    expect(urls.some((u) => u.includes('tok-landlord-primary'))).toBe(true);
+    expect(urls.some((u) => u.includes('tok-landlord-coowner'))).toBe(true);
   });
 
   test('throws NOT_FOUND when policy does not exist', async () => {
@@ -506,8 +641,108 @@ describe('policy.changeGuarantorType', () => {
 // gate here and defer the happy path until renewal-specific factories exist.
 // ===========================================================================
 describe('policy.renew', () => {
+  test('clones every landlord (primary + co-owners), preserving isPrimary', async () => {
+    const { policy } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    // Add a co-owner (non-primary) landlord, no documents → no S3 copy.
+    await landlordFactory.create(
+      { firstName: 'CoOwner', paternalLastName: 'Renew' },
+      { transient: { policyId: policy.id } },
+    );
+    const sourceLandlords = await prisma.landlord.findMany({ where: { policyId: policy.id } });
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.policy.renew({
+      sourcePolicyId: policy.id,
+      startDate: '2027-01-01',
+      endDate: '2028-01-01',
+      selection: {
+        property: { address: false, typeAndDescription: true, features: true, services: true },
+        policyTerms: {
+          guarantorType: GuarantorType.NONE,
+          financial: true,
+          contract: true,
+          packageAndPricing: true,
+        },
+        landlords: sourceLandlords.map((l) => ({
+          sourceId: l.id,
+          include: true,
+          basicInfo: true,
+          contact: true,
+          address: false,
+          banking: true,
+          propertyDeed: true,
+          cfdi: true,
+          documents: false,
+        })),
+        tenant: {
+          include: false,
+          basicInfo: false,
+          contact: false,
+          address: false,
+          employment: false,
+          rentalHistory: false,
+          references: false,
+          paymentPreferences: false,
+          documents: false,
+        },
+        jointObligors: [],
+        avals: [],
+      },
+    });
+
+    const newLandlords = await prisma.landlord.findMany({
+      where: { policyId: result.newPolicyId },
+      orderBy: { isPrimary: 'desc' },
+    });
+    expect(newLandlords).toHaveLength(2);
+    expect(newLandlords.filter((l) => l.isPrimary)).toHaveLength(1);
+    // The co-owner carried over alongside the primary.
+    expect(newLandlords.map((l) => l.firstName)).toContain('CoOwner');
+  });
+
+  test('drops a co-owner whose include is false (per-landlord selection)', async () => {
+    const { policy, landlord } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    const coOwner = await landlordFactory.create(
+      { firstName: 'Dropped', paternalLastName: 'CoOwner' },
+      { transient: { policyId: policy.id } },
+    );
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.policy.renew({
+      sourcePolicyId: policy.id,
+      startDate: '2027-01-01',
+      endDate: '2028-01-01',
+      selection: {
+        property: { address: true, typeAndDescription: true, features: true, services: true },
+        policyTerms: {
+          guarantorType: GuarantorType.NONE,
+          financial: true,
+          contract: true,
+          packageAndPricing: true,
+        },
+        landlords: [
+          { sourceId: landlord.id, include: true, basicInfo: true, contact: true, address: true, banking: true, propertyDeed: true, cfdi: true, documents: false },
+          { sourceId: coOwner.id, include: false, basicInfo: true, contact: true, address: true, banking: true, propertyDeed: true, cfdi: true, documents: false },
+        ],
+        tenant: {
+          include: false, basicInfo: false, contact: false, address: false, employment: false,
+          rentalHistory: false, references: false, paymentPreferences: false, documents: false,
+        },
+        jointObligors: [],
+        avals: [],
+      },
+    });
+
+    const newLandlords = await prisma.landlord.findMany({
+      where: { policyId: result.newPolicyId },
+    });
+    // Only the included landlord carried over; the excluded co-owner was dropped.
+    expect(newLandlords).toHaveLength(1);
+    expect(newLandlords.map((l) => l.firstName)).not.toContain('Dropped');
+  });
+
   test('auth gate: ADMIN/STAFF allowed; BROKER and PUBLIC blocked', async () => {
-    const { policy } = await createPolicyWithActors();
+    const { policy, landlord } = await createPolicyWithActors();
 
     await expectAuthGate({
       allowed: [UserRole.ADMIN, UserRole.STAFF],
@@ -524,16 +759,19 @@ describe('policy.renew', () => {
               contract: true,
               packageAndPricing: true,
             },
-            landlord: {
-              include: true,
-              basicInfo: true,
-              contact: true,
-              address: true,
-              banking: true,
-              propertyDeed: true,
-              cfdi: true,
-              documents: true,
-            },
+            landlords: [
+              {
+                sourceId: landlord.id,
+                include: true,
+                basicInfo: true,
+                contact: true,
+                address: true,
+                banking: true,
+                propertyDeed: true,
+                cfdi: true,
+                documents: true,
+              },
+            ],
             tenant: {
               include: false,
               basicInfo: false,

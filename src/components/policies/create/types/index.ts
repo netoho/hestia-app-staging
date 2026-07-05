@@ -102,7 +102,7 @@ export interface TenantFormData extends ActorFormData {
 export interface PolicyCreationFormData {
   property: PropertyFormData;
   pricing: PricingFormData;
-  landlord: LandlordFormData;
+  landlords: LandlordFormData[];
   tenant: TenantFormData;
   guarantorType: GuarantorType;
   jointObligors: ActorFormData[];

@@ -9,7 +9,7 @@ import { DocumentCategory, DocumentUploadStatus } from "@/prisma/generated/prism
 import {BaseActorService} from './BaseActorService';
 import {AsyncResult, Result} from '../types/result';
 import {ErrorCode, ServiceError} from '../types/errors';
-import {ActorData, CompanyActorData, PersonActorData} from '@/lib/types/actor';
+import {ActorData, AddressWithMetadata, CompanyActorData, PersonActorData} from '@/lib/types/actor';
 import type {JointObligorWithRelations} from './types';
 import {
   jointObligorStrictSchema,
@@ -17,10 +17,11 @@ import {
   jointObligorAdminSchema,
   validateJointObligorTab,
   getJointObligorTabSchema,
-  JointObligorComplete,
-  JointObligorPartial,
+  type JointObligorTypeEnum,
+  type GuaranteeMethodEnum,
 } from '@/lib/schemas/joint-obligor';
-import { prepareJointObligorForDB, prepareJointObligorForPartialUpdate } from '@/lib/utils/joint-obligor/prepareForDB';
+import { jointObligorSelect } from '@/lib/domain/joint-obligor/select';
+import { toDb as jointObligorToDb } from '@/lib/domain/joint-obligor/adapters/db';
 
 export class JointObligorService extends BaseActorService<JointObligorWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
@@ -38,23 +39,9 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
    * Get includes for joint obligor queries
    */
   protected getIncludes(): Record<string, boolean | object> {
-    return {
-      addressDetails: true,
-      employerAddressDetails: true,
-      guaranteePropertyDetails: true,
-      personalReferences: true,
-      commercialReferences: true,
-      policy: {
-        include: {
-          propertyDetails: {
-            include: {
-              propertyAddressDetails: true,
-              contractSigningAddressDetails: true,
-            }
-          }
-        }
-      },
-    };
+    // Single source of truth for joint-obligor relations — see
+    // `@/lib/domain/joint-obligor/select`.
+    return jointObligorSelect;
   }
 
   /**
@@ -82,7 +69,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     tab: string,
     data: any,
     jointObligorType: 'INDIVIDUAL' | 'COMPANY',
-    guaranteeMethod?: 'income' | 'property',
+    guaranteeMethod?: 'INCOME' | 'PROPERTY',
     isPartial: boolean = false
   ): Result<any> {
     const validation = validateJointObligorTab(tab, data, jointObligorType, guaranteeMethod, isPartial);
@@ -102,7 +89,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
   }
 
   /**
-   * Save joint obligor information using new prepareForDB utility
+   * Save joint obligor information via the canonical domain db adapter (toDb).
    */
   async saveJointObligorInformation(
     jointObligorId: string,
@@ -112,24 +99,31 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     tabName?: string
   ): AsyncResult<JointObligorWithRelations> {
     return this.executeTransaction(async (tx) => {
-      // Fetch existing joint obligor to get policyId
+      // Fetch existing joint obligor to resolve address relations.
       const existingJointObligor = await tx.jointObligor.findUnique({
         where: { id: jointObligorId },
-        select: { policyId: true }
+        select: {
+          addressId: true,
+          employerAddressId: true,
+          guaranteePropertyAddressId: true,
+        },
       });
 
       if (!existingJointObligor) {
-        throw new ServiceError(
-          ErrorCode.NOT_FOUND,
-          'Joint Obligor not found',
-          404
-        );
+        throw new ServiceError(ErrorCode.NOT_FOUND, 'Joint Obligor not found', 404);
       }
 
-      // Validate data if not skipping validation
+      const typed = data as {
+        jointObligorType?: JointObligorTypeEnum;
+        guaranteeMethod?: GuaranteeMethodEnum;
+      };
+      const jointObligorType = typed.jointObligorType ?? 'INDIVIDUAL';
+      const guaranteeMethod = typed.guaranteeMethod;
+
+      // Validate (raw input) unless explicitly skipped.
       if (!skipValidation) {
         const validation = isPartial
-          ? this.validateTabData(tabName || 'personal', data, data.jointObligorType || 'INDIVIDUAL', data.guaranteeMethod, true)
+          ? this.validateTabData(tabName || 'personal', data, jointObligorType, guaranteeMethod, true)
           : this.validatePersonData(data, false);
 
         if (!validation.ok) {
@@ -137,26 +131,116 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
         }
       }
 
-      // Prepare data for database using utility
-      const dbData = isPartial
-        ? prepareJointObligorForPartialUpdate(data as JointObligorPartial, existingJointObligor)
-        : prepareJointObligorForDB(data as JointObligorComplete, existingJointObligor.policyId, existingJointObligor.actorId);
+      // Build the Prisma payload via the canonical domain db adapter.
+      const preparedResult = jointObligorToDb(data, {
+        jointObligorType,
+        guaranteeMethod,
+        isPartial,
+        tabName,
+      });
+      if (!preparedResult.ok) {
+        throw preparedResult.error;
+      }
+      const preparedData = preparedResult.value;
 
-      // Update joint obligor
+      // Upsert the address relations the adapter left as nested objects.
+      let addressId: string | undefined;
+      let employerAddressId: string | undefined;
+      let guaranteePropertyAddressId: string | undefined;
+
+      if (preparedData.addressDetails) {
+        const result = await this.upsertAddress(
+          preparedData.addressDetails as AddressWithMetadata,
+          existingJointObligor.addressId,
+        );
+        if (!result.ok) throw result.error;
+        addressId = result.value;
+      }
+      if (preparedData.employerAddressDetails) {
+        const result = await this.upsertAddress(
+          preparedData.employerAddressDetails as AddressWithMetadata,
+          existingJointObligor.employerAddressId,
+        );
+        if (!result.ok) throw result.error;
+        employerAddressId = result.value;
+      }
+      if (preparedData.guaranteePropertyDetails) {
+        const result = await this.upsertAddress(
+          preparedData.guaranteePropertyDetails as AddressWithMetadata,
+          existingJointObligor.guaranteePropertyAddressId,
+        );
+        if (!result.ok) throw result.error;
+        guaranteePropertyAddressId = result.value;
+      }
+
+      const updateData = this.buildJointObligorUpdateData(
+        preparedData,
+        addressId,
+        employerAddressId,
+        guaranteePropertyAddressId,
+      );
+
       const updatedJointObligor = await tx.jointObligor.update({
         where: { id: jointObligorId },
-        data: dbData as any,
-        include: this.getIncludes()
+        data: updateData,
+        include: this.getIncludes(),
       });
 
-      this.log('info', 'Joint obligor information saved', {
-        jointObligorId,
-        isPartial,
-        tabName
-      });
+      this.log('info', 'Joint obligor information saved', { jointObligorId, isPartial, tabName });
 
       return updatedJointObligor as JointObligorWithRelations;
     }, 'saveJointObligorInformation');
+  }
+
+  /**
+   * Build the Prisma update payload from the adapter output. Base actor fields
+   * (name/company/legalRep/contact/bank/occupation/income) come from
+   * `buildUpdateData`; this adds the joint-obligor-specific scalars + the
+   * upserted address FKs. References are saved separately by the router.
+   */
+  private buildJointObligorUpdateData(
+    data: Record<string, unknown>,
+    addressId?: string,
+    employerAddressId?: string,
+    guaranteePropertyAddressId?: string,
+  ): Record<string, unknown> {
+    const updateData = this.buildUpdateData(data as Partial<ActorData>);
+
+    // Identity + relationship.
+    if (data.jointObligorType !== undefined) updateData.jointObligorType = data.jointObligorType;
+    if (data.relationshipToTenant !== undefined) updateData.relationshipToTenant = data.relationshipToTenant || null;
+    if (data.nationality !== undefined) updateData.nationality = data.nationality || null;
+    if (data.passport !== undefined) updateData.passport = data.passport || null;
+    if (addressId) updateData.addressId = addressId;
+
+    // Employment (income guarantee, individuals).
+    if (data.employmentStatus !== undefined) updateData.employmentStatus = data.employmentStatus || null;
+    if (data.position !== undefined) updateData.position = data.position || null;
+    if (data.incomeSource !== undefined) updateData.incomeSource = data.incomeSource || null;
+    if (data.hasProperties !== undefined) updateData.hasProperties = data.hasProperties;
+    if (employerAddressId) updateData.employerAddressId = employerAddressId;
+
+    // Guarantee method + flag.
+    if (data.guaranteeMethod !== undefined) updateData.guaranteeMethod = data.guaranteeMethod || null;
+    if (data.hasPropertyGuarantee !== undefined) updateData.hasPropertyGuarantee = data.hasPropertyGuarantee;
+
+    // Property guarantee.
+    if (data.propertyValue !== undefined) updateData.propertyValue = data.propertyValue || null;
+    if (data.propertyDeedNumber !== undefined) updateData.propertyDeedNumber = data.propertyDeedNumber || null;
+    if (data.propertyRegistry !== undefined) updateData.propertyRegistry = data.propertyRegistry || null;
+    if (data.propertyTaxAccount !== undefined) updateData.propertyTaxAccount = data.propertyTaxAccount || null;
+    if (data.propertyUnderLegalProceeding !== undefined) {
+      updateData.propertyUnderLegalProceeding = data.propertyUnderLegalProceeding || false;
+    }
+    if (guaranteePropertyAddressId) updateData.guaranteePropertyAddressId = guaranteePropertyAddressId;
+
+    // Marriage information (property guarantee).
+    if (data.maritalStatus !== undefined) updateData.maritalStatus = data.maritalStatus || null;
+    if (data.spouseName !== undefined) updateData.spouseName = data.spouseName || null;
+    if (data.spouseRfc !== undefined) updateData.spouseRfc = data.spouseRfc || null;
+    if (data.spouseCurp !== undefined) updateData.spouseCurp = data.spouseCurp || null;
+
+    return updateData;
   }
 
   /**
@@ -454,12 +538,12 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       }
 
       // Additional docs for property guarantee
-      if (jointObligor.guaranteeMethod === 'property' || jointObligor.hasPropertyGuarantee) {
+      if (jointObligor.guaranteeMethod === 'PROPERTY' || jointObligor.hasPropertyGuarantee) {
         requiredDocs.push('property_deed', 'property_tax_statement');
       }
 
       // Additional docs for income guarantee
-      if (jointObligor.guaranteeMethod === 'income') {
+      if (jointObligor.guaranteeMethod === 'INCOME') {
         requiredDocs.push('proof_of_income', 'bank_statement');
       }
 
@@ -480,7 +564,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     const jointObligor = jointObligorResult.value;
 
     // Check based on guarantee method
-    if (jointObligor.guaranteeMethod === 'property') {
+    if (jointObligor.guaranteeMethod === 'PROPERTY') {
       // Verify property information is complete
       const hasPropertyInfo = !!(
         jointObligor.propertyAddress &&
@@ -490,7 +574,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       return Result.ok(hasPropertyInfo);
     }
 
-    if (jointObligor.guaranteeMethod === 'income') {
+    if (jointObligor.guaranteeMethod === 'INCOME') {
       // Verify income information is complete
       const hasIncomeInfo = !!(
         jointObligor.occupation &&
@@ -562,13 +646,13 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     // Joint obligor specific - must have guarantee method
     if (!jointObligor.guaranteeMethod) errors.push('Método de garantía requerido');
 
-    if (jointObligor.guaranteeMethod === 'property') {
+    if (jointObligor.guaranteeMethod === 'PROPERTY') {
       // Property guarantee validation
       if (!jointObligor.hasPropertyGuarantee) errors.push('Garantía de propiedad requerida');
       if (!jointObligor.propertyDeedNumber) errors.push('Número de escritura de garantía requerido');
       if (!jointObligor.propertyRegistry) errors.push('Folio de registro de garantía requerido');
       if (!jointObligor.propertyValue) errors.push('Valor de propiedad de garantía requerido');
-    } else if (jointObligor.guaranteeMethod === 'income') {
+    } else if (jointObligor.guaranteeMethod === 'INCOME') {
       // Income guarantee validation
       if (!jointObligor.monthlyIncome) errors.push('Ingreso mensual requerido para garantía por ingresos');
       // TODO: Validate minimum income rule with business before enabling
@@ -607,7 +691,7 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
     if (!obligor.ok) return obligor;
 
     const isCompany = obligor.value.jointObligorType === 'COMPANY';
-    const guaranteeMethod = obligor.value.guaranteeMethod as 'income' | 'property' | undefined;
+    const guaranteeMethod = obligor.value.guaranteeMethod as 'INCOME' | 'PROPERTY' | undefined;
     const nationality = obligor.value.nationality;
 
     const requiredDocs = getRequiredDocuments('jointObligor', isCompany, {

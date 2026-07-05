@@ -21,6 +21,7 @@ import { GET as testReminderGet } from '@/app/api/cron/test-reminder/route';
 import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 import { prisma } from '../../utils/database';
 import { createPolicyWithActors } from '../scenarios';
+import { landlordFactory } from '../factories';
 import { buildRequest, readJson } from '../restHelpers';
 
 function addDays(base: Date, days: number): Date {
@@ -50,6 +51,25 @@ describe('GET /api/cron/incomplete-actors-reminder', () => {
     // Primary landlord + tenant are both incomplete with email → 2 reminders.
     expect(envelope.result.remindersSent).toBeGreaterThanOrEqual(2);
     expect(Array.isArray(envelope.result.errors)).toBe(true);
+  });
+
+  test('reminds every incomplete landlord (co-owners), not just the primary', async () => {
+    // Primary landlord + tenant (both incomplete) + a second incomplete co-owner.
+    const { policy } = await createPolicyWithActors();
+    await landlordFactory.create(
+      { informationComplete: false },
+      { transient: { policyId: policy.id } },
+    );
+
+    const res = await incompleteActorsGet(
+      buildRequest('GET', 'http://localhost/api/cron/incomplete-actors-reminder'),
+    );
+    const { status, body } = await readJson(res);
+
+    expect(status).toBe(200);
+    const result = (body as { result: { remindersSent: number } }).result;
+    // primary landlord + co-owner + tenant all incomplete with email → >= 3.
+    expect(result.remindersSent).toBeGreaterThanOrEqual(3);
   });
 
   test('returns success with zero counters when no policies are eligible', async () => {
@@ -116,6 +136,36 @@ describe('GET /api/cron/policy-expiration-reminder', () => {
     expect(log?.status).toBe('sent');
   });
 
+  test('reminds every landlord (co-owners included), not just the primary', async () => {
+    const { policy } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    const coOwner = await landlordFactory.create(
+      {},
+      { transient: { policyId: policy.id } },
+    );
+    await prisma.policy.update({
+      where: { id: policy.id },
+      data: { expiresAt: addDays(new Date(), 30) },
+    });
+
+    const res = await policyExpirationReminderGet(
+      buildRequest('GET', 'http://localhost/api/cron/policy-expiration-reminder'),
+    );
+    const { status, body } = await readJson(res);
+    expect(status).toBe(200);
+    const result = (body as { result: { totalRemindersSent: number } }).result;
+    // Primary + co-owner both notified.
+    expect(result.totalRemindersSent).toBeGreaterThanOrEqual(2);
+
+    const coOwnerLog = await prisma.reminderLog.findFirst({
+      where: {
+        policyId: policy.id,
+        reminderType: 'policy_expiration_tier_30',
+        recipientEmail: coOwner.email,
+      },
+    });
+    expect(coOwnerLog?.status).toBe('sent');
+  });
+
   test('returns totalRemindersSent=0 when no policies are in any tier window', async () => {
     const res = await policyExpirationReminderGet(
       buildRequest('GET', 'http://localhost/api/cron/policy-expiration-reminder'),
@@ -145,6 +195,29 @@ describe('GET /api/cron/policy-quarterly-followup', () => {
     expect(log).not.toBeNull();
     expect(log?.recipientEmail).toBe(landlord.email);
     expect(log?.status).toBe('sent');
+  });
+
+  test('sends quarterly follow-up to every landlord (co-owners included)', async () => {
+    const { policy, landlord } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    const coOwner = await landlordFactory.create(
+      {},
+      { transient: { policyId: policy.id } },
+    );
+
+    const res = await policyQuarterlyFollowupGet(
+      buildRequest('GET', 'http://localhost/api/cron/policy-quarterly-followup'),
+    );
+    const { status, body } = await readJson(res);
+    expect(status).toBe(200);
+    const result = (body as { result: { remindersSent: number } }).result;
+    expect(result.remindersSent).toBeGreaterThanOrEqual(2);
+
+    for (const email of [landlord.email, coOwner.email]) {
+      const log = await prisma.reminderLog.findFirst({
+        where: { policyId: policy.id, reminderType: 'policy_quarterly_followup', recipientEmail: email },
+      });
+      expect(log?.status).toBe('sent');
+    }
   });
 
   test('skips policies with a recent quarterly follow-up already logged', async () => {
