@@ -494,7 +494,7 @@ describe('actor.saveMultipleLandlords (landlord)', () => {
     await expect(
       caller.actor.saveMultipleLandlords({
         policyId: policy.id,
-        // @ts-expect-error — intentionally minimal: gate fires before validation
+        // intentionally minimal payload: the auth gate fires before input validation
         landlords: [],
       }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });

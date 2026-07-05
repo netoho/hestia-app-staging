@@ -70,5 +70,4 @@ export const policyFactory = Factory.define<Policy, PolicyTransient>(
 );
 
 export const cancelledPolicy = policyFactory.params({ status: PolicyStatus.CANCELLED });
-export const submittedPolicy = policyFactory.params({ status: PolicyStatus.SUBMITTED });
 export const collectingInfoPolicy = policyFactory.params({ status: PolicyStatus.COLLECTING_INFO });

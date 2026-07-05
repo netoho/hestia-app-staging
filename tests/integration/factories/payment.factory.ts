@@ -19,7 +19,9 @@ type PaymentTransient = { policyId: string };
 
 export const paymentFactory = Factory.define<Payment, PaymentTransient>(
   ({ sequence, transientParams, onCreate }) => {
-    onCreate(async (p) => prisma.payment.create({ data: p }));
+    // metadata is a nullable Json column: the model type allows `null`, but the
+    // create input wants the value omitted (or Prisma.JsonNull) — map it away.
+    onCreate(async (p) => prisma.payment.create({ data: { ...p, metadata: p.metadata ?? undefined } }));
 
     return {
       id: undefined as unknown as string,
