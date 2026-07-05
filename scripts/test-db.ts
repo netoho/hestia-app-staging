@@ -95,8 +95,30 @@ async function execArgs(args: string[]): Promise<number> {
   return await proc.exited;
 }
 
+// `.env.test.local` commonly points at the dev DB (documented footgun). When the
+// active DATABASE_URL isn't a *_test database but `.env.test` has one, prefer the
+// safe URL instead of refusing — same fallback as tests/integration/preload.ts.
+function fallbackToEnvTestUrl(): void {
+  const url = process.env.DATABASE_URL ?? '';
+  if (url.endsWith('_test')) return;
+  const raw = readFileSync(resolve(process.cwd(), '.env.test'), 'utf8');
+  const line = raw.split('\n').find((l) => l.trim().startsWith('DATABASE_URL='));
+  if (!line) return;
+  let value = line.trim().slice('DATABASE_URL='.length).trim();
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    value = value.slice(1, -1);
+  }
+  if (value.endsWith('_test')) {
+    console.warn(
+      `[test-db] DATABASE_URL is not a *_test database (got: ${url || '<unset>'}) — falling back to .env.test's DATABASE_URL`,
+    );
+    process.env.DATABASE_URL = value;
+  }
+}
+
 async function main(): Promise<void> {
   loadDotenvTest();
+  fallbackToEnvTestUrl();
 
   const args = process.argv.slice(2);
   let mode: 'setup' | 'run' = 'setup';
