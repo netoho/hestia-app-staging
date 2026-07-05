@@ -476,7 +476,7 @@ export class DocumentService extends BaseService {
 ### Example 2: API Route for Document Download
 
 ```typescript
-// File: src/app/api/documents/[id]/download/route.ts:15-40
+// Illustrative only — the real flow is presigned URLs via documentService + the document tRPC router
 import { getStorageProvider } from '@/lib/storage';
 import { DocumentService } from '@/lib/services/documentService';
 
@@ -518,7 +518,7 @@ export async function GET(
 ### Example 3: Multi-File Upload
 
 ```typescript
-// File: src/app/api/actors/[type]/[identifier]/documents/route.ts:50-85
+// Illustrative only — actor document listing goes through the document tRPC router
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const files = formData.getAll('files') as File[];
