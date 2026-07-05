@@ -168,7 +168,8 @@ Confirm no remaining imports across the codebase, then delete.
 
 - `bun run test:unit` — new unit tests green.
 - `bun run test:integration` — existing integration tests green.
-- `bun run build` — type-check green.
+- `bun run typecheck:ratchet` — tracked-file tsc error count did not grow
+  (note: `bun run build` does NOT type-check — `ignoreBuildErrors` is on).
 - `grep -rn "as any" src/lib/utils/<entity> src/lib/services/actors/<Entity>Service.ts src/components/actor/<entity>` — zero hits.
 
 ## Patterns the recipe extends to (A–F)

@@ -128,8 +128,8 @@ docs/                      # Extended documentation
 # Database
 DATABASE_URL="postgresql://..."
 
-# Authentication
-NEXTAUTH_URL="http://localhost:3000"
+# Authentication (dev server runs on 9002)
+NEXTAUTH_URL="http://localhost:9002"
 NEXTAUTH_SECRET="..."
 JWT_SECRET="..."
 
@@ -145,7 +145,7 @@ GOOGLE_MAPS_API_KEY="..."
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="..."
 
 # App
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:9002"
 ```
 
 See [STORAGE_SETUP.md](STORAGE_SETUP.md) for detailed storage configuration.
