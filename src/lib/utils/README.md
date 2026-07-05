@@ -1,22 +1,20 @@
 # Utilities
 
-Data transformation and helper functions for the application.
+Data transformation and helper functions. **Actor data preparation no longer lives
+here** — every `prepareForDB` file was deleted by the #123 hexagonal sweep; the write
+path is `toDb()` in `src/lib/domain/<entity>/adapters/db.ts` for all four actors.
 
-## Directory Structure
+## Directory Structure (flat — no per-actor subdirectories anymore)
 
 ```
 utils/
-├── dataTransform.ts       # Base transforms (shared by all actors)
-├── prepareForDB.ts        # Consolidated actor data preparation
-├── landlord/prepareForDB.ts   # Landlord-specific transforms
-├── tenant/prepareForDB.ts     # Tenant-specific transforms
-├── aval/prepareForDB.ts       # Aval-specific transforms
-├── joint-obligor/prepareForDB.ts  # JointObligor-specific transforms
+├── dataTransform.ts       # Base transforms (consumed by the domain db adapters)
 ├── actor.ts               # Actor helper utilities
 ├── actorMapping.ts        # Actor type/model mapping
 ├── actorValidation.ts     # Actor validation helpers
 ├── addressUtils.ts        # Address utilities
 ├── currency.ts            # Currency formatting
+├── dateRangePresets.ts    # Date-range picker presets
 ├── filename.ts            # Filename utilities
 ├── formatting.ts          # Date, address, file size formatting
 ├── modernEmailTemplates.ts # Email template helpers
@@ -25,17 +23,17 @@ utils/
 ├── optimisticUpdates.ts   # Optimistic UI update helpers
 ├── policy.ts              # Policy utils (number, progress, display)
 ├── prismaActorDelegate.ts # Prisma actor delegate abstraction
+├── receiptConfig.ts       # Receipt configuration helpers
 ├── requestCache.ts        # Request-level caching
 ├── tokenUtils.ts          # Token utilities
-├── trpcErrorHandler.ts    # tRPC error mapping
+├── trpcErrorHandler.ts    # Service-error → tRPC error mapping
+├── trpcErrors.ts          # Client-side friendly-error parsing (getFriendlyError)
 └── validationUtils.ts     # Shared validation helpers
 ```
 
 ## Data Transformation
 
 ### Base Transforms (`dataTransform.ts`)
-
-Shared functions used by all actor prepareForDB files:
 
 ```typescript
 import {
@@ -47,77 +45,48 @@ import {
 } from '@/lib/utils/dataTransform';
 ```
 
-### Consolidated Prepare (`prepareForDB.ts`)
+These are the normalize step inside every domain `toDb()` — **normalize before
+validate** is the load-bearing ordering (forms submit string numbers/booleans and
+empty strings; canonical schemas reject all three).
 
-Generic actor preparation with shared logic:
-
-```typescript
-import { prepareActorForDB, PrepareOptions } from '@/lib/utils/prepareForDB';
-
-const prepared = prepareActorForDB(formData, {
-  actorType: 'tenant',
-  isCompany: false,
-  isPartial: false,
-});
-```
-
-### Actor-Specific Transforms
-
-Each actor has specific requirements:
-
-| Actor | Special Logic |
-|-------|--------------|
-| **Landlord** | Extracts policy fields, multi-landlord support |
-| **Tenant** | Reference formatting |
-| **Aval** | Mandatory property guarantee, marriage validation |
-| **JointObligor** | Flexible guarantee (income vs property), Prisma relations |
+### Actor writes — use the domain adapters
 
 ```typescript
-// Landlord — migrated to the hexagonal domain layer (S2)
-import { toDb, toDbMultiple } from '@/lib/domain/landlord/adapters/db';
-
-// Tenant — migrated to the hexagonal domain layer (S1)
-import { toDb } from '@/lib/domain/tenant/adapters/db';
-
-// Aval — migrated to the hexagonal domain layer (S3)
-import { toDb } from '@/lib/domain/aval/adapters/db';
-
-// JointObligor (uses Prisma relation format)
-import { prepareJointObligorForDB } from '@/lib/utils/joint-obligor/prepareForDB';
+import { tenantToDb } from '@/lib/domain/tenant/adapters/db';          // S1
+import { landlordToDb } from '@/lib/domain/landlord/adapters/db';      // S2 (multi-record)
+import { avalToDb } from '@/lib/domain/aval/adapters/db';              // S3
+import { jointObligorToDb } from '@/lib/domain/joint-obligor/adapters/db'; // S4b (2-axis variant)
 ```
+
+Anything that hand-builds an actor write payload instead of going through these is a
+bug (one known: `LandlordService.buildUpdateData`, #152).
 
 ## Other Utilities
 
-### Name Formatting (`names.ts`)
+### Names / Currency / Errors
 ```typescript
 import { formatFullName, getInitials } from '@/lib/utils/names';
-```
-
-### Currency (`currency.ts`)
-```typescript
-import { formatCurrency } from '@/lib/utils/currency';
-formatCurrency(15000); // "$15,000.00"
+import { formatCurrency } from '@/lib/utils/currency';   // 15000 -> "$15,000.00"
+import { serviceErrorToTRPC } from '@/lib/utils/trpcErrorHandler';
+import { getFriendlyError } from '@/lib/utils/trpcErrors'; // client-side toasts
 ```
 
 ### Policy Utils (`policy.ts`)
 ```typescript
 import {
-  generatePolicyNumber,       // Generate POL-YYYYMMDD-XXX
-  validatePolicyNumberFormat, // Validate format
-  calculatePolicyProgress,    // Calculate actor completion
-  getPrimaryLandlord,         // Get primary from array
-  getActorDisplayName,        // Format actor name
+  generatePolicyNumber,       // POL-YYYYMMDD-XXX
+  validatePolicyNumberFormat,
+  calculatePolicyProgress,    // actor completion
+  getActorDisplayName,
 } from '@/lib/utils/policy';
 ```
 
-### Error Handling (`trpcErrorHandler.ts`)
-```typescript
-import { serviceErrorToTRPC } from '@/lib/utils/trpcErrorHandler';
-```
+`getPrimaryLandlord` still exists for legacy display ordering only — **do not use it
+for business logic**: every landlord is first-class (links, gates, notifications
+iterate ALL landlords).
 
 ## Best Practices
 
 - Keep utilities pure (no side effects)
 - Import from specific files, not barrel exports
-- Use `dataTransform.ts` functions as the base
-- Actor-specific logic stays in actor-specific files
+- Entity shapes belong to `src/lib/domain/` — utils never define a parallel actor shape

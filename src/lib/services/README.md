@@ -49,9 +49,18 @@ These remain functional because they don't need DB access or BaseService benefit
 
 - `progressService.ts` - Pure calculation functions
 
-### Notification Services
+### Notification & Email
 
-- `notificationService/` - Notification delivery (directory with multiple modules)
+- `notificationService/` - Notification fan-out (fans out to ALL landlords — never just the primary)
+- `emailService.ts` - Provider-agnostic email delivery (SMTP / Resend / Mailgun) + the react-email template senders (`sendActorInvitation`, `sendPolicySubmissionConfirmation`, …). Missing provider config logs and returns `false` — it never throws.
+
+### Domain adapters (the #123 change to this layer)
+
+All four actor services write through `src/lib/domain/<entity>/adapters/db.ts`
+(`<entity>ToDb`: normalize → validate → transform) and read through
+`src/lib/domain/<entity>/select.ts`. Services no longer define entity shapes —
+the canonical Zod schema in `src/lib/domain/<entity>/schema.ts` does. See
+[docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
 
 ---
 
