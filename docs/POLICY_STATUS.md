@@ -14,19 +14,22 @@
 
 ```
 COLLECTING_INFO ──→ PENDING_APPROVAL ──→ ACTIVE ──→ EXPIRED
-       │                    │                │
-       └──→ CANCELLED ←────┘────────────────┘
+       │  │                 │                │
+       │  └──── direct approval ──→ ACTIVE   │
+       └──→ CANCELLED ←────┴─────────────────┘
 ```
 
 ### Allowed Transitions
 
 ```
-COLLECTING_INFO  → PENDING_APPROVAL, CANCELLED
+COLLECTING_INFO  → PENDING_APPROVAL, ACTIVE (direct approval), CANCELLED
 PENDING_APPROVAL → ACTIVE, COLLECTING_INFO, CANCELLED
 ACTIVE           → EXPIRED, CANCELLED
 EXPIRED          → CANCELLED
 CANCELLED        → (none)
 ```
+
+The direct `COLLECTING_INFO → ACTIVE` edge (`ALLOWED_TRANSITIONS`, `policyWorkflowService.ts:15`) is the admin direct-approval path. It gates on actor-information completeness only (see below) and **skips the payment-settled check** — the least-tested transition; exercised by e2e scenario E2E-07 (#161).
 
 ## Validation Gates
 

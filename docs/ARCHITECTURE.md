@@ -62,7 +62,7 @@ Two exceptions, both documented:
 2. The API output (`adapters/api.ts`) is hand-authored because Prisma
    emits `NULL`-but-not-undefined shapes while the canonical schema
    models the form input shape (most fields `.optional().nullable()`).
-   A drift test in `__tests__/api.test.ts` asserts every API field
+   A drift test in `__tests__/adapters.test.ts` (paired with `__tests__/schema.test.ts`) asserts every API field
    exists on the canonical schema — the lock that prevents divergence.
 
 ## Adapter contracts
@@ -131,12 +131,14 @@ After every entity has migrated, `src/lib/schemas/<entity>/` shims
 can be retired.
 
 ```
-S1: tenant (gating slice)        ← this slice
-S2: landlord
-S3: aval
-S4: joint obligor (biggest as-any cleanup; 58 casts removed)
-S5: policy (aggregate)
-S6a/b/c: document / investigation / receipt
+S1: tenant                        ✅ merged (PR #138)
+S2: landlord                      ✅ merged (PRs #146/#147) — multi-record pattern
+S3: aval                          ✅ merged (PR #149) — conditional-required refinement
+S4: joint obligor                 ✅ merged (PRs #153/#154/#156) — 2-axis synthetic variant; 58+ casts removed
+S6a: document                     ✅ merged (PR #157) — leaf entity
+S6b: investigation                ✅ merged (PR #158) — sanitized output + state machine
+S6c: receipt                      ⏳ next (#136)
+S5: policy (aggregate, capstone)  ⏳ design-first, lands last (#133; multi-tenant split to #169)
 ```
 
 ## Why this matters

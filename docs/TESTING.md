@@ -15,8 +15,8 @@ Both are loud, fast feedback. No silent breakage.
 
 ## At a glance
 
-- **311 integration tests** across 13 files
-- **134 procedures + endpoints** under contract (every tRPC procedure plus the in-scope REST handlers)
+- **385 integration tests** across 15 files
+- **108 tRPC procedures (every one `.output()`-locked) + 20 REST handler exports** under contract
 - **Real Postgres test DB** — truncated and reseeded between every test
 - **tRPC**: invoked via `appRouter.createCaller(ctx)` — no HTTP transport
 - **REST**: route handlers invoked directly with constructed `NextRequest`
@@ -36,7 +36,7 @@ bun run test:integration
 bun run test:db:down
 ```
 
-Hard safety net: `tests/integration/preload.ts` refuses to run if `DATABASE_URL` doesn't end in `_test`.
+Hard safety net: `tests/integration/preload.ts` only runs against a `*_test` database. If `DATABASE_URL` points elsewhere (the classic `.env.test.local`-points-at-dev footgun), it falls back to `.env.test`'s URL with a warning — and refuses to run only when no safe URL exists. `scripts/test-db.ts` and `tests/utils/database.ts` (`resetDatabase`) carry the same guard.
 
 CI runs the same flow on every PR — see `.github/workflows/test.yml`. The CI job uses a `postgres:15` service container in place of docker-compose; the rest is identical.
 
@@ -70,7 +70,7 @@ To point the suite at a Postgres you're already running on `localhost:5432`:
    ```
    DATABASE_URL="postgresql://test:test@localhost:5432/hestia_test"
    ```
-   The role you specify must be able to `CREATE DATABASE hestia_test`. The `_test` suffix guard in `scripts/test-db.ts` and `tests/integration/preload.ts` will refuse anything else.
+   The role you specify must be able to `CREATE DATABASE hestia_test`. The `_test` suffix guard in `scripts/test-db.ts` and `tests/integration/preload.ts` applies: a non-`_test` URL here is ignored in favor of `.env.test`'s URL (with a warning), so you can leave a dev-DB override in place without the old stash dance.
 
 2. Provision the schema once per session:
    ```bash
@@ -110,6 +110,8 @@ tests/integration/
 │   ├── payment.factory.ts
 │   ├── tenantReceipt.factory.ts
 │   ├── actorInvestigation.factory.ts
+│   ├── actorDocument.factory.ts
+│   ├── actorInvestigationDocument.factory.ts
 │   └── index.ts
 ├── routers/                    # one file per tRPC router
 │   ├── policy.test.ts
@@ -117,6 +119,7 @@ tests/integration/
 │   ├── actor.test.ts
 │   ├── receipt.test.ts
 │   ├── auxiliary.test.ts       # contract+address+package+pricing
+│   ├── dashboard.test.ts
 │   ├── user-staff-onboard-document.test.ts
 │   └── investigation.test.ts
 └── rest/                       # one file per REST area
@@ -124,6 +127,7 @@ tests/integration/
     ├── webhooks-stripe.test.ts
     ├── payments-receipt.test.ts
     ├── policies-export.test.ts
+    ├── reports-csv.test.ts
     ├── auth.test.ts
     └── user-avatar.test.ts
 
@@ -275,7 +279,7 @@ export const completedFoo = fooFactory.params({ status: 'COMPLETED' });
 
 Then export it from `tests/integration/factories/index.ts`.
 
-Existing factories in this style: `user`, `package`, `policy`, `landlord`, `tenant`, `jointObligor`, `aval`, `payment`, `tenantReceipt`, `actorInvestigation`.
+Existing factories in this style: `user`, `package`, `policy`, `landlord`, `tenant`, `jointObligor`, `aval`, `payment`, `tenantReceipt`, `actorInvestigation`, `actorDocument`, `actorInvestigationDocument`.
 
 ### Recipe 4 — Mock a new external service
 
@@ -312,7 +316,7 @@ If you introduce a new auth scope (e.g. a new role, or a new actor type with its
 
 ### Factories (`tests/integration/factories/`)
 
-`userFactory`, `packageFactory`, `policyFactory`, `landlordFactory`, `tenantFactory`, `jointObligorFactory`, `avalFactory`, `paymentFactory`, `tenantReceiptFactory`, `actorInvestigationFactory`. Each ships with `.params({...})` traits for common variants — see the source for the full set.
+`userFactory`, `packageFactory`, `policyFactory`, `landlordFactory`, `tenantFactory`, `jointObligorFactory`, `avalFactory`, `paymentFactory`, `tenantReceiptFactory`, `actorInvestigationFactory`, `actorDocumentFactory`, `actorInvestigationDocumentFactory`. Each ships with `.params({...})` traits for common variants — see the source for the full set.
 
 ### Scenarios (`tests/integration/scenarios.ts`)
 
@@ -360,23 +364,14 @@ If you introduce a new auth scope (e.g. a new role, or a new actor type with its
 
 ## Gotchas
 
-- **`tests/` is gitignored.** New test files need `git add -f`. (A future cleanup PR will tidy `.gitignore`.)
-- **`ActorAuthService.handleAdminAuth` re-resolves the session via `next/headers`.** The preload mocks both `next/headers` and `next-auth`, but several happy paths that depend on the admin re-resolve are still deferred (see *Known follow-ups* below).
+- **`tests/` and `.github/` are git-tracked** (since the guardrails PR #170; they were gitignored wholesale before — no more `git add -f`). Artifact dirs (`tests/.auth/`, `playwright-report/`, `test-results/`) stay ignored.
+- **`.env.test.local` pointing at a non-test DB is auto-ignored**: the preload and `scripts/test-db.ts` fall back to `.env.test`'s DATABASE_URL with a warning. A legit `*_test` override still wins.
 - **Rate-limited routes** (`/api/auth/login`, `/api/auth/forgot-password`) read `x-forwarded-for` for the rate-limit key. Tests use a unique IP per request — see `tests/integration/rest/auth.test.ts` for the pattern.
-- **`tests/` directory has docker-compose, .env.test, etc. mostly gitignored.** Force-add only what's needed for the suite.
+- **The tsc ratchet gates CI** (`bun run typecheck:ratchet`): the count of type errors in tracked files must not grow past `tsc-baseline.json`. If your PR lowers the count, run with `--update` and commit the new baseline.
 
 ## Known follow-ups
 
-These were carried forward from PRs and are tracked here so they don't get lost:
-
-| Item | Why deferred | Where it'd live |
-|---|---|---|
-| `actor.update` / `actor.submitActor` admin-session happy paths | `ActorAuthService.handleAdminAuth` calls `getServerSession` → `next/headers` which throws outside a request scope. Either refactor the service to read `ctx.session` or tighten the preload mock. | `tests/integration/routers/actor.test.ts` |
-| `document.{getUploadUrl,confirmUpload,listDocuments,deleteDocument,getDownloadUrl}` happy paths | Same constraint as above (dual-auth via `ActorAuthService`). | `tests/integration/routers/user-staff-onboard-document.test.ts` |
-| `policy.{replaceTenant,changeGuarantorType,renew}` happy paths | Heavy archiving + transactional cloning needs richer actor-history factories and document-copy stubs. | `tests/integration/routers/policy.test.ts` |
-| `payment.{generatePaymentLinks,editAmount,createNew}` happy paths | Stripe-roundtrip flows need richer Stripe-session fixtures (idempotency keys, expired sessions). | `tests/integration/routers/payment.test.ts` |
-| `investigation.submit` happy path | Requires investigation-document fixtures to satisfy the "must have at least one document" precondition. | `tests/integration/routers/investigation.test.ts` |
-| `policy.sendInvitations` BROKER auth gate | Router catches the FORBIDDEN ownership check and re-throws as INTERNAL_SERVER_ERROR — masks the real auth failure. Fix the router error mapping, then re-enable the BROKER scope in the auth gate. | `src/server/routers/policy.router.ts` + the existing test |
+The originally-deferred happy paths have since been lifted: admin-session dual-auth (`actor.update`/`submitActor`), the `document.*` suite, `investigation.submit`, `policy.{replaceTenant,changeGuarantorType}`, and the `payment.{generatePaymentLinks,editAmount,createNew}` group all have tests today (see the respective `tests/integration/routers/*.test.ts`). Remaining test debt is tracked as GitHub issues, not in this document — a doc-table of work items is how `docs/BACKLOG.md` rotted.
 
 ## Out of scope
 
@@ -385,7 +380,7 @@ Per [PRD #95](https://github.com/netoho/hestia-app/issues/95):
 - Performance / load testing
 - Concurrency-race tests (need a separate harness)
 - Exhaustive Zod input-validation matrices (Zod is upstream-tested)
-- E2E browser tests — see the separate Playwright suite under `tests/e2e/`
+- E2E browser tests — a fresh Playwright happy-path suite is being built under `tests/e2e/` ([#161](https://github.com/netoho/hestia-app/issues/161)); the old scaffold was never wired to CI and is being replaced
 - Per-test database transactions or per-worker schema isolation (deferred until wall-clock pain demands them)
 - Coverage-percentage gates in CI (deferred until the suite stabilizes)
 

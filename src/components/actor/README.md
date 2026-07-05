@@ -13,7 +13,7 @@ actor/
 │   ├── FormWizardTabs.tsx
 │   └── DocumentProgressBar.tsx
 ├── tenant/                  # Tenant-specific components
-│   ├── TenantFormWizard.tsx
+│   ├── TenantFormWizard-Simplified.tsx
 │   └── [Tab Components]
 ├── landlord/               # Landlord-specific components
 ├── aval/                   # Aval-specific components
@@ -161,7 +161,7 @@ Smart address input with autocomplete:
 
 ### Tenant
 - Employment verification
-- Financial information
+- Rental history (there is no financial tab on tenant)
 - Income requirements
 
 ### Landlord

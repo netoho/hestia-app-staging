@@ -1,733 +1,83 @@
 # Actor Services
 
-**Status**: ✅ Production-Ready Actor Management
-
----
-
-## Purpose
-
-Complete CRUD and business logic for all actor types (Landlord, Tenant, Aval, JointObligor). Uses inheritance pattern with `BaseActorService` providing common functionality, and concrete services implementing actor-specific validation and business rules.
-
----
+CRUD + business logic for the four actor types (Tenant, Landlord, Aval, JointObligor).
+Inheritance pattern: `BaseActorService<T>` provides the shared machinery; concrete
+services add actor-specific rules. Since the #123 hexagonal sweep, **all four services
+write through the domain adapters** (`<entity>ToDb` from
+`src/lib/domain/<entity>/adapters/db.ts`) and read through the domain selects
+(`<entity>Select` from `src/lib/domain/<entity>/select.ts`).
 
 ## Files
 
-- **BaseActorService.ts** - Abstract base class with common actor operations
-- **LandlordService.ts** - Landlord-specific service
-- **TenantService.ts** - Tenant-specific service
-- **AvalService.ts** - Aval (guarantor) service
-- **JointObligorService.ts** - Joint obligor service
-- **types.ts** - Shared actor types and interfaces
-- **index.ts** - Exports and factory function
-
----
-
-## Architecture
-
-### Inheritance Hierarchy
+- **BaseActorService.ts** — abstract base (validation wrap, address upsert, references,
+  save pipeline, token reads, submit/force-complete, activity log, auto status transition)
+- **TenantService.ts / LandlordService.ts / AvalService.ts / JointObligorService.ts**
+- **types.ts** — shared actor types; **index.ts** — singletons + `getServiceForType(type)`
 
 ```
-BaseService (from ../base/)
+BaseService (../base/)
   ↓
 BaseActorService<T> (abstract)
-  ├─> LandlordService
-  ├─> TenantService
-  ├─> AvalService
-  └─> JointObligorService
+  ├─> LandlordService   ├─> AvalService
+  ├─> TenantService     └─> JointObligorService
 ```
 
-### Factory Pattern
+## Real public surface (verified against source — don't trust older copies of this doc)
 
-```typescript
-// Singleton instances
-const landlordService = new LandlordService();
-const tenantService = new TenantService();
-const avalService = new AvalService();
-const jointObligorService = new JointObligorService();
+### `BaseActorService<T>` (BaseActorService.ts)
 
-// Factory function
-export function getServiceForType(type: string) {
-  switch(type) {
-    case 'landlord': return landlordService;
-    case 'tenant': return tenantService;
-    case 'joint-obligor': return jointObligorService;
-    case 'aval': return avalService;
-    default: throw new Error(`Invalid actor type: ${type}`);
-  }
-}
+| Method | Line | Notes |
+|---|---|---|
+| `getById(id)` | :627 | uses the domain select |
+| `getByToken(token)` | :635 | portal read; checks `tokenExpiry` only (policy-status invalidation is #165) |
+| `update(...)` | :667 | the tab-save path — tab names gated via `getTabFields` (`shared.router.ts:537`) |
+| `submitActor(...)` | :703 | submit/force-complete; `skipValidation` skips completeness AND required docs |
+| `savePersonalReferences(...)` | :206 | |
+| `saveCommercialReferences(...)` | :261 | |
+| `save(...)` | :845 | abstract — each service implements the full-save |
+
+Protected helpers (used by subclasses, not callable outside): `validateActorData`,
+`upsertAddress`/`upsertMultipleAddresses`, `buildUpdateData`, `saveActorData`,
+`getActorById`, `isInformationComplete`, `logActivity`,
+`checkAndTransitionPolicyStatus`, `deleteActor`.
+
+> There is **no** `BaseActorService.create/findById/findByPolicyId/delete` public
+> API, no `TenantService.validateReferences/calculateIncomeRatio`, no
+> `AvalService.validatePropertyGuarantee/calculatePropertyValue`, no
+> `JointObligorService.validateIncomeRequirement`, no
+> `LandlordService.findPrimaryLandlord/setPrimaryLandlord` (primary-landlord is a
+> legacy concept — every landlord is first-class). Earlier versions of this README
+> documented those; they never survived to the current code.
+
+### Per-service additions
+
+| Service | Extra public methods |
+|---|---|
+| `TenantService` | `save` :101, `delete` :320 |
+| `LandlordService` | `saveLandlordInformation` :133, `saveFinancialDetails` :162, `savePropertyDetails` :196, `getManyByToken` :473, `save` :683, `delete` :722, `submitAllLandlords` :790 |
+| `AvalService` | `saveAvalInformation` :81, `saveGuaranteePropertyAddress` :259, reference savers, `save` :565, `delete` :579 |
+| `JointObligorService` | `saveJointObligorInformation` :94, `saveEmployerAddress` :250, `saveGuaranteePropertyAddress` :284, reference savers, `save` :595, `delete` :609 |
+
+(Line numbers drift — treat as anchors, `grep -n "public async"` for the current truth.)
+
+## The write path (post-hex)
+
+```
+router input → domain toDb() [normalize → validate → transform] → prisma upsert
+                                     ↑
+                     canonical schema (src/lib/domain/<entity>/schema.ts)
 ```
 
----
-
-## Exports
-
-### Classes
-
-```typescript
-export { BaseActorService } from './BaseActorService';
-export { LandlordService } from './LandlordService';
-export { TenantService } from './TenantService';
-export { AvalService } from './AvalService';
-export { JointObligorService } from './JointObligorService';
-```
-
-### Factory Function
-
-```typescript
-export function getServiceForType(
-  type: 'landlord' | 'tenant' | 'aval' | 'joint-obligor'
-): BaseActorService<any>
-```
-
----
-
-## BaseActorService
-
-**File**: `BaseActorService.ts`
-
-### Purpose
-
-Abstract base class providing common CRUD operations and validation framework for all actors.
-
-### Type Parameters
-
-```typescript
-export abstract class BaseActorService<T> extends BaseService
-```
-
-`T` = Actor model type (Landlord, Tenant, Aval, or JointObligor)
-
-### Abstract Methods (Must Implement)
-
-```typescript
-protected abstract validatePersonData(
-  data: PersonActorData,
-  isPartial?: boolean
-): Result<PersonActorData>;
-
-protected abstract validateCompanyData(
-  data: CompanyActorData,
-  isPartial?: boolean
-): Result<CompanyActorData>;
-```
-
-### Concrete Methods (Inherited by All)
-
-```typescript
-async create(data: Partial<T>): AsyncResult<T>;
-async update(id: string, data: Partial<T>, options?: UpdateOptions): AsyncResult<T>;
-async findById(id: string): AsyncResult<T | null>;
-async getByToken(token: string): AsyncResult<T | null>;
-async findByPolicyId(policyId: string): AsyncResult<T[]>;
-async delete(id: string): AsyncResult<void>;
-```
-
-### Validation Dispatcher
-
-```typescript
-protected validateActorData(
-  data: ActorData,
-  isPartial = false
-): Result<ActorData> {
-  if (isPersonActor(data)) {
-    return this.validatePersonData(data as PersonActorData, isPartial);
-  } else if (isCompanyActor(data)) {
-    return this.validateCompanyData(data as CompanyActorData, isPartial);
-  }
-  return Result.error(new ServiceError(ErrorCode.VALIDATION_ERROR, ...));
-}
-```
-
----
-
-## Landlord Service
-
-**File**: `LandlordService.ts`
-
-### Special Features
-
-- **Primary landlord support** (isPrimary flag)
-- **Multi-landlord policies** (same property, multiple owners)
-- **Bank information** (for rent payment deposits)
-
-### Key Methods
-
-```typescript
-export class LandlordService extends BaseActorService<Landlord> {
-  // Validation
-  protected validatePersonData(
-    data: PersonActorData,
-    isPartial = false
-  ): Result<PersonActorData>;
-
-  protected validateCompanyData(
-    data: CompanyActorData,
-    isPartial = false
-  ): Result<CompanyActorData>;
-
-  // Business logic
-  async findPrimaryLandlord(policyId: string): AsyncResult<Landlord | null>;
-  async setPrimaryLandlord(landlordId: string): AsyncResult<Landlord>;
-}
-```
-
-### Usage Example
-
-```typescript
-import { LandlordService } from '@/lib/services/actors';
-
-const landlordService = new LandlordService();
-
-// Update landlord data
-const result = await landlordService.update(landlordId, {
-  firstName: 'Juan',
-  middleName: 'Carlos',
-  paternalLastName: 'García',
-  maternalLastName: 'López',
-  email: 'juan@example.com',
-  phone: '5551234567',
-}, { isPartial: false });
-
-if (!result.ok) {
-  return NextResponse.json(
-    { error: result.error.getUserMessage() },
-    { status: result.error.statusCode }
-  );
-}
-
-return NextResponse.json({ success: true, data: result.value });
-```
-
----
-
-## Tenant Service
-
-**File**: `TenantService.ts`
-
-### Special Features
-
-- **Individual vs Company** tenant types
-- **Employment information** validation
-- **Income verification**
-- **Personal references** (3 required)
-
-### Key Methods
-
-```typescript
-export class TenantService extends BaseActorService<Tenant> {
-  protected validatePersonData(
-    data: PersonActorData,
-    isPartial = false
-  ): Result<PersonActorData>;
-
-  protected validateCompanyData(
-    data: CompanyActorData,
-    isPartial = false
-  ): Result<CompanyActorData>;
-
-  // Tenant-specific
-  async validateReferences(references: PersonalReference[]): Result<void>;
-  async calculateIncomeRatio(tenant: Tenant, rentAmount: number): number;
-}
-```
-
-### Usage Example
-
-```typescript
-import { TenantService } from '@/lib/services/actors';
-
-const tenantService = new TenantService();
-
-// Update tenant data
-const result = await tenantService.update(tenantId, {
-  tenantType: TenantType.INDIVIDUAL,
-  firstName: 'María',
-  paternalLastName: 'González',
-  maternalLastName: 'Hernández',
-  email: 'maria@example.com',
-  phone: '5559876543',
-  employmentStatus: 'EMPLOYED',
-  occupation: 'Software Engineer',
-  employerName: 'Tech Corp',
-  monthlyIncome: 50000,
-}, { isPartial: false });
-
-if (!result.ok) {
-  return NextResponse.json(
-    { error: result.error.getUserMessage(), details: result.error.context },
-    { status: result.error.statusCode }
-  );
-}
-```
-
----
-
-## Aval Service
-
-**File**: `AvalService.ts`
-
-### Special Features
-
-- **Property guarantee** (owns property as guarantee)
-- **Property deed number** and registry
-- **Property value validation**
-- **Personal references**
-
-### Key Methods
-
-```typescript
-export class AvalService extends BaseActorService<Aval> {
-  protected validatePersonData(
-    data: PersonActorData,
-    isPartial = false
-  ): Result<PersonActorData>;
-
-  protected validateCompanyData(
-    data: CompanyActorData,
-    isPartial = false
-  ): Result<CompanyActorData>;
-
-  // Aval-specific
-  async validatePropertyGuarantee(data: PropertyGuaranteeData): Result<void>;
-  async calculatePropertyValue(address: string): AsyncResult<number>;
-}
-```
-
-### Usage Example
-
-```typescript
-import { AvalService } from '@/lib/services/actors';
-
-const avalService = new AvalService();
-
-// Update aval data
-const result = await avalService.update(avalId, {
-  firstName: 'Roberto',
-  paternalLastName: 'Sánchez',
-  maternalLastName: 'Torres',
-  email: 'roberto@example.com',
-  phone: '5554445555',
-  occupation: 'Business Owner',
-  monthlyIncome: 80000,
-  // Property guarantee (required for Aval)
-  propertyAddress: 'Av. Insurgentes 1234, Col. Roma, CDMX',
-  propertyValue: 3000000,
-  propertyDeedNumber: 'DEED-12345',
-  propertyRegistry: 'REG-67890',
-}, { isPartial: false });
-```
-
----
-
-## Joint Obligor Service
-
-**File**: `JointObligorService.ts`
-
-### Special Features
-
-- **Shares payment obligation** with tenant
-- **Income requirements** (must meet minimum threshold)
-- **Employment verification**
-- **Personal references**
-
-### Key Methods
-
-```typescript
-export class JointObligorService extends BaseActorService<JointObligor> {
-  protected validatePersonData(
-    data: PersonActorData,
-    isPartial = false
-  ): Result<PersonActorData>;
-
-  protected validateCompanyData(
-    data: CompanyActorData,
-    isPartial = false
-  ): Result<CompanyActorData>;
-
-  // JointObligor-specific
-  async validateIncomeRequirement(
-    income: number,
-    rentAmount: number
-  ): Result<void>;
-}
-```
-
-### Usage Example
-
-```typescript
-import { JointObligorService } from '@/lib/services/actors';
-
-const obligorService = new JointObligorService();
-
-// Update joint obligor data
-const result = await obligorService.update(obligorId, {
-  firstName: 'Luis',
-  paternalLastName: 'Ramírez',
-  maternalLastName: 'Flores',
-  email: 'luis@example.com',
-  phone: '5556667777',
-  employmentStatus: 'EMPLOYED',
-  occupation: 'Manager',
-  employerName: 'Corp Inc',
-  monthlyIncome: 60000,
-  incomeSource: 'Salary',
-}, { isPartial: false });
-```
-
----
-
-## Factory Pattern Usage
-
-### Basic Usage
-
-```typescript
-import { getServiceForType } from '@/lib/services/actors';
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { type: string; identifier: string } }
-) {
-  const { type, identifier } = await params;
-  const body = await request.json();
-
-  // Get appropriate service based on type
-  const service = getServiceForType(type);
-
-  const result = await service.update(identifier, body, {
-    isPartial: false,
-  });
-
-  if (!result.ok) {
-    return NextResponse.json(
-      { error: result.error.getUserMessage() },
-      { status: result.error.statusCode }
-    );
-  }
-
-  return NextResponse.json({ success: true, data: result.value });
-}
-```
-
-### Type-Safe Usage
-
-```typescript
-import { getServiceForType } from '@/lib/services/actors';
-import type { ActorType } from '@/types/policy';
-
-function handleActor(type: ActorType) {
-  const service = getServiceForType(type);
-  // service is BaseActorService<any>
-  // All methods available: findById, update, getByToken, etc.
-}
-```
-
-### Direct Import (When Type Known)
-
-```typescript
-import { LandlordService } from '@/lib/services/actors';
-
-const landlordService = new LandlordService();
-const result = await landlordService.findPrimaryLandlord(policyId);
-```
-
----
-
-## Common Patterns
-
-### Pattern 1: Save Draft (Partial Save)
-
-```typescript
-// User saving progress - allow incomplete data
-const result = await service.update(actorId, {
-  firstName: 'Juan', // Only filled this field
-}, { isPartial: true });
-```
-
-### Pattern 2: Final Submission (Full Validation)
-
-```typescript
-// User submitting complete information
-const result = await service.update(actorId, {
-  ...allRequiredFields,
-  informationComplete: true,
-}, { isPartial: false });
-```
-
-### Pattern 3: Admin Override (Skip Validation)
-
-```typescript
-// Admin can bypass validation
-const isAdmin = user.role === UserRole.ADMIN;
-
-const result = await service.update(actorId, data, {
-  skipValidation: isAdmin && userRequestedSkip,
-  updatedById: userId,
-});
-```
-
-### Pattern 4: Find with Policy Context
-
-```typescript
-// Get all actors for a policy
-const landlords = await landlordService.findByPolicyId(policyId);
-const tenant = (await tenantService.findByPolicyId(policyId))[0];
-const avals = await avalService.findByPolicyId(policyId);
-const obligors = await obligorService.findByPolicyId(policyId);
-
-// Check if all complete
-const allComplete =
-  landlords.every(l => l.informationComplete) &&
-  tenant?.informationComplete &&
-  avals.every(a => a.informationComplete) &&
-  obligors.every(o => o.informationComplete);
-```
-
----
-
-## Extending for New Actor Type
-
-### Step 1: Create Service Class
-
-```typescript
-// src/lib/services/actors/NewActorService.ts
-import { BaseActorService } from './BaseActorService';
-import { NewActor } from "@/prisma/generated/prisma-client/enums";
-import { PersonActorData, CompanyActorData } from '@/lib/types/actor';
-import { Result } from '../types/result';
-
-export class NewActorService extends BaseActorService<NewActor> {
-  constructor() {
-    super(prisma.newActor, 'newActor');
-  }
-
-  protected validatePersonData(
-    data: PersonActorData,
-    isPartial = false
-  ): Result<PersonActorData> {
-    const schema = isPartial
-      ? partialPersonNewActorSchema
-      : personNewActorSchema;
-
-    try {
-      const validated = schema.parse(data);
-      return Result.ok(validated);
-    } catch (error) {
-      return Result.error(this.formatValidationError(error));
-    }
-  }
-
-  protected validateCompanyData(
-    data: CompanyActorData,
-    isPartial = false
-  ): Result<CompanyActorData> {
-    // Similar implementation
-  }
-
-  // Add actor-specific methods
-  async customBusinessLogic(): AsyncResult<something> {
-    // ...
-  }
-}
-```
-
-### Step 2: Add to Factory
-
-```typescript
-// src/lib/services/actors/index.ts
-export { NewActorService } from './NewActorService';
-import { NewActorService } from './NewActorService';
-
-const newActorService = new NewActorService();
-
-export function getServiceForType(type: string) {
-  switch(type) {
-    // ... existing cases
-    case 'new-actor':
-      return newActorService;
-    default:
-      throw new Error(`Invalid actor type: ${type}`);
-  }
-}
-```
-
-### Step 3: Use in Routes
-
-```typescript
-// src/app/api/actors/[type]/[identifier]/route.ts
-// Already works! Factory will return NewActorService for 'new-actor' type
-```
-
----
-
-## Validation Rules
-
-### Person Actor (All Types)
-
-**Required Fields**:
-- firstName
-- paternalLastName
-- maternalLastName
-- email (valid format)
-- phone (10 digits)
-
-**Optional Fields**:
-- middleName
-- curp (18 chars if provided)
-- rfc (12-13 chars if provided)
-- passport
-
-### Company Actor (All Types)
-
-**Required Fields**:
-- companyName
-- rfc (12-13 chars)
-- legalRepFirstName
-- legalRepPaternalLastName
-- legalRepEmail
-
-**Optional Fields**:
-- legalRepMiddleName
-- legalRepMaternalLastName
-- legalRepPhone
-- legalRepCurp
-
-### Actor-Specific Rules
-
-**Tenant**:
-- 3 personal references required
-- monthlyIncome required (if employed)
-- Typically income >= 3x rent (soft validation)
-
-**Aval**:
-- Property guarantee fields required
-- propertyValue must be positive
-- propertyAddress required
-
-**JointObligor**:
-- monthlyIncome and incomeSource required
-- 3 personal references required
-
-**Landlord**:
-- Bank information (optional but recommended)
-- isPrimary flag (one must be primary per policy)
-
----
-
-## Testing
-
-### Unit Test Example
-
-```typescript
-import { LandlordService } from '@/lib/services/actors';
-import { prismaMock } from '@/tests/mocks/prisma';
-
-describe('LandlordService', () => {
-  const service = new LandlordService({ prisma: prismaMock });
-
-  it('should update landlord', async () => {
-    const mockLandlord = {
-      id: '123',
-      firstName: 'Juan',
-      paternalLastName: 'García',
-      maternalLastName: 'López',
-      email: 'juan@example.com',
-      phone: '5551234567'
-    };
-
-    prismaMock.landlord.update.mockResolvedValue(mockLandlord);
-
-    const result = await service.update('123', mockLandlord);
-
-    expect(result.ok).toBe(true);
-    expect(result.value).toEqual(mockLandlord);
-  });
-
-  it('should reject invalid email', async () => {
-    const invalidData = {
-      firstName: 'Juan',
-      email: 'not-an-email' // Invalid!
-    };
-
-    const result = await service.update('123', invalidData);
-
-    expect(result.ok).toBe(false);
-    expect(result.error.code).toBe(ErrorCode.VALIDATION_ERROR);
-  });
-});
-```
-
----
-
-## Best Practices
-
-### DO ✅
-
-- **Use factory pattern** in unified routes
-  ```typescript
-  const service = getServiceForType(type);
-  ```
-
-- **Use direct import** when type is known
-  ```typescript
-  const landlordService = new LandlordService();
-  ```
-
-- **Allow partial saves** for draft state
-  ```typescript
-  await service.update(id, data, { isPartial: true });
-  ```
-
-- **Set informationComplete = true** only when all required fields filled
-  ```typescript
-  await service.update(id, { ...completeData, informationComplete: true });
-  ```
-
-- **Check primary landlord** when multiple landlords
-  ```typescript
-  const primary = await landlordService.findPrimaryLandlord(policyId);
-  ```
-
-### DON'T ❌
-
-- **Don't skip validation** except for admin overrides
-  ```typescript
-  // ❌ WRONG
-  await service.update(id, data, { skipValidation: true }); // Always skips!
-
-  // ✅ RIGHT
-  await service.update(id, data, { skipValidation: isAdmin && userRequestedSkip });
-  ```
-
-- **Don't access prisma directly** - use service methods
-  ```typescript
-  // ❌ WRONG
-  await prisma.landlord.update({ where: { id }, data });
-
-  // ✅ RIGHT
-  await landlordService.update(id, data);
-  ```
-
-- **Don't forget Result error handling**
-  ```typescript
-  // ❌ WRONG
-  const result = await service.findById(id);
-  const actor = result.value; // Might be undefined!
-
-  // ✅ RIGHT
-  const result = await service.findById(id);
-  if (!result.ok) return Result.error(result.error);
-  const actor = result.value; // Guaranteed to exist
-  ```
-
----
-
-## Related Modules
-
-- **[/src/lib/services/](../README.md)** - Service layer overview
-- **[/src/lib/services/base/](../base/README.md)** - BaseService foundation
-- **[/src/lib/services/types/](../types/README.md)** - Result pattern
-- **[/docs/ACTOR_SYSTEM_ARCHITECTURE.md](../../../../docs/ACTOR_SYSTEM_ARCHITECTURE.md)** - Complete actor system architecture
-
----
-
-**Production Status**: ✅ Handles All Actor CRUD Operations
+- Tab saves filter fields by the `.keyof()`-derived tab lists from
+  `adapters/form.ts` — a field added to the canonical tab schema flows to the write
+  path automatically.
+- All methods return `Result<T, ServiceError>` / `AsyncResult<T>` — no throws across
+  the service boundary.
+- Known gap: `LandlordService.buildUpdateData` still bypasses `landlordToDb` for
+  single-actor updates (#152).
+
+## Consumers
+
+`src/server/routers/actor/{shared,landlord}.router.ts` (all portal + admin actor
+operations), `policyService` flows (creation, renewal — note renewal's hand-built
+copy lists, #159), `progressService`, investigation gates.

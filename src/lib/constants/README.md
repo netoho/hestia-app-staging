@@ -43,76 +43,31 @@ export const actorConfig = {
       { id: 'references', label: 'Referencias', icon: Users },
       { id: 'documents', label: 'Documentos', icon: FileText },
     ],
-    requiredDocuments: {
-      individual: ['ine', 'proof_of_address', 'proof_of_income'],
-      company: ['company_constitution', 'legal_powers', 'rfc_document'],
-    },
   },
   // ... other actors
 };
 ```
 
-## Tab Field Mappings
+Note: `actorConfig` entries hold `personTabs`/`companyTabs` only. Required documents
+live in `actorDocumentRequirements.ts`, not on `actorConfig`.
 
-Define which fields belong to each tab for validation and saving:
+## Tab Field Mappings — DEPRECATED (#168)
 
-### Tenant Tab Fields (`tenantTabFields.ts`)
+Per-tab field lists are **derived from the canonical domain schemas** now:
+`src/lib/domain/<entity>/adapters/form.ts` exposes `.keyof()`-derived tab-field lists
+that can never drift from validation.
 
-```typescript
-export const tenantIndividualTabFields: Record<TenantIndividualTab, string[]> = {
-  personal: [
-    'tenantType',
-    'firstName',
-    'middleName',
-    'paternalLastName',
-    'maternalLastName',
-    'birthDate',
-    'birthPlace',
-    'nationality',
-    'curp',
-    'rfc',
-    'identificationNumber',
-    'email',
-    'phoneNumber',
-    'alternatePhoneNumber',
-    'addressDetails',
-    'addressDetails.street',
-    // ... nested fields
-  ],
-  employment: [
-    'employmentStatus',
-    'occupation',
-    'employerName',
-    'position',
-    'monthlyIncome',
-    'employerAddressDetails',
-    // ... employer address fields
-  ],
-  financial: [
-    'monthlyIncome',
-    'additionalIncome',
-    'bankName',
-    'accountHolder',
-    'accountNumber',
-  ],
-  // ... other tabs
-};
-```
+What remains in this directory is transitional:
 
-### Helper Functions
+- `src/lib/constants/{tenant,landlord,aval,jointObligor}TabFields.ts` — **dead code**
+  (their only consumer, `useFormWizardSubmissionTRPC`, has zero importers); they carry
+  16 of the repo's remaining `as any`. Deletion tracked in #168.
+- `src/lib/constants/actorTabFields.ts` — still **live in one place**: the actor
+  router's tab-NAME gate (`shared.router.ts:537 getTabFields`). A new tab must be
+  registered there today or `actor.update` returns BAD_REQUEST — #168 routes this
+  gate through the domain form adapters and then deletes the whole layer.
 
-```typescript
-// Get fields for specific tab
-export function getTenantTabFields(
-  tab: string,
-  tenantType: 'INDIVIDUAL' | 'COMPANY'
-): string[] {
-  if (tenantType === 'COMPANY') {
-    return tenantCompanyTabFields[tab] || [];
-  }
-  return tenantIndividualTabFields[tab] || [];
-}
-```
+Do not add fields to any of these files; add them to the domain tab schema instead.
 
 ## Form Messages (`formMessages.ts`)
 

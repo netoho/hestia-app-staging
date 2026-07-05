@@ -7,8 +7,8 @@ Hestia uses an abstracted storage layer that supports multiple providers for sec
 
 ### 1. AWS S3 (Recommended for Production)
 - **Private bucket storage** with signed URLs
-- **10-second default expiration** for download links
-- Supports S3-compatible services (MinIO, DigitalOcean Spaces, etc.)
+- **60-second default expiration** for signed links (`options.expiresInSeconds || 60` — `src/lib/storage/providers/s3.ts`)
+- Supports S3-compatible services via `AWS_S3_ENDPOINT` (MinIO, DigitalOcean Spaces, etc.)
 
 ### 2. Local Storage (Development/Demo)
 - In-memory storage for testing
@@ -91,7 +91,7 @@ LOCAL_STORAGE_PATH=/tmp/hestia-storage
 
 ### Signed URLs
 - All file access requires signed URLs
-- Default expiration: **10 seconds** for downloads
+- Default expiration: **60 seconds**
 - Configurable expiration times per request
 - URLs cannot be shared or reused after expiration
 
@@ -101,8 +101,8 @@ LOCAL_STORAGE_PATH=/tmp/hestia-storage
 - Access controlled through application logic
 
 ### File Validation
-- Maximum file size: 15MB
-- Allowed types: PDF, JPEG, PNG, GIF, WebP
+- Maximum file size: **10MB default** (`defaultValidationConfig.maxSizeMB` in `src/lib/constants/documentCategories.ts`; per-category overrides exist, e.g. PROPERTY_DEED 10MB+)
+- Allowed types: PDF, JPEG, PNG, WebP (no GIF)
 - Filename sanitization
 - Suspicious file detection
 
@@ -128,12 +128,12 @@ await storage.upload({
 });
 ```
 
-### Generate Signed URL (10-second expiration)
+### Generate Signed URL (short expiration)
 ```typescript
 const signedUrl = await storage.getSignedUrl({
   path: 'policies/123/document.pdf',
   action: 'read',
-  expiresInSeconds: 10, // Security: Short expiration
+  expiresInSeconds: 60, // default when omitted
   responseDisposition: 'attachment'
 });
 ```
@@ -159,13 +159,13 @@ await storage.delete('policies/123/document.pdf');
 - Verify AWS credentials
 
 ### Signed URLs Not Working
-- Check expiration time (default 10 seconds)
+- Check expiration time (default 60 seconds)
 - Verify storage provider configuration
 - Check file exists in storage
 - Review CORS settings if browser issues
 
 ### Large File Uploads Failing
-- Check MAX_FILE_SIZE setting (15MB default)
+- Check the category validation config (10MB default, per-category overrides)
 - Verify network timeouts
 - Check S3 multipart upload settings
 - Review application memory limits
@@ -173,7 +173,7 @@ await storage.delete('policies/123/document.pdf');
 ## Best Practices
 
 1. **Use S3 for production** - Better performance and reliability
-2. **Keep expiration times short** - 10 seconds for downloads
+2. **Keep expiration times short** - 60 seconds default for signed links
 3. **Monitor storage costs** - Set up billing alerts
 4. **Regular backups** - Implement backup strategy
 5. **Encrypt sensitive files** - Use S3 server-side encryption
