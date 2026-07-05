@@ -29,9 +29,12 @@
     "test:db:provision": "NODE_ENV=test dotenv -e .env.test -e .env.test.local -o -- bun run scripts/test-db.ts setup",
     "test:db:down": "docker compose -f docker-compose.test.yml down",
     "test:db:reset": "docker compose -f docker-compose.test.yml down -v && bun run test:db:setup",
-    "test:e2e": "DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' playwright test --config=tests/playwright.config.ts",
-    "test:e2e:ui": "DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' playwright test --config=tests/playwright.config.ts --ui",
-    "test:e2e:headed": "DATABASE_URL='postgresql://test:test@localhost:5433/hestia_test' playwright test --config=tests/playwright.config.ts --headed"
+    "pretest:e2e": "bun run test:db:up && bun run test:e2e:provision",
+    "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
+    "test:e2e:provision": "DATABASE_URL='postgresql://test:test@localhost:5433/hestia_e2e_test' bun run scripts/test-db.ts setup",
+    "test:e2e:ui": "playwright test --config=tests/e2e/playwright.config.ts --ui",
+    "test:e2e:headed": "playwright test --config=tests/e2e/playwright.config.ts --headed",
+    "dev:e2e": "DATABASE_URL='postgresql://test:test@localhost:5433/hestia_e2e_test' NEXTAUTH_URL='http://localhost:9002' NEXTAUTH_SECRET='e2e-nextauth-secret' JWT_SECRET='e2e-jwt-secret' NEXT_PUBLIC_APP_URL='http://localhost:9002' STORAGE_PROVIDER=s3 AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_S3_BUCKET=hestia-e2e AWS_S3_REGION=us-east-1 AWS_REGION=us-east-1 AWS_S3_ENDPOINT='http://localhost:9100' bun run --bun next dev --turbopack -p 9002"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
