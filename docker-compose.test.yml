@@ -1,0 +1,20 @@
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: hestia-test-db
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: hestia_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - hestia_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d hestia_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  hestia_test_data:
