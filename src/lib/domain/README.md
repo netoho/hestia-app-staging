@@ -26,11 +26,10 @@ src/lib/domain/<entity>/
 
 ## Naming convention
 
-For every entity, the four exports the rest of the codebase touches
-are named identically:
+For every entity, the exports the rest of the codebase touches follow one pattern:
 
 - `<entity>Schema` — canonical Zod (discriminated union for entities
-  with INDIVIDUAL/COMPANY variants, single schema otherwise)
+  with variants, single schema otherwise)
 - `<entity>Select` — Prisma include constant; the single source of
   truth for "what gets loaded with an entity"
 - `<entity>ApiOutput` — tRPC output schema (drift-tested against
@@ -39,7 +38,16 @@ are named identically:
 - `<entity>TabFields(tabName)` — per-tab field-name list derived via
   `.keyof()` on the corresponding tab schema
 
-This is what S2 onwards inherits from S1's tenant slice.
+**Actual canonical exports as merged** (prefer plain `<entity>Schema` for new
+slices; these exceptions predate the rule and are kept to avoid churn):
+
+| Entity | Canonical export | Discriminator |
+|---|---|---|
+| tenant | `tenantSchema` (schema.ts:151) | `tenantType` |
+| landlord | `landlordSchema` (:126) + `multiLandlordSchema` (:132) | `isCompany` |
+| aval | `avalMasterSchema` (:161) | `avalType` (PROPERTY-only guarantee; synthetic-variant retrofit = #151) |
+| joint-obligor | `jointObligorCanonicalSchema` (:271) | synthetic `jointObligorVariant` |
+| document / investigation | leaf schemas, no variant union | — |
 
 ## Recipe — porting the next entity (e.g. S2 landlord)
 
@@ -162,6 +170,79 @@ Confirm no remaining imports across the codebase, then delete.
 - `bun run test:integration` — existing integration tests green.
 - `bun run build` — type-check green.
 - `grep -rn "as any" src/lib/utils/<entity> src/lib/services/actors/<Entity>Service.ts src/components/actor/<entity>` — zero hits.
+
+## Patterns the recipe extends to (A–F)
+
+The tenant slice couldn't surface these; the later slices did. Each pattern below
+is documented from **merged code** — read the cited files before applying it.
+
+### A — Multi-record entities (worked example: landlord, S2)
+
+A policy has 1..N landlords. The canonical layer models both the single record
+(`landlordSchema`) and the collection (`multiLandlordSchema`, schema.ts:132); the
+db adapter exposes `toDbMultiple` and the service wraps the collection write in a
+transaction. Rule: the collection schema OWNS collection-level invariants (at
+least one record, exactly-one-of-X); the per-record schema knows nothing about
+its siblings. Gates/links/notifications iterate ALL records — never index 0 or
+`isPrimary` (legacy).
+
+### B — Multi-dimensional variants via a synthetic discriminator (joint-obligor, S4a)
+
+When an entity varies on two axes (INDIVIDUAL|COMPANY × INCOME|PROPERTY),
+`z.discriminatedUnion` needs ONE key. Synthesize it: `jointObligorVariant` with 4
+literal branches (schema.ts:225-257), **derived on read / decomposed on write —
+never a DB column** (schema.ts:39). `jointObligorStrictSchema` wraps the union in
+`z.preprocess` (:282-300) that computes the variant from `(type, guaranteeMethod)`
+before parsing. This killed the 58-cast prepareForDB hotspot: the type system can
+finally express what the data actually is. Standard for every multi-axis entity
+(aval retrofit tracked in #151).
+
+### C — Aggregate entities (policy, S5a — pending #133)
+
+Policy composes every actor + propertyDetails + payments. Design rule (to be
+proven by S5a): the aggregate schema COMPOSES the per-entity canonical schemas
+(`z.object({ tenant: tenantSchema.nullable(), landlords: z.array(...), ... })`)
+and its select composes the per-entity selects — the aggregate never redeclares an
+actor's fields. This is also what kills the admin-vs-portal data-path divergence
+(see #171). Fill this section in with real code when S5a merges.
+
+### D — Sanitized public outputs (investigation, S6b)
+
+Endpoints reachable by unauthenticated token links must declare an allowlist:
+the public `getByToken` payload is `.pick(INVESTIGATION_PUBLIC_FIELDS)` on the
+canonical schema (adapters/api.ts:128-130) — secrets (`brokerToken`,
+`landlordToken`, `tokenExpiry`, PII) cannot leak because the shape is built by
+picking, never by omitting from the server shape. Any new public/token endpoint
+copies this: define `<ENTITY>_PUBLIC_FIELDS`, derive via `.pick`, drift-test it.
+
+### E — Lifecycle state machines (investigation S6b; receipt S6c pending #136)
+
+Status enums live on the canonical schema as plain enum fields; **transition
+rules live in the service** (see `policyWorkflowService.ALLOWED_TRANSITIONS` for
+the shape: an explicit map + per-edge gates, never scattered ifs). The schema
+stays a data contract; the machine is behavior. Docs for the policy machine:
+`docs/POLICY_STATUS.md` — keep the transition table in sync with the
+`ALLOWED_TRANSITIONS` map (it drifted once already).
+
+### F — Per-procedure output narrowing (pending #148)
+
+The polymorphic actor router still returns one loose `PolymorphicActorOutput`
+(10 fields + `.passthrough()`, `policy: z.unknown()`), which makes field removal
+invisible to the contract suite and manufactures tsc noise downstream. The fix:
+each procedure declares the narrowest domain `…ApiOutput` that matches what it
+returns (admin vs portal shapes may differ — that's Pattern D applied per
+procedure). Fill in with real code when #148 lands.
+
+## Known gaps the recipe does not cover yet
+
+- **Clone/copy field-lists** (renewal, tenantReplacement, guarantorTypeChange)
+  still hand-enumerate fields — a new schema field silently vanishes on clone
+  until #159's drift test + derivation land.
+- **Reverse form→schema drift** — a form field missing from the tab schema is
+  silently dropped; #160 adds the reverse assertion to formLabelSchemaSync.
+- **Wizard reset-on-data** — tab forms seed `defaultValues` once; admin inline
+  editors don't reset on refetch (#171). The T3 factory (#127) is where the
+  reset pattern gets baked in once.
 
 ## What stays in `src/lib/schemas/<entity>/`?
 
