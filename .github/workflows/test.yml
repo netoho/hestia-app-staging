@@ -45,6 +45,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: TypeScript ratchet (tracked-file error count must not grow)
+        run: bun run typecheck:ratchet
+
       - name: Provision test database
         # Creates `hestia_test` if missing and runs `prisma db push`.
         run: NODE_ENV=test bun run scripts/test-db.ts setup

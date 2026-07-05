@@ -9,8 +9,9 @@
     "build": "bun run --bun next build",
     "build:analyze": "ANALYZE=true bun run --bun next build",
     "start": "bun run --bun next start",
-    "lint": "bun run --bun next lint",
+    "lint": "eslint src",
     "typecheck": "bun run --bun tsc --noEmit",
+    "typecheck:ratchet": "bun run scripts/tsc-ratchet.ts",
     "db:seed": "bun run prisma db seed",
     "db:reset": "bun run --bun prisma db push --force-reset",
     "postinstall": "bun run --bun prisma generate",
@@ -122,12 +123,14 @@
     "@types/stripe": "^8.0.417",
     "@types/uuid": "^11.0.0",
     "dotenv-cli": "^11.0.0",
+    "eslint": "^10.6.0",
     "fishery": "^2.4.0",
     "jszip": "^3.10.1",
     "postcss": "^8",
     "prisma": "^7.0.1",
     "tailwindcss": "^4.1.16",
     "tsx": "^4.16.2",
-    "typescript": "^5"
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.62.1"
   }
 }
