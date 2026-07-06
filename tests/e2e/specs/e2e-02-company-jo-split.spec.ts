@@ -46,6 +46,13 @@ test('E2E-02: company tenant + income JO + split payments reaches ACTIVE', async
   expect(joRow.guaranteeMethod).toBe('INCOME');
   expect(joRow.informationComplete).toBe(true);
 
+  // The type discriminator survives the references/documents saves, whose
+  // schemas don't carry it (the type-reversion class found by E2E-03's
+  // run-to-green: adapters used to inject the caller's INDIVIDUAL default).
+  const tenantRow = await prisma.tenant.findUniqueOrThrow({ where: { id: tokens.tenant!.id } });
+  expect(tenantRow.tenantType).toBe('COMPANY');
+  expect(tenantRow.informationComplete).toBe(true);
+
   // 3 — Cross-surface parity (#171 class): portal-saved values visible in admin
   await page.goto(`/dashboard/policies/${policyId}?tab=guarantors`);
   await expect(page.getByText('Método de Garantía')).toBeVisible({ timeout: 30_000 });
