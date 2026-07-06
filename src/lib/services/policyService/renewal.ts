@@ -200,12 +200,14 @@ export async function clonePolicyForRenewal(
       ) => {
         const keepBasic = sel.basicInfo;
         const keepContact = sel.contact;
+        const keepAddress = sel.address;
         const keepBanking = sel.banking;
         const keepPropertyDeed = sel.propertyDeed;
         const keepCfdi = sel.cfdi;
         return {
         isPrimary: ld.isPrimary,
         isCompany: keepBasic ? ld.isCompany : false,
+        nationality: keepBasic ? ld.nationality : 'MEXICAN',
         firstName: keepBasic ? ld.firstName : null,
         middleName: keepBasic ? ld.middleName : null,
         paternalLastName: keepBasic ? ld.paternalLastName : null,
@@ -229,7 +231,7 @@ export async function clonePolicyForRenewal(
         workPhone: keepContact ? ld.workPhone : null,
         personalEmail: keepContact ? ld.personalEmail : null,
         workEmail: keepContact ? ld.workEmail : null,
-        address: '',
+        address: keepAddress ? ld.address : '',
         addressId: newAddressId,
         bankName: keepBanking ? ld.bankName : null,
         accountNumber: keepBanking ? ld.accountNumber : null,
