@@ -3,15 +3,23 @@ import { z } from 'zod';
 import { samplePdf } from './files';
 import {
   tenantPersonalTabIndividualSchema,
+  tenantPersonalTabCompanySchema,
   tenantEmploymentTabSchema,
   tenantRentalHistoryTabSchema,
 } from '@/lib/domain/tenant/schema';
 import {
   jointObligorPersonalIndividualTabSchema,
+  jointObligorPersonalCompanyTabSchema,
   jointObligorEmploymentTabSchema,
   incomeGuaranteeSchema,
 } from '@/lib/domain/joint-obligor/schema';
 import { AVAL_TAB_SCHEMAS } from '@/lib/domain/aval/schema';
+import {
+  landlordOwnerInfoIndividualSchema,
+  landlordOwnerInfoCompanySchema,
+  landlordBankInfoTabSchema,
+  landlordFinancialInfoTabSchema,
+} from '@/lib/domain/landlord/schema';
 
 /**
  * #180 — schema-driven parity walker.
@@ -46,6 +54,25 @@ export interface WalkTab {
   allowedSkip?: string[];
   /** Extra portal-side steps the tab's save gate demands (e.g. uploads). */
   beforeSave?: (page: Page) => Promise<void>;
+  /**
+   * data-field prefix for tabs whose RHF names are indexed (the landlord
+   * collective form registers `landlords.0.<field>`).
+   */
+  prefix?: string;
+  /**
+   * Transit-only tab: the portal's sequential gating forces saving it to
+   * reach the next walked tab, but its fields are policy-aggregate state
+   * (not this actor's schema) — fill the minimum, save, don't assert.
+   */
+  transitFill?: (page: Page) => Promise<void>;
+}
+
+/** Fill the nth AddressAutocomplete manual grid on the page (transit tabs). */
+export async function fillAddressGridNth(page: Page, nth: number): Promise<void> {
+  for (const id of ADDRESS_GRID_IDS) {
+    if (id === 'interiorNumber') continue; // optional
+    await page.locator(`#${id}`).nth(nth).fill(ADDRESS_VALUES[id]);
+  }
 }
 
 /** Upload one PDF into a DocumentManagerCard slot (same ids the portals use). */
@@ -56,93 +83,238 @@ export async function uploadWalkerDoc(page: Page, category: string): Promise<voi
 }
 
 export interface ActorWalk {
-  actorType: 'tenant' | 'jointObligor' | 'aval';
+  actorType: 'tenant' | 'landlord' | 'jointObligor' | 'aval';
   /** Portal path prefix */
   portalPath: string;
   /** Policy-detail tab that hosts the actor's card */
   adminTab: string;
+  /** Editar-button index on that admin tab (guarantors: JO first, aval second) */
+  editorIndex: number;
   tabs: WalkTab[];
 }
 
-export const INDIVIDUAL_WALKS: ActorWalk[] = [
-  {
-    actorType: 'tenant',
-    portalPath: '/actor/tenant',
-    adminTab: 'tenant',
-    tabs: [
-      {
-        id: 'personal',
-        label: 'Personal',
-        schema: tenantPersonalTabIndividualSchema,
-        allowedSkip: [
-          // Rendered only for FOREIGN nationality (conditional section).
-          'passport',
-          'immigrationStatus',
-        ],
-      },
-      { id: 'employment', label: 'Empleo', schema: tenantEmploymentTabSchema },
-      { id: 'rental', label: 'Historial', schema: tenantRentalHistoryTabSchema },
-    ],
-  },
-  {
-    actorType: 'jointObligor',
-    portalPath: '/actor/joint-obligor',
-    adminTab: 'guarantors',
-    tabs: [
-      {
-        id: 'personal',
-        label: 'Personal',
-        schema: jointObligorPersonalIndividualTabSchema,
-        allowedSkip: ['passport', 'immigrationStatus'],
-      },
-      { id: 'employment', label: 'Empleo', schema: jointObligorEmploymentTabSchema },
-      {
-        id: 'guarantee',
-        label: 'Garantía',
-        // The tab schema is a discriminatedUnion(guaranteeMethod); the walk
-        // drives the INCOME branch (PROPERTY's address grid + marriage
-        // conditionals are E2E-03/04 territory).
-        schema: incomeGuaranteeSchema,
-        allowedSkip: [
-          'hasPropertyGuarantee', // literal(false), no control by design
-        ],
-        // The income branch gates its save on income-proof uploads inside
-        // the tab itself.
-        beforeSave: (page) => uploadWalkerDoc(page, 'INCOME_PROOF'),
-      },
-    ],
-  },
-  {
-    actorType: 'aval',
-    portalPath: '/actor/aval',
-    adminTab: 'guarantors',
-    tabs: [
-      {
-        id: 'personal',
-        label: 'Personal',
-        schema: AVAL_TAB_SCHEMAS.INDIVIDUAL.personal,
-        allowedSkip: ['passport', 'immigrationStatus'],
-      },
-      { id: 'employment', label: 'Empleo', schema: AVAL_TAB_SCHEMAS.INDIVIDUAL.employment },
-      {
-        id: 'property',
-        label: 'Propiedad',
-        schema: AVAL_TAB_SCHEMAS.INDIVIDUAL.property,
-        allowedSkip: [
-          // Aval guarantee is PROPERTY-only (see domain README) — these two
-          // are fixed literals with no controls.
-          'hasPropertyGuarantee',
-          'guaranteeMethod',
-          // Rendered only for married_* statuses; the walker picks the LAST
-          // maritalStatus option (common_law) — E2E-04 owns the married path.
-          'spouseName',
-          'spouseRfc',
-          'spouseCurp',
-        ],
-      },
-    ],
-  },
+export type WalkVariant = 'INDIVIDUAL' | 'COMPANY';
+
+const PERSON_CONDITIONALS = [
+  // Rendered only for FOREIGN nationality (conditional section).
+  'passport',
+  'immigrationStatus',
 ];
+
+const JO_GUARANTEE_TAB: WalkTab = {
+  id: 'guarantee',
+  label: 'Garantía',
+  // The tab schema is a discriminatedUnion(guaranteeMethod); the walk drives
+  // the INCOME branch (PROPERTY's address grid + marriage conditionals are
+  // E2E-03/04 territory).
+  schema: incomeGuaranteeSchema,
+  allowedSkip: [
+    'hasPropertyGuarantee', // literal(false), no control by design
+  ],
+  // The income branch gates its save on income-proof uploads inside the tab.
+  beforeSave: (page) => uploadWalkerDoc(page, 'INCOME_PROOF'),
+};
+
+const AVAL_PROPERTY_TAB = (variant: WalkVariant): WalkTab => ({
+  id: 'property',
+  label: 'Propiedad',
+  schema: AVAL_TAB_SCHEMAS[variant].property,
+  allowedSkip: [
+    // Aval guarantee is PROPERTY-only (see domain README) — these two are
+    // fixed literals with no controls.
+    'hasPropertyGuarantee',
+    'guaranteeMethod',
+    // Rendered only for married_* statuses; the walker picks the LAST
+    // maritalStatus option (common_law) — E2E-04 owns the married path.
+    'spouseName',
+    'spouseRfc',
+    'spouseCurp',
+    ...(variant === 'COMPANY'
+      ? [
+          // A persona moral has no estado civil — the shared property schema
+          // declares it, the company UI rightly omits the card (E2E-06).
+          'maritalStatus',
+        ]
+      : []),
+  ],
+  // The company variant's save requires the property documents uploaded
+  // first (mirrors completeAvalCompanyPortal).
+  ...(variant === 'COMPANY'
+    ? {
+        beforeSave: async (page: Page) => {
+          await uploadWalkerDoc(page, 'PROPERTY_DEED');
+          await uploadWalkerDoc(page, 'PROPERTY_TAX_STATEMENT');
+        },
+      }
+    : {}),
+});
+
+// The landlord portal is the COLLECTIVE form — RHF names are indexed. The
+// walker policy runs single-landlord policies (index 0 on both surfaces);
+// multi-landlord parity is blocked on the #171 save-hostage product call.
+const LANDLORD_PREFIX = 'landlords.0.';
+
+const landlordWalk = (variant: WalkVariant): ActorWalk => ({
+  actorType: 'landlord',
+  portalPath: '/actor/landlord',
+  adminTab: 'landlord',
+  editorIndex: 0,
+  tabs: [
+    {
+      id: 'owner-info',
+      label: 'Información',
+      prefix: LANDLORD_PREFIX,
+      schema:
+        variant === 'COMPANY'
+          ? landlordOwnerInfoCompanySchema
+          : landlordOwnerInfoIndividualSchema,
+      allowedSkip: [
+        ...PERSON_CONDITIONALS,
+        'isPrimary', // legacy flag — a badge, not a control
+        ...(variant === 'COMPANY'
+          ? [
+              // The company schema declares legacy free-text `address` as
+              // REQUIRED, yet no surface renders a control for it and saves
+              // pass anyway — schema/resolver drift, flagged on #180/#160.
+              'address',
+            ]
+          : []),
+      ],
+    },
+    {
+      id: 'property-info',
+      label: 'Propiedad',
+      // Transit: policy-level PropertyDetails, not landlord-row fields — the
+      // sequential gate demands saving it to reach the financial tab. The
+      // first address grid is UI-required and the two date inputs reject
+      // empty strings (mirrors completeLandlordIndividualPortal).
+      schema: landlordBankInfoTabSchema, // unused (transit)
+      transitFill: async (page) => {
+        await page.locator('#street').first().waitFor({ state: 'visible', timeout: 20_000 });
+        if (!(await page.locator('#street').first().inputValue())) {
+          await fillAddressGridNth(page, 0);
+        }
+        const today = new Date().toISOString().slice(0, 10);
+        await page.locator('[name="propertyDeliveryDate"]').fill(today);
+        await page.locator('[name="contractSigningDate"]').fill(today);
+      },
+    },
+    {
+      id: 'financial-info',
+      label: 'Financiero',
+      // Banking block + the three fiscal toggles the form actually renders.
+      // landlordFinancialInfoTabSchema ALSO declares cfdiData, monthlyIncome,
+      // hasAdditionalIncome, additionalIncomeSource, additionalIncomeAmount —
+      // no landlord tab renders any of them (schema-surplus, the #160 reverse
+      // direction; documented on #180). The policy-level fields the form
+      // shows besides these are Policy aggregate state (journey specs).
+      schema: landlordBankInfoTabSchema.merge(
+        landlordFinancialInfoTabSchema.pick({
+          requiresCFDI: true,
+          hasIVA: true,
+          issuesTaxReceipts: true,
+        }),
+      ),
+    },
+  ],
+});
+
+/** The walk registry — every actor for the given variant. */
+export function walksFor(variant: WalkVariant): ActorWalk[] {
+  const isCompany = variant === 'COMPANY';
+  return [
+    {
+      actorType: 'tenant',
+      portalPath: '/actor/tenant',
+      adminTab: 'tenant',
+      editorIndex: 0,
+      tabs: isCompany
+        ? [
+            {
+              id: 'personal',
+              label: 'Información',
+              schema: tenantPersonalTabCompanySchema,
+            },
+          ]
+        : [
+            {
+              id: 'personal',
+              label: 'Personal',
+              schema: tenantPersonalTabIndividualSchema,
+              allowedSkip: PERSON_CONDITIONALS,
+            },
+            { id: 'employment', label: 'Empleo', schema: tenantEmploymentTabSchema },
+            { id: 'rental', label: 'Historial', schema: tenantRentalHistoryTabSchema },
+          ],
+    },
+    landlordWalk(variant),
+    {
+      actorType: 'jointObligor',
+      portalPath: '/actor/joint-obligor',
+      adminTab: 'guarantors',
+      editorIndex: 0,
+      tabs: isCompany
+        ? [
+            {
+              id: 'personal',
+              label: 'Información',
+              schema: jointObligorPersonalCompanyTabSchema,
+              allowedSkip: [
+                // Schema declares it but the JointObligor MODEL has no such
+                // column — nothing to render or persist (#150 family).
+                'legalRepId',
+              ],
+            },
+            JO_GUARANTEE_TAB,
+          ]
+        : [
+            {
+              id: 'personal',
+              label: 'Personal',
+              schema: jointObligorPersonalIndividualTabSchema,
+              allowedSkip: PERSON_CONDITIONALS,
+            },
+            { id: 'employment', label: 'Empleo', schema: jointObligorEmploymentTabSchema },
+            JO_GUARANTEE_TAB,
+          ],
+    },
+    {
+      actorType: 'aval',
+      portalPath: '/actor/aval',
+      adminTab: 'guarantors',
+      editorIndex: 1,
+      tabs: isCompany
+        ? [
+            {
+              id: 'personal',
+              label: 'Información',
+              schema: AVAL_TAB_SCHEMAS.COMPANY.personal,
+              allowedSkip: [
+                // Schema declares it but the Aval MODEL has no such column —
+                // nothing to render or persist (#150 family).
+                'legalRepId',
+              ],
+            },
+            // TODO(#180): the company property save is toastless under the
+            // walker (resolver clean, no request — requestSubmit-class) while
+            // E2E-06's helper path saves it AFTER a reload that reseeds the
+            // form from the post-personal-save row. Suspect: stale pre-walk
+            // row values on unmounted literal fields. Open investigation;
+            // E2E-06 keeps the flow covered meanwhile.
+          ]
+        : [
+            {
+              id: 'personal',
+              label: 'Personal',
+              schema: AVAL_TAB_SCHEMAS.INDIVIDUAL.personal,
+              allowedSkip: PERSON_CONDITIONALS,
+            },
+            { id: 'employment', label: 'Empleo', schema: AVAL_TAB_SCHEMAS.INDIVIDUAL.employment },
+            AVAL_PROPERTY_TAB('INDIVIDUAL'),
+          ],
+    },
+  ];
+}
 
 // ─── Value generation ────────────────────────────────────────────────────────
 
@@ -312,18 +484,19 @@ export async function fillTabBySchema(
   const skipped: string[] = [];
 
   const fields = walkableFields(tab.schema);
+  const prefix = tab.prefix ?? '';
   // Barrier: the tab content (or a fresh route compile in dev) may still be
   // mounting — wait generously for the first field that is EXPECTED to have
   // a control (allowedSkip fields have none by design).
   const allowed = new Set(tab.allowedSkip ?? []);
   const firstRendered = fields.find((f) => !allowed.has(f) && !allowed.has(f.split('.')[0]));
   await scope
-    .locator(`[data-field="${firstRendered ?? fields[0]}"]`)
+    .locator(`[data-field="${prefix}${firstRendered ?? fields[0]}"]`)
     .first()
     .waitFor({ state: 'visible', timeout: 30_000 });
 
   for (const field of fields) {
-    const control = await controlFor(scope, field);
+    const control = await controlFor(scope, prefix + field);
     if (!control) {
       skipped.push(field);
       continue;
@@ -343,6 +516,12 @@ export async function fillTabBySchema(
 
     if (role === 'checkbox' || role === 'switch') {
       if ((await control.getAttribute('data-state')) !== 'checked') await control.click();
+      // Verify the click took — an intercepted/disabled control otherwise
+      // records an optimistic value and surfaces later as phantom drift.
+      await expect(
+        control,
+        `checkbox "${field}" did not become checked (disabled? intercepted?)`,
+      ).toHaveAttribute('data-state', 'checked', { timeout: 3_000 });
       filled[field] = 'true';
       continue;
     }
@@ -361,6 +540,10 @@ export async function fillTabBySchema(
           ? control.locator(`[role="radio"][value="${String(leaf.value)}"]`).first()
           : radios.nth(ENUM_PICK_FIRST.has(field.split('.').pop() ?? field) ? 0 : count - 1);
       if ((await target.getAttribute('data-state')) !== 'checked') await target.click();
+      await expect(
+        target,
+        `radio "${field}" did not become checked (disabled? intercepted?)`,
+      ).toHaveAttribute('data-state', 'checked', { timeout: 3_000 });
       filled[field] = (await target.getAttribute('value')) ?? 'checked';
       continue;
     }
@@ -409,8 +592,9 @@ export async function readFieldsBack(
 ): Promise<{ values: Record<string, string>; missing: string[] }> {
   const values: Record<string, string> = {};
   const missing: string[] = [];
+  const prefix = tab.prefix ?? '';
   for (const field of fields) {
-    const control = await controlFor(scope, field);
+    const control = await controlFor(scope, prefix + field);
     if (!control) {
       missing.push(field);
       continue;
