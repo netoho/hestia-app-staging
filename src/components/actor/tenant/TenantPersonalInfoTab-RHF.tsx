@@ -267,6 +267,22 @@ export default function TenantPersonalInfoTabRHF({
                       )}
                     />
 
+                    {/* Declared by the tenant company schema but previously
+                        unrendered — #180 walker finding. */}
+                    <FormField
+                      control={form.control}
+                      name="legalRepId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel optional>Identificación del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="legalRepEmail"

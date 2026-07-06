@@ -100,6 +100,7 @@ export interface CompanyActorData extends BaseActorData {
   legalRepEmail: string;
 
   // Additional contact
+  personalEmail?: string;
   workEmail?: string;
 }
 

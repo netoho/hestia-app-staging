@@ -507,6 +507,22 @@ function LandlordIndividualFields({
               </FormItem>
             )}
           />
+
+          {/* Declared by the landlord owner-info schema but previously
+              unrendered on the individual card — #180 walker finding. */}
+          <FormField
+            control={form.control}
+            name={`landlords.${index}.workEmail`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel optional>Email de Trabajo</FormLabel>
+                <FormControl>
+                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       )}
 
@@ -788,6 +804,22 @@ function LandlordCompanyFields({
       {/* Additional Contact (only for primary) */}
       {showAdditionalContact && (
         <div className="grid grid-cols-2 gap-4">
+          {/* Declared by the landlord company schema but previously
+              unrendered — #180 walker finding. */}
+          <FormField
+            control={form.control}
+            name={`landlords.${index}.personalEmail`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel optional>Email Personal</FormLabel>
+                <FormControl>
+                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name={`landlords.${index}.workEmail`}
