@@ -33,11 +33,13 @@ export default function AvalPersonalInfoTab({
   disabled = false,
 }: AvalPersonalInfoTabProps) {
   // Get appropriate schema based on aval type
-  const schema = getAvalTabSchema(avalType, 'personal');
-
-  // Initialize form with RHF + Zod validation
+  // Initialize form with RHF + Zod validation. Resolve against the schema for
+  // the type currently selected in the form — a resolver pinned to the
+  // mount-time prop rejects the INDIVIDUAL→COMPANY radio switch on the
+  // avalType literal (same dead-toggle class as the JO personal tab).
   const form = useForm({
-    resolver: zodResolver(schema),
+    resolver: (values, ctx, options) =>
+      zodResolver(getAvalTabSchema(values.avalType ?? avalType, 'personal'))(values, ctx, options),
     mode: 'onChange', // Real-time validation
     defaultValues: {
       avalType,
