@@ -515,7 +515,6 @@ export default function TenantPersonalInfoTabRHF({
                           `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
                         );
                       }}
-                      required
                       disabled={disabled}
                     />
                   </FormControl>
