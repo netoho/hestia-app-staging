@@ -238,7 +238,7 @@ export type PolicyListOutput = z.infer<typeof PolicyListOutput>;
 const PolicyGetByIdLandlord = LandlordShape.extend({
   documents: z.array(z.object({ id: z.string() }).passthrough()),
   addressDetails: PropertyAddressShape.nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdTenant = TenantShape.extend({
   personalReferences: z.array(z.object({ id: z.string() }).passthrough()),
@@ -248,7 +248,7 @@ const PolicyGetByIdTenant = TenantShape.extend({
   employerAddressDetails: PropertyAddressShape.nullable(),
   previousRentalAddressDetails: PropertyAddressShape.nullable(),
   employmentStatus: z.nativeEnum(EmploymentStatus).nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdJointObligor = JointObligorShape.extend({
   personalReferences: z.array(z.object({ id: z.string() }).passthrough()),
@@ -257,7 +257,7 @@ const PolicyGetByIdJointObligor = JointObligorShape.extend({
   addressDetails: PropertyAddressShape.nullable(),
   employerAddressDetails: PropertyAddressShape.nullable(),
   guaranteePropertyDetails: PropertyAddressShape.nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdAval = AvalShape.extend({
   personalReferences: z.array(z.object({ id: z.string() }).passthrough()),
@@ -266,7 +266,7 @@ const PolicyGetByIdAval = AvalShape.extend({
   addressDetails: PropertyAddressShape.nullable(),
   employerAddressDetails: PropertyAddressShape.nullable(),
   guaranteePropertyDetails: PropertyAddressShape.nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdProgressShape = z
   .object({
