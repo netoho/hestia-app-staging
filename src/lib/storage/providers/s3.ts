@@ -46,6 +46,11 @@ export class S3StorageProvider implements StorageProvider {
         secretAccessKey: config.secretAccessKey,
       },
       endpoint: config.endpoint,
+      // S3-compatible services (MinIO in e2e, DO Spaces, …) need path-style
+      // URLs; virtual-host style against a custom endpoint produces
+      // bucket.host URLs the service won't answer. Real AWS (no endpoint)
+      // keeps virtual-host style.
+      forcePathStyle: !!config.endpoint,
     });
   }
 

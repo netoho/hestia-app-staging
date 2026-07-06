@@ -137,7 +137,7 @@ export function PolicyHeader({
         {/* Actions Dropdown */}
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0">
+          <Button variant="outline" size="icon" className="shrink-0" data-testid="policy-actions-menu">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>

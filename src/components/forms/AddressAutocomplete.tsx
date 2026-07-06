@@ -407,7 +407,7 @@ export function AddressAutocomplete({
                 value={formData.street}
                 onChange={(e) => handleFieldChange('street', e.target.value)}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -418,7 +418,7 @@ export function AddressAutocomplete({
                   value={formData.exteriorNumber}
                   onChange={(e) => handleFieldChange('exteriorNumber', e.target.value)}
                   disabled={disabled}
-                  required
+                  required={required}
                 />
               </div>
               <div>
@@ -441,7 +441,7 @@ export function AddressAutocomplete({
                 value={formData.neighborhood}
                 onChange={(e) => handleFieldChange('neighborhood', e.target.value)}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
             <div>
@@ -452,7 +452,7 @@ export function AddressAutocomplete({
                 onChange={(e) => handleFieldChange('postalCode', e.target.value)}
                 maxLength={5}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
           </div>
@@ -465,7 +465,7 @@ export function AddressAutocomplete({
                 value={formData.municipality}
                 onChange={(e) => handleFieldChange('municipality', e.target.value)}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
             <div>
@@ -475,7 +475,7 @@ export function AddressAutocomplete({
                 value={formData.city}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
           </div>
@@ -488,7 +488,7 @@ export function AddressAutocomplete({
                 value={formData.state}
                 onChange={(e) => handleFieldChange('state', e.target.value)}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
             <div>
@@ -498,7 +498,7 @@ export function AddressAutocomplete({
                 value={formData.country}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
                 disabled={disabled}
-                required
+                required={required}
               />
             </div>
           </div>

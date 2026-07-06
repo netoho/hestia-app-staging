@@ -72,6 +72,10 @@ export async function seedTestData(): Promise<void> {
 
   await prisma.user.create({
     data: {
+      // Stable id: the e2e suite logs in once (storageState) and resets the DB
+      // per scenario — the JWT's user id must survive reseeding or every
+      // created policy hits a P2003 on createdById.
+      id: 'test-admin-user-id',
       email: 'admin@hestiaplp.com.mx',
       name: 'Super Admin',
       password: hashedPassword,
