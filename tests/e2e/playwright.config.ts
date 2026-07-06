@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+
+const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
 /**
  * E2E harness (#161). Design decisions (2026-07-05 planning):
@@ -83,6 +86,7 @@ export default defineConfig({
     command: isCI
       ? 'bun run --bun next build && bun run --bun next start -p 9002'
       : 'bun run --bun next dev --turbopack -p 9002',
+    cwd: REPO_ROOT,
     url: BASE_URL,
     reuseExistingServer: !isCI,
     timeout: 300_000,

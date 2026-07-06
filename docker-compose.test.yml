@@ -17,14 +17,14 @@ services:
       retries: 5
 
   # S3-compatible storage for the e2e suite (real presigned-upload flow).
-  # bitnami/minio auto-creates MINIO_DEFAULT_BUCKETS on boot — no mc step needed.
+  # The hestia-e2e bucket is created idempotently by tests/e2e/global-setup.ts.
   minio-test:
-    image: bitnami/minio:latest
+    image: minio/minio:latest
     container_name: hestia-test-minio
+    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_DEFAULT_BUCKETS: hestia-e2e
     ports:
       - "9100:9000"   # S3 API (host 9100 — the dev app owns 9002)
       - "9101:9001"   # console

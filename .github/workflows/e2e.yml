@@ -29,25 +29,25 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      minio:
-        image: bitnami/minio:latest
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_DEFAULT_BUCKETS: hestia-e2e
-        ports:
-          - 9100:9000
-        options: >-
-          --health-cmd "mc ready local"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
     env:
       E2E_DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
 
     steps:
       - uses: actions/checkout@v4
+
+      # GitHub service containers can't override the image command, and
+      # minio/minio needs `server /data` — start it as a plain container.
+      # (The bucket is created by tests/e2e/global-setup.ts.)
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9100:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do
+            if docker exec minio mc ready local >/dev/null 2>&1; then echo "minio ready"; exit 0; fi
+            sleep 2
+          done
+          echo "minio failed to become ready" && docker logs minio && exit 1
 
       - uses: oven-sh/setup-bun@v1
         with:

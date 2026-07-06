@@ -21,4 +21,30 @@ export default async function globalSetup() {
   await seedTestData();
   await prisma.$disconnect();
   console.log('[e2e] database reset + seeded (admin@hestiaplp.com.mx / password123)');
+
+  await ensureBucket();
+}
+
+/** Idempotently create the MinIO bucket the presigned-upload flow targets. */
+async function ensureBucket(): Promise<void> {
+  const { S3Client, CreateBucketCommand } = await import('@aws-sdk/client-s3');
+  const client = new S3Client({
+    region: APP_ENV.AWS_S3_REGION,
+    endpoint: APP_ENV.AWS_S3_ENDPOINT,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: APP_ENV.AWS_ACCESS_KEY_ID,
+      secretAccessKey: APP_ENV.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+  try {
+    await client.send(new CreateBucketCommand({ Bucket: APP_ENV.AWS_S3_BUCKET }));
+    console.log(`[e2e] created MinIO bucket ${APP_ENV.AWS_S3_BUCKET}`);
+  } catch (err) {
+    const name = (err as { name?: string }).name ?? '';
+    if (name === 'BucketAlreadyOwnedByYou' || name === 'BucketAlreadyExists') return;
+    throw err;
+  } finally {
+    client.destroy();
+  }
 }

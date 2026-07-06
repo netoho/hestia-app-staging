@@ -10,11 +10,13 @@ const ADMIN_AUTH_FILE = 'tests/.auth/admin.json';
 setup('authenticate as admin', async ({ page }) => {
   await page.goto('/login');
 
-  await page.getByPlaceholder(/correo|email/i).fill('admin@hestiaplp.com.mx');
-  await page.getByPlaceholder(/contraseña|password/i).fill('password123');
-  await page.getByRole('button', { name: /iniciar|login/i }).click();
+  // Generous first-visit timeout: dev-server cold compile of the route.
+  await expect(page.getByLabel('Correo Electrónico')).toBeVisible({ timeout: 60_000 });
+  await page.getByLabel('Correo Electrónico').fill('admin@hestiaplp.com.mx');
+  await page.getByLabel('Contraseña').fill('password123');
+  await page.getByRole('button', { name: 'Iniciar Sesión' }).click();
 
-  await expect(page).toHaveURL(/dashboard/, { timeout: 20_000 });
+  await expect(page).toHaveURL(/dashboard/, { timeout: 30_000 });
 
   await page.context().storageState({ path: ADMIN_AUTH_FILE });
 });
