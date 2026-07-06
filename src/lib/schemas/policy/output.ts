@@ -136,6 +136,22 @@ const PolicyTopLevelShape = z.object({
   totalPrice: z.number(),
   tenantPercentage: z.number(),
   landlordPercentage: z.number(),
+  // Financial/contract details — previously ABSENT here, so the contract
+  // lock stripped them from policy.getById on the wire and the admin
+  // surfaces rendered false/empty fiscal data whatever the landlord portal
+  // saved (the #174 strip class, caught by the #180 parity walker).
+  tenantPaymentMethod: z.string().nullable(),
+  tenantRequiresCFDI: z.boolean(),
+  tenantCFDIData: z.string().nullable(),
+  hasIVA: z.boolean(),
+  issuesTaxReceipts: z.boolean(),
+  securityDeposit: z.number().nullable(),
+  maintenanceFee: z.number().nullable(),
+  maintenanceIncludedInRent: z.boolean(),
+  rentIncreasePercentage: z.number().nullable(),
+  paymentMethod: z.string().nullable(),
+  contractStartDate: z.date().nullable(),
+  contractEndDate: z.date().nullable(),
   status: z.nativeEnum(PolicyStatus),
   createdById: z.string(),
   managedById: z.string().nullable(),
