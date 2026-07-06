@@ -536,6 +536,22 @@ export default function JointObligorPersonalInfoTabRHF({
                   </FormItem>
                 )}
               />
+
+              {/* Declared by the JO personal tab schema but previously
+                  unrendered — found by the #180 parity walker. */}
+              <FormField
+                control={form.control}
+                name="workEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email de Trabajo</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Address */}
