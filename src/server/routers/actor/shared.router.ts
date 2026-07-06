@@ -217,11 +217,19 @@ export const sharedActorRouter = createTRPCRouter({
         });
       }
 
+      // Gates are scoped to the landlord the TOKEN belongs to. The previous
+      // `.some(informationComplete)` locked every co-owner out of their own
+      // portal the moment ANY landlord submitted (their rows still
+      // incomplete) — the multi-landlord flow could then never finish
+      // through self-service.
+      const self = result.value.find(l => l.accessToken === input.token) ?? null;
+
       return {
         data: result.value,
         policy: result.value.length > 0 ? result.value[0].policy : null,
         authType: 'actor',
-        canEdit: !result.value.some(l => l.informationComplete)
+        canEdit: !(self?.informationComplete ?? false),
+        selfId: self?.id ?? null,
       };
     }),
 
