@@ -1,0 +1,133 @@
+# E2E nightly full run (#161). Runs the ENTIRE suite (all scenarios + the
+# heavier parity/staleness specs as they land) every night against the newest
+# release/** branch — that's where regressions accumulate before prod — and
+# falls back to main when no release branch exists. Failures file/refresh a
+# "Nightly e2e failing" issue so they can't go unnoticed.
+#
+# Note: GitHub only evaluates `schedule` triggers from the DEFAULT branch, so
+# this file starts firing once it reaches main (the next release merge).
+# Until then, use workflow_dispatch.
+
+name: E2E nightly
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # 08:00 UTC = 02:00 America/Mexico_City
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch/ref to test (default: newest release/**, else main)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
+      DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pick target ref (newest release/**, fallback main)
+        id: pick
+        shell: bash
+        run: |
+          REF="${{ inputs.ref }}"
+          if [ -z "$REF" ]; then
+            REF=$(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/release/*' \
+              | sed 's|^origin/||' | sort -V | tail -1)
+          fi
+          REF="${REF:-main}"
+          git checkout "$REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "nightly target: $REF ($(git rev-parse --short HEAD))"
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9100:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do
+            if docker exec minio mc ready local >/dev/null 2>&1; then echo "minio ready"; exit 0; fi
+            sleep 2
+          done
+          echo "minio failed to become ready" && docker logs minio && exit 1
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Provision e2e database
+        run: DATABASE_URL="$E2E_DATABASE_URL" bun run scripts/test-db.ts setup
+
+      - name: Run full e2e suite
+        shell: bash
+        run: bunx playwright test --config=tests/e2e/playwright.config.ts 2>&1 | tee e2e-run.log
+
+      # Same gate as e2e-core.yml — see the comment there.
+      - name: Log-noise gate — zero error-level server logs
+        shell: bash
+        run: |
+          COUNT=$(grep -c '"level":"error"' e2e-run.log || true)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::e2e run produced $COUNT unexpected error-level server log line(s):"
+            grep -n '"level":"error"' e2e-run.log
+            exit 1
+          fi
+          echo "clean: zero error-level server log lines"
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-nightly
+          path: |
+            playwright-report/
+            e2e-run.log
+          retention-days: 7
+
+      - name: File/refresh nightly-failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TITLE="Nightly e2e failing"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="Nightly e2e run failed on \`${{ steps.pick.outputs.ref }}\`: ${RUN_URL}"
+          NUM=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label bug
+          fi

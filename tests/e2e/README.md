@@ -31,7 +31,7 @@ bun run dev:e2e           # dev server wired to hestia_e2e_test + MinIO — NEVE
 | Google Maps | not needed — manual address entry is the default | |
 | Email | not needed — actor tokens are persisted at `policy.create` before any email attempt; specs read them from the DB (`helpers/db.ts`) | |
 | Auth | one real `/login` pass (NextAuth credentials) → `storageState` | the login flow itself stays covered |
-| CI | `.github/workflows/e2e.yml`: full suite on PR→main/master + push `release/**`/`hotfix/**` | feature PRs run unit+integration only |
+| CI | `e2e-core.yml`: `@core` specs (E2E-01 + E2E-07) on PR→main/master + push `release/**`/`hotfix/**`; `e2e-nightly.yml`: FULL suite nightly (02:00 CDMX) on the newest `release/**` (fallback main), failure files a "Nightly e2e failing" issue | feature PRs run unit+integration only; both workflows fail on any `"level":"error"` server log line |
 
 ## Scenarios (spanning set — see #161 for the full table)
 
