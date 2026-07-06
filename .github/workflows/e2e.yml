@@ -31,6 +31,10 @@ jobs:
           --health-retries 10
     env:
       E2E_DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
+      # prisma.config.ts resolves DATABASE_URL eagerly, so `bun install`'s
+      # postinstall (prisma generate) needs it set even though generate never
+      # connects. Same value as E2E_DATABASE_URL — every later step agrees.
+      DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
 
     steps:
       - uses: actions/checkout@v4

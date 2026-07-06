@@ -15,11 +15,24 @@ export interface WizardTenant {
   email: string;
 }
 
+export type WizardLandlord =
+  | { isCompany?: false; firstName: string; paternalLastName: string; email: string }
+  | { isCompany: true; companyName: string; companyRfc?: string; email: string };
+
+/**
+ * JO and aval wizard cards capture name+email only; the actor's INDIVIDUAL vs
+ * COMPANY type is chosen later, inside their portal (there is no toggle here).
+ */
+export type WizardGuarantor =
+  | { type: 'NONE' }
+  | { type: 'JOINT_OBLIGOR'; email: string; firstName?: string; paternalLastName?: string }
+  | { type: 'AVAL'; email: string; firstName?: string; paternalLastName?: string };
+
 export interface WizardOptions {
   rentAmount?: number;
   tenant: WizardTenant;
-  landlord: { firstName: string; paternalLastName: string; email: string };
-  guarantor: { type: 'NONE' } | { type: 'JOINT_OBLIGOR'; email: string; firstName?: string; paternalLastName?: string };
+  landlord: WizardLandlord;
+  guarantor: WizardGuarantor;
   /** landlordPercentage auto-mirrors (sum enforced to 100). Default 100. */
   tenantPercentage?: number;
 }
@@ -67,10 +80,21 @@ export async function createPolicyViaWizard(page: Page, opts: WizardOptions): Pr
   }
   await next(page);
 
-  // ── Step 3: Arrendador (1 individual) ───────────────────────────────────
+  // ── Step 3: Arrendador ───────────────────────────────────────────────────
   await expect(page.getByText('Arrendador Principal')).toBeVisible();
-  await page.locator('[name="landlords.0.firstName"]').fill(opts.landlord.firstName);
-  await page.locator('[name="landlords.0.paternalLastName"]').fill(opts.landlord.paternalLastName);
+  if (opts.landlord.isCompany) {
+    // Radix checkbox labeled "El arrendador es una empresa" swaps the entry
+    // to the company field set.
+    await page.getByRole('checkbox', { name: 'El arrendador es una empresa' }).click();
+    await expect(page.locator('[name="landlords.0.companyName"]')).toBeVisible();
+    await page.locator('[name="landlords.0.companyName"]').fill(opts.landlord.companyName);
+    if (opts.landlord.companyRfc) {
+      await page.locator('[name="landlords.0.companyRfc"]').fill(opts.landlord.companyRfc);
+    }
+  } else {
+    await page.locator('[name="landlords.0.firstName"]').fill(opts.landlord.firstName);
+    await page.locator('[name="landlords.0.paternalLastName"]').fill(opts.landlord.paternalLastName);
+  }
   await page.locator('[name="landlords.0.email"]').fill(opts.landlord.email);
   await next(page);
 
@@ -89,17 +113,19 @@ export async function createPolicyViaWizard(page: Page, opts: WizardOptions): Pr
 
   // ── Step 5: Garantía ─────────────────────────────────────────────────────
   await expect(page.getByText('Obligado Solidario / Aval')).toBeVisible();
-  if (opts.guarantor.type === 'JOINT_OBLIGOR') {
+  if (opts.guarantor.type !== 'NONE') {
+    const optionLabel = opts.guarantor.type === 'JOINT_OBLIGOR' ? 'Obligado Solidario' : 'Aval';
+    const fieldPrefix = opts.guarantor.type === 'JOINT_OBLIGOR' ? 'jointObligors' : 'avals';
     await page.getByRole('combobox').click();
-    await page.getByRole('option', { name: 'Obligado Solidario', exact: true }).click();
-    // Selecting the type auto-appends one JO card.
+    await page.getByRole('option', { name: optionLabel, exact: true }).click();
+    // Selecting the type auto-appends one card of that guarantor.
     if (opts.guarantor.firstName) {
-      await page.locator('[name="jointObligors.0.firstName"]').fill(opts.guarantor.firstName);
+      await page.locator(`[name="${fieldPrefix}.0.firstName"]`).fill(opts.guarantor.firstName);
     }
     if (opts.guarantor.paternalLastName) {
-      await page.locator('[name="jointObligors.0.paternalLastName"]').fill(opts.guarantor.paternalLastName);
+      await page.locator(`[name="${fieldPrefix}.0.paternalLastName"]`).fill(opts.guarantor.paternalLastName);
     }
-    await page.locator('[name="jointObligors.0.email"]').fill(opts.guarantor.email);
+    await page.locator(`[name="${fieldPrefix}.0.email"]`).fill(opts.guarantor.email);
   }
   await next(page);
 

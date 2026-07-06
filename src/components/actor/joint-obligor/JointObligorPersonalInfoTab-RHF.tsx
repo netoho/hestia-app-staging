@@ -43,12 +43,16 @@ export default function JointObligorPersonalInfoTabRHF({
   onSave,
   disabled = false,
 }: JointObligorPersonalInfoTabProps) {
-  // Get appropriate schema based on joint obligor type
-  const schema = getJointObligorTabSchema('personal', jointObligorType);
-
-  // Initialize form with RHF + Zod validation
+  // Initialize form with RHF + Zod validation. The schema must follow the
+  // type currently SELECTED in the form, not the mount-time prop: the wizard
+  // always creates JOs as INDIVIDUAL and this tab's radio is the only way to
+  // become COMPANY — a resolver pinned to the prop rejects that save on the
+  // jointObligorType literal and dead-ends the company self-service flow.
   const form = useForm({
-    resolver: zodResolver(schema as any),
+    resolver: (values, ctx, options) =>
+      zodResolver(
+        getJointObligorTabSchema('personal', values.jointObligorType ?? jointObligorType) as any,
+      )(values, ctx, options),
     mode: 'onChange',
     defaultValues: {
       jointObligorType,

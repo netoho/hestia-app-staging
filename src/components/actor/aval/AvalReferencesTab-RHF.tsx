@@ -37,12 +37,15 @@ export default function AvalReferencesTab({
     resolver: zodResolver(schema),
     mode: 'onChange',
     defaultValues: {
-      personalReferences: initialData?.personalReferences || [
+      // Length-checked, not `||`: a fresh aval arrives with EMPTY arrays,
+      // which are truthy and would short-circuit to zero rendered cards —
+      // leaving the actor no way to enter the 3 required references.
+      personalReferences: initialData?.personalReferences?.length > 0 ? initialData.personalReferences : [
         { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
         { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
         { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
       ],
-      commercialReferences: initialData?.commercialReferences || [
+      commercialReferences: initialData?.commercialReferences?.length > 0 ? initialData.commercialReferences : [
         { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
         { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
         { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },

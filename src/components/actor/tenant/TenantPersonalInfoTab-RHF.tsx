@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -32,19 +32,25 @@ export default function TenantPersonalInfoTabRHF({
   onSave,
   disabled = false,
 }: TenantPersonalInfoTabProps) {
-  // Get appropriate schema based on tenant type
-  const schema = getTenantTabSchema(tenantType, 'personal');
-
   // Initialize form with RHF + Zod validation.
   // Defaults come from the canonical tenant form adapter so a future
   // field addition only needs to touch `src/lib/domain/tenant/`.
-  const form = useForm({
+  // FieldValues pinned explicitly: without it TFieldValues infers from
+  // tenantFormDefaults' Record<string, unknown> and every FormField control
+  // in the file stops typechecking.
+  const form = useForm<FieldValues>({
+    // Resolve against the schema for the type currently selected in the form
+    // — a resolver pinned to the mount-time prop rejects the type-radio
+    // switch on the tenantType literal (same dead-toggle class as JO/aval).
     // Cast through ZodTypeAny so we don't have to special-case the
     // individual-vs-company union at the resolver type position.
     // RHF's `Resolver<T>` is invariant; the inferred union of the two
     // tab schemas confuses the resolver-type inference. The runtime
     // behavior is identical to passing the raw schema.
-    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
+    resolver: (values, ctx, options) =>
+      zodResolver(
+        getTenantTabSchema((values.tenantType as TenantType) ?? tenantType, 'personal') as unknown as Parameters<typeof zodResolver>[0],
+      )(values, ctx, options),
     mode: 'onChange',
     defaultValues: tenantFormDefaults({ tenantType, initialData }),
   });
