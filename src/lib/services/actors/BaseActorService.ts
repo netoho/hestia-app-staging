@@ -109,15 +109,25 @@ export abstract class BaseActorService<
   }
 
   /**
-   * Create or update address
+   * Create or update address.
+   * A payload without a street is "nothing to persist": the portals post {}
+   * for untouched optional address widgets, and street is the only required
+   * PropertyAddress column — letting such payloads through threw
+   * PrismaClientValidationError on every save that carried one (the tenant
+   * Historial tab, most visibly). No-op keeps the existing link, and the
+   * caller drops the payload key as it does for a real upsert.
    */
   protected async upsertAddress(
     addressData: AddressWithMetadata,
     existingAddressId?: string | null
-  ): AsyncResult<string> {
+  ): AsyncResult<string | undefined> {
     return this.executeDbOperation(async () => {
       // Remove id and timestamp fields from addressData to prevent conflicts
       const cleanData = cleanAddressData(addressData);
+
+      if (!cleanData.street) {
+        return existingAddressId ?? undefined;
+      }
 
       const address = await this.prisma.propertyAddress.upsert({
         where: { id: existingAddressId || '' },
@@ -151,48 +161,30 @@ export abstract class BaseActorService<
         previousRentalAddressId?: string;
       } = {};
 
-      // Upsert current address
+      // Streetless payloads are skipped for the same reason upsertAddress
+      // no-ops on them: nothing to persist, and Prisma rejects the create.
+      const upsertOne = async (details: AddressWithMetadata) => {
+        const cleanData = cleanAddressData(details);
+        if (!cleanData.street) return undefined;
+        const address = await this.prisma.propertyAddress.upsert({
+          where: { id: details.id || '' },
+          create: cleanData,
+          update: cleanData,
+        });
+        return address.id;
+      };
+
       if (data.addressDetails) {
-        const cleanData = cleanAddressData(data.addressDetails);
-        const currentAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.addressDetails.id || '' },
-          create: cleanData,
-          update: cleanData,
-        });
-        updates.addressId = currentAddress.id;
+        updates.addressId = await upsertOne(data.addressDetails);
       }
-
-      // Upsert employer address
       if (data.employerAddressDetails) {
-        const cleanData = cleanAddressData(data.employerAddressDetails);
-        const employerAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.employerAddressDetails.id || '' },
-          create: cleanData,
-          update: cleanData,
-        });
-        updates.employerAddressId = employerAddress.id;
+        updates.employerAddressId = await upsertOne(data.employerAddressDetails);
       }
-
-      // Upsert guarantee property address
       if (data.guaranteePropertyDetails) {
-        const cleanData = cleanAddressData(data.guaranteePropertyDetails);
-        const guaranteePropertyAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.guaranteePropertyDetails.id || '' },
-          create: cleanData,
-          update: cleanData,
-        });
-        updates.guaranteePropertyAddressId = guaranteePropertyAddress.id;
+        updates.guaranteePropertyAddressId = await upsertOne(data.guaranteePropertyDetails);
       }
-
-      // Upsert previous rental address
       if (data.previousRentalAddressDetails) {
-        const cleanData = cleanAddressData(data.previousRentalAddressDetails);
-        const previousRentalAddress = await this.prisma.propertyAddress.upsert({
-          where: { id: data.previousRentalAddressDetails.id || '' },
-          create: cleanData,
-          update: cleanData,
-        });
-        updates.previousRentalAddressId = previousRentalAddress.id;
+        updates.previousRentalAddressId = await upsertOne(data.previousRentalAddressDetails);
       }
 
       return updates;

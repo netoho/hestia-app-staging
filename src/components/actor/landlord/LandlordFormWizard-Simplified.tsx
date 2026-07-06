@@ -19,6 +19,8 @@ interface LandlordFormWizardProps {
   token: string;
   initialData?: any;
   policy?: any;
+  /** Landlord record the presented token belongs to (portal flows). */
+  selfId?: string | null;
   onComplete?: () => void;
   isAdminEdit?: boolean;
 }
@@ -27,6 +29,7 @@ export default function LandlordFormWizardSimplified({
   token,
   initialData = {},
   policy,
+  selfId = null,
   onComplete,
   isAdminEdit = false,
 }: LandlordFormWizardProps) {
@@ -36,8 +39,18 @@ export default function LandlordFormWizardSimplified({
 
   // Landlord data - can be array (multi-actor) or single
   const landlords = initialData?.landlords || (initialData ? [initialData] : []);
-  const primaryLandlord = landlords.find((landlord: any) => landlord.isPrimary) || {};
-  const isCompany = primaryLandlord?.isCompany ?? false;
+  // Every landlord is first-class: this portal belongs to the TOKEN's
+  // landlord, so doc requirements and upload binding follow the SELF record.
+  // Keying them off the legacy "primary" gave a company co-owner the
+  // individual doc set — their required company docs were un-uploadable and
+  // completion unreachable. Primary/first remain only as fallbacks for
+  // admin-edit flows that pass no selfId.
+  const selfLandlord =
+    (selfId ? landlords.find((l: any) => l.id === selfId) : undefined) ??
+    landlords.find((landlord: any) => landlord.isPrimary) ??
+    landlords[0] ??
+    {};
+  const isCompany = selfLandlord?.isCompany ?? false;
 
   // Tab configuration
   const config = actorConfig.landlord;
@@ -236,13 +249,13 @@ export default function LandlordFormWizardSimplified({
           {wizard.activeTab === 'financial-info' && (
             <FinancialInfoFormRHF
               initialData={{
-                landlord: primaryLandlord,
+                landlord: selfLandlord,
                 policyFinancial: initialData?.policyFinancialData || {},
               }}
               onSave={(data) => handleTabSave('financial-info', data)}
               policy={policy}
               token={token}
-              landlordId={primaryLandlord?.id}
+              landlordId={selfLandlord?.id}
               isAdminEdit={isAdminEdit}
               disabled={isSaving}
             />
@@ -263,7 +276,7 @@ export default function LandlordFormWizardSimplified({
             }}>
               <DocumentsSection
                 token={token}
-                landlordId={primaryLandlord?.id}
+                landlordId={selfLandlord?.id}
                 isCompany={isCompany}
                 allTabsSaved={allTabsSaved || isAdminEdit}
                 initialDocuments={initialData?.documents || []}

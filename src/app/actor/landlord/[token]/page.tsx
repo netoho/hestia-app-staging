@@ -42,7 +42,11 @@ export default function LandlordPortalPage() {
   const landlords = data?.data || null;
   const policy = data?.policy || null;
   const canEdit = data?.canEdit || false;
-  const isCompleted = !!data?.data?.some(l => l.informationComplete);
+  // Completion is scoped to the landlord this TOKEN belongs to — a `.some()`
+  // here showed "Información Enviada" to every co-owner as soon as one
+  // landlord submitted, locking the rest out with their rows incomplete.
+  const self = data?.selfId ? data?.data?.find(l => l.id === data.selfId) : null;
+  const isCompleted = !!self?.informationComplete;
   const informationComplete = isCompleted
 
   const handleComplete = () => {
@@ -252,6 +256,7 @@ export default function LandlordPortalPage() {
             },
           }}
           policy={policy}
+          selfId={data?.selfId ?? null}
           onComplete={handleComplete}
         />
       </div>

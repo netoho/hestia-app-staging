@@ -182,7 +182,10 @@ function mapAvalFields(
   out.hasPropertyGuarantee = true;
   out.guaranteeMethod = 'PROPERTY';
 
-  // Legacy isCompany → avalType.
+  // Legacy isCompany → avalType. The enum is the aval model's ONLY stored
+  // discriminator — isCompany is an input-compat alias, never a column
+  // (writing it throws PrismaClientValidationError). Anything type-branching
+  // on a loaded aval must read avalType (#151).
   if ('isCompany' in out) {
     out.avalType = out.isCompany ? 'COMPANY' : 'INDIVIDUAL';
     delete out.isCompany;

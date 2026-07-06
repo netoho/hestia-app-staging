@@ -23,15 +23,24 @@ export type WizardLandlord =
  * JO and aval wizard cards capture name+email only; the actor's INDIVIDUAL vs
  * COMPANY type is chosen later, inside their portal (there is no toggle here).
  */
+export interface WizardGuarantorActor {
+  email: string;
+  firstName?: string;
+  paternalLastName?: string;
+}
+
 export type WizardGuarantor =
   | { type: 'NONE' }
-  | { type: 'JOINT_OBLIGOR'; email: string; firstName?: string; paternalLastName?: string }
-  | { type: 'AVAL'; email: string; firstName?: string; paternalLastName?: string };
+  | ({ type: 'JOINT_OBLIGOR' } & WizardGuarantorActor)
+  | ({ type: 'AVAL' } & WizardGuarantorActor)
+  | { type: 'BOTH'; jointObligor: WizardGuarantorActor; aval: WizardGuarantorActor };
 
 export interface WizardOptions {
   rentAmount?: number;
   tenant: WizardTenant;
   landlord: WizardLandlord;
+  /** Co-owners appended via "Agregar copropietario" (each may be a company). */
+  coLandlords?: WizardLandlord[];
   guarantor: WizardGuarantor;
   /** landlordPercentage auto-mirrors (sum enforced to 100). Default 100. */
   tenantPercentage?: number;
@@ -82,20 +91,30 @@ export async function createPolicyViaWizard(page: Page, opts: WizardOptions): Pr
 
   // ── Step 3: Arrendador ───────────────────────────────────────────────────
   await expect(page.getByText('Arrendador Principal')).toBeVisible();
-  if (opts.landlord.isCompany) {
-    // Radix checkbox labeled "El arrendador es una empresa" swaps the entry
-    // to the company field set.
-    await page.getByRole('checkbox', { name: 'El arrendador es una empresa' }).click();
-    await expect(page.locator('[name="landlords.0.companyName"]')).toBeVisible();
-    await page.locator('[name="landlords.0.companyName"]').fill(opts.landlord.companyName);
-    if (opts.landlord.companyRfc) {
-      await page.locator('[name="landlords.0.companyRfc"]').fill(opts.landlord.companyRfc);
+
+  const fillLandlordCard = async (index: number, landlord: WizardLandlord) => {
+    if (landlord.isCompany) {
+      // Radix checkbox labeled "El arrendador es una empresa" swaps the entry
+      // to the company field set — one checkbox per card.
+      await page.getByRole('checkbox', { name: 'El arrendador es una empresa' }).nth(index).click();
+      await expect(page.locator(`[name="landlords.${index}.companyName"]`)).toBeVisible();
+      await page.locator(`[name="landlords.${index}.companyName"]`).fill(landlord.companyName);
+      if (landlord.companyRfc) {
+        await page.locator(`[name="landlords.${index}.companyRfc"]`).fill(landlord.companyRfc);
+      }
+    } else {
+      await page.locator(`[name="landlords.${index}.firstName"]`).fill(landlord.firstName);
+      await page.locator(`[name="landlords.${index}.paternalLastName"]`).fill(landlord.paternalLastName);
     }
-  } else {
-    await page.locator('[name="landlords.0.firstName"]').fill(opts.landlord.firstName);
-    await page.locator('[name="landlords.0.paternalLastName"]').fill(opts.landlord.paternalLastName);
+    await page.locator(`[name="landlords.${index}.email"]`).fill(landlord.email);
+  };
+
+  await fillLandlordCard(0, opts.landlord);
+  for (const [i, co] of (opts.coLandlords ?? []).entries()) {
+    await page.getByRole('button', { name: 'Agregar copropietario' }).click();
+    await expect(page.locator(`[name="landlords.${i + 1}.email"]`)).toBeVisible();
+    await fillLandlordCard(i + 1, co);
   }
-  await page.locator('[name="landlords.0.email"]').fill(opts.landlord.email);
   await next(page);
 
   // ── Step 4: Inquilino ────────────────────────────────────────────────────
@@ -114,18 +133,32 @@ export async function createPolicyViaWizard(page: Page, opts: WizardOptions): Pr
   // ── Step 5: Garantía ─────────────────────────────────────────────────────
   await expect(page.getByText('Obligado Solidario / Aval')).toBeVisible();
   if (opts.guarantor.type !== 'NONE') {
-    const optionLabel = opts.guarantor.type === 'JOINT_OBLIGOR' ? 'Obligado Solidario' : 'Aval';
-    const fieldPrefix = opts.guarantor.type === 'JOINT_OBLIGOR' ? 'jointObligors' : 'avals';
+    const fillGuarantorCard = async (prefix: 'jointObligors' | 'avals', actor: WizardGuarantorActor) => {
+      if (actor.firstName) {
+        await page.locator(`[name="${prefix}.0.firstName"]`).fill(actor.firstName);
+      }
+      if (actor.paternalLastName) {
+        await page.locator(`[name="${prefix}.0.paternalLastName"]`).fill(actor.paternalLastName);
+      }
+      await page.locator(`[name="${prefix}.0.email"]`).fill(actor.email);
+    };
+
+    const optionLabel =
+      opts.guarantor.type === 'JOINT_OBLIGOR' ? 'Obligado Solidario'
+      : opts.guarantor.type === 'AVAL' ? 'Aval'
+      : 'Ambos';
     await page.getByRole('combobox').click();
     await page.getByRole('option', { name: optionLabel, exact: true }).click();
-    // Selecting the type auto-appends one card of that guarantor.
-    if (opts.guarantor.firstName) {
-      await page.locator(`[name="${fieldPrefix}.0.firstName"]`).fill(opts.guarantor.firstName);
+    // Selecting the type auto-appends one card per guarantor kind.
+    if (opts.guarantor.type === 'BOTH') {
+      await fillGuarantorCard('jointObligors', opts.guarantor.jointObligor);
+      await fillGuarantorCard('avals', opts.guarantor.aval);
+    } else {
+      await fillGuarantorCard(
+        opts.guarantor.type === 'JOINT_OBLIGOR' ? 'jointObligors' : 'avals',
+        opts.guarantor,
+      );
     }
-    if (opts.guarantor.paternalLastName) {
-      await page.locator(`[name="${fieldPrefix}.0.paternalLastName"]`).fill(opts.guarantor.paternalLastName);
-    }
-    await page.locator(`[name="${fieldPrefix}.0.email"]`).fill(opts.guarantor.email);
   }
   await next(page);
 

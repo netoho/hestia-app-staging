@@ -9,8 +9,12 @@ import { generatePolicyUrl } from '../utils/tokenUtils';
 import { brandInfo, emailSubject } from '@/lib/config/brand';
 import { formatDate, formatDateLong, formatDateTimeLong } from '@/lib/utils/formatting';
 
-// Email provider configuration
-const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'; // 'resend', 'mailgun', or 'smtp'
+// Email provider configuration. Empty string or 'none' = email deliberately
+// disabled (e2e, local dev without a provider): sends no-op with a single
+// notice instead of a per-send error. Unset still defaults to resend.
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER ?? 'resend'; // 'resend', 'mailgun', 'smtp', 'none' or ''
+const EMAIL_DISABLED = EMAIL_PROVIDER === '' || EMAIL_PROVIDER === 'none';
+let emailDisabledNoticeLogged = false;
 const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const COMPANY_NAME = brandInfo.name;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || brandInfo.supportEmail;
@@ -31,6 +35,13 @@ interface EmailData {
 // Email provider abstraction
 class EmailProvider {
   static async sendEmail(data: EmailData): Promise<boolean> {
+    if (EMAIL_DISABLED) {
+      if (!emailDisabledNoticeLogged) {
+        emailDisabledNoticeLogged = true;
+        console.warn('[email] EMAIL_PROVIDER is empty/none — email sending disabled, all sends will be skipped');
+      }
+      return false;
+    }
     try {
       switch (EMAIL_PROVIDER) {
         case 'mailgun':

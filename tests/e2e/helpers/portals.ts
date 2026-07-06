@@ -127,18 +127,23 @@ async function fillCommercialReference(page: Page, i: number): Promise<void> {
 }
 
 /**
- * Fill the AddressAutocomplete manual grid. The widget's input ids are static
- * and DUPLICATE when a tab renders two widgets (landlord property tab) — the
- * primary address renders first, so target the first match.
+ * Fill the nth AddressAutocomplete manual grid on the page. The widget's
+ * input ids are static and DUPLICATE when a tab renders several widgets
+ * (landlord property tab's two, or one per card in the collective
+ * multi-landlord form) — target by occurrence order.
  */
+async function fillAddressNth(page: Page, nth: number): Promise<void> {
+  await page.locator('#street').nth(nth).fill('Calle Actor');
+  await page.locator('#exteriorNumber').nth(nth).fill('45');
+  await page.locator('#neighborhood').nth(nth).fill('Roma Norte');
+  await page.locator('#postalCode').nth(nth).fill('06700');
+  await page.locator('#municipality').nth(nth).fill('Cuauhtémoc');
+  await page.locator('#city').nth(nth).fill('Ciudad de México');
+  await page.locator('#state').nth(nth).fill('CDMX');
+}
+
 async function fillAddress(page: Page): Promise<void> {
-  await page.locator('#street').first().fill('Calle Actor');
-  await page.locator('#exteriorNumber').first().fill('45');
-  await page.locator('#neighborhood').first().fill('Roma Norte');
-  await page.locator('#postalCode').first().fill('06700');
-  await page.locator('#municipality').first().fill('Cuauhtémoc');
-  await page.locator('#city').first().fill('Ciudad de México');
-  await page.locator('#state').first().fill('CDMX');
+  await fillAddressNth(page, 0);
 }
 
 async function fillPersonalReference(page: Page, i: number, opts?: { relationship?: string }): Promise<void> {
@@ -156,9 +161,13 @@ async function fillPersonalReference(page: Page, i: number, opts?: { relationshi
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TENANT — individual / MEXICAN (E2E-01)
+// TENANT — individual / MEXICAN (E2E-01) · FOREIGN variant (E2E-05)
 // ─────────────────────────────────────────────────────────────────────────────
-export async function completeTenantIndividualPortal(page: Page, token: string): Promise<void> {
+export async function completeTenantIndividualPortal(
+  page: Page,
+  token: string,
+  opts: { foreign?: boolean } = {},
+): Promise<void> {
   await page.goto(`/actor/tenant/${token}`);
   await waitPortalLoaded(page);
 
@@ -172,6 +181,13 @@ export async function completeTenantIndividualPortal(page: Page, token: string):
     ['email', 'tenant.e2e@example.com'],
     ['phone', '5512345678'],
   ]);
+  if (opts.foreign) {
+    // FOREIGN reveals the passport field; the docs tab later requires the
+    // immigration document (requirements config, condition: 'foreign').
+    await page.getByRole('radio', { name: 'Extranjera' }).check();
+    await expect(page.locator('[name="passport"]')).toBeVisible();
+    await page.locator('[name="passport"]').fill('P12345678');
+  }
   // addressDetails arrives as null from the DB and the tab schema is
   // .optional() (undefined-only) — filling it yields the object Zod accepts.
   await fillAddress(page);
@@ -198,12 +214,16 @@ export async function completeTenantIndividualPortal(page: Page, token: string):
   for (let i = 0; i < 3; i++) await fillPersonalReference(page, i);
   await save(page);
 
-  // Tab 5 — Documentos (IDENTIFICATION, INCOME_PROOF, ADDRESS_PROOF, BANK_STATEMENT)
+  // Tab 5 — Documentos (IDENTIFICATION, INCOME_PROOF, ADDRESS_PROOF, BANK_STATEMENT;
+  // + IMMIGRATION_DOCUMENT when the personal tab saved nationality FOREIGN)
   await expect(page.locator('#upload-identification')).toBeVisible({ timeout: 20_000 });
   await uploadDoc(page, 'IDENTIFICATION');
   await uploadDoc(page, 'INCOME_PROOF');
   await uploadDoc(page, 'ADDRESS_PROOF');
   await uploadDoc(page, 'BANK_STATEMENT');
+  if (opts.foreign) {
+    await uploadDoc(page, 'IMMIGRATION_DOCUMENT');
+  }
   await page.getByRole('button', { name: 'Enviar Información' }).click();
   await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
 }
@@ -250,30 +270,116 @@ export async function completeTenantCompanyPortal(page: Page, token: string): Pr
   await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
 }
 
+/**
+ * The multi-landlord array schema validates EVERY card on any save, so a
+ * sibling card's required fields (legalRepCurp, curp) and null-poisoned
+ * optionals ("Expected string, received null" — #175 surfacing client-side)
+ * silently block each landlord's own save. Fill whatever is still empty on
+ * the other cards; prefilled values are left untouched, and the sibling's
+ * own later visit overwrites the placeholders with their real data.
+ */
+async function fillSiblingLandlordCards(page: Page, ownIndex: number): Promise<void> {
+  const emails = page.locator('[name^="landlords."][name$=".email"]');
+  const n = await emails.count();
+  for (let j = 0; j < n; j++) {
+    if (j === ownIndex) continue;
+    const p = (f: string) => `landlords.${j}.${f}`;
+    const fillIfEmpty = async (field: string, value: string) => {
+      const loc = page.locator(`[name="${p(field)}"]`);
+      if ((await loc.count()) && !(await loc.inputValue())) await loc.fill(value);
+    };
+    const isCompanyCard = (await page.locator(`[name="${p('companyName')}"]`).count()) > 0;
+    if (isCompanyCard) {
+      await fillIfEmpty('companyName', 'Inmobiliaria Copropietaria SA de CV');
+      await fillIfEmpty('companyRfc', 'ISI900101AB1');
+      await fillIfEmpty('legalRepFirstName', 'Rep');
+      await fillIfEmpty('legalRepPaternalLastName', 'Legal');
+      await fillIfEmpty('legalRepCurp', 'RELG800101HDFXXX01');
+      await fillIfEmpty('legalRepRfc', 'RELG800101AB1');
+      await fillIfEmpty('legalRepPosition', 'Apoderado');
+      await fillIfEmpty('legalRepEmail', 'rep.copropietario@example.com');
+      await fillIfEmpty('legalRepPhone', '5500000001');
+      await fillIfEmpty('legalRepMiddleName', 'Opcional');
+      await fillIfEmpty('legalRepMaternalLastName', 'Opcional');
+      await fillIfEmpty('businessType', 'Inmobiliario');
+    } else {
+      await fillIfEmpty('firstName', 'Co');
+      await fillIfEmpty('paternalLastName', 'Propietario');
+      await fillIfEmpty('curp', 'COPX800101HDFXXX02');
+      await fillIfEmpty('rfc', 'COPX800101AB1');
+    }
+    await fillIfEmpty('phone', '5500000003'); // shared contact — required on every card
+    await fillIfEmpty('personalEmail', 'cop.opt@example.com');
+    await fillIfEmpty('workEmail', 'cop.work@example.com');
+    await fillIfEmpty('workPhone', '5500000004');
+  }
+}
+
+/**
+ * The landlord portal is COLLECTIVE: any landlord's token renders every
+ * landlord card of the policy (array order is not creation order). Locate the
+ * caller's own card by its prefilled email; single-landlord policies resolve
+ * to the only card.
+ */
+async function landlordIndexByEmail(page: Page, email?: string): Promise<number> {
+  const inputs = page.locator('[name^="landlords."][name$=".email"]');
+  await expect(inputs.first()).toBeVisible({ timeout: 20_000 });
+  if (!email) return 0;
+  const n = await inputs.count();
+  for (let i = 0; i < n; i++) {
+    if ((await inputs.nth(i).inputValue()) === email) {
+      const name = await inputs.nth(i).getAttribute('name');
+      return parseInt((name ?? 'landlords.0.email').split('.')[1], 10);
+    }
+  }
+  throw new Error(`[e2e] no landlord card prefilled with ${email}`);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// LANDLORD — individual (single landlord)
+// LANDLORD — individual
 // ─────────────────────────────────────────────────────────────────────────────
-export async function completeLandlordIndividualPortal(page: Page, token: string): Promise<void> {
+export async function completeLandlordIndividualPortal(
+  page: Page,
+  token: string,
+  opts: { email?: string } = {},
+): Promise<void> {
   await page.goto(`/actor/landlord/${token}`);
   await waitPortalLoaded(page);
 
-  // Tab 1 — Información (owner-info; index 0 = the only landlord)
-  await expect(page.locator('[name="landlords.0.firstName"]')).toBeVisible({ timeout: 20_000 });
-  await waitFormHydrated(page, 'landlords.0.email');
+  // Tab 1 — Información (owner-info; fill ONLY the caller's own card)
+  const i = await landlordIndexByEmail(page, opts.email);
+  await expect(page.locator(`[name="landlords.${i}.firstName"]`)).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, `landlords.${i}.email`);
   await fillAllStable(page, [
-    ['landlords.0.firstName', 'Carlos'],
-    ['landlords.0.paternalLastName', 'Ramírez'],
-    ['landlords.0.curp', 'RACX800202HDFMRR08'],
-    ['landlords.0.rfc', 'RACX800202AB1'],
-    ['landlords.0.email', 'landlord.e2e@example.com'],
-    ['landlords.0.phone', '5599887766'],
+    [`landlords.${i}.firstName`, 'Carlos'],
+    [`landlords.${i}.paternalLastName`, 'Ramírez'],
+    [`landlords.${i}.curp`, 'RACX800202HDFMRR08'],
+    [`landlords.${i}.rfc`, 'RACX800202AB1'],
+    [`landlords.${i}.email`, opts.email ?? 'landlord.e2e@example.com'],
+    [`landlords.${i}.phone`, '5599887766'],
   ]);
-  await fillAddress(page); // Dirección Actual is UI-required on this tab
+  // EVERY card's address grid carries native `required` inputs — one empty
+  // sibling grid makes requestSubmit() no-op with zero feedback (the
+  // collective form holds each landlord's save hostage to all cards'
+  // addresses; app gap noted on the PR). Fill any grid still empty, plus the
+  // sibling cards' schema-required fields.
+  await fillSiblingLandlordCards(page, i);
+  await pickUnsetSelects(page);
+  const gridCount = await page.locator('#street').count();
+  for (let j = 0; j < gridCount; j++) {
+    if (!(await page.locator('#street').nth(j).inputValue())) {
+      await fillAddressNth(page, j);
+    }
+  }
   await save(page);
 
-  // Tab 2 — Propiedad (property address is UI-required; second widget is optional)
+  // Tab 2 — Propiedad (policy-level; property address is UI-required, second
+  // widget is optional). May arrive prefilled when another landlord already
+  // saved it — fill only when empty.
   await expect(page.locator('#street').first()).toBeVisible({ timeout: 20_000 });
-  await fillAddress(page);
+  if (!(await page.locator('#street').first().inputValue())) {
+    await fillAddress(page);
+  }
   // The date fields reject empty strings ("Formato de fecha debe ser
   // YYYY-MM-DD" — schema lacks empty→null normalization), so fill both.
   const today = new Date().toISOString().slice(0, 10);
@@ -362,42 +468,58 @@ export async function completeJointObligorIncomePortal(page: Page, token: string
 // ─────────────────────────────────────────────────────────────────────────────
 // LANDLORD — company (E2E-03)
 // ─────────────────────────────────────────────────────────────────────────────
-export async function completeLandlordCompanyPortal(page: Page, token: string): Promise<void> {
+export async function completeLandlordCompanyPortal(
+  page: Page,
+  token: string,
+  opts: { email?: string } = {},
+): Promise<void> {
   await page.goto(`/actor/landlord/${token}`);
   await waitPortalLoaded(page);
 
-  // Tab 1 — Información: the wizard saved isCompany=true, so the company
-  // branch renders from the start (no toggle dance needed).
-  await expect(page.locator('[name="landlords.0.companyName"]')).toBeVisible({ timeout: 20_000 });
-  await waitFormHydrated(page, 'landlords.0.email');
+  // Tab 1 — Información: the wizard saved isCompany=true, so this card's
+  // company branch renders from the start (no toggle dance needed). Fill
+  // ONLY the caller's own card (collective multi-landlord form).
+  const i = await landlordIndexByEmail(page, opts.email);
+  await expect(page.locator(`[name="landlords.${i}.companyName"]`)).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, `landlords.${i}.email`);
   await fillAllStable(page, [
-    ['landlords.0.companyName', 'Inmobiliaria E2E SA de CV'],
-    ['landlords.0.companyRfc', 'IEE900101AB1'],
-    ['landlords.0.email', 'inmobiliaria.e2e@example.com'],
-    ['landlords.0.phone', '5522334455'],
-    ['landlords.0.legalRepFirstName', 'Roberto'],
-    ['landlords.0.legalRepPaternalLastName', 'Vega'],
+    [`landlords.${i}.companyName`, 'Inmobiliaria E2E SA de CV'],
+    [`landlords.${i}.companyRfc`, 'IEE900101AB1'],
+    [`landlords.${i}.email`, opts.email ?? 'inmobiliaria.e2e@example.com'],
+    [`landlords.${i}.phone`, '5522334455'],
+    [`landlords.${i}.legalRepFirstName`, 'Roberto'],
+    [`landlords.${i}.legalRepPaternalLastName`, 'Vega'],
   ]);
   await fillOptionalStrings(page, [
-    'landlords.0.legalRepMiddleName',
-    'landlords.0.legalRepMaternalLastName',
-    'landlords.0.legalRepCurp',
-    'landlords.0.legalRepRfc',
-    'landlords.0.legalRepPosition',
-    'landlords.0.legalRepEmail',
-    'landlords.0.legalRepPhone',
-    'landlords.0.businessType',
-    'landlords.0.personalEmail',
-    'landlords.0.workEmail',
-    'landlords.0.workPhone',
+    `landlords.${i}.legalRepMiddleName`,
+    `landlords.${i}.legalRepMaternalLastName`,
+    `landlords.${i}.legalRepCurp`,
+    `landlords.${i}.legalRepRfc`,
+    `landlords.${i}.legalRepPosition`,
+    `landlords.${i}.legalRepEmail`,
+    `landlords.${i}.legalRepPhone`,
+    `landlords.${i}.businessType`,
+    `landlords.${i}.personalEmail`,
+    `landlords.${i}.workEmail`,
+    `landlords.${i}.workPhone`,
   ]);
+  // Same sibling hostage as the individual variant — fill the other cards'
+  // schema-required fields and any still-empty address grid.
+  await fillSiblingLandlordCards(page, i);
   await pickUnsetSelects(page);
-  await fillAddress(page); // Dirección Actual is UI-required on this tab
+  const gridCount = await page.locator('#street').count();
+  for (let j = 0; j < gridCount; j++) {
+    if (!(await page.locator('#street').nth(j).inputValue())) {
+      await fillAddressNth(page, j);
+    }
+  }
   await save(page);
 
-  // Tab 2 — Propiedad (same layout as the individual variant)
+  // Tab 2 — Propiedad (policy-level; may be prefilled by another landlord)
   await expect(page.locator('#street').first()).toBeVisible({ timeout: 20_000 });
-  await fillAddress(page);
+  if (!(await page.locator('#street').first().inputValue())) {
+    await fillAddress(page);
+  }
   const today = new Date().toISOString().slice(0, 10);
   await page.locator('[name="propertyDeliveryDate"]').fill(today);
   await page.locator('[name="contractSigningDate"]').fill(today);
@@ -419,18 +541,45 @@ export async function completeLandlordCompanyPortal(page: Page, token: string): 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// JOINT OBLIGOR — company / PROPERTY guarantee (E2E-03)
+// JOINT OBLIGOR — company (E2E-03 PROPERTY · E2E-06 INCOME)
 // ─────────────────────────────────────────────────────────────────────────────
-export async function completeJointObligorCompanyPropertyPortal(page: Page, token: string): Promise<void> {
+
+/** Fill the JO Garantía tab's PROPERTY branch (radio + fields + in-tab docs). */
+async function fillJoPropertyGuarantee(page: Page): Promise<void> {
+  await page.getByRole('radio', { name: 'Garantía con Propiedad' }).check();
+  await expect(page.locator('[name="propertyValue"]')).toBeVisible({ timeout: 20_000 });
+  await fillAddress(page); // guaranteePropertyDetails widget
+  await page.locator('[name="propertyValue"]').fill('3500000');
+  await page.locator('[name="propertyDeedNumber"]').fill('ESC-2024-789');
+  await page.locator('[name="propertyRegistry"]').fill('FR-123456');
+  await uploadDoc(page, 'PROPERTY_DEED');
+  await uploadDoc(page, 'PROPERTY_TAX_STATEMENT');
+}
+
+/** Fill the JO Garantía tab's INCOME branch (radio + bank fields + income proof). */
+async function fillJoIncomeGuarantee(page: Page): Promise<void> {
+  await page.getByRole('radio', { name: 'Garantía por Ingresos' }).check();
+  await expect(page.locator('[name="bankName"]')).toBeVisible({ timeout: 20_000 });
+  await page.locator('[name="bankName"]').fill('BBVA');
+  await page.locator('[name="accountHolder"]').fill('Garantías Corporativas E2E');
+  await page.locator('[name="monthlyIncome"]').fill('80000');
+  await uploadDoc(page, 'INCOME_PROOF');
+}
+
+async function completeJointObligorCompanyPortal(
+  page: Page,
+  token: string,
+  method: 'PROPERTY' | 'INCOME',
+): Promise<void> {
   await page.goto(`/actor/joint-obligor/${token}`);
   await waitPortalLoaded(page);
 
   // Tab 1 — Personal. The portal opens with the INDIVIDUAL layout (the wizard
-  // card has no type toggle, so the JO was created as INDIVIDUAL). The tab's
-  // zodResolver was also built for INDIVIDUAL at mount — so fill the visible
-  // individual basics FIRST (they stay registered in RHF after the switch and
-  // keep that validation happy), then flip to Persona Moral and fill the
-  // company field set. toDb decomposes by the saved jointObligorType.
+  // card has no type toggle, so the JO was created as INDIVIDUAL). Fill the
+  // visible individual basics FIRST (they stay registered in RHF after the
+  // switch, keeping any individual-schema validation happy), then flip to
+  // Persona Moral and fill the company field set. toDb decomposes by the
+  // saved jointObligorType.
   await expect(page.locator('[name="firstName"]')).toBeVisible({ timeout: 20_000 });
   await waitFormHydrated(page, 'email');
   await fillAllStable(page, [
@@ -479,16 +628,13 @@ export async function completeJointObligorCompanyPropertyPortal(page: Page, toke
   await pickUnsetSelects(page);
   await save(page);
 
-  // Tab 2 — Garantía: PROPERTY method (radio), property data + in-tab deed/tax docs
+  // Tab 2 — Garantía (per-method branch)
   await expect(page.getByText('Método de Garantía')).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('radio', { name: 'Garantía con Propiedad' }).check();
-  await expect(page.locator('[name="propertyValue"]')).toBeVisible({ timeout: 20_000 });
-  await fillAddress(page); // guaranteePropertyDetails widget
-  await page.locator('[name="propertyValue"]').fill('3500000');
-  await page.locator('[name="propertyDeedNumber"]').fill('ESC-2024-789');
-  await page.locator('[name="propertyRegistry"]').fill('FR-123456');
-  await uploadDoc(page, 'PROPERTY_DEED');
-  await uploadDoc(page, 'PROPERTY_TAX_STATEMENT');
+  if (method === 'PROPERTY') {
+    await fillJoPropertyGuarantee(page);
+  } else {
+    await fillJoIncomeGuarantee(page);
+  }
   await save(page);
 
   // Tab 3 — Referencias (company → 3 commercial references)
@@ -496,12 +642,75 @@ export async function completeJointObligorCompanyPropertyPortal(page: Page, toke
   for (let i = 0; i < 3; i++) await fillCommercialReference(page, i);
   await save(page);
 
-  // Tab 4 — Documentos (company set; deed/predial already uploaded in Garantía)
+  // Tab 4 — Documentos (company set; guarantee docs already uploaded in Garantía)
   await expect(page.locator('#upload-company_constitution')).toBeVisible({ timeout: 20_000 });
   await uploadDoc(page, 'COMPANY_CONSTITUTION');
   await uploadDoc(page, 'LEGAL_POWERS');
   await uploadDoc(page, 'IDENTIFICATION');
   await uploadDoc(page, 'TAX_STATUS_CERTIFICATE');
+  await uploadDoc(page, 'BANK_STATEMENT');
+  await page.getByRole('button', { name: 'Enviar Información' }).click();
+  await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
+}
+
+export async function completeJointObligorCompanyPropertyPortal(page: Page, token: string): Promise<void> {
+  return completeJointObligorCompanyPortal(page, token, 'PROPERTY');
+}
+
+export async function completeJointObligorCompanyIncomePortal(page: Page, token: string): Promise<void> {
+  return completeJointObligorCompanyPortal(page, token, 'INCOME');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JOINT OBLIGOR — individual / PROPERTY guarantee (E2E-05)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function completeJointObligorIndividualPropertyPortal(page: Page, token: string): Promise<void> {
+  await page.goto(`/actor/joint-obligor/${token}`);
+  await waitPortalLoaded(page);
+
+  // Tab 1 — Personal (same as the INCOME variant)
+  await expect(page.locator('[name="firstName"]')).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, 'email');
+  await fillAllStable(page, [
+    ['firstName', 'Ricardo'],
+    ['paternalLastName', 'Fuentes'],
+    ['curp', 'FURX790909HDFNTC03'],
+    ['rfc', 'FURX790909AB1'],
+    ['email', 'jo.property.e2e@example.com'],
+    ['phone', '5511224433'],
+  ]);
+  await pickFirstOption(page, page.getByRole('combobox').first()); // Relación con el Inquilino
+  await fillAddress(page);
+  await save(page);
+
+  // Tab 2 — Empleo
+  await expect(page.locator('[name="occupation"]')).toBeVisible({ timeout: 20_000 });
+  await pickFirstOption(page, page.getByRole('combobox').first()); // Situación Laboral
+  await page.locator('[name="occupation"]').fill('Contador');
+  if (await page.locator('[name="monthlyIncome"]').count()) {
+    await page.locator('[name="monthlyIncome"]').fill('50000');
+  }
+  if (await page.locator('#street').count()) {
+    await fillAddress(page);
+  }
+  await save(page);
+
+  // Tab 3 — Garantía: PROPERTY. The marital-status card renders for
+  // individuals on this branch — pick Soltero(a) so no spouse is required.
+  await expect(page.getByText('Método de Garantía')).toBeVisible({ timeout: 20_000 });
+  await fillJoPropertyGuarantee(page);
+  await pickOptionByName(page, 'Soltero(a)');
+  await save(page);
+
+  // Tab 4 — Referencias (individual → 3 personal references)
+  await expect(page.locator('[name="personalReferences.0.firstName"]')).toBeVisible({ timeout: 20_000 });
+  for (let i = 0; i < 3; i++) await fillPersonalReference(page, i);
+  await save(page);
+
+  // Tab 5 — Documentos (individual set; deed/predial already uploaded)
+  await expect(page.locator('#upload-identification')).toBeVisible({ timeout: 20_000 });
+  await uploadDoc(page, 'IDENTIFICATION');
+  await uploadDoc(page, 'ADDRESS_PROOF');
   await uploadDoc(page, 'BANK_STATEMENT');
   await page.getByRole('button', { name: 'Enviar Información' }).click();
   await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
@@ -582,6 +791,152 @@ export async function completeAvalMarriedPortal(page: Page, token: string): Prom
   await uploadDoc(page, 'IDENTIFICATION');
   await uploadDoc(page, 'INCOME_PROOF');
   await uploadDoc(page, 'ADDRESS_PROOF');
+  await uploadDoc(page, 'BANK_STATEMENT');
+  await page.getByRole('button', { name: 'Enviar Información' }).click();
+  await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AVAL — individual, single (E2E-06)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function completeAvalSinglePortal(page: Page, token: string): Promise<void> {
+  await page.goto(`/actor/aval/${token}`);
+  await waitPortalLoaded(page);
+
+  // Tab 1 — Personal (avalType INDIVIDUAL is the default radio)
+  await expect(page.locator('[name="firstName"]')).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, 'email');
+  await fillAllStable(page, [
+    ['firstName', 'Andrea'],
+    ['paternalLastName', 'Cortés'],
+    ['curp', 'COXA900808MDFRRN01'],
+    ['rfc', 'COXA900808AB1'],
+    ['email', 'aval.single.e2e@example.com'],
+    ['phone', '5599881122'],
+    ['relationshipToTenant', 'Amiga'], // plain input on the aval tab
+  ]);
+  await fillOptionalStrings(page, ['workPhone']);
+  await pickUnsetSelects(page);
+  await fillAddress(page);
+  await save(page);
+
+  // Tab 2 — Empleo
+  await expect(page.locator('[name="occupation"]')).toBeVisible({ timeout: 20_000 });
+  await pickUnsetSelects(page); // Situación Laboral
+  await page.locator('[name="occupation"]').fill('Diseñadora');
+  if (await page.locator('[name="monthlyIncome"]').count()) {
+    await page.locator('[name="monthlyIncome"]').fill('38000');
+  }
+  await fillOptionalStrings(page, ['employerName', 'position', 'incomeSource']);
+  if (await page.locator('#street').count()) {
+    await fillAddress(page);
+  }
+  await save(page);
+
+  // Tab 3 — Propiedad: property guarantee, estado civil soltera (no spouse block)
+  await expect(page.locator('[name="propertyValue"]')).toBeVisible({ timeout: 20_000 });
+  await fillAddress(page); // guaranteePropertyDetails widget
+  await page.locator('[name="propertyValue"]').fill('1900000');
+  await page.locator('[name="propertyDeedNumber"]').fill('ESC-2021-111');
+  await page.locator('[name="propertyRegistry"]').fill('FR-222333');
+  await uploadDoc(page, 'PROPERTY_DEED');
+  await uploadDoc(page, 'PROPERTY_TAX_STATEMENT');
+  await pickOptionByName(page, 'Soltero(a)');
+  await expect(page.locator('[name="spouseName"]')).toHaveCount(0);
+  await save(page);
+
+  // Tab 4 — Referencias (3 personal references)
+  await expect(page.locator('[name="personalReferences.0.firstName"]')).toBeVisible({ timeout: 20_000 });
+  for (let i = 0; i < 3; i++) await fillPersonalReference(page, i);
+  await save(page);
+
+  // Tab 5 — Documentos
+  await expect(page.locator('#upload-identification')).toBeVisible({ timeout: 20_000 });
+  await uploadDoc(page, 'IDENTIFICATION');
+  await uploadDoc(page, 'INCOME_PROOF');
+  await uploadDoc(page, 'ADDRESS_PROOF');
+  await uploadDoc(page, 'BANK_STATEMENT');
+  await page.getByRole('button', { name: 'Enviar Información' }).click();
+  await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AVAL — company (E2E-05)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function completeAvalCompanyPortal(page: Page, token: string): Promise<void> {
+  await page.goto(`/actor/aval/${token}`);
+  await waitPortalLoaded(page);
+
+  // Tab 1 — Personal: fill visible individual basics first (same rationale as
+  // the JO company helper), flip to Persona Moral, fill the company set. The
+  // service uses the POSTED avalType for tab filtering, so the company fields
+  // persist on this very save.
+  await expect(page.locator('[name="firstName"]')).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, 'email');
+  await fillAllStable(page, [
+    ['firstName', 'Marta'],
+    ['paternalLastName', 'Ibarra'],
+    ['curp', 'IAMX810101MDFBRR09'],
+    ['rfc', 'IAMX810101AB1'],
+    ['email', 'aval.company.e2e@example.com'],
+    ['phone', '5544335566'],
+  ]);
+  await page.getByRole('radio', { name: 'Persona Moral (Empresa)' }).check();
+  await expect(page.locator('[name="companyName"]')).toBeVisible();
+  await fillAllStable(page, [
+    ['companyName', 'Avales Corporativos E2E SA de CV'],
+    ['companyRfc', 'ACE900101AB1'],
+    ['legalRepFirstName', 'Marta'],
+    ['legalRepPaternalLastName', 'Ibarra'],
+    ['legalRepPosition', 'Directora General'],
+    ['legalRepRfc', 'IAMX810101AB1'],
+    ['legalRepEmail', 'marta.rep@example.com'],
+    ['legalRepPhone', '5544335577'],
+  ]);
+  await fillOptionalStrings(page, [
+    'legalRepMiddleName',
+    'legalRepMaternalLastName',
+    'workPhone',
+  ]);
+  if (await page.locator('[name="relationshipToTenant"]').count()) {
+    await page.locator('[name="relationshipToTenant"]').fill('Socio Comercial');
+  }
+  await pickUnsetSelects(page);
+  await fillAddress(page);
+  await save(page);
+  // Type-flip save barrier (tab set is about to lose Empleo).
+  await expect(page.getByText('✓ Guardado').first()).toBeVisible({ timeout: 30_000 });
+
+  // Same client-only tabSaved dance as the JO company helper: reload to mount
+  // the company tab set, re-save the (prefilled) personal tab to advance.
+  await page.reload();
+  await waitPortalLoaded(page);
+  await expect(page.locator('[name="companyName"]')).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, 'companyName');
+  await pickUnsetSelects(page);
+  await save(page);
+
+  // Tab 2 — Propiedad (company: no estado-civil card)
+  await expect(page.locator('[name="propertyValue"]')).toBeVisible({ timeout: 20_000 });
+  await fillAddress(page);
+  await page.locator('[name="propertyValue"]').fill('5200000');
+  await page.locator('[name="propertyDeedNumber"]').fill('ESC-2018-999');
+  await page.locator('[name="propertyRegistry"]').fill('FR-888777');
+  await uploadDoc(page, 'PROPERTY_DEED');
+  await uploadDoc(page, 'PROPERTY_TAX_STATEMENT');
+  await save(page);
+
+  // Tab 3 — Referencias (company → 3 commercial references)
+  await expect(page.locator('[name="commercialReferences.0.companyName"]')).toBeVisible({ timeout: 20_000 });
+  for (let i = 0; i < 3; i++) await fillCommercialReference(page, i);
+  await save(page);
+
+  // Tab 4 — Documentos (company set)
+  await expect(page.locator('#upload-company_constitution')).toBeVisible({ timeout: 20_000 });
+  await uploadDoc(page, 'COMPANY_CONSTITUTION');
+  await uploadDoc(page, 'LEGAL_POWERS');
+  await uploadDoc(page, 'IDENTIFICATION');
+  await uploadDoc(page, 'TAX_STATUS_CERTIFICATE');
   await uploadDoc(page, 'BANK_STATEMENT');
   await page.getByRole('button', { name: 'Enviar Información' }).click();
   await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });

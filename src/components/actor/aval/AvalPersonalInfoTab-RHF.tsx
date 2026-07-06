@@ -122,14 +122,19 @@ export default function AvalPersonalInfoTab({
                   )}
                 />
 
+                {/* companyRfc is what the canonical company schema requires —
+                    this input was bound to `rfc` (and the four legal-rep
+                    contact fields below were missing entirely), so the
+                    schema rejected every company save on fields that had no
+                    inputs. */}
                 <FormField
                   control={form.control}
-                  name="rfc"
+                  name="companyRfc"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel required>RFC de la Empresa</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={disabled} maxLength={13} placeholder="RFC a 13 caracteres" />
+                        <Input {...field} value={field.value || ''} disabled={disabled} maxLength={12} placeholder="RFC a 12 caracteres" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -193,6 +198,66 @@ export default function AvalPersonalInfoTab({
                           <FormLabel optional>Apellido Materno</FormLabel>
                           <FormControl>
                             <Input {...field} disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="legalRepPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Cargo</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} placeholder="Ej: Director General" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="legalRepRfc"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>RFC del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} maxLength={13} placeholder="RFC con homoclave" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="legalRepEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Email del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} type="email" disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="legalRepPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Teléfono del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} placeholder="55 1234 5678" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

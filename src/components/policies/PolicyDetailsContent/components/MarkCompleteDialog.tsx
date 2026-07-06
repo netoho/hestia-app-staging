@@ -108,7 +108,16 @@ export function MarkCompleteDialog({
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmForce} disabled={isPending}>
+            {/* preventDefault for the same reason as step 1: success closes
+                via the mutation handler; an error keeps the dialog open for
+                retry instead of vanishing silently. */}
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                onConfirmForce();
+              }}
+              disabled={isPending}
+            >
               {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Confirmar y Forzar Completo
             </AlertDialogAction>
@@ -132,7 +141,18 @@ export function MarkCompleteDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={onMarkComplete} disabled={isPending}>
+          {/* preventDefault: AlertDialogAction closes the dialog on click by
+              default — that wiped markCompleteActor before the server's
+              requiresForce answer arrived, so step 2 could never render and
+              the whole force flow was unreachable from the actor card. The
+              mutation lifecycle owns open/close instead. */}
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              onMarkComplete();
+            }}
+            disabled={isPending}
+          >
             {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Marcar Completo
           </AlertDialogAction>

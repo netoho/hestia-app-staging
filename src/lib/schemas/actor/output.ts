@@ -114,6 +114,9 @@ export const ActorGetManyByTokenOutput = z.object({
   policy: z.unknown().nullable(),
   authType: z.literal('actor'),
   canEdit: z.boolean(),
+  /** The landlord the presented token belongs to — completion gates must be
+   *  scoped to THIS record, never `.some()` over the policy's landlords. */
+  selfId: z.string().nullable(),
 });
 export type ActorGetManyByTokenOutput = z.infer<typeof ActorGetManyByTokenOutput>;
 
