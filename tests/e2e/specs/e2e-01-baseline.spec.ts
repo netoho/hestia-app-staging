@@ -16,7 +16,7 @@ import {
  * tenant pays 100% → wizard → portals → investigation → landlord approval
  * → auto PENDING_APPROVAL → payment settled → ACTIVE.
  */
-test('E2E-01: baseline policy reaches ACTIVE', async ({ page }) => {
+test('E2E-01: baseline policy reaches ACTIVE', { tag: '@core' }, async ({ page }) => {
   test.setTimeout(420_000);
   await freshDb();
 

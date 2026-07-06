@@ -1,8 +1,10 @@
-# E2E happy-path suite (#161). Cadence (locked 2026-07-05): full suite on every
-# PR into main/master and every push to release/** or hotfix/** — feature PRs
-# run only unit+integration (test.yml).
+# E2E core gate (#161). Cadence (updated 2026-07-06, supersedes the 2026-07-05
+# decision): the @core-tagged specs (E2E-01 baseline + E2E-07 admin fast path)
+# run on every PR into main/master and every push to release/** or hotfix/**.
+# The FULL suite runs nightly (e2e-nightly.yml). Feature PRs run only
+# unit+integration (test.yml).
 
-name: E2E
+name: E2E core
 
 on:
   pull_request:
@@ -10,10 +12,14 @@ on:
   push:
     branches: ['release/**', 'hotfix/**']
 
+concurrency:
+  group: e2e-core-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  e2e:
+  e2e-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -66,14 +72,34 @@ jobs:
       - name: Provision e2e database
         run: DATABASE_URL="$E2E_DATABASE_URL" bun run scripts/test-db.ts setup
 
-      - name: Run e2e suite
+      - name: Run e2e core suite
         # webServer in the config builds + starts the app with the e2e env.
-        run: bunx playwright test --config=tests/e2e/playwright.config.ts
+        # shell: bash gives pipefail, so playwright's exit code survives tee.
+        shell: bash
+        run: bunx playwright test --config=tests/e2e/playwright.config.ts --grep @core 2>&1 | tee e2e-run.log
+
+      # Expected 4xx outcomes log at info (silent) since PR #179 — any
+      # error-level server line in a green run is a real, unhandled problem
+      # (the logged-and-swallowed class, e.g. the upsertAddress bug). When a
+      # future negative-path spec legitimately provokes one, add an explicit
+      # allowlist grep -v here, reviewed in that PR.
+      - name: Log-noise gate — zero error-level server logs
+        shell: bash
+        run: |
+          COUNT=$(grep -c '"level":"error"' e2e-run.log || true)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::e2e run produced $COUNT unexpected error-level server log line(s):"
+            grep -n '"level":"error"' e2e-run.log
+            exit 1
+          fi
+          echo "clean: zero error-level server log lines"
 
       - name: Upload report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            e2e-run.log
           retention-days: 7

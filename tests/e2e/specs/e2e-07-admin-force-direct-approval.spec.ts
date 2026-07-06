@@ -11,7 +11,7 @@ import { forceCompleteActor, approvePolicyDirectFromCollecting } from '../helper
  * prominent header button. The direct edge validates actor completeness only
  * — no payments, no investigations (policyWorkflowService).
  */
-test('E2E-07: admin force-complete + direct COLLECTING_INFO→ACTIVE', async ({ page }) => {
+test('E2E-07: admin force-complete + direct COLLECTING_INFO→ACTIVE', { tag: '@core' }, async ({ page }) => {
   test.setTimeout(300_000);
   await freshDb();
 
