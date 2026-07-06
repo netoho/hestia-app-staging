@@ -119,8 +119,17 @@ export function toDb(
     working = mapLegalRepFields(working);
   }
 
-  // 4. Ensure tenantType is correctly set (defensive).
-  working.tenantType = opts.tenantType;
+  // 4. Only an EXPLICIT type in the input may write the tenantType column.
+  //    opts.tenantType selects which schema validates, but callers derive it
+  //    heuristically when the payload has no type signal (TenantService
+  //    guesses INDIVIDUAL) — unconditionally injecting it here reverted
+  //    COMPANY tenants to INDIVIDUAL on references/documents tab saves.
+  const inputRecord = input as Record<string, unknown>;
+  if (inputRecord.tenantType !== undefined || inputRecord.isCompany !== undefined) {
+    working.tenantType = opts.tenantType;
+  } else {
+    delete working.tenantType;
+  }
 
   // 5. Validate against the canonical schema in the appropriate mode.
   //    Tab-level validation lets us accept fields one tab at a time

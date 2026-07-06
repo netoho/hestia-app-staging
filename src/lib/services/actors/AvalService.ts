@@ -17,8 +17,11 @@ import {
   avalPartialSchema,
   avalAdminSchema,
   getAvalSchema,
+  getAvalTabSchema,
+  isValidAvalTab,
   validateAvalData,
-  type AvalFormData
+  type AvalFormData,
+  type AvalTab
 } from '@/lib/schemas/aval';
 import { avalSelect } from '@/lib/domain/aval/select';
 import { toDb as avalToDb } from '@/lib/domain/aval/adapters/db';
@@ -112,14 +115,39 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       }
       const preparedData = preparedResult.value;
 
-      // Validate unless explicitly skipped
+      // Validate unless explicitly skipped. Tab saves validate against that
+      // TAB's schema (mirroring JointObligorService.validateTabData) — the
+      // master avalPartialSchema is NOT partial over the personal block, so
+      // routing tab saves through it 400s every non-personal tab with
+      // "firstName Required". Full saves keep the master-schema gate.
       if (!skipValidation) {
-        const validationResult = this.validateAvalDataWithMode(
-          preparedData,
-          isPartial ? 'partial' : 'strict'
-        );
-        if (!validationResult.ok) {
-          throw validationResult.error;
+        if (tabName && isValidAvalTab(existingAval.avalType, tabName)) {
+          const tabSchema = getAvalTabSchema(existingAval.avalType, tabName as AvalTab);
+          // Refined tab schemas (property's spouse-when-married) are
+          // ZodEffects and have no .partial(); they validate in full — which
+          // is also what keeps the refinement enforced on tab saves.
+          const partialCapable = tabSchema as { partial?: () => { safeParse: (d: unknown) => unknown } };
+          const schemaForMode =
+            isPartial && typeof partialCapable.partial === 'function'
+              ? (partialCapable.partial() as typeof tabSchema)
+              : tabSchema;
+          const parsed = schemaForMode.safeParse(data);
+          if (!parsed.success) {
+            throw new ServiceError(
+              ErrorCode.VALIDATION_ERROR,
+              'Invalid aval data',
+              400,
+              { errors: parsed.error.issues.map((i) => ({ field: i.path.join('.'), message: i.message, code: i.code })) }
+            );
+          }
+        } else {
+          const validationResult = this.validateAvalDataWithMode(
+            preparedData,
+            isPartial ? 'partial' : 'strict'
+          );
+          if (!validationResult.ok) {
+            throw validationResult.error;
+          }
         }
       }
 
@@ -613,8 +641,12 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     if (!aval.propertyRegistry) errors.push('Folio de registro de garantía requerido');
     if (!aval.propertyValue) errors.push('Valor de propiedad de garantía requerido');
 
-    // Check references (minimum 3 for aval)
-    const referenceCount = aval.personalReferences?.length ?? 0;
+    // Check references (minimum 3; companies provide COMMERCIAL references —
+    // same class as the JO fix: counting personalReferences unconditionally
+    // makes company-aval submission structurally impossible).
+    const referenceCount = aval.isCompany
+      ? aval.commercialReferences?.length ?? 0
+      : aval.personalReferences?.length ?? 0;
     if (referenceCount < 3) {
       errors.push('Mínimo 3 referencias requeridas');
     }

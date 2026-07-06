@@ -106,6 +106,8 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
           addressId: true,
           employerAddressId: true,
           guaranteePropertyAddressId: true,
+          jointObligorType: true,
+          guaranteeMethod: true,
         },
       });
 
@@ -117,8 +119,15 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
         jointObligorType?: JointObligorTypeEnum;
         guaranteeMethod?: GuaranteeMethodEnum;
       };
-      const jointObligorType = typed.jointObligorType ?? 'INDIVIDUAL';
-      const guaranteeMethod = typed.guaranteeMethod;
+      // Tab payloads only carry the discriminators on the tabs whose schema
+      // includes them (zodResolver strips the rest) — the fallback must be
+      // the ROW's truth, never a hardcoded INDIVIDUAL, or a COMPANY JO gets
+      // validated (and previously rewritten) as INDIVIDUAL on every
+      // guarantee/references/documents save.
+      const jointObligorType =
+        typed.jointObligorType ?? existingJointObligor.jointObligorType ?? 'INDIVIDUAL';
+      const guaranteeMethod =
+        typed.guaranteeMethod ?? existingJointObligor.guaranteeMethod ?? undefined;
 
       // Validate (raw input) unless explicitly skipped.
       if (!skipValidation) {
@@ -662,10 +671,16 @@ export class JointObligorService extends BaseActorService<JointObligorWithRelati
       // }
     }
 
-    // Check references (minimum 3 for joint obligor with addresses)
-    const referenceCount = jointObligor.personalReferences?.length ?? 0;
+    // Check references (minimum 3; companies provide COMMERCIAL references —
+    // counting personalReferences unconditionally made company-JO submission
+    // structurally impossible, since the company references tab only collects
+    // commercial ones).
+    const referenceCount =
+      jointObligor.jointObligorType === 'COMPANY'
+        ? jointObligor.commercialReferences?.length ?? 0
+        : jointObligor.personalReferences?.length ?? 0;
     if (referenceCount < 3) {
-      errors.push('Mínimo 3 referencias requeridas con dirección');
+      errors.push('Mínimo 3 referencias requeridas');
     }
 
     if (errors.length > 0) {
