@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
 
-import LandlordFormWizardSimplified from "@/components/actor/landlord/LandlordFormWizard-Simplified";
+import ActorWizard from '@/components/actor/ActorWizard';
+import { landlordWizardConfig } from '@/components/actor/landlord/landlordWizardConfig';
 
 export default function LandlordPortalPage() {
   const params = useParams();
@@ -240,7 +241,8 @@ export default function LandlordPortalPage() {
         </Card>
 
         {/* Form Wizard */}
-        <LandlordFormWizardSimplified
+        <ActorWizard
+          config={landlordWizardConfig}
           token={token}
           initialData={{
             landlords,

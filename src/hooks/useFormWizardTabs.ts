@@ -16,8 +16,9 @@ interface UseFormWizardTabsOptions {
   autoAdvanceDelay?: number;
 }
 
-// Check if a tab can be accessed based on previous tabs
-const canAccessTab = (tabId: string, tabs: Tab[], isAdminEdit: boolean, tabSaved: Record<string, boolean>) => {
+// Check if a tab can be accessed based on previous tabs.
+// Exported for the ActorWizard gating unit tests (T3 #127).
+export const canAccessTab = (tabId: string, tabs: Tab[], isAdminEdit: boolean, tabSaved: Record<string, boolean>) => {
   if (isAdminEdit) return true;
 
   // If this tab is already saved, allow access (can go back to edit)

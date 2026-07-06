@@ -8,43 +8,41 @@ This directory contains React components for the actor data collection system. T
 
 ```
 actor/
+├── ActorWizard.tsx          # THE wizard (T3 #127) — portals + inline admin
 ├── shared/                  # Reusable components
 │   ├── FormWizardProgress.tsx
 │   ├── FormWizardTabs.tsx
 │   └── DocumentProgressBar.tsx
-├── tenant/                  # Tenant-specific components
-│   ├── TenantFormWizard-Simplified.tsx
-│   └── [Tab Components]
-├── landlord/               # Landlord-specific components
-├── aval/                   # Aval-specific components
-└── joint-obligor/          # Joint Obligor components
+├── tenant/                  # tenantWizardConfig.tsx + [Tab Components]
+├── landlord/                # landlordWizardConfig.tsx (save dispatch, selfId) + tabs
+├── aval/                    # avalWizardConfig.tsx + tabs
+└── joint-obligor/           # jointObligorWizardConfig.tsx + tabs
 ```
 
 ## Core Patterns
 
-### 1. FormWizard Pattern
+### 1. ActorWizard + config (T3 #127)
 
-Each actor has a main wizard component that orchestrates the tab flow. Components use React Hook Form (RHF suffix on form components) and manage tab-based state internally:
+One generic `ActorWizard` renders every actor's portal AND the inline admin
+editor — the same component, differing only in navigation policy
+(`isAdminEdit` unlocks free tab access). What varies per actor lives in an
+`ActorWizardConfig` (`<type>WizardConfig.tsx`): tab lists, the type
+discriminator (`resolveContext`), the save wiring (`useSave` — tenant/JO/aval
+share `useActorUpdateSave`; landlord dispatches to three mutations + co-owner
+delete), and the tab/documents JSX:
 
 ```tsx
-export default function TenantFormWizard({
-  token,
-  initialData,
-  policy,
-  onComplete,
-  isAdminEdit = false,
-}) {
-  // Tab configuration based on actor type
-  const tabs = formData.tenantType === 'COMPANY'
-    ? config.companyTabs
-    : config.personTabs;
+import ActorWizard from '@/components/actor/ActorWizard';
+import { tenantWizardConfig } from '@/components/actor/tenant/tenantWizardConfig';
 
-  return (
-    <FormWizardTabs tabs={tabs} activeTab={activeTab}>
-      {/* Tab content based on activeTab */}
-    </FormWizardTabs>
-  );
-}
+<ActorWizard
+  config={tenantWizardConfig}
+  token={token}          // or the actor id in admin flows (dual auth)
+  initialData={tenant}
+  policy={policy}
+  onComplete={handleComplete}
+  isAdminEdit={false}
+/>
 ```
 
 ### 2. Tab Components

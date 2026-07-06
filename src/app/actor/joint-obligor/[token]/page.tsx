@@ -7,7 +7,8 @@ import { Loader2, CheckCircle2, AlertCircle, Home, DollarSign, Calendar } from '
 import { formatAddress } from "@/lib/schemas/shared/address.schema";
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
-import JointObligorFormWizardSimplified from "@/components/actor/joint-obligor/JointObligorFormWizard-Simplified";
+import ActorWizard from '@/components/actor/ActorWizard';
+import { jointObligorWizardConfig } from '@/components/actor/joint-obligor/jointObligorWizardConfig';
 
 export default function JointObligorPortalPage({
   params
@@ -174,7 +175,8 @@ export default function JointObligorPortalPage({
         )}
 
         {/* Form Wizard */}
-        <JointObligorFormWizardSimplified
+        <ActorWizard
+          config={jointObligorWizardConfig}
           token={token}
           initialData={obligorData}
           policy={policy}
