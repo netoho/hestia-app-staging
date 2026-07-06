@@ -148,3 +148,65 @@ export async function approvePolicyToActive(page: Page, policyId: string): Promi
 
   await expect(page.getByText('Activa').first()).toBeVisible({ timeout: 30_000 });
 }
+
+// ─── Admin fast path (E2E-07) ────────────────────────────────────────────────
+
+/**
+ * Force-complete an actor from its policy-detail tab card: "Completar" opens
+ * the two-step MarkCompleteDialog — the strict attempt fails server-side
+ * (nothing was filled through the portal), the force layout lists the missing
+ * data, and "Confirmar y Forzar Completo" overrides it.
+ */
+export async function forceCompleteActor(
+  page: Page,
+  opts: { policyId: string; actorType: 'tenant' | 'landlord'; actorId: string },
+): Promise<void> {
+  await page.goto(`/dashboard/policies/${opts.policyId}?tab=${opts.actorType}`);
+  await page.getByRole('button', { name: 'Completar' }).first().click();
+
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog.getByRole('button', { name: 'Marcar Completo' })).toBeVisible({ timeout: 15_000 });
+  await dialog.getByRole('button', { name: 'Marcar Completo' }).click();
+
+  // Strict path rejects with requiresForce → force layout.
+  await expect(
+    dialog.getByText('¿Marcar como completo con información faltante?'),
+  ).toBeVisible({ timeout: 15_000 });
+  await dialog.getByRole('button', { name: 'Confirmar y Forzar Completo' }).click();
+
+  await expect
+    .poll(
+      async () => {
+        const row =
+          opts.actorType === 'tenant'
+            ? await prisma.tenant.findUnique({
+                where: { id: opts.actorId },
+                select: { informationComplete: true },
+              })
+            : await prisma.landlord.findUnique({
+                where: { id: opts.actorId },
+                select: { informationComplete: true },
+              });
+        return row?.informationComplete;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+}
+
+/**
+ * COLLECTING_INFO → ACTIVE via the prominent header approve button — it only
+ * renders for staff/admin once EVERY actor is informationComplete. This
+ * direct edge validates actor completeness ONLY (no payments, no
+ * investigations — policyWorkflowService.validateStatusRequirements), which
+ * is exactly the least-tested path E2E-07 exists to lock.
+ */
+export async function approvePolicyDirectFromCollecting(page: Page, policyId: string): Promise<void> {
+  await page.goto(`/dashboard/policies/${policyId}`);
+  await expect(page.getByText('Recopilando Información').first()).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole('button', { name: 'Aprobar Protección' }).click();
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+
+  await expect(page.getByText('Activa').first()).toBeVisible({ timeout: 30_000 });
+}
