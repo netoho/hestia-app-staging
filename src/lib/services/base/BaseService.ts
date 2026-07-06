@@ -47,18 +47,20 @@ export abstract class BaseService {
       level,
       message,
       context: this.context,
-      data,
+      // Error's message/stack are non-enumerable, so a plain Error would
+      // serialize as {} — flatten it so the single JSON line carries
+      // everything (own enumerables like Prisma's code/meta included).
+      data:
+        data instanceof Error
+          ? { name: data.name, message: data.message, stack: data.stack, ...data }
+          : data,
       timestamp: new Date().toISOString(),
     };
 
     if (level === 'error') {
       console.error(JSON.stringify(logData));
-      if (data && data.message) {
-        console.error(data.message);
-      }
     } else if (level === 'warn') {
       console.warn(JSON.stringify(logData));
-    } else {
     }
   }
 
@@ -157,6 +159,11 @@ export abstract class BaseService {
    * `requiresForce`/`missingFields`/`missingDocuments` raised by
    * `BaseActorService.submitActor`. Only genuinely unexpected exceptions
    * get wrapped as a generic `DATABASE_ERROR / Transaction failed`.
+   *
+   * Logging: 4xx ServiceErrors are expected business outcomes (validation
+   * gates, the `requiresForce` probe every force-complete fires, not-found) —
+   * the client already receives them structured, so they log at `info`
+   * (silent), not `error`. Only 5xx / unexpected exceptions are faults.
    */
   protected async executeTransaction<T>(
     operations: (tx: PrismaClient) => Promise<T>
@@ -168,7 +175,7 @@ export abstract class BaseService {
       return Result.ok(result);
     } catch (error: unknown) {
       if (error instanceof ServiceError) {
-        this.log('error', 'Transaction failed', error);
+        this.log(error.statusCode >= 500 ? 'error' : 'info', 'Transaction failed', error);
         return Result.error(error);
       }
       this.log('error', 'Transaction failed', error);
