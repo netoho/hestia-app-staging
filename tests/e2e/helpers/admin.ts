@@ -195,6 +195,67 @@ export async function forceCompleteActor(
 }
 
 /**
+ * Complete an actor from its policy-detail card STRICTLY — the first
+ * MarkCompleteDialog step must succeed with no force fallback. Used after a
+ * renewal clone: if the clone dropped any validator-required field or
+ * document, the server answers requiresForce and this helper fails loudly
+ * (that failure IS the copy-list-integrity assertion at the UI level).
+ * `cardName` scopes the click when a tab renders several actor cards
+ * (multi-landlord).
+ */
+export async function completeActorStrict(
+  page: Page,
+  opts: {
+    policyId: string;
+    actorType: 'tenant' | 'landlord';
+    actorId: string;
+    cardName: string;
+  },
+): Promise<void> {
+  await page.goto(`/dashboard/policies/${opts.policyId}?tab=${opts.actorType}`);
+
+  const card = page
+    .locator('div')
+    .filter({ has: page.getByText(opts.cardName) })
+    .filter({ has: page.getByRole('button', { name: 'Completar' }) })
+    .last();
+  await card.getByRole('button', { name: 'Completar' }).click();
+
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog.getByRole('button', { name: 'Marcar Completo' })).toBeVisible({ timeout: 15_000 });
+  await dialog.getByRole('button', { name: 'Marcar Completo' }).click();
+
+  await expect
+    .poll(
+      async () => {
+        const force = await dialog
+          .getByText('¿Marcar como completo con información faltante?')
+          .isVisible()
+          .catch(() => false);
+        if (force) {
+          const missing = await dialog.textContent().catch(() => '');
+          throw new Error(
+            `[e2e] strict complete for ${opts.cardName} hit the FORCE path — the clone dropped validator-required data. Dialog: ${missing}`,
+          );
+        }
+        const row =
+          opts.actorType === 'tenant'
+            ? await prisma.tenant.findUnique({
+                where: { id: opts.actorId },
+                select: { informationComplete: true },
+              })
+            : await prisma.landlord.findUnique({
+                where: { id: opts.actorId },
+                select: { informationComplete: true },
+              });
+        return row?.informationComplete;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+}
+
+/**
  * COLLECTING_INFO → ACTIVE via the prominent header approve button — it only
  * renders for staff/admin once EVERY actor is informationComplete. This
  * direct edge validates actor completeness ONLY (no payments, no
