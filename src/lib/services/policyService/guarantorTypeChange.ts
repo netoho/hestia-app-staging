@@ -3,6 +3,10 @@ import { GuarantorType, PolicyStatus } from '@/prisma/generated/prisma-client/en
 import { generateJointObligorToken, generateAvalToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from './index';
 import { sendIncompleteActorInfoNotification } from '@/lib/services/notificationService';
+import {
+  archiveAndCleanupJointObligor,
+  archiveAndCleanupAval,
+} from './actorArchive';
 
 // Statuses that allow guarantor type change
 export const CHANGEABLE_STATUSES: PolicyStatus[] = [
@@ -49,7 +53,8 @@ export interface ChangeGuarantorTypeResult {
 export async function changeGuarantorType(
   input: ChangeGuarantorTypeInput
 ): Promise<ChangeGuarantorTypeResult> {
-  // Get policy with full guarantor data for archiving
+  // The archive helper refetches each actor in full (row + relations) inside
+  // the transaction, so only ids are needed here.
   const policy = await prisma.policy.findUnique({
     where: { id: input.policyId },
     select: {
@@ -58,52 +63,8 @@ export async function changeGuarantorType(
       policyNumber: true,
       guarantorType: true,
       managedById: true,
-      jointObligors: {
-        select: {
-          id: true,
-          jointObligorType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          rfc: true,
-          employmentStatus: true,
-          occupation: true,
-          employerName: true,
-          monthlyIncome: true,
-          verificationStatus: true,
-          informationComplete: true,
-          addressId: true,
-          employerAddressId: true,
-          guaranteePropertyAddressId: true,
-        },
-      },
-      avals: {
-        select: {
-          id: true,
-          avalType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          rfc: true,
-          employmentStatus: true,
-          occupation: true,
-          employerName: true,
-          monthlyIncome: true,
-          verificationStatus: true,
-          informationComplete: true,
-          addressId: true,
-          employerAddressId: true,
-          guaranteePropertyAddressId: true,
-        },
-      },
+      jointObligors: { select: { id: true } },
+      avals: { select: { id: true } },
     },
   });
 
@@ -143,188 +104,28 @@ export async function changeGuarantorType(
   const createdJointObligorIds: string[] = [];
   const createdAvalIds: string[] = [];
 
+  const archiveMeta = {
+    policyId: input.policyId,
+    replacedById: input.performedById,
+    replacementReason: input.reason,
+  };
+
   // Use transaction for atomicity
   await prisma.$transaction(async (tx) => {
-    // 1. Archive and delete all existing joint obligors
+    // 1. Archive (summary + full snapshot) and delete all existing joint obligors
     for (const jo of policy.jointObligors) {
-      // Archive to history
-      await tx.jointObligorHistory.create({
-        data: {
-          policyId: input.policyId,
-          jointObligorType: jo.jointObligorType,
-          firstName: jo.firstName,
-          middleName: jo.middleName,
-          paternalLastName: jo.paternalLastName,
-          maternalLastName: jo.maternalLastName,
-          companyName: jo.companyName,
-          email: jo.email,
-          phone: jo.phone,
-          rfc: jo.rfc,
-          employmentStatus: jo.employmentStatus,
-          occupation: jo.occupation,
-          employerName: jo.employerName,
-          monthlyIncome: jo.monthlyIncome,
-          verificationStatus: jo.verificationStatus,
-          informationComplete: jo.informationComplete,
-          replacedById: input.performedById,
-          replacementReason: input.reason,
-        },
-      });
-
-      // Get document IDs and delete their DocumentValidation
-      const joDocIds = await tx.actorDocument.findMany({
-        where: { jointObligorId: jo.id },
-        select: { id: true },
-      });
-      if (joDocIds.length > 0) {
-        await tx.documentValidation.deleteMany({
-          where: { documentId: { in: joDocIds.map((d) => d.id) } },
-        });
-      }
-
-      // Unlink documents (soft delete - keep S3 files)
-      await tx.actorDocument.updateMany({
-        where: { jointObligorId: jo.id },
-        data: { jointObligorId: null },
-      });
-
-      // Delete references
-      await tx.personalReference.deleteMany({
-        where: { jointObligorId: jo.id },
-      });
-      await tx.commercialReference.deleteMany({
-        where: { jointObligorId: jo.id },
-      });
-
-      // Delete ActorSectionValidation
-      await tx.actorSectionValidation.deleteMany({
-        where: { actorType: 'jointObligor', actorId: jo.id },
-      });
-
-      // Archive joint obligor investigations (PENDING/APPROVED)
-      await tx.actorInvestigation.updateMany({
-        where: {
-          actorType: 'JOINT_OBLIGOR',
-          actorId: jo.id,
-          status: { in: ['PENDING', 'APPROVED'] },
-        },
-        data: {
-          status: 'ARCHIVED',
-          archivedAt: new Date(),
-          archivedBy: input.performedById,
-          archiveReason: 'SUPERSEDED',
-          brokerToken: null,
-          landlordToken: null,
-        },
-      });
-
-      // Delete PropertyAddress records
-      const joAddressIds = [
-        jo.addressId,
-        jo.employerAddressId,
-        jo.guaranteePropertyAddressId,
-      ].filter((id): id is string => !!id);
-      if (joAddressIds.length > 0) {
-        await tx.propertyAddress.deleteMany({
-          where: { id: { in: joAddressIds } },
-        });
-      }
+      await archiveAndCleanupJointObligor(tx, jo.id, archiveMeta);
     }
-
-    // Delete all joint obligors
     if (policy.jointObligors.length > 0) {
       await tx.jointObligor.deleteMany({
         where: { policyId: input.policyId },
       });
     }
 
-    // 2. Archive and delete all existing avals
+    // 2. Archive (summary + full snapshot) and delete all existing avals
     for (const aval of policy.avals) {
-      // Archive to history
-      await tx.avalHistory.create({
-        data: {
-          policyId: input.policyId,
-          avalType: aval.avalType,
-          firstName: aval.firstName,
-          middleName: aval.middleName,
-          paternalLastName: aval.paternalLastName,
-          maternalLastName: aval.maternalLastName,
-          companyName: aval.companyName,
-          email: aval.email,
-          phone: aval.phone,
-          rfc: aval.rfc,
-          employmentStatus: aval.employmentStatus,
-          occupation: aval.occupation,
-          employerName: aval.employerName,
-          monthlyIncome: aval.monthlyIncome,
-          verificationStatus: aval.verificationStatus,
-          informationComplete: aval.informationComplete,
-          replacedById: input.performedById,
-          replacementReason: input.reason,
-        },
-      });
-
-      // Get document IDs and delete their DocumentValidation
-      const avalDocIds = await tx.actorDocument.findMany({
-        where: { avalId: aval.id },
-        select: { id: true },
-      });
-      if (avalDocIds.length > 0) {
-        await tx.documentValidation.deleteMany({
-          where: { documentId: { in: avalDocIds.map((d) => d.id) } },
-        });
-      }
-
-      // Unlink documents (soft delete - keep S3 files)
-      await tx.actorDocument.updateMany({
-        where: { avalId: aval.id },
-        data: { avalId: null },
-      });
-
-      // Delete references
-      await tx.personalReference.deleteMany({
-        where: { avalId: aval.id },
-      });
-      await tx.commercialReference.deleteMany({
-        where: { avalId: aval.id },
-      });
-
-      // Delete ActorSectionValidation
-      await tx.actorSectionValidation.deleteMany({
-        where: { actorType: 'aval', actorId: aval.id },
-      });
-
-      // Archive aval investigations (PENDING/APPROVED)
-      await tx.actorInvestigation.updateMany({
-        where: {
-          actorType: 'AVAL',
-          actorId: aval.id,
-          status: { in: ['PENDING', 'APPROVED'] },
-        },
-        data: {
-          status: 'ARCHIVED',
-          archivedAt: new Date(),
-          archivedBy: input.performedById,
-          archiveReason: 'SUPERSEDED',
-          brokerToken: null,
-          landlordToken: null,
-        },
-      });
-
-      // Delete PropertyAddress records
-      const avalAddressIds = [
-        aval.addressId,
-        aval.employerAddressId,
-        aval.guaranteePropertyAddressId,
-      ].filter((id): id is string => !!id);
-      if (avalAddressIds.length > 0) {
-        await tx.propertyAddress.deleteMany({
-          where: { id: { in: avalAddressIds } },
-        });
-      }
+      await archiveAndCleanupAval(tx, aval.id, archiveMeta);
     }
-
-    // Delete all avals
     if (policy.avals.length > 0) {
       await tx.aval.deleteMany({
         where: { policyId: input.policyId },
