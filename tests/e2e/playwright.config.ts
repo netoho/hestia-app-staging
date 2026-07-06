@@ -40,8 +40,8 @@ export const APP_ENV = {
   AWS_S3_REGION: 'us-east-1',
   AWS_REGION: 'us-east-1',
   AWS_S3_ENDPOINT: 'http://localhost:9100',
-  // No email provider configured on purpose — emailService logs + returns false.
-  EMAIL_PROVIDER: '',
+  // Email deliberately disabled — emailService logs one notice and skips sends.
+  EMAIL_PROVIDER: 'none',
   NODE_ENV: isCI ? 'production' : 'development',
 } as const;
 
