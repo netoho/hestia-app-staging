@@ -366,7 +366,24 @@ export default function AvalPersonalInfoTab({
                     <FormItem>
                       <FormLabel required>Nacionalidad</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={disabled} />
+                        {/* Was a free-text Input against the MEXICAN|FOREIGN
+                            enum — impossible to fill correctly by hand
+                            ("Nacionalidad inválida"). #180 walker finding. */}
+                        <RadioGroup
+                          value={field.value || 'MEXICAN'}
+                          onValueChange={field.onChange}
+                          disabled={disabled}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="MEXICAN" id="aval-mexican" />
+                            <Label htmlFor="aval-mexican">Mexicana</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="FOREIGN" id="aval-foreign" />
+                            <Label htmlFor="aval-foreign">Extranjera</Label>
+                          </div>
+                        </RadioGroup>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -419,6 +436,38 @@ export default function AvalPersonalInfoTab({
                 </FormItem>
               )}
             />
+
+            {/* Declared by the aval personal tab schema but previously
+                unrendered — found by the #180 parity walker. */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="personalEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email Personal</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="workEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email de Trabajo</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Relationship to Tenant */}
             <FormField

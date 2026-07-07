@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type HTMLAttributes } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -62,7 +62,11 @@ export function AddressAutocomplete({
   required = false,
   className,
   showFullForm = false,
-}: AddressAutocompleteProps) {
+  // Everything FormControl forwards through its Slot (id, data-field,
+  // aria-describedby, aria-invalid) — previously dropped silently, which
+  // broke label association AND field addressability (#180 walker finding).
+  ...rootProps
+}: AddressAutocompleteProps & Omit<HTMLAttributes<HTMLDivElement>, 'onChange' | 'onBlur'>) {
   const [searchInput, setSearchInput] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -322,7 +326,7 @@ export function AddressAutocomplete({
   };
 
   return (
-    <div className={cn('space-y-4', className)} ref={wrapperRef}>
+    <div {...rootProps} className={cn('space-y-4', className)} ref={wrapperRef}>
       {/* Search Input */}
       <div className="space-y-2">
         {label && (

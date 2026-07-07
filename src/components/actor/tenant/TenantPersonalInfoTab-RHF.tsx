@@ -267,6 +267,22 @@ export default function TenantPersonalInfoTabRHF({
                       )}
                     />
 
+                    {/* Declared by the tenant company schema but previously
+                        unrendered — #180 walker finding. */}
+                    <FormField
+                      control={form.control}
+                      name="legalRepId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel optional>Identificación del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="legalRepEmail"
@@ -497,6 +513,22 @@ export default function TenantPersonalInfoTabRHF({
                     <FormLabel optional>Teléfono de Trabajo</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Declared by the tenant personal tab schema but previously
+                  unrendered — found by the #180 parity walker. */}
+              <FormField
+                control={form.control}
+                name="workEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email de Trabajo</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

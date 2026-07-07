@@ -341,6 +341,10 @@ export abstract class BaseActorService<
       if (companyData.legalRepPhone !== undefined) updateData.legalRepPhone = companyData.legalRepPhone;
       if (companyData.legalRepEmail !== undefined) updateData.legalRepEmail = companyData.legalRepEmail;
       if (companyData.workEmail !== undefined) updateData.workEmail = companyData.workEmail || null;
+      // personalEmail was only handled on the person branch — company actors
+      // silently dropped it on every update (#180 walker finding; the
+      // hand-enumeration residue flagged on #171/#152).
+      if (companyData.personalEmail !== undefined) updateData.personalEmail = companyData.personalEmail || null;
     }
 
     return updateData;
