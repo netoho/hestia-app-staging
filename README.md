@@ -181,10 +181,10 @@ Every tRPC procedure declares `.output(<schema>)` against a Zod schema in `src/l
 
 ## Reporting fields not yet modeled
 
-The dashboard CSV report (`/api/reports/policies/csv`) ships several columns that map directly to existing data, plus a few documented gaps. These need product input before they can be added:
+The dashboard CSV report (`/api/reports/policies/csv`) ships several columns that map directly to existing data, plus a few documented gaps. Status of each:
 
-1. **% de comisión** — no business definition; not stored anywhere. Open question: per-broker default rate, per-package, per-policy negotiated, or a hybrid? Column is omitted from the CSV today.
-2. **Descuento** — no semantic definition (package discount? broker margin? promotional?). Column is omitted from the CSV today. The pricing service has an `isManualOverride` flag but no separate discount field.
+1. ~~**% de comisión**~~ — **ruled not needed (product, 2026-07-07); kept for future reference only.** Never had a business definition and is stored nowhere. If ever revived, the open question was: per-broker default rate, per-package, per-policy negotiated, or a hybrid? Column stays omitted from the CSV.
+2. ~~**Descuento**~~ — **ruled not needed (product, 2026-07-07); reference only.** Never had a semantic definition (package discount? broker margin? promotional?); the pricing service has an `isManualOverride` flag but no discount field. Column stays omitted from the CSV.
 3. ~~**Vendedor picker UI**~~ — resolved: `AssignBrokerModal` → `policy.assignManager` sets `Policy.managedById`; the report reads it (falling back to `"CS"` when null).
 4. **"En proceso" multi-status URL filter** — `usePoliciesState` (`src/hooks/usePoliciesState.ts`) accepts a single `?status=` value. The dashboard "En proceso" KPI tile points at `?status=COLLECTING_INFO` only. If new intermediate statuses are added between `COLLECTING_INFO` and `PENDING_APPROVAL`, extend the hook to support a multi-value filter (e.g. `?status=in:COLLECTING_INFO,FOO`) and update `KpiTiles.tsx`.
 
