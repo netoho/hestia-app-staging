@@ -27,11 +27,19 @@ import { trpc } from '@/lib/trpc/client';
 import { getActorTypeLabel } from '@/lib/utils/actor';
 import { getFriendlyError, readForceCompleteState } from '@/lib/utils/trpcErrors';
 
-// Import simplified form wizards
-import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
-import LandlordFormWizard from '@/components/actor/landlord/LandlordFormWizard-Simplified';
-import AvalFormWizard from '@/components/actor/aval/AvalFormWizard-Simplified';
-import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard-Simplified';
+// One generic wizard (T3 #127) — same component the actor portals render.
+import ActorWizard, { type ActorWizardConfig } from '@/components/actor/ActorWizard';
+import { tenantWizardConfig } from '@/components/actor/tenant/tenantWizardConfig';
+import { landlordWizardConfig } from '@/components/actor/landlord/landlordWizardConfig';
+import { avalWizardConfig } from '@/components/actor/aval/avalWizardConfig';
+import { jointObligorWizardConfig } from '@/components/actor/joint-obligor/jointObligorWizardConfig';
+
+const WIZARD_CONFIGS: Record<InlineActorEditorProps['actorType'], ActorWizardConfig> = {
+  tenant: tenantWizardConfig,
+  landlord: landlordWizardConfig,
+  aval: avalWizardConfig,
+  jointObligor: jointObligorWizardConfig,
+};
 
 interface InlineActorEditorProps {
   isOpen: boolean;
@@ -187,31 +195,16 @@ export default function InlineActorEditor({
     setForceState(null);
   };
 
-  const getFormWizard = () => {
-    const initialData = getInitialData();
-
-    // Common props for all wizards
-    const wizardProps = {
-      token: actorId, // Will be used as identifier in actor.update
-      initialData,
-      policy,
-      onComplete: handleComplete,
-      isAdminEdit: true,
-    };
-
-    switch (actorType) {
-      case 'tenant':
-        return <TenantFormWizard {...wizardProps} />;
-      case 'landlord':
-        return <LandlordFormWizard {...wizardProps} />;
-      case 'aval':
-        return <AvalFormWizard {...wizardProps} />;
-      case 'jointObligor':
-        return <JointObligorFormWizard {...wizardProps} />;
-      default:
-        return <div>Tipo de actor no soportado</div>;
-    }
-  };
+  const getFormWizard = () => (
+    <ActorWizard
+      config={WIZARD_CONFIGS[actorType]}
+      token={actorId} // Used as identifier in actor.update (admin dual-auth)
+      initialData={getInitialData()}
+      policy={policy}
+      onComplete={handleComplete}
+      isAdminEdit
+    />
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
