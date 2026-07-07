@@ -31,7 +31,7 @@ export default function TenantPortalPage() {
   }, [token]);
 
   // Use tRPC to fetch actor data
-  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+  const { data, isLoading, error, refetch, dataUpdatedAt } = trpc.actor.getByToken.useQuery(
     {
       type: 'tenant',
       token
@@ -251,6 +251,7 @@ export default function TenantPortalPage() {
           policy={policy}
           onComplete={handleComplete}
           isAdminEdit={false}
+          dataUpdatedAt={dataUpdatedAt}
         />
       </div>
     </div>

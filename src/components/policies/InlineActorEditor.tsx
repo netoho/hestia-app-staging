@@ -203,6 +203,11 @@ export default function InlineActorEditor({
       policy={policy}
       onComplete={handleComplete}
       isAdminEdit
+      dataUpdatedAt={
+        actorType === 'landlord'
+          ? landlordsQuery.dataUpdatedAt
+          : singleActorQuery.dataUpdatedAt
+      }
     />
   );
 

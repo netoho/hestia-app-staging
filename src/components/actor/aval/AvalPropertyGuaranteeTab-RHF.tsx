@@ -16,6 +16,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
 import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
@@ -46,16 +47,19 @@ export default function AvalPropertyGuaranteeTab({
   // Get schema with conditional validation
   const schema = getAvalTabSchema(avalType, 'property');
 
+  const defaultValues = {
+    hasPropertyGuarantee: true,
+    guaranteeMethod: 'PROPERTY',
+    propertyUnderLegalProceeding: false,
+    ...initialData,
+  };
+
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: {
-      hasPropertyGuarantee: true,
-      guaranteeMethod: 'PROPERTY',
-      propertyUnderLegalProceeding: false,
-      ...initialData,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch marital status for conditional spouse fields
   const maritalStatus = form.watch('maritalStatus');

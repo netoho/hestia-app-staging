@@ -19,6 +19,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getJointObligorTabSchema } from '@/lib/schemas/joint-obligor';
 
@@ -44,19 +45,22 @@ export default function JointObligorEmploymentTabRHF({
   // Employment tab is only for INDIVIDUAL joint obligors
   const schema = getJointObligorTabSchema('employment', 'INDIVIDUAL');
 
+  const defaultValues = {
+    employmentStatus: initialData?.employmentStatus || '',
+    occupation: initialData?.occupation || '',
+    employerName: initialData?.employerName || '',
+    employerAddressDetails: initialData?.employerAddressDetails || {},
+    position: initialData?.position || '',
+    monthlyIncome: initialData?.monthlyIncome || 0,
+    incomeSource: initialData?.incomeSource || '',
+  };
+
   const form = useForm({
     resolver: zodResolver(schema as any),
     mode: 'onChange',
-    defaultValues: {
-      employmentStatus: initialData?.employmentStatus || '',
-      occupation: initialData?.occupation || '',
-      employerName: initialData?.employerName || '',
-      employerAddressDetails: initialData?.employerAddressDetails || {},
-      position: initialData?.position || '',
-      monthlyIncome: initialData?.monthlyIncome || 0,
-      incomeSource: initialData?.incomeSource || '',
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   const handleSubmit = async (data: any) => {
     await onSave(data);

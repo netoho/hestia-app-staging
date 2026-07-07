@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFormWizardTabs } from '@/hooks/useFormWizardTabs';
@@ -8,6 +8,7 @@ import { trpc } from '@/lib/trpc/client';
 import { getFriendlyError } from '@/lib/utils/trpcErrors';
 import { FormWizardProgress } from '@/components/actor/shared/FormWizardProgress';
 import { FormWizardTabs } from '@/components/actor/shared/FormWizardTabs';
+import { WizardDataVersionContext } from '@/components/actor/shared/useWizardDataReset';
 
 /**
  * Generic actor wizard (T3, #127) — the single component behind every actor
@@ -42,6 +43,11 @@ export interface ActorWizardProps {
   selfId?: string | null;
   onComplete?: () => void;
   isAdminEdit?: boolean;
+  /**
+   * The feeding query's `dataUpdatedAt`. Tabs adopting useWizardDataReset
+   * re-seed from fresh `initialData` whenever this bumps (#171 edit half).
+   */
+  dataUpdatedAt?: number;
 }
 
 /** Everything a config's render functions receive. */
@@ -125,10 +131,16 @@ export default function ActorWizard({
   selfId = null,
   onComplete,
   isAdminEdit = false,
+  dataUpdatedAt = 0,
 }: ActorWizardProps) {
   const { toast } = useToast();
   const [requiredDocsUploaded, setRequiredDocsUploaded] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState(initialData?.additionalInfo || '');
+  // Scopes the save button's requestSubmit to THIS wizard's forms. A bare
+  // document.querySelector('form') submits the first form in the whole
+  // document — on the admin surface the dialog portals to body-end, so any
+  // form on the underlying page would hijack the save silently.
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const { isCompany, self } = config.resolveContext(initialData, selfId);
   const tabs = config.getTabs(isCompany);
@@ -195,7 +207,8 @@ export default function ActorWizard({
   const currentIndex = tabs.findIndex((t) => t.id === wizard.activeTab);
 
   return (
-    <div className="space-y-6">
+    <WizardDataVersionContext.Provider value={dataUpdatedAt}>
+    <div className="space-y-6" ref={contentRef}>
       <FormWizardProgress tabs={tabs} tabSaved={wizard.tabSaved} />
 
       <FormWizardTabs
@@ -257,8 +270,9 @@ export default function ActorWizard({
         <div className="flex gap-2">
           <Button
             onClick={() => {
-              // Trigger form submission in the active tab (one form per tab).
-              document.querySelector('form')?.requestSubmit();
+              // Trigger form submission in the active tab (one form per tab),
+              // scoped to this wizard's subtree.
+              contentRef.current?.querySelector('form')?.requestSubmit();
             }}
             disabled={isSaving}
           >
@@ -271,5 +285,6 @@ export default function ActorWizard({
         </div>
       </div>
     </div>
+    </WizardDataVersionContext.Provider>
   );
 }

@@ -13,6 +13,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
 import type { AvalType } from "@/prisma/generated/prisma-client/enums";
@@ -33,11 +34,14 @@ export default function AvalEmploymentTab({
   // Get schema for employment tab (all fields optional)
   const schema = getAvalTabSchema(avalType, 'employment');
 
+  const defaultValues = initialData;
+
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: initialData,
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   const handleSubmit = async (data: any) => {
     await onSave(data);

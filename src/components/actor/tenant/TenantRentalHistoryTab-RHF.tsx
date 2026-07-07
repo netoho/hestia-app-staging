@@ -15,6 +15,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getTenantTabSchema } from '@/lib/domain/tenant/schema';
 
@@ -32,22 +33,25 @@ export default function TenantRentalHistoryTabRHF({
   // Rental history tab is only for INDIVIDUAL tenants
   const schema = getTenantTabSchema('INDIVIDUAL', 'rental');
 
+  const defaultValues = {
+    previousLandlordName: initialData?.previousLandlordName || '',
+    previousLandlordPhone: initialData?.previousLandlordPhone || '',
+    previousLandlordEmail: initialData?.previousLandlordEmail || '',
+    previousRentAmount: initialData?.previousRentAmount || null,
+    previousRentalAddressDetails: initialData?.previousRentalAddressDetails || {},
+    rentalHistoryYears: initialData?.rentalHistoryYears || null,
+    reasonForMoving: initialData?.reasonForMoving || '',
+    numberOfOccupants: initialData?.numberOfOccupants || null,
+    hasPets: initialData?.hasPets || false,
+    petDescription: initialData?.petDescription || '',
+  };
+
   const form = useForm({
     resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
-    defaultValues: {
-      previousLandlordName: initialData?.previousLandlordName || '',
-      previousLandlordPhone: initialData?.previousLandlordPhone || '',
-      previousLandlordEmail: initialData?.previousLandlordEmail || '',
-      previousRentAmount: initialData?.previousRentAmount || null,
-      previousRentalAddressDetails: initialData?.previousRentalAddressDetails || {},
-      rentalHistoryYears: initialData?.rentalHistoryYears || null,
-      reasonForMoving: initialData?.reasonForMoving || '',
-      numberOfOccupants: initialData?.numberOfOccupants || null,
-      hasPets: initialData?.hasPets || false,
-      petDescription: initialData?.petDescription || '',
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   const hasPets = form.watch('hasPets');
 

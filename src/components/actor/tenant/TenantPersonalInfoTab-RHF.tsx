@@ -15,6 +15,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getTenantTabSchema, type TenantType } from '@/lib/domain/tenant/schema';
 import { tenantFormDefaults } from '@/lib/domain/tenant/adapters/form';
@@ -32,9 +33,11 @@ export default function TenantPersonalInfoTabRHF({
   onSave,
   disabled = false,
 }: TenantPersonalInfoTabProps) {
-  // Initialize form with RHF + Zod validation.
   // Defaults come from the canonical tenant form adapter so a future
   // field addition only needs to touch `src/lib/domain/tenant/`.
+  const defaultValues = tenantFormDefaults({ tenantType, initialData });
+
+  // Initialize form with RHF + Zod validation.
   // FieldValues pinned explicitly: without it TFieldValues infers from
   // tenantFormDefaults' Record<string, unknown> and every FormField control
   // in the file stops typechecking.
@@ -52,8 +55,9 @@ export default function TenantPersonalInfoTabRHF({
         getTenantTabSchema((values.tenantType as TenantType) ?? tenantType, 'personal') as unknown as Parameters<typeof zodResolver>[0],
       )(values, ctx, options),
     mode: 'onChange',
-    defaultValues: tenantFormDefaults({ tenantType, initialData }),
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch tenantType and nationality for dynamic UI
   const currentTenantType = form.watch('tenantType');

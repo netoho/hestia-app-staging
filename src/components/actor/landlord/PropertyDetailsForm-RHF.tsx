@@ -14,6 +14,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import {
   Select,
   SelectContent,
@@ -43,6 +44,40 @@ export default function PropertyDetailsFormRHF({
   onSave,
   disabled = false,
 }: PropertyDetailsFormRHFProps) {
+  const defaultValues = {
+    // Addresses
+    propertyAddressDetails: initialData?.propertyAddressDetails || {},
+    contractSigningAddressDetails: initialData?.contractSigningAddressDetails || {},
+    // Parking
+    parkingSpaces: initialData?.parkingSpaces || 0,
+    parkingNumbers: initialData?.parkingNumbers || '',
+    // Utilities
+    hasElectricity: initialData?.hasElectricity ?? true,
+    hasWater: initialData?.hasWater ?? true,
+    hasGas: initialData?.hasGas ?? false,
+    hasPhone: initialData?.hasPhone ?? false,
+    hasCableTV: initialData?.hasCableTV ?? false,
+    hasInternet: initialData?.hasInternet ?? false,
+    otherServices: initialData?.otherServices || '',
+    utilitiesInLandlordName: initialData?.utilitiesInLandlordName ?? false,
+    // Included in rent
+    electricityIncludedInRent: initialData?.electricityIncludedInRent ?? false,
+    waterIncludedInRent: initialData?.waterIncludedInRent ?? false,
+    gasIncludedInRent: initialData?.gasIncludedInRent ?? false,
+    internetIncludedInRent: initialData?.internetIncludedInRent ?? false,
+    cableTVIncludedInRent: initialData?.cableTVIncludedInRent ?? false,
+    phoneIncludedInRent: initialData?.phoneIncludedInRent ?? false,
+    // Features
+    isFurnished: initialData?.isFurnished ?? false,
+    petsAllowed: initialData?.petsAllowed ?? false,
+    hasInventory: initialData?.hasInventory ?? false,
+    hasRules: initialData?.hasRules ?? false,
+    rulesType: initialData?.rulesType || null,
+    // Dates (format Date objects to YYYY-MM-DD strings for HTML input)
+    propertyDeliveryDate: formatDateForInput(initialData?.propertyDeliveryDate),
+    contractSigningDate: formatDateForInput(initialData?.contractSigningDate),
+  };
+
   // This form collects a superset of `propertyDetailsSchema` (utilities-
   // included flags live on the form but are validated elsewhere), so the
   // resolver is typed against generic FieldValues rather than the schema's
@@ -50,40 +85,9 @@ export default function PropertyDetailsFormRHF({
   const form = useForm({
     resolver: zodResolver(propertyDetailsSchema) as Resolver<FieldValues>,
     mode: 'onChange',
-    defaultValues: {
-      // Addresses
-      propertyAddressDetails: initialData?.propertyAddressDetails || {},
-      contractSigningAddressDetails: initialData?.contractSigningAddressDetails || {},
-      // Parking
-      parkingSpaces: initialData?.parkingSpaces || 0,
-      parkingNumbers: initialData?.parkingNumbers || '',
-      // Utilities
-      hasElectricity: initialData?.hasElectricity ?? true,
-      hasWater: initialData?.hasWater ?? true,
-      hasGas: initialData?.hasGas ?? false,
-      hasPhone: initialData?.hasPhone ?? false,
-      hasCableTV: initialData?.hasCableTV ?? false,
-      hasInternet: initialData?.hasInternet ?? false,
-      otherServices: initialData?.otherServices || '',
-      utilitiesInLandlordName: initialData?.utilitiesInLandlordName ?? false,
-      // Included in rent
-      electricityIncludedInRent: initialData?.electricityIncludedInRent ?? false,
-      waterIncludedInRent: initialData?.waterIncludedInRent ?? false,
-      gasIncludedInRent: initialData?.gasIncludedInRent ?? false,
-      internetIncludedInRent: initialData?.internetIncludedInRent ?? false,
-      cableTVIncludedInRent: initialData?.cableTVIncludedInRent ?? false,
-      phoneIncludedInRent: initialData?.phoneIncludedInRent ?? false,
-      // Features
-      isFurnished: initialData?.isFurnished ?? false,
-      petsAllowed: initialData?.petsAllowed ?? false,
-      hasInventory: initialData?.hasInventory ?? false,
-      hasRules: initialData?.hasRules ?? false,
-      rulesType: initialData?.rulesType || null,
-      // Dates (format Date objects to YYYY-MM-DD strings for HTML input)
-      propertyDeliveryDate: formatDateForInput(initialData?.propertyDeliveryDate),
-      contractSigningDate: formatDateForInput(initialData?.contractSigningDate),
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   const hasRules = form.watch('hasRules');
 
