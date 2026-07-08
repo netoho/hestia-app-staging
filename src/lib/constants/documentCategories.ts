@@ -51,7 +51,7 @@ export const documentCategoryLabels: Record<DocumentCategory, { title: string; d
     description: 'Documento del SAT con datos fiscales actualizados'
   },
   [DocumentCategory.CREDIT_REPORT]: {
-    title: 'Reporte de Buró de Crédito',
+    title: 'Buró de crédito',
     description: 'Historial crediticio reciente (no mayor a 3 meses)'
   },
   [DocumentCategory.PROPERTY_REGISTRY]: {
