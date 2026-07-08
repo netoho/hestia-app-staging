@@ -1,0 +1,78 @@
+import { describe, test, expect } from 'bun:test';
+import { PaymentStatus, PaymentType, PaymentMethod } from '@/prisma/generated/prisma-client/enums';
+import {
+  isCfdiEligible,
+  formaPagoFromMethod,
+  conceptFromType,
+  buildCfdiSubmission,
+  SAT_FORMA_PAGO,
+} from '../payloadBuilder';
+
+describe('isCfdiEligible', () => {
+  test('COMPLETED + an invoiceable type is eligible', () => {
+    for (const type of [PaymentType.TENANT_PORTION, PaymentType.LANDLORD_PORTION, PaymentType.INVESTIGATION_FEE, PaymentType.POLICY_PREMIUM, PaymentType.INCIDENT_PAYMENT]) {
+      expect(isCfdiEligible({ status: PaymentStatus.COMPLETED, type })).toBe(true);
+    }
+  });
+
+  test('non-COMPLETED is never eligible', () => {
+    expect(isCfdiEligible({ status: PaymentStatus.PENDING, type: PaymentType.TENANT_PORTION })).toBe(false);
+    expect(isCfdiEligible({ status: PaymentStatus.PENDING_VERIFICATION, type: PaymentType.TENANT_PORTION })).toBe(false);
+    expect(isCfdiEligible({ status: PaymentStatus.CANCELLED, type: PaymentType.TENANT_PORTION })).toBe(false);
+  });
+
+  test('REFUND and PARTIAL_PAYMENT are excluded even when COMPLETED (PUE only)', () => {
+    expect(isCfdiEligible({ status: PaymentStatus.COMPLETED, type: PaymentType.REFUND })).toBe(false);
+    expect(isCfdiEligible({ status: PaymentStatus.COMPLETED, type: PaymentType.PARTIAL_PAYMENT })).toBe(false);
+  });
+});
+
+describe('formaPagoFromMethod', () => {
+  test('maps Stripe methods to SAT c_FormaPago', () => {
+    expect(formaPagoFromMethod(PaymentMethod.CARD)).toBe(SAT_FORMA_PAGO.TARJETA_CREDITO);
+    expect(formaPagoFromMethod(PaymentMethod.BANK_TRANSFER)).toBe(SAT_FORMA_PAGO.TRANSFERENCIA);
+    expect(formaPagoFromMethod(PaymentMethod.CASH)).toBe(SAT_FORMA_PAGO.EFECTIVO);
+  });
+
+  test('ambiguous / unknown methods fall back to 99 (por definir)', () => {
+    expect(formaPagoFromMethod(PaymentMethod.MANUAL)).toBe(SAT_FORMA_PAGO.POR_DEFINIR);
+    expect(formaPagoFromMethod(PaymentMethod.STRIPE)).toBe(SAT_FORMA_PAGO.POR_DEFINIR);
+    expect(formaPagoFromMethod(null)).toBe(SAT_FORMA_PAGO.POR_DEFINIR);
+    expect(formaPagoFromMethod(undefined)).toBe(SAT_FORMA_PAGO.POR_DEFINIR);
+  });
+});
+
+describe('buildCfdiSubmission', () => {
+  const base = {
+    id: 'pay_1',
+    subtotal: 4310.34,
+    amount: 5000,
+    description: 'Pago del Inquilino',
+    type: PaymentType.TENANT_PORTION,
+    method: PaymentMethod.CARD,
+  };
+
+  test('uses the stored IVA-exclusive subtotal as unit_price', () => {
+    expect(buildCfdiSubmission(base).unit_price).toBe(4310.34);
+  });
+
+  test('falls back to reverse-IVA of the gross amount when subtotal is null', () => {
+    const out = buildCfdiSubmission({ ...base, subtotal: null });
+    expect(out.unit_price).toBeCloseTo(5000 / 1.16, 2);
+  });
+
+  test('external_ref is the payment id; payment_form derives from method', () => {
+    const out = buildCfdiSubmission(base);
+    expect(out.external_ref).toBe('pay_1');
+    expect(out.payment_form).toBe(SAT_FORMA_PAGO.TARJETA_CREDITO);
+  });
+
+  test('description falls back to a concept from type when null', () => {
+    const out = buildCfdiSubmission({ ...base, description: null, type: PaymentType.INVESTIGATION_FEE });
+    expect(out.description).toBe(conceptFromType(PaymentType.INVESTIGATION_FEE));
+  });
+
+  test('formaPagoOverride wins (the manual-payment picker path, T2)', () => {
+    expect(buildCfdiSubmission({ ...base, method: PaymentMethod.MANUAL }, '01').payment_form).toBe('01');
+  });
+});

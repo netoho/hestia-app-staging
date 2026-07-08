@@ -12,6 +12,7 @@ import { ServiceError, ErrorCode } from './types/errors';
 import { BaseService } from './base/BaseService';
 import { pricingService } from './pricingService';
 import { sendPaymentLinkEmail } from './emailService';
+import { cfdiIssuanceService } from './cfdi/cfdiIssuanceService';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 import { calculateBreakdown } from '@/lib/utils/money';
 import { PAYMENT_LIMITS } from '@/lib/config/payments';
@@ -425,9 +426,9 @@ class PaymentService extends BaseService {
     } : {};
 
     // Use transaction to ensure atomicity when updating payment + policy status
-    return this.prisma.$transaction(async (tx) => {
+    const updatedPayment = await this.prisma.$transaction(async (tx) => {
       // Update payment record
-      const updatedPayment = await tx.payment.update({
+      const result = await tx.payment.update({
         where: { id: paymentId },
         data: {
           status,
@@ -445,8 +446,20 @@ class PaymentService extends BaseService {
         );
       }
 
-      return updatedPayment;
+      return result;
     });
+
+    // After commit: register a CFDI for the completed payment (#212).
+    // Fire-and-forget — a micfdi failure must never roll back or block the
+    // payment. Both Stripe rails (card via checkout.session.completed, SPEI via
+    // payment_intent.succeeded) reach COMPLETED through this method.
+    if (status === PaymentStatus.COMPLETED) {
+      void cfdiIssuanceService.issueForPayment(paymentId).catch((err) =>
+        console.error('CFDI issuance error:', err),
+      );
+    }
+
+    return updatedPayment;
   }
 
   /**
