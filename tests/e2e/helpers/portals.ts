@@ -270,71 +270,6 @@ export async function completeTenantCompanyPortal(page: Page, token: string): Pr
   await expect(page.getByText(/Información (Enviada|Completa)/)).toBeVisible({ timeout: 30_000 });
 }
 
-/**
- * The multi-landlord array schema validates EVERY card on any save, so a
- * sibling card's required fields (legalRepCurp, curp) and null-poisoned
- * optionals ("Expected string, received null" — #175 surfacing client-side)
- * silently block each landlord's own save. Fill whatever is still empty on
- * the other cards; prefilled values are left untouched, and the sibling's
- * own later visit overwrites the placeholders with their real data.
- */
-async function fillSiblingLandlordCards(page: Page, ownIndex: number): Promise<void> {
-  const emails = page.locator('[name^="landlords."][name$=".email"]');
-  const n = await emails.count();
-  for (let j = 0; j < n; j++) {
-    if (j === ownIndex) continue;
-    const p = (f: string) => `landlords.${j}.${f}`;
-    const fillIfEmpty = async (field: string, value: string) => {
-      const loc = page.locator(`[name="${p(field)}"]`);
-      if ((await loc.count()) && !(await loc.inputValue())) await loc.fill(value);
-    };
-    const isCompanyCard = (await page.locator(`[name="${p('companyName')}"]`).count()) > 0;
-    if (isCompanyCard) {
-      await fillIfEmpty('companyName', 'Inmobiliaria Copropietaria SA de CV');
-      await fillIfEmpty('companyRfc', 'ISI900101AB1');
-      await fillIfEmpty('legalRepFirstName', 'Rep');
-      await fillIfEmpty('legalRepPaternalLastName', 'Legal');
-      await fillIfEmpty('legalRepCurp', 'RELG800101HDFXXX01');
-      await fillIfEmpty('legalRepRfc', 'RELG800101AB1');
-      await fillIfEmpty('legalRepPosition', 'Apoderado');
-      await fillIfEmpty('legalRepEmail', 'rep.copropietario@example.com');
-      await fillIfEmpty('legalRepPhone', '5500000001');
-      await fillIfEmpty('legalRepMiddleName', 'Opcional');
-      await fillIfEmpty('legalRepMaternalLastName', 'Opcional');
-      await fillIfEmpty('businessType', 'Inmobiliario');
-    } else {
-      await fillIfEmpty('firstName', 'Co');
-      await fillIfEmpty('paternalLastName', 'Propietario');
-      await fillIfEmpty('curp', 'COPX800101HDFXXX02');
-      await fillIfEmpty('rfc', 'COPX800101AB1');
-    }
-    await fillIfEmpty('phone', '5500000003'); // shared contact — required on every card
-    await fillIfEmpty('personalEmail', 'cop.opt@example.com');
-    await fillIfEmpty('workEmail', 'cop.work@example.com');
-    await fillIfEmpty('workPhone', '5500000004');
-  }
-}
-
-/**
- * The landlord portal is COLLECTIVE: any landlord's token renders every
- * landlord card of the policy (array order is not creation order). Locate the
- * caller's own card by its prefilled email; single-landlord policies resolve
- * to the only card.
- */
-async function landlordIndexByEmail(page: Page, email?: string): Promise<number> {
-  const inputs = page.locator('[name^="landlords."][name$=".email"]');
-  await expect(inputs.first()).toBeVisible({ timeout: 20_000 });
-  if (!email) return 0;
-  const n = await inputs.count();
-  for (let i = 0; i < n; i++) {
-    if ((await inputs.nth(i).inputValue()) === email) {
-      const name = await inputs.nth(i).getAttribute('name');
-      return parseInt((name ?? 'landlords.0.email').split('.')[1], 10);
-    }
-  }
-  throw new Error(`[e2e] no landlord card prefilled with ${email}`);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // LANDLORD — individual
 // ─────────────────────────────────────────────────────────────────────────────
@@ -346,31 +281,20 @@ export async function completeLandlordIndividualPortal(
   await page.goto(`/actor/landlord/${token}`);
   await waitPortalLoaded(page);
 
-  // Tab 1 — Información (owner-info; fill ONLY the caller's own card)
-  const i = await landlordIndexByEmail(page, opts.email);
-  await expect(page.locator(`[name="landlords.${i}.firstName"]`)).toBeVisible({ timeout: 20_000 });
-  await waitFormHydrated(page, `landlords.${i}.email`);
+  // Tab 1 — Información (per-record since #189: the portal renders ONLY the
+  // token's landlord — the sibling-card hostage workarounds died with the
+  // collective form)
+  await expect(page.locator('[name="firstName"]')).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, 'email');
   await fillAllStable(page, [
-    [`landlords.${i}.firstName`, 'Carlos'],
-    [`landlords.${i}.paternalLastName`, 'Ramírez'],
-    [`landlords.${i}.curp`, 'RACX800202HDFMRR08'],
-    [`landlords.${i}.rfc`, 'RACX800202AB1'],
-    [`landlords.${i}.email`, opts.email ?? 'landlord.e2e@example.com'],
-    [`landlords.${i}.phone`, '5599887766'],
+    ['firstName', 'Carlos'],
+    ['paternalLastName', 'Ramírez'],
+    ['curp', 'RACX800202HDFMRR08'],
+    ['rfc', 'RACX800202AB1'],
+    ['email', opts.email ?? 'landlord.e2e@example.com'],
+    ['phone', '5599887766'],
   ]);
-  // EVERY card's address grid carries native `required` inputs — one empty
-  // sibling grid makes requestSubmit() no-op with zero feedback (the
-  // collective form holds each landlord's save hostage to all cards'
-  // addresses; app gap noted on the PR). Fill any grid still empty, plus the
-  // sibling cards' schema-required fields.
-  await fillSiblingLandlordCards(page, i);
-  await pickUnsetSelects(page);
-  const gridCount = await page.locator('#street').count();
-  for (let j = 0; j < gridCount; j++) {
-    if (!(await page.locator('#street').nth(j).inputValue())) {
-      await fillAddressNth(page, j);
-    }
-  }
+  await fillAddress(page);
   await save(page);
 
   // Tab 2 — Propiedad (policy-level; property address is UI-required, second
@@ -476,43 +400,34 @@ export async function completeLandlordCompanyPortal(
   await page.goto(`/actor/landlord/${token}`);
   await waitPortalLoaded(page);
 
-  // Tab 1 — Información: the wizard saved isCompany=true, so this card's
-  // company branch renders from the start (no toggle dance needed). Fill
-  // ONLY the caller's own card (collective multi-landlord form).
-  const i = await landlordIndexByEmail(page, opts.email);
-  await expect(page.locator(`[name="landlords.${i}.companyName"]`)).toBeVisible({ timeout: 20_000 });
-  await waitFormHydrated(page, `landlords.${i}.email`);
+  // Tab 1 — Información: the wizard saved isCompany=true, so the company
+  // branch renders from the start. Per-record since #189 — only the token's
+  // landlord is on this form.
+  await expect(page.locator('[name="companyName"]')).toBeVisible({ timeout: 20_000 });
+  await waitFormHydrated(page, 'email');
   await fillAllStable(page, [
-    [`landlords.${i}.companyName`, 'Inmobiliaria E2E SA de CV'],
-    [`landlords.${i}.companyRfc`, 'IEE900101AB1'],
-    [`landlords.${i}.email`, opts.email ?? 'inmobiliaria.e2e@example.com'],
-    [`landlords.${i}.phone`, '5522334455'],
-    [`landlords.${i}.legalRepFirstName`, 'Roberto'],
-    [`landlords.${i}.legalRepPaternalLastName`, 'Vega'],
+    ['companyName', 'Inmobiliaria E2E SA de CV'],
+    ['companyRfc', 'IEE900101AB1'],
+    ['email', opts.email ?? 'inmobiliaria.e2e@example.com'],
+    ['phone', '5522334455'],
+    ['legalRepFirstName', 'Roberto'],
+    ['legalRepPaternalLastName', 'Vega'],
   ]);
   await fillOptionalStrings(page, [
-    `landlords.${i}.legalRepMiddleName`,
-    `landlords.${i}.legalRepMaternalLastName`,
-    `landlords.${i}.legalRepCurp`,
-    `landlords.${i}.legalRepRfc`,
-    `landlords.${i}.legalRepPosition`,
-    `landlords.${i}.legalRepEmail`,
-    `landlords.${i}.legalRepPhone`,
-    `landlords.${i}.businessType`,
-    `landlords.${i}.personalEmail`,
-    `landlords.${i}.workEmail`,
-    `landlords.${i}.workPhone`,
+    'legalRepMiddleName',
+    'legalRepMaternalLastName',
+    'legalRepCurp',
+    'legalRepRfc',
+    'legalRepPosition',
+    'legalRepEmail',
+    'legalRepPhone',
+    'businessType',
+    'personalEmail',
+    'workEmail',
+    'workPhone',
   ]);
-  // Same sibling hostage as the individual variant — fill the other cards'
-  // schema-required fields and any still-empty address grid.
-  await fillSiblingLandlordCards(page, i);
   await pickUnsetSelects(page);
-  const gridCount = await page.locator('#street').count();
-  for (let j = 0; j < gridCount; j++) {
-    if (!(await page.locator('#street').nth(j).inputValue())) {
-      await fillAddressNth(page, j);
-    }
-  }
+  await fillAddress(page);
   await save(page);
 
   // Tab 2 — Propiedad (policy-level; may be prefilled by another landlord)
