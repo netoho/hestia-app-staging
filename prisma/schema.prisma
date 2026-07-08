@@ -1190,8 +1190,9 @@ model Payment {
   refundedAt   DateTime?
   refundAmount Float?
 
-  policy    Policy            @relation(fields: [policyId], references: [id], onDelete: Cascade)
-  transfers PaymentTransfer[]
+  policy     Policy            @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  transfers  PaymentTransfer[]
+  cfdiRecord CfdiRecord?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1199,6 +1200,45 @@ model Payment {
   @@index([policyId])
   @@index([status])
   @@index([type])
+}
+
+/// CFDI e-invoice record for a completed payment (micfdi integration, #211/#212).
+/// One record per invoiceable payment. The receptor's fiscal identity (RFC, uso
+/// CFDI, régimen) is entered by the client at the micfdi portal and is NEVER
+/// stored here — we only submit the payment facts and keep the returned link.
+model CfdiRecord {
+  id        String @id @default(cuid())
+  paymentId String @unique
+
+  /// Idempotency key sent to micfdi (= Payment.id).
+  externalRef String
+
+  /// micfdi identifiers + the permanent client self-stamp link.
+  micfdiRecordId String?
+  portalUrl      String?
+  /// micfdi vocabulary: registered → validated → invoiced; or "error".
+  status       String  @default("pending")
+  errorMessage String? @db.Text
+
+  /// Submission snapshot (what we sent): IVA-exclusive price + SAT c_FormaPago.
+  unitPrice   Float
+  paymentForm String
+  description String?
+
+  /// Reconciliation (populated later by the poll, T5) — the stamped CFDI.
+  folio     String?
+  uuid      String?
+  subtotal  Float?
+  iva       Float?
+  total     Float?
+  stampedAt DateTime?
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
 }
 
 model PaymentTransfer {
