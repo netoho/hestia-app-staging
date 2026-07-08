@@ -692,6 +692,9 @@ export async function completeAvalMarriedPortal(page: Page, token: string): Prom
   await page.locator('[name="spouseName"]').fill('María Elena López Hernández');
   await page.locator('[name="spouseRfc"]').fill('LOHM840606AB1');
   await page.locator('[name="spouseCurp"]').fill('LOHM840606MDFPRR04');
+  // The married_* statuses reveal the OPTIONAL marriage-certificate slot
+  // (#177 ruling: renders, never gates) — exercise the upload here.
+  await uploadDoc(page, 'MARRIAGE_CERTIFICATE');
   await save(page);
 
   // Tab 4 — Referencias (3 personal references)
@@ -699,9 +702,7 @@ export async function completeAvalMarriedPortal(page: Page, token: string): Prom
   for (let i = 0; i < 3; i++) await fillPersonalReference(page, i);
   await save(page);
 
-  // Tab 5 — Documentos (IDENTIFICATION, INCOME_PROOF, ADDRESS_PROOF, BANK_STATEMENT;
-  // no MARRIAGE_CERTIFICATE card exists anywhere in the aval flow — see the
-  // dead-category note on the E2E-04 spec)
+  // Tab 5 — Documentos (IDENTIFICATION, INCOME_PROOF, ADDRESS_PROOF, BANK_STATEMENT)
   await expect(page.locator('#upload-identification')).toBeVisible({ timeout: 20_000 });
   await uploadDoc(page, 'IDENTIFICATION');
   await uploadDoc(page, 'INCOME_PROOF');

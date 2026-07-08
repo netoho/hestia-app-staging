@@ -59,6 +59,15 @@ test('E2E-04: individual aval married_joint reaches ACTIVE', async ({ page }) =>
   expect(avalRow.propertyValue).toBe(2800000);
   expect(avalRow.informationComplete).toBe(true);
 
+  // #177: the optional marriage-certificate slot rendered for married_joint
+  // and its upload persisted (a real MinIO object behind an actorDocument
+  // row). Optional by ruling — completion above succeeded regardless.
+  const marriageCert = await prisma.actorDocument.findFirst({
+    where: { avalId: tokens.avals[0].id, category: 'MARRIAGE_CERTIFICATE' },
+  });
+  expect(marriageCert).not.toBeNull();
+  expect(marriageCert?.uploadStatus).toBe('COMPLETE');
+
   // 3 — Cross-surface parity (#171 class): aval portal-saved values in admin
   await page.goto(`/dashboard/policies/${policyId}?tab=guarantors`);
   await expect(page.getByText(/Fernando/).first()).toBeVisible({ timeout: 30_000 });
