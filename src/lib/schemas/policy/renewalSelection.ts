@@ -38,7 +38,8 @@ const LandlordInstanceSelection = z.object({
   documents: z.boolean().default(true),
 });
 
-const TenantSelection = z.object({
+const TenantInstanceSelection = z.object({
+  sourceId: z.string(),
   include: z.boolean().default(true),
   basicInfo: z.boolean().default(true),
   contact: z.boolean().default(true),
@@ -82,7 +83,10 @@ export const PolicyRenewalSelectionSchema = z.object({
   // First entry corresponds to the primary landlord; every landlord (primary +
   // co-owners) gets its own carry-over selection, mirroring jointObligors/avals.
   landlords: z.array(LandlordInstanceSelection),
-  tenant: TenantSelection,
+  // One entry per tenant (S5b #169), mirroring landlords/jointObligors/avals.
+  // The renewal clones ALL tenants; per-tenant exclusion UI is deferred, so
+  // the client sends include: true per entry today.
+  tenants: z.array(TenantInstanceSelection),
   jointObligors: z.array(JointObligorInstanceSelection),
   avals: z.array(AvalInstanceSelection),
 });
@@ -91,7 +95,7 @@ export type PolicyRenewalSelection = z.infer<typeof PolicyRenewalSelectionSchema
 export type PropertyRenewalSelection = z.infer<typeof PropertySelection>;
 export type PolicyTermsRenewalSelection = z.infer<typeof PolicyTermsSelection>;
 export type LandlordRenewalSelection = z.infer<typeof LandlordInstanceSelection>;
-export type TenantRenewalSelection = z.infer<typeof TenantSelection>;
+export type TenantRenewalSelection = z.infer<typeof TenantInstanceSelection>;
 export type JointObligorRenewalSelection = z.infer<typeof JointObligorInstanceSelection>;
 export type AvalRenewalSelection = z.infer<typeof AvalInstanceSelection>;
 
