@@ -93,8 +93,12 @@ export function useDocumentOperations({
   const getUploadUrlMutation = trpc.document.getUploadUrl.useMutation();
   const confirmUploadMutation = trpc.document.confirmUpload.useMutation();
 
-  // Use the query data or create empty map
-  const documents = documentsData || createEmptyDocumentMap();
+  // Use the query data or create empty map. Annotated: with `initialData`
+  // present, React Query's TData inference collapses to the RAW response
+  // shape instead of the select-transformed GroupedDocuments, which made
+  // every `documents[Category]` index a TS7053 downstream.
+  const documents: GroupedDocuments =
+    (documentsData as unknown as GroupedDocuments | undefined) || createEmptyDocumentMap();
 
   // Create operation ID
   const createOperationId = (type: string, category: DocumentCategory, timestamp: number) => {
