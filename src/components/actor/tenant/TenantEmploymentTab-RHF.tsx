@@ -20,6 +20,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getTenantTabSchema } from '@/lib/domain/tenant/schema';
 
@@ -47,23 +48,26 @@ export default function TenantEmploymentTabRHF({
   // Employment tab is only for INDIVIDUAL tenants
   const schema = getTenantTabSchema('INDIVIDUAL', 'employment');
 
+  const defaultValues = {
+    employmentStatus: initialData?.employmentStatus || '',
+    occupation: initialData?.occupation || '',
+    employerName: initialData?.employerName || '',
+    employerAddressDetails: initialData?.employerAddressDetails || {},
+    position: initialData?.position || '',
+    monthlyIncome: initialData?.monthlyIncome || 0,
+    incomeSource: initialData?.incomeSource || '',
+    yearsAtJob: initialData?.yearsAtJob || 0,
+    hasAdditionalIncome: initialData?.hasAdditionalIncome || false,
+    additionalIncomeSource: initialData?.additionalIncomeSource || '',
+    additionalIncomeAmount: initialData?.additionalIncomeAmount || 0,
+  };
+
   const form = useForm({
     resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
-    defaultValues: {
-      employmentStatus: initialData?.employmentStatus || '',
-      occupation: initialData?.occupation || '',
-      employerName: initialData?.employerName || '',
-      employerAddressDetails: initialData?.employerAddressDetails || {},
-      position: initialData?.position || '',
-      monthlyIncome: initialData?.monthlyIncome || 0,
-      incomeSource: initialData?.incomeSource || '',
-      yearsAtJob: initialData?.yearsAtJob || 0,
-      hasAdditionalIncome: initialData?.hasAdditionalIncome || false,
-      additionalIncomeSource: initialData?.additionalIncomeSource || '',
-      additionalIncomeAmount: initialData?.additionalIncomeAmount || 0,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   const hasAdditionalIncome = form.watch('hasAdditionalIncome');
 

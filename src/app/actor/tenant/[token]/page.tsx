@@ -11,7 +11,8 @@ import { brandInfo } from '@/lib/config/brand';
 import { formatFullName } from '@/lib/utils/names';
 import { trpc } from '@/lib/trpc/client';
 
-import TenantFormWizardSimplified from "@/components/actor/tenant/TenantFormWizard-Simplified";
+import ActorWizard from '@/components/actor/ActorWizard';
+import { tenantWizardConfig } from '@/components/actor/tenant/tenantWizardConfig';
 
 export default function TenantPortalPage() {
   const params = useParams();
@@ -30,7 +31,7 @@ export default function TenantPortalPage() {
   }, [token]);
 
   // Use tRPC to fetch actor data
-  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+  const { data, isLoading, error, refetch, dataUpdatedAt } = trpc.actor.getByToken.useQuery(
     {
       type: 'tenant',
       token
@@ -243,12 +244,14 @@ export default function TenantPortalPage() {
         </Card>
 
         {/* Form Wizard */}
-        <TenantFormWizardSimplified
+        <ActorWizard
+          config={tenantWizardConfig}
           token={token}
           initialData={tenant}
           policy={policy}
           onComplete={handleComplete}
           isAdminEdit={false}
+          dataUpdatedAt={dataUpdatedAt}
         />
       </div>
     </div>

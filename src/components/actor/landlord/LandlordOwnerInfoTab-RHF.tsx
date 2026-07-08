@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,6 +17,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import {
   landlordOwnerInfoIndividualSchema,
@@ -120,39 +120,26 @@ export default function LandlordOwnerInfoTabRHF({
   }))
 
   if (landlords.length === 0) {
-    landlords[0] = [createEmptyIndividualLandlord(true)]
+    landlords[0] = createEmptyIndividualLandlord(true)
   }
+
+  const defaultValues = { landlords };
+
   const form = useForm<LandlordsFormData>({
     resolver: zodResolver(landlordsFormSchema) as Resolver<LandlordsFormData>,
     mode: 'onChange',
-    defaultValues: {
-      landlords,
-    },
+    defaultValues,
   });
+  // Replaces the bespoke reset-on-initialData effect: version-keyed on the
+  // feeding query's dataUpdatedAt (via ActorWizard), so it fires on real
+  // refetches (e.g. a save bringing new IDs) instead of on every re-render.
+  useWizardDataReset(form, defaultValues);
 
   // useFieldArray for landlords
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'landlords',
   });
-
-  // Reset form when initialData changes (e.g., after save brings new IDs).
-  // keepDirtyValues: a re-render that hands us a new initialData reference
-  // (e.g. a session refetch upstream) refreshes untouched fields but never
-  // clobbers fields the user is currently editing.
-  useEffect(() => {
-    if (initialData?.length > 0) {
-      form.reset(
-        {
-          landlords: initialData.map((l) => ({
-            ...l,
-            isCompany: l.isCompany ?? false,
-          })),
-        },
-        { keepDirtyValues: true },
-      );
-    }
-  }, [initialData, form]);
 
   // Computed values
   const canAddMore = fields.length < LANDLORD_LIMITS.MAX;
@@ -507,6 +494,22 @@ function LandlordIndividualFields({
               </FormItem>
             )}
           />
+
+          {/* Declared by the landlord owner-info schema but previously
+              unrendered on the individual card — #180 walker finding. */}
+          <FormField
+            control={form.control}
+            name={`landlords.${index}.workEmail`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel optional>Email de Trabajo</FormLabel>
+                <FormControl>
+                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       )}
 
@@ -788,6 +791,22 @@ function LandlordCompanyFields({
       {/* Additional Contact (only for primary) */}
       {showAdditionalContact && (
         <div className="grid grid-cols-2 gap-4">
+          {/* Declared by the landlord company schema but previously
+              unrendered — #180 walker finding. */}
+          <FormField
+            control={form.control}
+            name={`landlords.${index}.personalEmail`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel optional>Email Personal</FormLabel>
+                <FormControl>
+                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name={`landlords.${index}.workEmail`}

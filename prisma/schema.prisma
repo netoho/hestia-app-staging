@@ -732,6 +732,12 @@ model TenantHistory {
   verificationStatus  ActorVerificationStatus
   informationComplete Boolean
 
+  // Full-fidelity snapshot of the actor row + relations (addresses,
+  // references, document metadata) at archive time; access tokens redacted.
+  // The typed columns above stay as the queryable summary — this is the
+  // audit-complete record (#159).
+  snapshot Json?
+
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   @@index([policyId])
@@ -767,6 +773,9 @@ model JointObligorHistory {
   verificationStatus  ActorVerificationStatus
   informationComplete Boolean
 
+  // Full-fidelity snapshot (see TenantHistory.snapshot)
+  snapshot Json?
+
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   @@index([policyId])
@@ -801,6 +810,9 @@ model AvalHistory {
   // Snapshot of verification status
   verificationStatus  ActorVerificationStatus
   informationComplete Boolean
+
+  // Full-fidelity snapshot (see TenantHistory.snapshot)
+  snapshot Json?
 
   policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 

@@ -161,9 +161,11 @@ function mapFields(data: Record<string, unknown>, opts: ToDbOptions): Record<str
   if ('isCompany' in out) {
     out.jointObligorType = out.isCompany ? 'COMPANY' : 'INDIVIDUAL';
     delete out.isCompany;
-  } else if (out.jointObligorType === undefined) {
-    out.jointObligorType = opts.jointObligorType;
   }
+  // When the input carries no type signal, leave the column untouched —
+  // opts.jointObligorType only selects validation/filtering context, and
+  // writing it here reverted COMPANY rows to the caller's default on tab
+  // saves whose schema lacks the discriminator.
 
   // Guarantee method drives the hasPropertyGuarantee flag.
   const guaranteeMethod = (out.guaranteeMethod ?? opts.guaranteeMethod) as

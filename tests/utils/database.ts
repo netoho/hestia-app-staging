@@ -41,7 +41,22 @@ const TABLES = [
   'SystemConfig',
 ];
 
+// Same safety contract as tests/integration/preload.ts and scripts/test-db.ts:
+// destructive helpers refuse to touch anything that isn't a *_test database.
+// (Before this guard, a bare `playwright test` against a mis-set DATABASE_URL
+// could truncate the dev database.)
+function assertTestDatabase(): void {
+  const dbUrl = process.env.DATABASE_URL ?? '';
+  const dbName = dbUrl.split('?')[0].split('/').pop() ?? '';
+  if (!dbName.endsWith('_test')) {
+    throw new Error(
+      `[tests/utils/database] Refusing to touch database "${dbName || '<unset>'}": DATABASE_URL must point at a *_test database.`,
+    );
+  }
+}
+
 export async function resetDatabase(): Promise<void> {
+  assertTestDatabase();
   for (const table of TABLES) {
     try {
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
@@ -52,10 +67,15 @@ export async function resetDatabase(): Promise<void> {
 }
 
 export async function seedTestData(): Promise<void> {
+  assertTestDatabase();
   const hashedPassword = await bcrypt.hash('password123', 10);
 
   await prisma.user.create({
     data: {
+      // Stable id: the e2e suite logs in once (storageState) and resets the DB
+      // per scenario — the JWT's user id must survive reseeding or every
+      // created policy hits a P2003 on createdById.
+      id: 'test-admin-user-id',
       email: 'admin@hestiaplp.com.mx',
       name: 'Super Admin',
       password: hashedPassword,

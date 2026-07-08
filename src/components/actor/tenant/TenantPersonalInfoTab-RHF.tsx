@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -15,6 +15,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getTenantTabSchema, type TenantType } from '@/lib/domain/tenant/schema';
 import { tenantFormDefaults } from '@/lib/domain/tenant/adapters/form';
@@ -32,22 +33,31 @@ export default function TenantPersonalInfoTabRHF({
   onSave,
   disabled = false,
 }: TenantPersonalInfoTabProps) {
-  // Get appropriate schema based on tenant type
-  const schema = getTenantTabSchema(tenantType, 'personal');
-
-  // Initialize form with RHF + Zod validation.
   // Defaults come from the canonical tenant form adapter so a future
   // field addition only needs to touch `src/lib/domain/tenant/`.
-  const form = useForm({
+  const defaultValues = tenantFormDefaults({ tenantType, initialData });
+
+  // Initialize form with RHF + Zod validation.
+  // FieldValues pinned explicitly: without it TFieldValues infers from
+  // tenantFormDefaults' Record<string, unknown> and every FormField control
+  // in the file stops typechecking.
+  const form = useForm<FieldValues>({
+    // Resolve against the schema for the type currently selected in the form
+    // — a resolver pinned to the mount-time prop rejects the type-radio
+    // switch on the tenantType literal (same dead-toggle class as JO/aval).
     // Cast through ZodTypeAny so we don't have to special-case the
     // individual-vs-company union at the resolver type position.
     // RHF's `Resolver<T>` is invariant; the inferred union of the two
     // tab schemas confuses the resolver-type inference. The runtime
     // behavior is identical to passing the raw schema.
-    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
+    resolver: (values, ctx, options) =>
+      zodResolver(
+        getTenantTabSchema((values.tenantType as TenantType) ?? tenantType, 'personal') as unknown as Parameters<typeof zodResolver>[0],
+      )(values, ctx, options),
     mode: 'onChange',
-    defaultValues: tenantFormDefaults({ tenantType, initialData }),
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch tenantType and nationality for dynamic UI
   const currentTenantType = form.watch('tenantType');
@@ -255,6 +265,22 @@ export default function TenantPersonalInfoTabRHF({
                           <FormLabel required>RFC del Representante</FormLabel>
                           <FormControl>
                             <Input {...field} value={field.value || ''} disabled={disabled} maxLength={13} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Declared by the tenant company schema but previously
+                        unrendered — #180 walker finding. */}
+                    <FormField
+                      control={form.control}
+                      name="legalRepId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel optional>Identificación del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -496,6 +522,22 @@ export default function TenantPersonalInfoTabRHF({
                   </FormItem>
                 )}
               />
+
+              {/* Declared by the tenant personal tab schema but previously
+                  unrendered — found by the #180 parity walker. */}
+              <FormField
+                control={form.control}
+                name="workEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email de Trabajo</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Address */}
@@ -515,7 +557,6 @@ export default function TenantPersonalInfoTabRHF({
                           `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
                         );
                       }}
-                      required
                       disabled={disabled}
                     />
                   </FormControl>

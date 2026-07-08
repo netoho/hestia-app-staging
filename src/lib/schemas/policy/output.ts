@@ -136,6 +136,22 @@ const PolicyTopLevelShape = z.object({
   totalPrice: z.number(),
   tenantPercentage: z.number(),
   landlordPercentage: z.number(),
+  // Financial/contract details — previously ABSENT here, so the contract
+  // lock stripped them from policy.getById on the wire and the admin
+  // surfaces rendered false/empty fiscal data whatever the landlord portal
+  // saved (the #174 strip class, caught by the #180 parity walker).
+  tenantPaymentMethod: z.string().nullable(),
+  tenantRequiresCFDI: z.boolean(),
+  tenantCFDIData: z.string().nullable(),
+  hasIVA: z.boolean(),
+  issuesTaxReceipts: z.boolean(),
+  securityDeposit: z.number().nullable(),
+  maintenanceFee: z.number().nullable(),
+  maintenanceIncludedInRent: z.boolean(),
+  rentIncreasePercentage: z.number().nullable(),
+  paymentMethod: z.string().nullable(),
+  contractStartDate: z.date().nullable(),
+  contractEndDate: z.date().nullable(),
   status: z.nativeEnum(PolicyStatus),
   createdById: z.string(),
   managedById: z.string().nullable(),
@@ -238,7 +254,7 @@ export type PolicyListOutput = z.infer<typeof PolicyListOutput>;
 const PolicyGetByIdLandlord = LandlordShape.extend({
   documents: z.array(z.object({ id: z.string() }).passthrough()),
   addressDetails: PropertyAddressShape.nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdTenant = TenantShape.extend({
   personalReferences: z.array(z.object({ id: z.string() }).passthrough()),
@@ -248,7 +264,7 @@ const PolicyGetByIdTenant = TenantShape.extend({
   employerAddressDetails: PropertyAddressShape.nullable(),
   previousRentalAddressDetails: PropertyAddressShape.nullable(),
   employmentStatus: z.nativeEnum(EmploymentStatus).nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdJointObligor = JointObligorShape.extend({
   personalReferences: z.array(z.object({ id: z.string() }).passthrough()),
@@ -257,7 +273,7 @@ const PolicyGetByIdJointObligor = JointObligorShape.extend({
   addressDetails: PropertyAddressShape.nullable(),
   employerAddressDetails: PropertyAddressShape.nullable(),
   guaranteePropertyDetails: PropertyAddressShape.nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdAval = AvalShape.extend({
   personalReferences: z.array(z.object({ id: z.string() }).passthrough()),
@@ -266,7 +282,7 @@ const PolicyGetByIdAval = AvalShape.extend({
   addressDetails: PropertyAddressShape.nullable(),
   employerAddressDetails: PropertyAddressShape.nullable(),
   guaranteePropertyDetails: PropertyAddressShape.nullable(),
-});
+}).passthrough();
 
 const PolicyGetByIdProgressShape = z
   .object({

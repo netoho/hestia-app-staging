@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { brandInfo } from '@/lib/config/brand';
 import { trpc } from '@/lib/trpc/client';
 
-import LandlordFormWizardSimplified from "@/components/actor/landlord/LandlordFormWizard-Simplified";
+import ActorWizard from '@/components/actor/ActorWizard';
+import { landlordWizardConfig } from '@/components/actor/landlord/landlordWizardConfig';
 
 export default function LandlordPortalPage() {
   const params = useParams();
@@ -29,7 +30,7 @@ export default function LandlordPortalPage() {
   }, [token]);
 
   // Use tRPC to fetch actor data
-  const { data, isLoading, error, refetch } = trpc.actor.getManyByToken.useQuery(
+  const { data, isLoading, error, refetch, dataUpdatedAt } = trpc.actor.getManyByToken.useQuery(
     {
       type: 'landlord',
       token
@@ -42,7 +43,11 @@ export default function LandlordPortalPage() {
   const landlords = data?.data || null;
   const policy = data?.policy || null;
   const canEdit = data?.canEdit || false;
-  const isCompleted = !!data?.data?.some(l => l.informationComplete);
+  // Completion is scoped to the landlord this TOKEN belongs to — a `.some()`
+  // here showed "Información Enviada" to every co-owner as soon as one
+  // landlord submitted, locking the rest out with their rows incomplete.
+  const self = data?.selfId ? data?.data?.find(l => l.id === data.selfId) : null;
+  const isCompleted = !!self?.informationComplete;
   const informationComplete = isCompleted
 
   const handleComplete = () => {
@@ -236,7 +241,8 @@ export default function LandlordPortalPage() {
         </Card>
 
         {/* Form Wizard */}
-        <LandlordFormWizardSimplified
+        <ActorWizard
+          config={landlordWizardConfig}
           token={token}
           initialData={{
             landlords,
@@ -252,7 +258,9 @@ export default function LandlordPortalPage() {
             },
           }}
           policy={policy}
+          selfId={data?.selfId ?? null}
           onComplete={handleComplete}
+          dataUpdatedAt={dataUpdatedAt}
         />
       </div>
     </div>

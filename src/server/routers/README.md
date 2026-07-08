@@ -13,6 +13,7 @@ routers/
 │   └── landlord.router.ts   # Landlord-specific procedures (property details, co-ownership)
 ├── address.router.ts
 ├── contract.router.ts
+├── dashboard.router.ts
 ├── document.router.ts
 ├── investigation.router.ts
 ├── onboard.router.ts
@@ -25,6 +26,9 @@ routers/
 └── user.router.ts
 ```
 
+14 namespaces, 108 procedures — every one `.output()`-locked and covered by the
+integration suite.
+
 ## Router Catalog
 
 | Router | tRPC namespace | Description |
@@ -32,6 +36,7 @@ routers/
 | `actor/` | `actor.*` | Actor self-service portal: get by token, save tab, full save, admin update, validate documents |
 | `address.router.ts` | `address.*` | Google Places autocomplete and place detail lookup |
 | `contract.router.ts` | `contract.*` | Contract retrieval by policy (stub, minimal implementation) |
+| `dashboard.router.ts` | `dashboard.*` | Dashboard KPIs + stats (2 procedures; output schema in `schemas/dashboard/output.ts`, 12 tests) |
 | `document.router.ts` | `document.*` | S3 presigned upload URLs and document status confirmation for actor documents |
 | `investigation.router.ts` | `investigation.*` | Tenant investigation flow: create, submit form, request/record approvals |
 | `onboard.router.ts` | `onboard.*` | Staff onboarding via invitation token: validate token, set password, upload avatar |

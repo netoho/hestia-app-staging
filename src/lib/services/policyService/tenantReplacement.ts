@@ -6,6 +6,14 @@ import {
   sendTenantReplacementNotification,
   sendIncompleteActorInfoNotification,
 } from '@/lib/services/notificationService';
+import {
+  archiveAndCleanupTenant,
+  archiveAndCleanupJointObligor,
+  archiveAndCleanupAval,
+} from './actorArchive';
+import { TENANT_REPLACEMENT_RESET } from './copyLists';
+
+export { TENANT_REPLACEMENT_RESET, TENANT_REPLACEMENT_INPUT_FIELDS } from './copyLists';
 
 // Statuses that allow tenant replacement
 export const REPLACEABLE_STATUSES: PolicyStatus[] = [
@@ -40,7 +48,9 @@ export interface ReplaceTenantResult {
 export async function replaceTenantOnPolicy(
   input: ReplaceTenantInput
 ): Promise<ReplaceTenantResult> {
-  // Get policy with full tenant and guarantor data for archiving
+  // The archive helper refetches each actor in full (row + relations) inside
+  // the transaction; here we only need ids plus the tenant name fields used
+  // for payment stamping and the activity log.
   const policy = await prisma.policy.findUnique({
     where: { id: input.policyId },
     select: {
@@ -54,73 +64,13 @@ export async function replaceTenantOnPolicy(
           id: true,
           tenantType: true,
           firstName: true,
-          middleName: true,
           paternalLastName: true,
-          maternalLastName: true,
           companyName: true,
           email: true,
-          phone: true,
-          rfc: true,
-          employmentStatus: true,
-          occupation: true,
-          employerName: true,
-          monthlyIncome: true,
-          verificationStatus: true,
-          informationComplete: true,
-          // Address IDs for cleanup
-          addressId: true,
-          employerAddressId: true,
-          previousRentalAddressId: true,
         },
       },
-      jointObligors: {
-        select: {
-          id: true,
-          jointObligorType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          rfc: true,
-          employmentStatus: true,
-          occupation: true,
-          employerName: true,
-          monthlyIncome: true,
-          verificationStatus: true,
-          informationComplete: true,
-          // Address IDs for cleanup
-          addressId: true,
-          employerAddressId: true,
-          guaranteePropertyAddressId: true,
-        },
-      },
-      avals: {
-        select: {
-          id: true,
-          avalType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          rfc: true,
-          employmentStatus: true,
-          occupation: true,
-          employerName: true,
-          monthlyIncome: true,
-          verificationStatus: true,
-          informationComplete: true,
-          // Address IDs for cleanup
-          addressId: true,
-          employerAddressId: true,
-          guaranteePropertyAddressId: true,
-        },
-      },
+      jointObligors: { select: { id: true } },
+      avals: { select: { id: true } },
     },
   });
 
@@ -142,351 +92,47 @@ export async function replaceTenantOnPolicy(
 
   const currentTenant = policy.tenant;
 
+  const archiveMeta = {
+    policyId: input.policyId,
+    replacedById: input.performedById,
+    replacementReason: input.replacementReason,
+  };
+
   // Use transaction for atomicity
   await prisma.$transaction(async (tx) => {
-    // 1. Archive current tenant to TenantHistory
-    await tx.tenantHistory.create({
-      data: {
-        policyId: input.policyId,
-        tenantType: currentTenant.tenantType,
-        firstName: currentTenant.firstName,
-        middleName: currentTenant.middleName,
-        paternalLastName: currentTenant.paternalLastName,
-        maternalLastName: currentTenant.maternalLastName,
-        companyName: currentTenant.companyName,
-        email: currentTenant.email,
-        phone: currentTenant.phone,
-        rfc: currentTenant.rfc,
-        employmentStatus: currentTenant.employmentStatus,
-        occupation: currentTenant.occupation,
-        employerName: currentTenant.employerName,
-        monthlyIncome: currentTenant.monthlyIncome,
-        verificationStatus: currentTenant.verificationStatus,
-        informationComplete: currentTenant.informationComplete,
-        replacedById: input.performedById,
-        replacementReason: input.replacementReason,
-      },
-    });
+    // 1. Archive current tenant (summary + full snapshot) and clean up its
+    //    documents/references/validations/investigations/addresses.
+    await archiveAndCleanupTenant(tx, currentTenant.id, archiveMeta);
 
-    // 2. Get tenant document IDs and delete their validations
-    const tenantDocIds = await tx.actorDocument.findMany({
-      where: { tenantId: currentTenant.id },
-      select: { id: true },
-    });
-    if (tenantDocIds.length > 0) {
-      await tx.documentValidation.deleteMany({
-        where: { documentId: { in: tenantDocIds.map((d) => d.id) } },
-      });
-    }
-
-    // 3. Unlink tenant's documents (soft delete - keep S3 files)
-    await tx.actorDocument.updateMany({
-      where: { tenantId: currentTenant.id },
-      data: { tenantId: null },
-    });
-
-    // 4. Delete tenant's references
-    await tx.personalReference.deleteMany({
-      where: { tenantId: currentTenant.id },
-    });
-    await tx.commercialReference.deleteMany({
-      where: { tenantId: currentTenant.id },
-    });
-
-    // 5. Delete ActorSectionValidation for tenant
-    await tx.actorSectionValidation.deleteMany({
-      where: { actorType: 'tenant', actorId: currentTenant.id },
-    });
-
-    // 5b. Archive tenant investigations (PENDING/APPROVED)
-    await tx.actorInvestigation.updateMany({
-      where: {
-        actorType: 'TENANT',
-        actorId: currentTenant.id,
-        status: { in: ['PENDING', 'APPROVED'] },
-      },
-      data: {
-        status: 'ARCHIVED',
-        archivedAt: new Date(),
-        archivedBy: input.performedById,
-        archiveReason: 'SUPERSEDED',
-        brokerToken: null,
-        landlordToken: null,
-      },
-    });
-
-    // 6. Delete PropertyAddress records
-    const addressIds = [
-      currentTenant.addressId,
-      currentTenant.employerAddressId,
-      currentTenant.previousRentalAddressId,
-    ].filter((id): id is string => !!id);
-    if (addressIds.length > 0) {
-      await tx.propertyAddress.deleteMany({
-        where: { id: { in: addressIds } },
-      });
-    }
-
-    // 7. Reset tenant record with new data
+    // 2. Reset tenant record with new data. TENANT_REPLACEMENT_RESET carries
+    //    the blank slate for every other column (drift-tested).
     await tx.tenant.update({
       where: { id: currentTenant.id },
       data: {
+        ...TENANT_REPLACEMENT_RESET,
         tenantType: input.newTenant.tenantType,
         email: input.newTenant.email,
         phone: input.newTenant.phone,
         firstName: input.newTenant.firstName || null,
-        middleName: null,
-        paternalLastName: null,
-        maternalLastName: null,
         companyName:
           input.newTenant.tenantType === 'COMPANY'
             ? input.newTenant.companyName
             : null,
-        companyRfc: null,
-        rfc: null,
-        curp: null,
-        passport: null,
-        nationality: 'MEXICAN',
-        // Clear legal rep fields
-        legalRepFirstName: null,
-        legalRepMiddleName: null,
-        legalRepPaternalLastName: null,
-        legalRepMaternalLastName: null,
-        legalRepId: null,
-        legalRepPosition: null,
-        legalRepRfc: null,
-        legalRepPhone: null,
-        legalRepEmail: null,
-        companyAddress: null,
-        // Clear contact fields
-        workPhone: null,
-        personalEmail: null,
-        workEmail: null,
-        // Clear address
-        currentAddress: null,
-        addressId: null,
-        // Clear employment
-        employmentStatus: null,
-        occupation: null,
-        employerName: null,
-        employerAddress: null,
-        employerAddressId: null,
-        position: null,
-        monthlyIncome: null,
-        incomeSource: null,
-        yearsAtJob: null,
-        hasAdditionalIncome: false,
-        additionalIncomeSource: null,
-        additionalIncomeAmount: null,
-        // Clear rental history
-        previousLandlordName: null,
-        previousLandlordPhone: null,
-        previousLandlordEmail: null,
-        previousRentAmount: null,
-        previousRentalAddress: null,
-        previousRentalAddressId: null,
-        rentalHistoryYears: null,
-        numberOfOccupants: null,
-        reasonForMoving: null,
-        hasPets: false,
-        petDescription: null,
-        // Clear payment preferences
-        paymentMethod: null,
-        requiresCFDI: false,
-        cfdiData: null,
-        // Reset status
-        informationComplete: false,
-        completedAt: null,
-        verificationStatus: 'PENDING',
-        verifiedAt: null,
-        verifiedBy: null,
-        rejectionReason: null,
-        rejectedAt: null,
-        // Clear token (will regenerate after)
-        accessToken: null,
-        tokenExpiry: null,
-        additionalInfo: null,
       },
     });
 
-    // 8. If replaceGuarantors, archive and delete all guarantors
+    // 3. If replaceGuarantors, archive (summary + snapshot) and delete all guarantors
     if (input.replaceGuarantors) {
-      // Archive and delete joint obligors
       for (const jo of policy.jointObligors) {
-        await tx.jointObligorHistory.create({
-          data: {
-            policyId: input.policyId,
-            jointObligorType: jo.jointObligorType,
-            firstName: jo.firstName,
-            middleName: jo.middleName,
-            paternalLastName: jo.paternalLastName,
-            maternalLastName: jo.maternalLastName,
-            companyName: jo.companyName,
-            email: jo.email,
-            phone: jo.phone,
-            rfc: jo.rfc,
-            employmentStatus: jo.employmentStatus,
-            occupation: jo.occupation,
-            employerName: jo.employerName,
-            monthlyIncome: jo.monthlyIncome,
-            verificationStatus: jo.verificationStatus,
-            informationComplete: jo.informationComplete,
-            replacedById: input.performedById,
-            replacementReason: input.replacementReason,
-          },
-        });
-
-        // Get document IDs and delete their DocumentValidation
-        const joDocIds = await tx.actorDocument.findMany({
-          where: { jointObligorId: jo.id },
-          select: { id: true },
-        });
-        if (joDocIds.length > 0) {
-          await tx.documentValidation.deleteMany({
-            where: { documentId: { in: joDocIds.map((d) => d.id) } },
-          });
-        }
-
-        // Unlink documents
-        await tx.actorDocument.updateMany({
-          where: { jointObligorId: jo.id },
-          data: { jointObligorId: null },
-        });
-
-        // Delete references
-        await tx.personalReference.deleteMany({
-          where: { jointObligorId: jo.id },
-        });
-        await tx.commercialReference.deleteMany({
-          where: { jointObligorId: jo.id },
-        });
-
-        // Delete ActorSectionValidation
-        await tx.actorSectionValidation.deleteMany({
-          where: { actorType: 'jointObligor', actorId: jo.id },
-        });
-
-        // Archive joint obligor investigations (PENDING/APPROVED)
-        await tx.actorInvestigation.updateMany({
-          where: {
-            actorType: 'JOINT_OBLIGOR',
-            actorId: jo.id,
-            status: { in: ['PENDING', 'APPROVED'] },
-          },
-          data: {
-            status: 'ARCHIVED',
-            archivedAt: new Date(),
-            archivedBy: input.performedById,
-            archiveReason: 'SUPERSEDED',
-            brokerToken: null,
-            landlordToken: null,
-          },
-        });
-
-        // Delete PropertyAddress records
-        const joAddressIds = [
-          jo.addressId,
-          jo.employerAddressId,
-          jo.guaranteePropertyAddressId,
-        ].filter((id): id is string => !!id);
-        if (joAddressIds.length > 0) {
-          await tx.propertyAddress.deleteMany({
-            where: { id: { in: joAddressIds } },
-          });
-        }
+        await archiveAndCleanupJointObligor(tx, jo.id, archiveMeta);
       }
-
-      // Delete all joint obligors
       await tx.jointObligor.deleteMany({
         where: { policyId: input.policyId },
       });
 
-      // Archive and delete avals
       for (const aval of policy.avals) {
-        await tx.avalHistory.create({
-          data: {
-            policyId: input.policyId,
-            avalType: aval.avalType,
-            firstName: aval.firstName,
-            middleName: aval.middleName,
-            paternalLastName: aval.paternalLastName,
-            maternalLastName: aval.maternalLastName,
-            companyName: aval.companyName,
-            email: aval.email,
-            phone: aval.phone,
-            rfc: aval.rfc,
-            employmentStatus: aval.employmentStatus,
-            occupation: aval.occupation,
-            employerName: aval.employerName,
-            monthlyIncome: aval.monthlyIncome,
-            verificationStatus: aval.verificationStatus,
-            informationComplete: aval.informationComplete,
-            replacedById: input.performedById,
-            replacementReason: input.replacementReason,
-          },
-        });
-
-        // Get document IDs and delete their DocumentValidation
-        const avalDocIds = await tx.actorDocument.findMany({
-          where: { avalId: aval.id },
-          select: { id: true },
-        });
-        if (avalDocIds.length > 0) {
-          await tx.documentValidation.deleteMany({
-            where: { documentId: { in: avalDocIds.map((d) => d.id) } },
-          });
-        }
-
-        // Unlink documents
-        await tx.actorDocument.updateMany({
-          where: { avalId: aval.id },
-          data: { avalId: null },
-        });
-
-        // Delete references
-        await tx.personalReference.deleteMany({
-          where: { avalId: aval.id },
-        });
-        await tx.commercialReference.deleteMany({
-          where: { avalId: aval.id },
-        });
-
-        // Delete ActorSectionValidation
-        await tx.actorSectionValidation.deleteMany({
-          where: { actorType: 'aval', actorId: aval.id },
-        });
-
-        // Archive aval investigations (PENDING/APPROVED)
-        await tx.actorInvestigation.updateMany({
-          where: {
-            actorType: 'AVAL',
-            actorId: aval.id,
-            status: { in: ['PENDING', 'APPROVED'] },
-          },
-          data: {
-            status: 'ARCHIVED',
-            archivedAt: new Date(),
-            archivedBy: input.performedById,
-            archiveReason: 'SUPERSEDED',
-            brokerToken: null,
-            landlordToken: null,
-          },
-        });
-
-        // Delete PropertyAddress records
-        const avalAddressIds = [
-          aval.addressId,
-          aval.employerAddressId,
-          aval.guaranteePropertyAddressId,
-        ].filter((id): id is string => !!id);
-        if (avalAddressIds.length > 0) {
-          await tx.propertyAddress.deleteMany({
-            where: { id: { in: avalAddressIds } },
-          });
-        }
+        await archiveAndCleanupAval(tx, aval.id, archiveMeta);
       }
-
-      // Delete all avals
       await tx.aval.deleteMany({
         where: { policyId: input.policyId },
       });
@@ -498,7 +144,7 @@ export async function replaceTenantOnPolicy(
       });
     }
 
-    // 9. Handle TENANT payments
+    // 4. Handle TENANT payments
     // Get tenant name for historical payments
     const tenantName = currentTenant.tenantType === 'COMPANY'
       ? currentTenant.companyName || 'Empresa'

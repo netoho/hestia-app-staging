@@ -54,24 +54,24 @@ The system handles four distinct actor types:
 
 ## Core Architecture Components
 
-### 1. Schema Layer (`/src/lib/schemas`)
+### 1. Domain Layer (`/src/lib/domain`) — single source of truth
 
-**Purpose**: Single source of truth for validation
+**Purpose**: canonical Zod schema + adapters per entity (hexagonal architecture — see [ARCHITECTURE.md](./ARCHITECTURE.md))
 
 ```typescript
-schemas/
-├── shared/          # Reusable components
-├── tenant/         # Tenant validation
-├── landlord/       # Landlord validation
-├── aval/          # Aval validation
-└── joint-obligor/  # Joint Obligor validation
+domain/
+├── tenant/          # schema.ts + select.ts + adapters/{db,api,form}.ts + __tests__/
+├── landlord/        # multi-record pattern
+├── aval/            # conditional-required refinement (spouse-when-married)
+├── joint-obligor/   # 2-axis synthetic variant (jointObligorVariant)
+├── document/        # leaf entity
+└── investigation/   # sanitized public output + state machine
 ```
 
 **Key Features**:
-- Zod-based runtime validation
-- Auto-generated TypeScript types
-- Three validation modes (strict/partial/admin)
-- Tab-based progressive validation
+- One canonical Zod schema per entity; every other shape (DB writes, API outputs, form defaults, tab-field lists) derives from it via `.pick`/`.omit`/`.keyof`
+- Drift tests lock API output ↔ canonical schema per entity
+- `src/lib/schemas/<actor>/` are now @deprecated re-export shims (kept until post-S5 cleanup); router **output** schemas still live in `src/lib/schemas/<domain>/output.ts`
 
 ### 2. Service Layer (`/src/lib/services/actors`)
 
@@ -394,7 +394,7 @@ export class NewActorService extends BaseActorService {}
 
 3. **Update Router**
 ```typescript
-// Add to actor.router.ts
+// Add to src/server/routers/actor/shared.router.ts (actor router is split)
 case 'newActor': return new NewActorService();
 ```
 

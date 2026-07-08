@@ -17,8 +17,11 @@ import {
   avalPartialSchema,
   avalAdminSchema,
   getAvalSchema,
+  getAvalTabSchema,
+  isValidAvalTab,
   validateAvalData,
-  type AvalFormData
+  type AvalFormData,
+  type AvalTab
 } from '@/lib/schemas/aval';
 import { avalSelect } from '@/lib/domain/aval/select';
 import { toDb as avalToDb } from '@/lib/domain/aval/adapters/db';
@@ -101,9 +104,16 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
         throw new ServiceError(ErrorCode.NOT_FOUND, 'Aval not found', 404, { avalId: id });
       }
 
+      // Posted type wins, row is the fallback (mirrors JointObligorService):
+      // the personal-tab save that FLIPS the type must be filtered/validated
+      // as the type it is becoming, or the company fields get tab-filtered
+      // out of that very save.
+      const effectiveAvalType =
+        (data as { avalType?: AvalType }).avalType ?? existingAval.avalType;
+
       // Prepare data for database via the domain db adapter.
       const preparedResult = avalToDb(data, {
-        avalType: existingAval.avalType,
+        avalType: effectiveAvalType,
         isPartial,
         tabName,
       });
@@ -112,14 +122,39 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
       }
       const preparedData = preparedResult.value;
 
-      // Validate unless explicitly skipped
+      // Validate unless explicitly skipped. Tab saves validate against that
+      // TAB's schema (mirroring JointObligorService.validateTabData) — the
+      // master avalPartialSchema is NOT partial over the personal block, so
+      // routing tab saves through it 400s every non-personal tab with
+      // "firstName Required". Full saves keep the master-schema gate.
       if (!skipValidation) {
-        const validationResult = this.validateAvalDataWithMode(
-          preparedData,
-          isPartial ? 'partial' : 'strict'
-        );
-        if (!validationResult.ok) {
-          throw validationResult.error;
+        if (tabName && isValidAvalTab(effectiveAvalType, tabName)) {
+          const tabSchema = getAvalTabSchema(effectiveAvalType, tabName as AvalTab);
+          // Refined tab schemas (property's spouse-when-married) are
+          // ZodEffects and have no .partial(); they validate in full — which
+          // is also what keeps the refinement enforced on tab saves.
+          const partialCapable = tabSchema as { partial?: () => { safeParse: (d: unknown) => unknown } };
+          const schemaForMode =
+            isPartial && typeof partialCapable.partial === 'function'
+              ? (partialCapable.partial() as typeof tabSchema)
+              : tabSchema;
+          const parsed = schemaForMode.safeParse(data);
+          if (!parsed.success) {
+            throw new ServiceError(
+              ErrorCode.VALIDATION_ERROR,
+              'Invalid aval data',
+              400,
+              { errors: parsed.error.issues.map((i) => ({ field: i.path.join('.'), message: i.message, code: i.code })) }
+            );
+          }
+        } else {
+          const validationResult = this.validateAvalDataWithMode(
+            preparedData,
+            isPartial ? 'partial' : 'strict'
+          );
+          if (!validationResult.ok) {
+            throw validationResult.error;
+          }
         }
       }
 
@@ -547,7 +582,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
 
       if (!aval) return false;
 
-      const requiredDocs = aval.isCompany
+      const requiredDocs = aval.avalType === 'COMPANY'
         ? ['company_constitution', 'legal_powers', 'property_deed', 'property_tax']
         : ['ine', 'property_deed', 'property_tax'];
 
@@ -587,7 +622,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
   protected validateCompleteness(aval: AvalWithRelations): Result<boolean> {
     const errors: string[] = [];
 
-    if (!aval.isCompany) {
+    if (aval.avalType !== 'COMPANY') {
       // Person validation
       if (!aval.firstName) errors.push('Nombre requerido');
       if (!aval.paternalLastName) errors.push('Apellido paterno requerido');
@@ -613,8 +648,12 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     if (!aval.propertyRegistry) errors.push('Folio de registro de garantía requerido');
     if (!aval.propertyValue) errors.push('Valor de propiedad de garantía requerido');
 
-    // Check references (minimum 3 for aval)
-    const referenceCount = aval.personalReferences?.length ?? 0;
+    // Check references (minimum 3; companies provide COMMERCIAL references —
+    // same class as the JO fix: counting personalReferences unconditionally
+    // makes company-aval submission structurally impossible).
+    const referenceCount = aval.avalType === 'COMPANY'
+      ? aval.commercialReferences?.length ?? 0
+      : aval.personalReferences?.length ?? 0;
     if (referenceCount < 3) {
       errors.push('Mínimo 3 referencias requeridas');
     }
@@ -641,7 +680,7 @@ export class AvalService extends BaseActorService<AvalWithRelations, ActorData> 
     const aval = await this.getById(avalId);
     if (!aval.ok) return aval;
 
-    const isCompany = aval.value.isCompany;
+    const isCompany = aval.value.avalType === 'COMPANY';
     const nationality = aval.value.nationality;
 
     const requiredDocs = getRequiredDocuments('aval', isCompany, {

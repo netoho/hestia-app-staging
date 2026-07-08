@@ -15,6 +15,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
 import type { AvalType } from "@/prisma/generated/prisma-client/enums";
@@ -32,18 +33,23 @@ export default function AvalPersonalInfoTab({
   onSave,
   disabled = false,
 }: AvalPersonalInfoTabProps) {
-  // Get appropriate schema based on aval type
-  const schema = getAvalTabSchema(avalType, 'personal');
+  const defaultValues = {
+    avalType,
+    ...initialData,
+  };
 
-  // Initialize form with RHF + Zod validation
+  // Get appropriate schema based on aval type
+  // Initialize form with RHF + Zod validation. Resolve against the schema for
+  // the type currently selected in the form — a resolver pinned to the
+  // mount-time prop rejects the INDIVIDUAL→COMPANY radio switch on the
+  // avalType literal (same dead-toggle class as the JO personal tab).
   const form = useForm({
-    resolver: zodResolver(schema),
+    resolver: (values, ctx, options) =>
+      zodResolver(getAvalTabSchema(values.avalType ?? avalType, 'personal'))(values, ctx, options),
     mode: 'onChange', // Real-time validation
-    defaultValues: {
-      avalType,
-      ...initialData,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch avalType for dynamic UI
   const currentAvalType = form.watch('avalType');
@@ -120,14 +126,19 @@ export default function AvalPersonalInfoTab({
                   )}
                 />
 
+                {/* companyRfc is what the canonical company schema requires —
+                    this input was bound to `rfc` (and the four legal-rep
+                    contact fields below were missing entirely), so the
+                    schema rejected every company save on fields that had no
+                    inputs. */}
                 <FormField
                   control={form.control}
-                  name="rfc"
+                  name="companyRfc"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel required>RFC de la Empresa</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={disabled} maxLength={13} placeholder="RFC a 13 caracteres" />
+                        <Input {...field} value={field.value || ''} disabled={disabled} maxLength={12} placeholder="RFC a 12 caracteres" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -191,6 +202,66 @@ export default function AvalPersonalInfoTab({
                           <FormLabel optional>Apellido Materno</FormLabel>
                           <FormControl>
                             <Input {...field} disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="legalRepPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Cargo</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} placeholder="Ej: Director General" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="legalRepRfc"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>RFC del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} maxLength={13} placeholder="RFC con homoclave" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="legalRepEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Email del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} type="email" disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="legalRepPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>Teléfono del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} placeholder="55 1234 5678" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -299,7 +370,24 @@ export default function AvalPersonalInfoTab({
                     <FormItem>
                       <FormLabel required>Nacionalidad</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={disabled} />
+                        {/* Was a free-text Input against the MEXICAN|FOREIGN
+                            enum — impossible to fill correctly by hand
+                            ("Nacionalidad inválida"). #180 walker finding. */}
+                        <RadioGroup
+                          value={field.value || 'MEXICAN'}
+                          onValueChange={field.onChange}
+                          disabled={disabled}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="MEXICAN" id="aval-mexican" />
+                            <Label htmlFor="aval-mexican">Mexicana</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="FOREIGN" id="aval-foreign" />
+                            <Label htmlFor="aval-foreign">Extranjera</Label>
+                          </div>
+                        </RadioGroup>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -352,6 +440,38 @@ export default function AvalPersonalInfoTab({
                 </FormItem>
               )}
             />
+
+            {/* Declared by the aval personal tab schema but previously
+                unrendered — found by the #180 parity walker. */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="personalEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email Personal</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="workEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email de Trabajo</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Relationship to Tenant */}
             <FormField

@@ -114,12 +114,16 @@ const FormControl = React.forwardRef<
   React.ElementRef<typeof Slot>,
   React.ComponentPropsWithoutRef<typeof Slot>
 >(({ ...props }, ref) => {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+  const { error, formItemId, formDescriptionId, formMessageId, name } = useFormField()
 
   return (
     <Slot
       ref={ref}
       id={formItemId}
+      // RHF field name on every control (inputs, select triggers, checkboxes)
+      // — the stable hook the #180 parity walker locates fields by, across
+      // portal and admin surfaces alike.
+      data-field={name}
       aria-describedby={
         !error
           ? `${formDescriptionId}`

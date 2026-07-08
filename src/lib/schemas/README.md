@@ -1,321 +1,76 @@
-# Schema System Documentation
+# `src/lib/schemas/` — router output schemas + legacy shims
 
-## Overview
+> **Canonical entity schemas do NOT live here anymore.** They live in
+> [`src/lib/domain/<entity>/`](../domain/README.md) — one canonical Zod schema per
+> entity, with db/api/form adapters derived from it. This directory now holds two
+> things: **router output schemas** (the API contract lock) and **@deprecated
+> re-export shims** kept only until the remaining importers migrate.
 
-This directory contains the Zod schema definitions that form the backbone of our actor validation system. After refactoring, we achieved a **60% reduction in validation code** by establishing a single source of truth for each actor type.
-
-## Architecture
-
-```
-schemas/
-├── shared/           # Reusable schema components
-│   ├── address.schema.ts
-│   ├── banking.schema.ts
-│   ├── company.schema.ts
-│   ├── contact.schema.ts
-│   ├── person.schema.ts
-│   ├── property.schema.ts
-│   └── references.schema.ts
-├── helpers.ts        # Schema helper utilities
-├── policy/          # Policy-level schemas
-│   └── wizard.ts
-├── tenant/          # Tenant actor schemas
-├── landlord/        # Landlord actor schemas
-├── aval/           # Aval actor schemas
-└── joint-obligor/   # Joint Obligor actor schemas
-```
-
-## Core Concepts
-
-### 1. Three Validation Modes
-
-Each actor supports three validation modes for different use cases:
-
-```typescript
-// Strict - All required fields must be present (final submission)
-const strictSchema = tenantStrictSchema;
-
-// Partial - Allows incomplete data (tab-by-tab saves)
-const partialSchema = tenantPartialSchema;
-
-// Admin - Flexible updates for staff corrections
-const adminSchema = tenantAdminSchema;
-```
-
-### 2. Tab-Based Validation
-
-Progressive data collection through tabs with independent validation:
-
-```typescript
-// Validate specific tab
-const validation = validateTenantTab(
-  'personal',     // tab name
-  data,          // form data
-  'INDIVIDUAL',  // actor type
-  false         // isPartial
-);
-```
-
-### 3. Discriminated Unions
-
-Type-safe handling of variant types:
-
-```typescript
-// Individual vs Company
-const TenantStrictSchema = z.union([
-  tenantIndividualCompleteSchema,
-  tenantCompanyCompleteSchema,
-]);
-
-// Flexible guarantee methods (Joint Obligor)
-const guaranteeSchema = z.discriminatedUnion('guaranteeMethod', [
-  incomeGuaranteeSchema,
-  propertyGuaranteeSchema,
-]);
-```
-
-## Actor Schemas
-
-### Tenant (`/tenant/index.ts`)
-- Supports INDIVIDUAL and COMPANY types
-- 5 tabs: personal, employment, financial, references, documents
-- Auto-migrates `isCompany` → `tenantType` enum
-
-### Landlord (`/landlord/index.ts`)
-- Supports multiple landlords per policy
-- Primary landlord designation
-- Financial data maps to Policy model
-- 4 tabs: owner-info, property-info, financial-info, documents
-
-### Aval (`/aval/index.ts`)
-- Mandatory property guarantee
-- Marriage info required for property owners
-- Exactly 3 references required
-- Uses `avalType` enum (INDIVIDUAL/COMPANY)
-
-### Joint Obligor (`/joint-obligor/index.ts`)
-- Flexible guarantee (income OR property)
-- Relationship to tenant required
-- Dynamic validation based on guarantee method
-- Uses `jointObligorType` enum
-
-## Shared Schemas
-
-### Person Schema
-Mexican 4-field naming convention:
-```typescript
-const personSchema = z.object({
-  firstName: z.string(),
-  middleName: z.string().optional(),
-  paternalLastName: z.string(),
-  maternalLastName: z.string(),
-  // ... other fields
-});
-```
-
-### Address Schema
-Complete address with Mexican format:
-```typescript
-const addressSchema = z.object({
-  street: z.string(),
-  exteriorNumber: z.string(),
-  interiorNumber: z.string().optional(),
-  neighborhood: z.string(),
-  municipality: z.string(),
-  state: z.string(),
-  postalCode: z.string(),
-  country: z.string().default('México'),
-});
-```
-
-## Usage Examples
-
-### 1. Basic Validation
-```typescript
-import { tenantStrictSchema } from '@/lib/schemas/tenant';
-
-const result = tenantStrictSchema.safeParse(data);
-if (!result.success) {
-  console.error(result.error.flatten());
-}
-```
-
-### 2. Tab-Specific Validation
-```typescript
-import { validateTenantTab } from '@/lib/schemas/tenant';
-
-const validation = validateTenantTab(
-  'employment',
-  formData,
-  'INDIVIDUAL',
-  true // partial validation
-);
-```
-
-### 3. Type Generation
-```typescript
-import type { TenantComplete } from '@/lib/schemas/tenant';
-
-// Automatically typed from schema
-const tenant: TenantComplete = {
-  tenantType: 'INDIVIDUAL',
-  firstName: 'Juan',
-  // ... all fields are type-checked
-};
-```
-
-### 4. Creating a New Actor Schema
-
-```typescript
-// 1. Define tab schemas
-const actorPersonalTabSchema = personSchema.extend({
-  actorType: z.enum(['INDIVIDUAL', 'COMPANY']),
-  specialField: z.string(),
-});
-
-// 2. Create complete schemas
-export const actorIndividualCompleteSchema = z.object({
-  ...actorPersonalTabSchema.shape,
-  ...actorEmploymentTabSchema.shape,
-  // ... other tabs
-});
-
-// 3. Define validation modes
-export const actorStrictSchema = z.union([
-  actorIndividualCompleteSchema,
-  actorCompanyCompleteSchema,
-]);
-
-export const actorPartialSchema = actorStrictSchema.partial();
-
-// 4. Export types
-export type ActorComplete = z.infer<typeof actorStrictSchema>;
-```
-
-## Best Practices
-
-### DO ✅
-- Use shared schemas for common fields
-- Create separate schemas for each tab
-- Export TypeScript types from schemas
-- Use discriminated unions for variant types
-- Validate at the edge (router level)
-
-### DON'T ❌
-- Use `.refine()` on schemas that will be merged
-- Duplicate validation logic
-- Mix database concerns with validation
-- Create deeply nested schemas
-- Hardcode validation messages in components
-
-## Common Patterns
-
-### Optional Fields
-```typescript
-// Use our helper for consistent optional handling
-import { optional } from '../helpers';
-
-const schema = z.object({
-  requiredField: z.string(),
-  optionalField: optional(z.string()),
-});
-```
-
-### Conditional Validation
-```typescript
-// Use discriminated unions
-const schema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('A'), fieldA: z.string() }),
-  z.object({ type: z.literal('B'), fieldB: z.number() }),
-]);
-```
-
-### Array Validation
-```typescript
-// Exact count
-references: z.array(referenceSchema).length(3)
-
-// Range
-items: z.array(itemSchema).min(1).max(10)
-```
-
-## Output schemas (`<domain>/output.ts`)
-
-Each tRPC router (and REST endpoint) declares its **response shape** in a `<domain>/output.ts` file inside this directory. The router pipes its return value through Zod via `.output(YourSchema)`, so dropping a column from a service `select` fails the matching integration test before it reaches the frontend. Frontend code can `import` these schemas directly for runtime validation.
-
-Existing per-domain output schemas:
+## What lives here
 
 ```
 schemas/
-├── policy/output.ts          # 11 policy procedures
-├── payment/output.ts         # 17 payment procedures (PaymentShape mirrors Prisma column-for-column)
-├── actor/output.ts           # 17 actor procedures (4 actor-type shapes)
-├── receipt/output.ts         # 12 receipt procedures
-├── investigation/output.ts   # 15 investigation procedures (sanitized public getByToken)
-├── pricing/output.ts         # 6 pricing procedures
-├── package/output.ts         # 4 package procedures
-├── address/output.ts         # 2 address procedures
-├── contract/output.ts        # contract.getByPolicy (placeholder)
-├── user/output.ts            # 5 user procedures
-├── staff/output.ts           # 5 staff procedures
-├── onboard/output.ts         # 3 onboard procedures
-└── document/output.ts        # 7 document procedures
+├── <domain>/output.ts   # ★ per-router response contracts (.output() on every procedure)
+├── shared/              # reusable sub-schemas (address, person, company, references, …)
+├── policy/wizard.ts     # policy creation wizard schema (moves to domain/policy with S5a #133)
+├── helpers.ts           # schema helper utilities
+├── actor/               # polymorphic actor router output shapes (see #148)
+└── tenant/ landlord/ aval/ joint-obligor/
+                         # @deprecated re-export shims → src/lib/domain/<entity>/
+```
+
+## Output schemas (`<domain>/output.ts`) — the contract lock
+
+Every tRPC procedure declares `.output(<schema>)` against a schema here (14 files,
+108 procedures — all locked). The frontend imports the same schemas, so dropping or
+renaming a field the frontend consumes fails the matching integration test before it
+lands. Existing files:
+
+```
+actor, address, contract, dashboard, document, investigation, onboard,
+package, payment, policy, pricing, receipt, staff, user   (…/output.ts)
 ```
 
 Conventions:
 
-- **Mirror the actual `service.select` or Prisma model**, not what you guess the frontend wants. Phase 2.2 caught a real drift because `userService.userSelect` excludes `emailVerified` and the schema initially declared it.
-- **Default Zod object mode** — extras stripped, missing required fields fail. That's what catches deletions.
-- Use **`.passthrough()`** for nested includes you haven't yet locked — the `actor/output.ts` polymorphic shape is the canonical example.
+- **Mirror the actual service `select` (or the Prisma model)** — never your guess at
+  what the frontend wants. For migrated entities, derive from the canonical schema:
+  `<entity>ApiOutput` in `src/lib/domain/<entity>/adapters/api.ts` is the source;
+  some output files re-export it.
+- **Default Zod object mode** — extras stripped, missing required fields fail. That's
+  what catches deletions.
+- **`.passthrough()` is tracked debt** (#148): 27 live calls remain, concentrated in
+  `policy/output.ts` (14) and `actor/output.ts` (6). The polymorphic
+  `PolymorphicActorOutput` locks only 10 base fields — per-actor narrowing via the
+  domain `…ApiOutput` shapes is the fix (Pattern F in the domain README).
 
-Full guide and recipes: [docs/TESTING.md](../../../docs/TESTING.md).
+Adding a procedure? Full recipe: [docs/TESTING.md](../../../docs/TESTING.md#recipes).
 
-## Migration Guide
+## The shims (`tenant/ landlord/ aval/ joint-obligor/index.ts`)
 
-To migrate an existing actor to the new schema system:
+Each is a one-file re-export pointing at `src/lib/domain/<entity>` so old import
+paths keep compiling. **Do not add anything to them.** New code imports from
+`@/lib/domain/<entity>` directly. Shim deletion is a post-S5 cleanup once the
+remaining importer files migrate (~19 at last audit).
 
-1. Create schema file: `src/lib/schemas/[actor]/index.ts`
-2. Define tab schemas for each form section
-3. Create complete schemas combining all tabs
-4. Define three validation modes (strict/partial/admin)
-5. Export TypeScript types
-6. Update service to use new schemas
-7. Update router to validate with schemas
-8. Update UI to use generated types
+## Where did X go?
 
-## Testing
+| You're looking for… | It's now… |
+|---|---|
+| `tenantStrictSchema` / `tenantPartialSchema` / `tenantAdminSchema` (three validation modes) | Deleted. The canonical `tenantSchema` + tab schemas in `src/lib/domain/tenant/schema.ts` cover strict/partial via the adapters |
+| `validateTenantTab(...)` | Deleted. Tab validation derives from the canonical tab schemas (`adapters/db.ts` filters by the `.keyof()`-derived tab field lists) |
+| `TENANT_TAB_FIELDS` and friends | `src/lib/domain/<entity>/adapters/form.ts` (`.keyof()`-derived). The old constants files are dead code pending deletion (#168) |
+| `prepareForDB` | Deleted app-wide. `toDb()` in `src/lib/domain/<entity>/adapters/db.ts` (normalize → validate → transform) |
+| Guarantee variants (JO income/property) | `z.discriminatedUnion('jointObligorVariant', …)` in `src/lib/domain/joint-obligor/schema.ts` — synthetic 2-axis discriminator (S4a) |
 
-Schemas are automatically tested through TypeScript compilation. Additional runtime tests:
+## Shared sub-schemas (`shared/`)
 
-```typescript
-describe('Actor Schema', () => {
-  it('validates complete data', () => {
-    const valid = actorStrictSchema.safeParse(completeData);
-    expect(valid.success).toBe(true);
-  });
-
-  it('allows partial data in admin mode', () => {
-    const valid = actorAdminSchema.safeParse(partialData);
-    expect(valid.success).toBe(true);
-  });
-});
-```
-
-## Performance
-
-- Validation happens at the edge (router level)
-- Schemas are parsed once and cached
-- Type checking happens at compile time
-- Average validation time: <5ms per actor
-
-## Future Enhancements
-
-- [ ] Add custom error messages per field
-- [ ] Implement async validation for uniqueness checks
-- [ ] Add schema versioning for migrations
-- [ ] Create schema composition utilities
-- [ ] Add validation performance metrics
+Still live and consumed by the domain layer: `address`, `person`, `company`,
+`contact`, `banking`, `property`, `references`. Mexican 4-field naming
+(`firstName`, `middleName`, `paternalLastName`, `maternalLastName`) and the
+Mexican address format live here.
 
 ---
 
-For implementation details, see the individual actor schema files or refer to the [Actor System Architecture](../../../docs/ACTOR_SYSTEM_ARCHITECTURE.md) documentation.
+Architecture rationale + entity walkthrough: [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
+Porting recipe (start here before touching schemas): [src/lib/domain/README.md](../domain/README.md).

@@ -27,11 +27,19 @@ import { trpc } from '@/lib/trpc/client';
 import { getActorTypeLabel } from '@/lib/utils/actor';
 import { getFriendlyError, readForceCompleteState } from '@/lib/utils/trpcErrors';
 
-// Import simplified form wizards
-import TenantFormWizard from '@/components/actor/tenant/TenantFormWizard-Simplified';
-import LandlordFormWizard from '@/components/actor/landlord/LandlordFormWizard-Simplified';
-import AvalFormWizard from '@/components/actor/aval/AvalFormWizard-Simplified';
-import JointObligorFormWizard from '@/components/actor/joint-obligor/JointObligorFormWizard-Simplified';
+// One generic wizard (T3 #127) — same component the actor portals render.
+import ActorWizard, { type ActorWizardConfig } from '@/components/actor/ActorWizard';
+import { tenantWizardConfig } from '@/components/actor/tenant/tenantWizardConfig';
+import { landlordWizardConfig } from '@/components/actor/landlord/landlordWizardConfig';
+import { avalWizardConfig } from '@/components/actor/aval/avalWizardConfig';
+import { jointObligorWizardConfig } from '@/components/actor/joint-obligor/jointObligorWizardConfig';
+
+const WIZARD_CONFIGS: Record<InlineActorEditorProps['actorType'], ActorWizardConfig> = {
+  tenant: tenantWizardConfig,
+  landlord: landlordWizardConfig,
+  aval: avalWizardConfig,
+  jointObligor: jointObligorWizardConfig,
+};
 
 interface InlineActorEditorProps {
   isOpen: boolean;
@@ -101,16 +109,26 @@ export default function InlineActorEditor({
 
   // Fetch data using admin endpoints (same data shape as public pages)
 
-  // For non-landlord actors: use getById
+  // For non-landlord actors: use getById.
+  // refetchOnMount 'always': an EDIT surface must never trust the app-wide
+  // 5-minute staleTime — every open revalidates in the background and
+  // useWizardDataReset re-seeds the mounted tabs when fresh data lands
+  // (#171 stale-open case; a portal save may have changed the row).
   const singleActorQuery = trpc.actor.getById.useQuery(
     { type: actorType, id: actorId },
-    { enabled: actorType !== 'landlord' && isOpen && !!actorId }
+    {
+      enabled: actorType !== 'landlord' && isOpen && !!actorId,
+      refetchOnMount: 'always',
+    }
   );
 
   // For landlords: get ALL landlords for this policy (to match public page behavior)
   const landlordsQuery = trpc.actor.listByPolicy.useQuery(
     { policyId, type: 'landlord' },
-    { enabled: actorType === 'landlord' && isOpen && !!policyId }
+    {
+      enabled: actorType === 'landlord' && isOpen && !!policyId,
+      refetchOnMount: 'always',
+    }
   );
 
   const handleComplete = () => {
@@ -187,31 +205,21 @@ export default function InlineActorEditor({
     setForceState(null);
   };
 
-  const getFormWizard = () => {
-    const initialData = getInitialData();
-
-    // Common props for all wizards
-    const wizardProps = {
-      token: actorId, // Will be used as identifier in actor.update
-      initialData,
-      policy,
-      onComplete: handleComplete,
-      isAdminEdit: true,
-    };
-
-    switch (actorType) {
-      case 'tenant':
-        return <TenantFormWizard {...wizardProps} />;
-      case 'landlord':
-        return <LandlordFormWizard {...wizardProps} />;
-      case 'aval':
-        return <AvalFormWizard {...wizardProps} />;
-      case 'jointObligor':
-        return <JointObligorFormWizard {...wizardProps} />;
-      default:
-        return <div>Tipo de actor no soportado</div>;
-    }
-  };
+  const getFormWizard = () => (
+    <ActorWizard
+      config={WIZARD_CONFIGS[actorType]}
+      token={actorId} // Used as identifier in actor.update (admin dual-auth)
+      initialData={getInitialData()}
+      policy={policy}
+      onComplete={handleComplete}
+      isAdminEdit
+      dataUpdatedAt={
+        actorType === 'landlord'
+          ? landlordsQuery.dataUpdatedAt
+          : singleActorQuery.dataUpdatedAt
+      }
+    />
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

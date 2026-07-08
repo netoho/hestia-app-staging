@@ -12,6 +12,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
 import type { AvalType } from "@/prisma/generated/prisma-client/enums";
 
@@ -33,22 +34,28 @@ export default function AvalReferencesTab({
   // Get schema - automatically validates exactly 3 references
   const schema = getAvalTabSchema(avalType, 'references');
 
+  const defaultValues = {
+    // Length-checked, not `||`: a fresh aval arrives with EMPTY arrays,
+    // which are truthy and would short-circuit to zero rendered cards —
+    // leaving the actor no way to enter the 3 required references.
+    personalReferences: initialData?.personalReferences?.length > 0 ? initialData.personalReferences : [
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
+    ],
+    commercialReferences: initialData?.commercialReferences?.length > 0 ? initialData.commercialReferences : [
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+    ],
+  };
+
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: {
-      personalReferences: initialData?.personalReferences || [
-        { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
-        { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
-        { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '' },
-      ],
-      commercialReferences: initialData?.commercialReferences || [
-        { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-        { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-        { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-      ],
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Use fieldArray for dynamic references (even though Aval has fixed 3)
   const { fields: personalFields } = useFieldArray({

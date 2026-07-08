@@ -24,6 +24,7 @@ export function SectionHeader({ title, onRefresh, isRefreshing }: SectionHeaderP
                 onClick={onRefresh}
                 disabled={isRefreshing}
                 className="h-8 px-2"
+                aria-label={`Actualizar ${title}`}
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>

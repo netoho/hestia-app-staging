@@ -9,28 +9,37 @@ api/
 ├── auth/
 │   ├── [...nextauth]/      # NextAuth.js handler
 │   ├── login/              # POST — custom JWT login
-│   ├── register/           # POST — user registration
+│   ├── register/           # POST — open BROKER self-registration (being REMOVED — #162)
 │   ├── forgot-password/    # POST — send password reset email
 │   └── reset-password/
 │       └── [token]/        # POST — reset password with token
 ├── cron/
-│   ├── incomplete-actors-reminder/  # GET — daily reminder emails for incomplete actor info
-│   ├── policy-expiry/               # GET — daily job to expire ended protecciones
-│   ├── receipt-reminder/            # GET — monthly receipt reminder to tenants
-│   └── test-reminder/               # GET — dev-only manual trigger for reminders
+│   ├── incomplete-actors-reminder/   # GET — daily reminder emails for incomplete actor info
+│   ├── policy-expiry/                # GET — daily job to expire ended protecciones
+│   ├── policy-expiration-reminder/   # GET — expiring-soon reminders to landlords/tenants
+│   ├── policy-quarterly-followup/    # GET — quarterly follow-up emails
+│   ├── receipt-reminder/             # GET — monthly receipt reminder to tenants
+│   └── test-reminder/                # GET — dev-only manual trigger for reminders
 ├── payments/
 │   └── [paymentId]/
-│       └── receipt/        # POST — get S3 presigned URL to upload a payment receipt
+│       └── receipt/        # GET/POST/PUT — S3 presigned URL flow for payment receipts
 ├── policies/
 │   └── [policyId]/
-│       └── pdf/            # GET — generate and download PDF for a protección (staff/admin/broker)
+│       ├── pdf/            # GET — generate and download PDF for a protección (staff/admin/broker)
+│       └── contract-cover/ # GET — generate the DOCX carátula (cover page)
+├── reports/
+│   └── policies/
+│       └── csv/            # GET — dashboard CSV export
 ├── trpc/
 │   └── [trpc]/             # tRPC fetch adapter — all tRPC calls go through here
 ├── user/
-│   └── avatar/             # GET/POST — get presigned URL to upload user avatar
+│   └── avatar/             # POST/DELETE — presigned avatar upload + removal
 └── webhooks/
     └── stripe/             # POST — Stripe webhook handler (payment events)
 ```
+
+18 `route.ts` files, 20 app-authored HTTP method exports (plus the 2 catch-all
+adapters) — all 20 exercised by the integration suite.
 
 ## Route Groups
 
@@ -57,6 +66,6 @@ Stripe webhook receiver. Verifies signature, processes payment events (`payment_
 
 ## Tests
 
-REST handlers are exercised by the integration suite under `tests/integration/rest/` — one file per area (`cron.test.ts`, `webhooks-stripe.test.ts`, `payments-receipt.test.ts`, `policies-export.test.ts`, `auth.test.ts`, `user-avatar.test.ts`). Tests invoke the route handlers directly with constructed `NextRequest` objects via `tests/integration/restHelpers.ts` (`buildRequest`, `withSession`, `withHeaders`, `readJson`). External services (Stripe, S3, Google Maps, email, `next/headers`, `next-auth`) are mocked at preload, so no test ever hits the real network.
+REST handlers are exercised by the integration suite under `tests/integration/rest/` — one file per area (`cron.test.ts`, `webhooks-stripe.test.ts`, `payments-receipt.test.ts`, `policies-export.test.ts`, `reports-csv.test.ts`, `auth.test.ts`, `user-avatar.test.ts`). Tests invoke the route handlers directly with constructed `NextRequest` objects via `tests/integration/restHelpers.ts` (`buildRequest`, `withSession`, `withHeaders`, `readJson`). External services (Stripe, S3, Google Maps, email, `next/headers`, `next-auth`) are mocked at preload, so no test ever hits the real network.
 
 Full guide: [docs/TESTING.md](../../../docs/TESTING.md).

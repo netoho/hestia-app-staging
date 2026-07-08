@@ -104,6 +104,30 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(401);
   });
 
+  test('returns the GENERIC 401 for a deactivated user with correct password (#164)', async () => {
+    const password = 'CorrectPass1';
+    const user = await prisma.user.create({
+      data: {
+        email: `deactivated-${Date.now()}@hestia.test`,
+        name: 'Deactivated',
+        role: UserRole.STAFF,
+        password: await bcrypt.hash(password, 10),
+        isActive: false,
+      },
+    });
+
+    const res = await loginPost(
+      buildJsonRequest('POST', 'http://localhost/api/auth/login', {
+        email: user.email,
+        password,
+      }) as never,
+    );
+    const { status, body } = await readJson(res);
+    expect(status).toBe(401);
+    // Same message as unknown email — no account-state disclosure.
+    expect(body).toMatchObject({ error: 'Invalid credentials' });
+  });
+
   test('returns 400 for malformed input', async () => {
     const res = await loginPost(
       buildJsonRequest('POST', 'http://localhost/api/auth/login', {
@@ -348,5 +372,146 @@ describe('POST /api/auth/reset-password/[token]', () => {
       await paramsFor('bogus'),
     );
     expect(res.status).toBe(400);
+  });
+});
+
+// ===========================================================================
+// NextAuth authorize + session revalidation (#164)
+//
+// The integration preload mocks next-auth's SESSION PLUMBING, so these tests
+// exercise the exported callbacks/authorize directly against the real test
+// DB — the mechanism, with next-auth's wiring left to next-auth.
+// ===========================================================================
+import { authOptions, SESSION_REVALIDATE_MS } from '@/lib/auth/auth-config';
+
+type AnyToken = Record<string, unknown>;
+
+function credentialsAuthorize() {
+  const provider = authOptions.providers[0] as unknown as {
+    authorize?: (c: Record<string, string>) => Promise<unknown>;
+    options?: { authorize?: (c: Record<string, string>) => Promise<unknown> };
+  };
+  // v4 provider objects carry a default no-op `authorize` at the top level;
+  // the configured one lives under `options` — prefer it.
+  const authorize = provider.options?.authorize ?? provider.authorize;
+  if (!authorize) throw new Error('credentials authorize not found on provider');
+  return authorize;
+}
+
+const jwtCb = authOptions.callbacks!.jwt! as unknown as (args: {
+  token: AnyToken;
+  user?: unknown;
+}) => Promise<AnyToken>;
+const sessionCb = authOptions.callbacks!.session! as unknown as (args: {
+  session: { user: Record<string, unknown> };
+  token: AnyToken;
+}) => Promise<unknown>;
+
+const staleToken = (userId: string, role: UserRole): AnyToken => ({
+  id: userId,
+  role,
+  // Outside the revalidation window → the next jwt() call re-checks the DB.
+  revalidatedAt: Date.now() - SESSION_REVALIDATE_MS - 1_000,
+});
+
+describe('NextAuth isActive enforcement (#164)', () => {
+  test('authorize rejects a deactivated user with correct password', async () => {
+    const password = 'CorrectPass1';
+    const user = await prisma.user.create({
+      data: {
+        email: `authorize-inactive-${Date.now()}@hestia.test`,
+        name: 'Inactive',
+        role: UserRole.STAFF,
+        password: await bcrypt.hash(password, 10),
+        isActive: false,
+      },
+    });
+
+    const result = await credentialsAuthorize()({ email: user.email!, password });
+    expect(result).toBeNull();
+  });
+
+  test('authorize accepts the same credentials once reactivated', async () => {
+    const password = 'CorrectPass1';
+    const user = await prisma.user.create({
+      data: {
+        email: `authorize-active-${Date.now()}@hestia.test`,
+        name: 'Active',
+        role: UserRole.STAFF,
+        password: await bcrypt.hash(password, 10),
+        isActive: true,
+      },
+    });
+
+    const result = await credentialsAuthorize()({ email: user.email!, password });
+    expect(result).toMatchObject({ id: user.id, role: UserRole.STAFF });
+  });
+
+  test('stale token of a deactivated user is invalidated and yields NO session', async () => {
+    const user = await userFactory.create({ role: UserRole.STAFF });
+    await prisma.user.update({ where: { id: user.id }, data: { isActive: false } });
+
+    const token = await jwtCb({ token: staleToken(user.id, UserRole.STAFF) });
+    expect(token.invalidated).toBe(true);
+
+    const session = await sessionCb({
+      session: { user: { email: user.email } },
+      token,
+    });
+    expect(session).toBeNull();
+  });
+
+  test('stale token picks up a role change; session survives for active users', async () => {
+    const user = await userFactory.create({ role: UserRole.BROKER });
+    await prisma.user.update({ where: { id: user.id }, data: { role: UserRole.ADMIN } });
+
+    const token = await jwtCb({ token: staleToken(user.id, UserRole.BROKER) });
+    expect(token.invalidated).toBeUndefined();
+    expect(token.role).toBe(UserRole.ADMIN);
+
+    const session = (await sessionCb({
+      session: { user: { email: user.email } },
+      token,
+    })) as { user: Record<string, unknown> };
+    expect(session.user).toMatchObject({ id: user.id, role: UserRole.ADMIN });
+  });
+
+  test('within the window no re-check happens (stale role kept)', async () => {
+    const user = await userFactory.create({ role: UserRole.BROKER });
+    await prisma.user.update({ where: { id: user.id }, data: { role: UserRole.ADMIN } });
+
+    const token = await jwtCb({
+      token: { id: user.id, role: UserRole.BROKER, revalidatedAt: Date.now() },
+    });
+    expect(token.role).toBe(UserRole.BROKER); // window not elapsed — no DB read
+  });
+
+  test('a reactivated user self-heals on the next window', async () => {
+    const user = await userFactory.create({ role: UserRole.STAFF });
+    await prisma.user.update({ where: { id: user.id }, data: { isActive: false } });
+    const invalidated = await jwtCb({ token: staleToken(user.id, UserRole.STAFF) });
+    expect(invalidated.invalidated).toBe(true);
+
+    await prisma.user.update({ where: { id: user.id }, data: { isActive: true } });
+    const healed = await jwtCb({
+      token: { ...invalidated, revalidatedAt: Date.now() - SESSION_REVALIDATE_MS - 1_000 },
+    });
+    expect(healed.invalidated).toBeUndefined();
+
+    const session = (await sessionCb({
+      session: { user: { email: user.email } },
+      token: healed,
+    })) as { user: Record<string, unknown> };
+    expect(session.user).toMatchObject({ id: user.id });
+  });
+
+  test('fresh login stamps the revalidation clock', async () => {
+    const token = await jwtCb({
+      token: {},
+      user: { id: 'fresh-user', role: UserRole.ADMIN },
+    });
+    expect(token.id).toBe('fresh-user');
+    expect(token.role).toBe(UserRole.ADMIN);
+    expect(typeof token.revalidatedAt).toBe('number');
   });
 });

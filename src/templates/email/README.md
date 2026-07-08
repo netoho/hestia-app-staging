@@ -164,9 +164,9 @@ MAILGUN_DOMAIN="mg.yourdomain.com"
 ## Usage
 
 ```typescript
-import { sendPolicyInvitation } from '@/lib/services/emailService';
+import { sendActorInvitation } from '@/lib/services/emailService';
 
-await sendPolicyInvitation({
+await sendActorInvitation({
   tenantEmail: 'usuario@ejemplo.com',
   tenantName: 'Juan Perez',
   propertyAddress: 'Av. Reforma 123, CDMX',
@@ -178,15 +178,15 @@ await sendPolicyInvitation({
 
 ## Testing
 
+There is **no email test/preview script wired** in package.json today. Options:
+
 ```bash
-# Test all email templates
-bun run test:email
+# Preview templates with react-email's dev server (dep is installed, script isn't):
+bunx react-email dev --dir src/templates/email
 
-# Test with specific email
-TEST_EMAIL=user@example.com bun run test:email
-
-# Test in demo mode (no actual emails sent)
-DEMO_MODE=true bun run test:email
+# Integration tests mock the email layer at preload — assert calls with spyOn
+# (see tests/integration/preload.ts). A missing provider key makes emailService
+# log-and-return-false, never throw, so local dev without SMTP creds is safe.
 ```
 
 ## Related

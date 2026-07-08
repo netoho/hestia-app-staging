@@ -13,15 +13,46 @@
  */
 
 import { mock, beforeEach, afterAll } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // ---------------------------------------------------------------------------
 // 1. Safety: never run integration tests against a non-test database.
+//
+// `.env.test.local` commonly points at the dev DB (documented footgun — see
+// docs/TESTING.md). Instead of forcing a manual stash dance, fall back to
+// `.env.test`'s DATABASE_URL when it is a proper *_test URL; refuse only when
+// no safe URL exists.
 // ---------------------------------------------------------------------------
-const dbUrl = process.env.DATABASE_URL ?? '';
+function readEnvTestDatabaseUrl(): string | undefined {
+  try {
+    const raw = readFileSync(resolve(process.cwd(), '.env.test'), 'utf8');
+    const line = raw.split('\n').find((l) => l.trim().startsWith('DATABASE_URL='));
+    if (!line) return undefined;
+    let value = line.trim().slice('DATABASE_URL='.length).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    return value;
+  } catch {
+    return undefined;
+  }
+}
+
+let dbUrl = process.env.DATABASE_URL ?? '';
 if (!dbUrl.endsWith('_test')) {
-  throw new Error(
-    `[preload] Refusing to run integration tests: DATABASE_URL must end in "_test" (got: ${dbUrl || '<unset>'})`,
-  );
+  const fallback = readEnvTestDatabaseUrl();
+  if (fallback?.endsWith('_test')) {
+    console.warn(
+      `[preload] DATABASE_URL is not a *_test database (got: ${dbUrl || '<unset>'}) — falling back to .env.test's DATABASE_URL`,
+    );
+    process.env.DATABASE_URL = fallback;
+    dbUrl = fallback;
+  } else {
+    throw new Error(
+      `[preload] Refusing to run integration tests: DATABASE_URL must end in "_test" (got: ${dbUrl || '<unset>'})`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -303,10 +334,6 @@ mock.module('@/lib/services/documentService', () => {
     }),
   },
   // Standalone exports used by user.router and onboard.router for avatar uploads.
-  getCurrentStorageProvider: mock(() => ({
-    publicUpload: mock(async () => 'avatars/test/fake.jpg'),
-    delete: mock(async () => true),
-  })),
   uploadActorDocument: mock(async () => ({ id: 'doc_test_fake' })),
   uploadPolicyDocument: mock(async () => ({ id: 'doc_test_fake' })),
   getDocumentUrl: mock(async () => 'https://test-bucket.s3.amazonaws.com/fake?view=fake'),

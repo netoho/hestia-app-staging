@@ -16,6 +16,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getJointObligorTabSchema, type JointObligorTypeEnum } from '@/lib/schemas/joint-obligor';
 
@@ -43,19 +44,26 @@ export default function JointObligorPersonalInfoTabRHF({
   onSave,
   disabled = false,
 }: JointObligorPersonalInfoTabProps) {
-  // Get appropriate schema based on joint obligor type
-  const schema = getJointObligorTabSchema('personal', jointObligorType);
+  const defaultValues = {
+    jointObligorType,
+    nationality: 'MEXICAN',
+    ...initialData,
+  };
 
-  // Initialize form with RHF + Zod validation
+  // Initialize form with RHF + Zod validation. The schema must follow the
+  // type currently SELECTED in the form, not the mount-time prop: the wizard
+  // always creates JOs as INDIVIDUAL and this tab's radio is the only way to
+  // become COMPANY — a resolver pinned to the prop rejects that save on the
+  // jointObligorType literal and dead-ends the company self-service flow.
   const form = useForm({
-    resolver: zodResolver(schema as any),
+    resolver: (values, ctx, options) =>
+      zodResolver(
+        getJointObligorTabSchema('personal', values.jointObligorType ?? jointObligorType) as any,
+      )(values, ctx, options),
     mode: 'onChange',
-    defaultValues: {
-      jointObligorType,
-      nationality: 'MEXICAN',
-      ...initialData,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch type and nationality for dynamic UI
   const currentType = form.watch('jointObligorType');
@@ -527,6 +535,22 @@ export default function JointObligorPersonalInfoTabRHF({
                     <FormLabel optional>Teléfono de Trabajo</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Declared by the JO personal tab schema but previously
+                  unrendered — found by the #180 parity walker. */}
+              <FormField
+                control={form.control}
+                name="workEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel optional>Email de Trabajo</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

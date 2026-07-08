@@ -1,0 +1,105 @@
+# E2E core gate (#161). Cadence (updated 2026-07-06, supersedes the 2026-07-05
+# decision): the @core-tagged specs (E2E-01 baseline + E2E-07 admin fast path)
+# run on every PR into main/master and every push to release/** or hotfix/**.
+# The FULL suite runs nightly (e2e-nightly.yml). Feature PRs run only
+# unit+integration (test.yml).
+
+name: E2E core
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: ['release/**', 'hotfix/**']
+
+concurrency:
+  group: e2e-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
+      # prisma.config.ts resolves DATABASE_URL eagerly, so `bun install`'s
+      # postinstall (prisma generate) needs it set even though generate never
+      # connects. Same value as E2E_DATABASE_URL — every later step agrees.
+      DATABASE_URL: postgresql://test:test@localhost:5433/hestia_e2e_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub service containers can't override the image command, and
+      # minio/minio needs `server /data` — start it as a plain container.
+      # (The bucket is created by tests/e2e/global-setup.ts.)
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9100:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do
+            if docker exec minio mc ready local >/dev/null 2>&1; then echo "minio ready"; exit 0; fi
+            sleep 2
+          done
+          echo "minio failed to become ready" && docker logs minio && exit 1
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Provision e2e database
+        run: DATABASE_URL="$E2E_DATABASE_URL" bun run scripts/test-db.ts setup
+
+      - name: Run e2e core suite
+        # webServer in the config builds + starts the app with the e2e env.
+        # shell: bash gives pipefail, so playwright's exit code survives tee.
+        shell: bash
+        run: bunx playwright test --config=tests/e2e/playwright.config.ts --grep @core 2>&1 | tee e2e-run.log
+
+      # Expected 4xx outcomes log at info (silent) since PR #179 — any
+      # error-level server line in a green run is a real, unhandled problem
+      # (the logged-and-swallowed class, e.g. the upsertAddress bug). When a
+      # future negative-path spec legitimately provokes one, add an explicit
+      # allowlist grep -v here, reviewed in that PR.
+      - name: Log-noise gate — zero error-level server logs
+        shell: bash
+        run: |
+          COUNT=$(grep -c '"level":"error"' e2e-run.log || true)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::e2e run produced $COUNT unexpected error-level server log line(s):"
+            grep -n '"level":"error"' e2e-run.log
+            exit 1
+          fi
+          echo "clean: zero error-level server log lines"
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            e2e-run.log
+          retention-days: 7
