@@ -151,6 +151,14 @@ export const PaymentSessionOutput = PaymentSessionResultShape;
 export type PaymentSessionOutput = z.infer<typeof PaymentSessionOutput>;
 
 // ===========================================================================
+// payment.sendPaymentLinkToTenants — { sentTo }
+// ===========================================================================
+export const PaymentSendLinkOutput = z.object({
+  sentTo: z.number(),
+});
+export type PaymentSendLinkOutput = z.infer<typeof PaymentSendLinkOutput>;
+
+// ===========================================================================
 // payment.getStripeReceipt / payment.getStripePublicReceipt — { receiptUrl }
 // ===========================================================================
 export const PaymentStripeReceiptOutput = z.object({

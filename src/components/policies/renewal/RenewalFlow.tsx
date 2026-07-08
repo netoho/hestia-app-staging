@@ -45,8 +45,11 @@ function defaultSelection(source: RenewalSourceSummary): PolicyRenewalSelection 
       cfdi: true,
       documents: true,
     })),
-    tenant: {
-      include: !!source.tenant,
+    // Clone-all semantics (S5b #169): every tenant carries over; per-tenant
+    // include toggles are deferred, so include is always true here.
+    tenants: source.tenants.map((tn) => ({
+      sourceId: tn.id,
+      include: true,
       basicInfo: true,
       contact: true,
       address: true,
@@ -55,7 +58,7 @@ function defaultSelection(source: RenewalSourceSummary): PolicyRenewalSelection 
       references: true,
       paymentPreferences: true,
       documents: true,
-    },
+    })),
     jointObligors: source.jointObligors.map((jo) => ({
       sourceId: jo.id,
       include: true,

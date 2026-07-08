@@ -14,6 +14,9 @@ export async function freshDb(): Promise<void> {
 }
 
 export interface ActorTokens {
+  /** Every tenant's portal token (S5b #169 — a policy has 1..N tenants). */
+  tenants: Array<{ id: string; token: string; email: string }>;
+  /** Legacy singular convenience = tenants[0]; kept for single-tenant specs. */
   tenant?: { id: string; token: string };
   landlords: Array<{ id: string; token: string; email: string }>;
   jointObligors: Array<{ id: string; token: string }>;
@@ -26,15 +29,25 @@ export interface ActorTokens {
  * no email capture needed.
  */
 export async function getActorTokens(policyId: string): Promise<ActorTokens> {
-  const [tenant, landlords, jointObligors, avals] = await Promise.all([
-    prisma.tenant.findFirst({ where: { policyId }, select: { id: true, accessToken: true } }),
+  const [tenants, landlords, jointObligors, avals] = await Promise.all([
+    prisma.tenant.findMany({
+      where: { policyId },
+      select: { id: true, accessToken: true, email: true },
+      orderBy: { createdAt: 'asc' },
+    }),
     prisma.landlord.findMany({ where: { policyId }, select: { id: true, accessToken: true, email: true } }),
     prisma.jointObligor.findMany({ where: { policyId }, select: { id: true, accessToken: true } }),
     prisma.aval.findMany({ where: { policyId }, select: { id: true, accessToken: true } }),
   ]);
 
+  const tenantTokens = tenants
+    .filter((t) => t.accessToken)
+    .map((t) => ({ id: t.id, token: t.accessToken as string, email: t.email ?? '' }));
+
   return {
-    tenant: tenant?.accessToken ? { id: tenant.id, token: tenant.accessToken } : undefined,
+    tenants: tenantTokens,
+    // Legacy singular = first tenant (createdAt asc); never index-1 semantics.
+    tenant: tenantTokens[0] ? { id: tenantTokens[0].id, token: tenantTokens[0].token } : undefined,
     landlords: landlords
       .filter((l) => l.accessToken)
       .map((l) => ({ id: l.id, token: l.accessToken as string, email: l.email ?? '' })),

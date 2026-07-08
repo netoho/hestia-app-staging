@@ -16,6 +16,7 @@ import {
   PaymentRecordOutput,
   PaymentGetByIdOutput,
   PaymentSessionOutput,
+  PaymentSendLinkOutput,
   PaymentStripeReceiptOutput,
   PaymentPublicInfoOutput,
   PaymentCheckoutSessionOutput,
@@ -165,6 +166,47 @@ export const paymentRouter = createTRPCRouter({
             code: 'CONFLICT',
             message: 'Esta protección ya tiene pagos pendientes. Use regenerar link para actualizar URLs expiradas.',
           });
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * Email the shared payment link of a TENANT-paid payment to every tenant
+   * of the policy (skipping tenants without email). All tenants receive the
+   * SAME public /payments/[id] link; any of them can complete the payment.
+   */
+  sendPaymentLinkToTenants: protectedProcedure
+    .input(z.object({
+      paymentId: z.string(),
+    }))
+    .output(PaymentSendLinkOutput)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await paymentService.sendPaymentLinkToTenants(input.paymentId, ctx.userId);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('not found')) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Pago no encontrado' });
+          }
+          if (error.message.includes('tenant-paid')) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Solo los pagos a cargo del inquilino se pueden enviar a los inquilinos',
+            });
+          }
+          if (error.message.includes('shareable link')) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Este pago no tiene un link de pago activo',
+            });
+          }
+          if (error.message.includes('email on file')) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Ningún inquilino tiene correo electrónico registrado',
+            });
+          }
         }
         throw error;
       }

@@ -23,6 +23,8 @@ export const REPLACEABLE_STATUSES: PolicyStatus[] = [
 
 export interface ReplaceTenantInput {
   policyId: string;
+  /** Which tenant row to replace — a policy has 1..N tenants (S5b #169). */
+  tenantId: string;
   replacementReason: string;
   newTenant: {
     tenantType: TenantType;
@@ -59,7 +61,7 @@ export async function replaceTenantOnPolicy(
       policyNumber: true,
       guarantorType: true,
       managedById: true,
-      tenant: {
+      tenants: {
         select: {
           id: true,
           tenantType: true,
@@ -86,11 +88,11 @@ export async function replaceTenantOnPolicy(
     };
   }
 
-  if (!policy.tenant) {
-    return { success: false, error: 'No tenant found to replace' };
+  // Replace the SPECIFIC tenant row — a policy has 1..N tenants (S5b #169).
+  const currentTenant = policy.tenants.find((t) => t.id === input.tenantId);
+  if (!currentTenant) {
+    return { success: false, error: 'Tenant not found on this policy' };
   }
-
-  const currentTenant = policy.tenant;
 
   const archiveMeta = {
     policyId: input.policyId,

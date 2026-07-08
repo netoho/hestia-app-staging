@@ -38,6 +38,8 @@ export type WizardGuarantor =
 export interface WizardOptions {
   rentAmount?: number;
   tenant: WizardTenant;
+  /** Co-tenants appended via "Agregar coinquilino" (each may be a company). */
+  coTenants?: WizardTenant[];
   landlord: WizardLandlord;
   /** Co-owners appended via "Agregar copropietario" (each may be a company). */
   coLandlords?: WizardLandlord[];
@@ -118,16 +120,31 @@ export async function createPolicyViaWizard(page: Page, opts: WizardOptions): Pr
   await next(page);
 
   // ── Step 4: Inquilino ────────────────────────────────────────────────────
-  await expect(page.getByText('Información del Inquilino')).toBeVisible();
-  if (opts.tenant.type === 'COMPANY') {
-    await page.getByRole('combobox').click();
-    await page.getByRole('option', { name: 'Persona Moral (Empresa)' }).click();
-    await page.locator('[name="companyName"]').fill(opts.tenant.companyName ?? 'Empresa E2E SA de CV');
-  } else {
-    await page.locator('[name="firstName"]').fill(opts.tenant.firstName ?? 'Juan');
-    await page.locator('[name="paternalLastName"]').fill(opts.tenant.paternalLastName ?? 'Pérez');
+  // Per-record cards since S5b #169 (fieldArray `tenants.N.*`, one Radix
+  // tenantType Select per card). Barrier on the first card's email input —
+  // the rewrite dropped the static "Información del Inquilino" heading.
+  await expect(page.locator('[name="tenants.0.email"]')).toBeVisible({ timeout: 20_000 });
+
+  const fillTenantCard = async (index: number, tenant: WizardTenant) => {
+    if (tenant.type === 'COMPANY') {
+      // One combobox per tenant card (the tenantType Select); no other Radix
+      // select on this step, so nth(index) maps to card `index`.
+      await page.getByRole('combobox').nth(index).click();
+      await page.getByRole('option', { name: 'Persona Moral (Empresa)' }).click();
+      await page.locator(`[name="tenants.${index}.companyName"]`).fill(tenant.companyName ?? 'Empresa E2E SA de CV');
+    } else {
+      await page.locator(`[name="tenants.${index}.firstName"]`).fill(tenant.firstName ?? 'Juan');
+      await page.locator(`[name="tenants.${index}.paternalLastName"]`).fill(tenant.paternalLastName ?? 'Pérez');
+    }
+    await page.locator(`[name="tenants.${index}.email"]`).fill(tenant.email);
+  };
+
+  await fillTenantCard(0, opts.tenant);
+  for (const [i, co] of (opts.coTenants ?? []).entries()) {
+    await page.getByRole('button', { name: 'Agregar coinquilino' }).click();
+    await expect(page.locator(`[name="tenants.${i + 1}.email"]`)).toBeVisible();
+    await fillTenantCard(i + 1, co);
   }
-  await page.locator('[name="email"]').fill(opts.tenant.email);
   await next(page);
 
   // ── Step 5: Garantía ─────────────────────────────────────────────────────

@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, AlertCircle, Plus } from 'lucide-react';
-import { PaymentType, PaymentStatus } from '@/prisma/generated/prisma-client/enums';
+import { Loader2, CreditCard, AlertCircle, Plus, Send } from 'lucide-react';
+import { PaymentType, PaymentStatus, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
@@ -57,6 +57,8 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
   const [cancellingPaymentId, setCancellingPaymentId] = useState<string | null>(null);
 
+  const [sendingPaymentId, setSendingPaymentId] = useState<string | null>(null);
+
   const {
     data: paymentSummary,
     isLoading,
@@ -94,6 +96,24 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     },
   });
 
+  const sendPaymentLinkToTenants = trpc.payment.sendPaymentLinkToTenants.useMutation({
+    onSuccess: (data) => {
+      setSendingPaymentId(null);
+      toast({
+        title: 'Enlace enviado',
+        description: `Enlace enviado a ${data.sentTo} inquilino(s)`,
+      });
+    },
+    onError: (error) => {
+      setSendingPaymentId(null);
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al enviar el link de pago',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleGenerateLinks = async () => {
     await generatePaymentLinks.mutateAsync({ policyId });
   };
@@ -102,6 +122,38 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
     setCancellingPaymentId(paymentId);
     cancelPayment.mutate({ paymentId });
   };
+
+  const handleSendToTenants = (paymentId: string) => {
+    setSendingPaymentId(paymentId);
+    sendPaymentLinkToTenants.mutate({ paymentId });
+  };
+
+  // The shared link can be emailed while a checkout session exists or can be
+  // created on demand: PENDING, non-manual, tenant-paid payments only.
+  const canSendToTenants = (p: { paidBy: string; isManual: boolean; status: string }) =>
+    isStaffOrAdmin &&
+    p.paidBy === PayerType.TENANT &&
+    !p.isManual &&
+    p.status === PaymentStatus.PENDING;
+
+  const renderSendToTenants = (payment: { id: string; paidBy: string; isManual: boolean; status: string }) =>
+    canSendToTenants(payment) ? (
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleSendToTenants(payment.id)}
+          disabled={sendingPaymentId === payment.id}
+        >
+          {sendingPaymentId === payment.id ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4 mr-1" />
+          )}
+          Enviar a inquilinos
+        </Button>
+      </div>
+    ) : null;
 
   const openManualPaymentDialog = (paymentType: PaymentType, expectedAmount: number, paymentId?: string) => {
     setManualPaymentDialog({
@@ -277,48 +329,54 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
       {/* Investigation Fee Payment */}
       {breakdown.investigationFee > 0 && investigationPayment && (
-        <PaymentCard
-          payment={investigationPayment}
-          isStaffOrAdmin={isStaffOrAdmin}
-          onManualPayment={() =>
-            openManualPaymentDialog(PaymentType.INVESTIGATION_FEE, breakdown.investigationFee, investigationPayment.id)
-          }
-          onVerify={
-            investigationPayment.status === PaymentStatus.PENDING_VERIFICATION
-              ? () => openVerifyDialog(investigationPayment)
-              : undefined
-          }
-          onCancel={() => handleCancelPayment(investigationPayment.id)}
-          onEdit={
-            investigationPayment.status === PaymentStatus.PENDING
-              ? () => openEditDialog(investigationPayment)
-              : undefined
-          }
-          isCancelling={cancellingPaymentId === investigationPayment.id}
-        />
+        <div className="space-y-2">
+          <PaymentCard
+            payment={investigationPayment}
+            isStaffOrAdmin={isStaffOrAdmin}
+            onManualPayment={() =>
+              openManualPaymentDialog(PaymentType.INVESTIGATION_FEE, breakdown.investigationFee, investigationPayment.id)
+            }
+            onVerify={
+              investigationPayment.status === PaymentStatus.PENDING_VERIFICATION
+                ? () => openVerifyDialog(investigationPayment)
+                : undefined
+            }
+            onCancel={() => handleCancelPayment(investigationPayment.id)}
+            onEdit={
+              investigationPayment.status === PaymentStatus.PENDING
+                ? () => openEditDialog(investigationPayment)
+                : undefined
+            }
+            isCancelling={cancellingPaymentId === investigationPayment.id}
+          />
+          {renderSendToTenants(investigationPayment)}
+        </div>
       )}
 
       {/* Tenant Payment */}
       {breakdown.tenantPercentage > 0 && breakdown.tenantAmountAfterFee > 0 && tenantPayment && (
-        <PaymentCard
-          payment={tenantPayment}
-          isStaffOrAdmin={isStaffOrAdmin}
-          onManualPayment={() =>
-            openManualPaymentDialog(PaymentType.TENANT_PORTION, breakdown.tenantAmountAfterFee, tenantPayment.id)
-          }
-          onVerify={
-            tenantPayment.status === PaymentStatus.PENDING_VERIFICATION
-              ? () => openVerifyDialog(tenantPayment)
-              : undefined
-          }
-          onCancel={() => handleCancelPayment(tenantPayment.id)}
-          onEdit={
-            tenantPayment.status === PaymentStatus.PENDING
-              ? () => openEditDialog(tenantPayment)
-              : undefined
-          }
-          isCancelling={cancellingPaymentId === tenantPayment.id}
-        />
+        <div className="space-y-2">
+          <PaymentCard
+            payment={tenantPayment}
+            isStaffOrAdmin={isStaffOrAdmin}
+            onManualPayment={() =>
+              openManualPaymentDialog(PaymentType.TENANT_PORTION, breakdown.tenantAmountAfterFee, tenantPayment.id)
+            }
+            onVerify={
+              tenantPayment.status === PaymentStatus.PENDING_VERIFICATION
+                ? () => openVerifyDialog(tenantPayment)
+                : undefined
+            }
+            onCancel={() => handleCancelPayment(tenantPayment.id)}
+            onEdit={
+              tenantPayment.status === PaymentStatus.PENDING
+                ? () => openEditDialog(tenantPayment)
+                : undefined
+            }
+            isCancelling={cancellingPaymentId === tenantPayment.id}
+          />
+          {renderSendToTenants(tenantPayment)}
+        </div>
       )}
 
       {/* Landlord Payment */}
@@ -346,26 +404,28 @@ export default function PaymentsTab({ policyId, isStaffOrAdmin }: PaymentsTabPro
 
       {/* Additional Payments (PARTIAL_PAYMENT, INCIDENT_PAYMENT) */}
       {additionalPayments.map((payment) => (
-        <PaymentCard
-          key={payment.id}
-          payment={payment}
-          isStaffOrAdmin={isStaffOrAdmin}
-          onManualPayment={() =>
-            openManualPaymentDialog(payment.type as PaymentType, payment.amount, payment.id)
-          }
-          onVerify={
-            payment.status === PaymentStatus.PENDING_VERIFICATION
-              ? () => openVerifyDialog(payment)
-              : undefined
-          }
-          onCancel={() => handleCancelPayment(payment.id)}
-          onEdit={
-            payment.status === PaymentStatus.PENDING
-              ? () => openEditDialog(payment)
-              : undefined
-          }
-          isCancelling={cancellingPaymentId === payment.id}
-        />
+        <div key={payment.id} className="space-y-2">
+          <PaymentCard
+            payment={payment}
+            isStaffOrAdmin={isStaffOrAdmin}
+            onManualPayment={() =>
+              openManualPaymentDialog(payment.type as PaymentType, payment.amount, payment.id)
+            }
+            onVerify={
+              payment.status === PaymentStatus.PENDING_VERIFICATION
+                ? () => openVerifyDialog(payment)
+                : undefined
+            }
+            onCancel={() => handleCancelPayment(payment.id)}
+            onEdit={
+              payment.status === PaymentStatus.PENDING
+                ? () => openEditDialog(payment)
+                : undefined
+            }
+            isCancelling={cancellingPaymentId === payment.id}
+          />
+          {renderSendToTenants(payment)}
+        </div>
       ))}
 
       {/* Cancelled/Failed Payments */}

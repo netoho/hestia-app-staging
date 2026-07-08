@@ -365,14 +365,14 @@ class ActorTokenService extends BaseService {
    * Generate tokens for all actors in a policy
    */
   async generatePolicyActorTokens(policyId: string): Promise<{
-    tenant?: { token: string; url: string; expiresAt: Date };
+    tenants?: Array<{ id: string; token: string; url: string; expiresAt: Date }>;
     jointObligors?: Array<{ id: string; token: string; url: string; expiresAt: Date }>;
     avals?: Array<{ id: string; token: string; url: string; expiresAt: Date }>;
   }> {
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       include: {
-        tenant: true,
+        tenants: true,
         jointObligors: true,
         avals: true
       }
@@ -383,14 +383,19 @@ class ActorTokenService extends BaseService {
     }
 
     const result: {
-      tenant?: { token: string; url: string; expiresAt: Date };
+      tenants?: Array<{ id: string; token: string; url: string; expiresAt: Date }>;
       jointObligors?: Array<{ id: string; token: string; url: string; expiresAt: Date }>;
       avals?: Array<{ id: string; token: string; url: string; expiresAt: Date }>;
     } = {};
 
-    // Generate tenant token
-    if (policy.tenant) {
-      result.tenant = await this.generateTenantToken(policy.tenant.id);
+    // Generate tenant tokens — every tenant gets their own portal link
+    if (policy.tenants && policy.tenants.length > 0) {
+      result.tenants = await Promise.all(
+        policy.tenants.map(async (tenant: { id: string }) => ({
+          id: tenant.id,
+          ...await this.generateTenantToken(tenant.id)
+        }))
+      );
     }
 
     // Generate joint obligor tokens
@@ -422,12 +427,12 @@ class ActorTokenService extends BaseService {
   async checkPolicyActorsComplete(policyId: string): Promise<{
     allComplete: boolean;
     landlords: boolean;
-    tenant: boolean;
+    tenants: boolean;
     jointObligors: boolean;
     avals: boolean;
     details: {
       landlordsComplete?: { [id: string]: boolean };
-      tenantComplete?: boolean;
+      tenantsComplete?: { [id: string]: boolean };
       jointObligorsComplete?: { [id: string]: boolean };
       avalsComplete?: { [id: string]: boolean };
     };
@@ -441,7 +446,12 @@ class ActorTokenService extends BaseService {
             informationComplete: true,
           }
         },
-        tenant: true,
+        tenants: {
+          select: {
+            id: true,
+            informationComplete: true,
+          }
+        },
         jointObligors: true,
         avals: true
       }
@@ -453,12 +463,12 @@ class ActorTokenService extends BaseService {
 
     const details: {
       landlordsComplete?: { [id: string]: boolean };
-      tenantComplete?: boolean;
+      tenantsComplete?: { [id: string]: boolean };
       jointObligorsComplete?: { [id: string]: boolean };
       avalsComplete?: { [id: string]: boolean };
     } = {};
     let landlordsComplete = true;
-    let tenantComplete = true;
+    let tenantsComplete = true;
     let jointObligorsComplete = true;
     let avalsComplete = true;
 
@@ -476,12 +486,18 @@ class ActorTokenService extends BaseService {
       landlordsComplete = false;
     }
 
-    // Check tenant
-    if (policy.tenant) {
-      details.tenantComplete = policy.tenant.informationComplete;
-      tenantComplete = policy.tenant.informationComplete;
+    // Check tenants — every tenant must be complete; a policy with zero
+    // tenants is never complete.
+    if (policy.tenants.length > 0) {
+      details.tenantsComplete = {};
+      for (const tenant of policy.tenants) {
+        details.tenantsComplete[tenant.id] = tenant.informationComplete;
+        if (!tenant.informationComplete) {
+          tenantsComplete = false;
+        }
+      }
     } else {
-      tenantComplete = false;
+      tenantsComplete = false;
     }
 
     // Check joint obligors based on guarantorType
@@ -519,9 +535,9 @@ class ActorTokenService extends BaseService {
     }
 
     return {
-      allComplete: landlordsComplete && tenantComplete && jointObligorsComplete && avalsComplete,
+      allComplete: landlordsComplete && tenantsComplete && jointObligorsComplete && avalsComplete,
       landlords: landlordsComplete,
-      tenant: tenantComplete,
+      tenants: tenantsComplete,
       jointObligors: jointObligorsComplete,
       avals: avalsComplete,
       details

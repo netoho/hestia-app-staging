@@ -355,9 +355,11 @@ export const sharedActorRouter = createTRPCRouter({
 
       if (!input.type || input.type === 'tenant') {
         const service = new TenantService();
-        const tenant = await service.getByPolicyId(input.policyId);
-        if (tenant.ok && tenant.value) {
-          results.push({ type: 'tenant', actor: tenant.value });
+        const tenants = await service.getAllByPolicyId(input.policyId);
+        if (tenants.ok && tenants.value) {
+          for (const tenant of tenants.value) {
+            results.push({ type: 'tenant', actor: tenant });
+          }
         }
       }
 

@@ -8,8 +8,9 @@ import {
 import { documentService } from '@/lib/services/documentService';
 import { getStorageProvider } from '@/lib/storage';
 import { generatePolicyActorTokens } from '@/lib/services/actorTokenService';
+import { policyRenewalPreconditionsSchema } from '@/lib/domain/policy/schema';
 import { logPolicyActivity } from './index';
-import type { PolicyRenewalSelection } from '@/lib/schemas/policy/renewalSelection';
+import type { PolicyRenewalSelection, TenantRenewalSelection } from '@/lib/schemas/policy/renewalSelection';
 
 export interface CloneForRenewalInput {
   sourcePolicyId: string;
@@ -34,6 +35,32 @@ const pick = <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K
 
 function makeBlankIfNotSelected<T>(value: T, selected: boolean, blank: T): T {
   return selected ? value : blank;
+}
+
+/**
+ * Per-tenant carry-over entry (S5b #169), mirroring the landlord/JO/aval
+ * sourceId lookups. A tenant missing from the selection (e.g. added after
+ * the selector loaded) clones everything — the clone-all ruling; per-tenant
+ * exclusion UI is deferred.
+ */
+function tenantSelectionFor(
+  selection: PolicyRenewalSelection,
+  sourceTenantId: string,
+): TenantRenewalSelection {
+  return (
+    selection.tenants.find((s) => s.sourceId === sourceTenantId) ?? {
+      sourceId: sourceTenantId,
+      include: true,
+      basicInfo: true,
+      contact: true,
+      address: true,
+      employment: true,
+      rentalHistory: true,
+      references: true,
+      paymentPreferences: true,
+      documents: true,
+    }
+  );
 }
 
 type AnyTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -89,7 +116,7 @@ export async function clonePolicyForRenewal(
           documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         },
       },
-      tenant: {
+      tenants: {
         include: {
           addressDetails: true,
           employerAddressDetails: true,
@@ -98,6 +125,7 @@ export async function clonePolicyForRenewal(
           commercialReferences: true,
           documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
         },
+        orderBy: { createdAt: 'asc' },
       },
       jointObligors: {
         include: {
@@ -130,14 +158,16 @@ export async function clonePolicyForRenewal(
   });
 
   if (!source) throw new Error('Source policy not found');
-  if (source.status !== PolicyStatus.ACTIVE && source.status !== PolicyStatus.EXPIRED) {
-    throw new Error(`Cannot renew policy in status ${source.status}`);
+  // Renewal preconditions are formalized on the canonical policy schema
+  // (S5a #133): ACTIVE|EXPIRED + at least one landlord. renewedToId may be
+  // set — overwriting an existing renewal is allowed per product decision.
+  const preconditions = policyRenewalPreconditionsSchema.safeParse(source);
+  if (!preconditions.success) {
+    throw new Error(
+      preconditions.error.issues[0]?.message ??
+        `Cannot renew policy in status ${source.status}`,
+    );
   }
-  if (source.renewedToId) {
-    // Overwriting is allowed per product decision; continue but we'll update renewedToId.
-  }
-
-  if (source.landlords.length === 0) throw new Error('Source policy has no landlords');
 
   const selectedLandlords = source.landlords.filter((ld) =>
     selection.landlords.find((s) => s.sourceId === ld.id && s.include),
@@ -158,20 +188,6 @@ export async function clonePolicyForRenewal(
   // ============================================================
   const txResult = await prisma.$transaction(
     async (tx) => {
-      // ---- Tenant addresses ----
-      const newTenantAddressId =
-        selection.tenant.include && selection.tenant.address
-          ? await duplicateAddress(tx, source.tenant?.addressId)
-          : null;
-      const newTenantEmployerAddressId =
-        selection.tenant.include && selection.tenant.employment
-          ? await duplicateAddress(tx, source.tenant?.employerAddressId)
-          : null;
-      const newTenantPreviousAddressId =
-        selection.tenant.include && selection.tenant.rentalHistory
-          ? await duplicateAddress(tx, source.tenant?.previousRentalAddressId)
-          : null;
-
       // ---- Property addresses ----
       const newPropertyAddressId =
         selection.property.address
@@ -250,72 +266,81 @@ export async function clonePolicyForRenewal(
         };
       };
 
-      // ---- Tenant field picks ----
-      const t = source.tenant;
-      const tKeepBasic = t && selection.tenant.include && selection.tenant.basicInfo;
-      const tKeepContact = t && selection.tenant.include && selection.tenant.contact;
-      const tKeepEmployment = t && selection.tenant.include && selection.tenant.employment;
-      const tKeepRentalHistory = t && selection.tenant.include && selection.tenant.rentalHistory;
-      const tKeepPayment = t && selection.tenant.include && selection.tenant.paymentPreferences;
-
-      const tenantData = t
-        ? {
-            tenantType: tKeepBasic ? t.tenantType : 'INDIVIDUAL',
-            firstName: tKeepBasic ? t.firstName : null,
-            middleName: tKeepBasic ? t.middleName : null,
-            paternalLastName: tKeepBasic ? t.paternalLastName : null,
-            maternalLastName: tKeepBasic ? t.maternalLastName : null,
-            nationality: tKeepBasic ? t.nationality : 'MEXICAN',
-            curp: tKeepBasic ? t.curp : null,
-            rfc: tKeepBasic ? t.rfc : null,
-            passport: tKeepBasic ? t.passport : null,
-            companyName: tKeepBasic ? t.companyName : null,
-            companyRfc: tKeepBasic ? t.companyRfc : null,
-            legalRepFirstName: tKeepBasic ? t.legalRepFirstName : null,
-            legalRepMiddleName: tKeepBasic ? t.legalRepMiddleName : null,
-            legalRepPaternalLastName: tKeepBasic ? t.legalRepPaternalLastName : null,
-            legalRepMaternalLastName: tKeepBasic ? t.legalRepMaternalLastName : null,
-            legalRepId: tKeepBasic ? t.legalRepId : null,
-            legalRepPosition: tKeepBasic ? t.legalRepPosition : null,
-            legalRepRfc: tKeepBasic ? t.legalRepRfc : null,
-            legalRepPhone: tKeepContact ? t.legalRepPhone : null,
-            legalRepEmail: tKeepContact ? t.legalRepEmail : null,
-            email: tKeepContact ? t.email : t.email || '',
-            phone: tKeepContact ? t.phone : '',
-            workPhone: tKeepContact ? t.workPhone : null,
-            personalEmail: tKeepContact ? t.personalEmail : null,
-            workEmail: tKeepContact ? t.workEmail : null,
-            currentAddress: null,
-            addressId: newTenantAddressId,
-            employmentStatus: tKeepEmployment ? t.employmentStatus : null,
-            occupation: tKeepEmployment ? t.occupation : null,
-            employerName: tKeepEmployment ? t.employerName : null,
-            employerAddressId: newTenantEmployerAddressId,
-            position: tKeepEmployment ? t.position : null,
-            monthlyIncome: tKeepEmployment ? t.monthlyIncome : null,
-            incomeSource: tKeepEmployment ? t.incomeSource : null,
-            yearsAtJob: tKeepEmployment ? t.yearsAtJob : null,
-            hasAdditionalIncome: tKeepEmployment ? t.hasAdditionalIncome : false,
-            additionalIncomeSource: tKeepEmployment ? t.additionalIncomeSource : null,
-            additionalIncomeAmount: tKeepEmployment ? t.additionalIncomeAmount : null,
-            previousLandlordName: tKeepRentalHistory ? t.previousLandlordName : null,
-            previousLandlordPhone: tKeepRentalHistory ? t.previousLandlordPhone : null,
-            previousLandlordEmail: tKeepRentalHistory ? t.previousLandlordEmail : null,
-            previousRentAmount: tKeepRentalHistory ? t.previousRentAmount : null,
-            previousRentalAddressId: newTenantPreviousAddressId,
-            rentalHistoryYears: tKeepRentalHistory ? t.rentalHistoryYears : null,
-            numberOfOccupants: tKeepRentalHistory ? t.numberOfOccupants : null,
-            reasonForMoving: tKeepRentalHistory ? t.reasonForMoving : null,
-            hasPets: tKeepRentalHistory ? t.hasPets : false,
-            petDescription: tKeepRentalHistory ? t.petDescription : null,
-            paymentMethod: tKeepPayment ? t.paymentMethod : null,
-            requiresCFDI: tKeepPayment ? t.requiresCFDI : false,
-            cfdiData: tKeepPayment ? t.cfdiData : null,
-            additionalInfo: tKeepBasic ? t.additionalInfo : null,
-            informationComplete: false,
-            verificationStatus: 'PENDING' as const,
-          }
-        : null;
+      // ---- Tenant field picks — one selection entry per tenant (S5b #169),
+      // mirroring landlords/jointObligors. The clone-all ruling means the
+      // client sends include: true per entry; a tenant missing an entry
+      // (added after the selector loaded) falls back to clone-everything. ----
+      const buildTenantData = (
+        t: (typeof source.tenants)[number],
+        addressIds: {
+          addressId: string | null;
+          employerAddressId: string | null;
+          previousRentalAddressId: string | null;
+        },
+        sel: TenantRenewalSelection,
+      ) => {
+        const tKeepBasic = sel.basicInfo;
+        const tKeepContact = sel.contact;
+        const tKeepEmployment = sel.employment;
+        const tKeepRentalHistory = sel.rentalHistory;
+        const tKeepPayment = sel.paymentPreferences;
+        return {
+          tenantType: tKeepBasic ? t.tenantType : ('INDIVIDUAL' as const),
+          firstName: tKeepBasic ? t.firstName : null,
+          middleName: tKeepBasic ? t.middleName : null,
+          paternalLastName: tKeepBasic ? t.paternalLastName : null,
+          maternalLastName: tKeepBasic ? t.maternalLastName : null,
+          nationality: tKeepBasic ? t.nationality : ('MEXICAN' as const),
+          curp: tKeepBasic ? t.curp : null,
+          rfc: tKeepBasic ? t.rfc : null,
+          passport: tKeepBasic ? t.passport : null,
+          companyName: tKeepBasic ? t.companyName : null,
+          companyRfc: tKeepBasic ? t.companyRfc : null,
+          legalRepFirstName: tKeepBasic ? t.legalRepFirstName : null,
+          legalRepMiddleName: tKeepBasic ? t.legalRepMiddleName : null,
+          legalRepPaternalLastName: tKeepBasic ? t.legalRepPaternalLastName : null,
+          legalRepMaternalLastName: tKeepBasic ? t.legalRepMaternalLastName : null,
+          legalRepId: tKeepBasic ? t.legalRepId : null,
+          legalRepPosition: tKeepBasic ? t.legalRepPosition : null,
+          legalRepRfc: tKeepBasic ? t.legalRepRfc : null,
+          legalRepPhone: tKeepContact ? t.legalRepPhone : null,
+          legalRepEmail: tKeepContact ? t.legalRepEmail : null,
+          email: tKeepContact ? t.email : t.email || '',
+          phone: tKeepContact ? t.phone : '',
+          workPhone: tKeepContact ? t.workPhone : null,
+          personalEmail: tKeepContact ? t.personalEmail : null,
+          workEmail: tKeepContact ? t.workEmail : null,
+          currentAddress: null,
+          addressId: addressIds.addressId,
+          employmentStatus: tKeepEmployment ? t.employmentStatus : null,
+          occupation: tKeepEmployment ? t.occupation : null,
+          employerName: tKeepEmployment ? t.employerName : null,
+          employerAddressId: addressIds.employerAddressId,
+          position: tKeepEmployment ? t.position : null,
+          monthlyIncome: tKeepEmployment ? t.monthlyIncome : null,
+          incomeSource: tKeepEmployment ? t.incomeSource : null,
+          yearsAtJob: tKeepEmployment ? t.yearsAtJob : null,
+          hasAdditionalIncome: tKeepEmployment ? t.hasAdditionalIncome : false,
+          additionalIncomeSource: tKeepEmployment ? t.additionalIncomeSource : null,
+          additionalIncomeAmount: tKeepEmployment ? t.additionalIncomeAmount : null,
+          previousLandlordName: tKeepRentalHistory ? t.previousLandlordName : null,
+          previousLandlordPhone: tKeepRentalHistory ? t.previousLandlordPhone : null,
+          previousLandlordEmail: tKeepRentalHistory ? t.previousLandlordEmail : null,
+          previousRentAmount: tKeepRentalHistory ? t.previousRentAmount : null,
+          previousRentalAddressId: addressIds.previousRentalAddressId,
+          rentalHistoryYears: tKeepRentalHistory ? t.rentalHistoryYears : null,
+          numberOfOccupants: tKeepRentalHistory ? t.numberOfOccupants : null,
+          reasonForMoving: tKeepRentalHistory ? t.reasonForMoving : null,
+          hasPets: tKeepRentalHistory ? t.hasPets : false,
+          petDescription: tKeepRentalHistory ? t.petDescription : null,
+          paymentMethod: tKeepPayment ? t.paymentMethod : null,
+          requiresCFDI: tKeepPayment ? t.requiresCFDI : false,
+          cfdiData: tKeepPayment ? t.cfdiData : null,
+          additionalInfo: tKeepBasic ? t.additionalInfo : null,
+          informationComplete: false,
+          verificationStatus: 'PENDING' as const,
+        };
+      };
 
       // ---- Policy terms (gated by sub-checkboxes) ----
       const terms = selection.policyTerms;
@@ -323,7 +348,7 @@ export async function clonePolicyForRenewal(
       const keepContract = terms.contract;
       const keepPackaging = terms.packageAndPricing;
 
-      // ---- Create new policy with nested landlord + tenant ----
+      // ---- Create new policy (actors are created individually below) ----
       const newPolicy = await tx.policy.create({
         data: {
           policyNumber,
@@ -350,9 +375,7 @@ export async function clonePolicyForRenewal(
           status: PolicyStatus.COLLECTING_INFO,
           activatedAt: startDate,
           expiresAt: endDate,
-          ...(tenantData ? { tenant: { create: tenantData } } : {}),
         },
-        include: { tenant: true },
       });
 
       // ---- Landlords (primary + co-owners) ----
@@ -369,6 +392,36 @@ export async function clonePolicyForRenewal(
           },
         });
         landlordIdMap.push({ sourceId: ld.id, newId: created.id });
+      }
+
+      // ---- Tenants ----
+      // ALL tenants clone to the renewal (S5b #169) — created individually,
+      // like landlords, so source → new ids map for references/investigations/
+      // document copies below. No primary tenant; ordering is createdAt asc.
+      const tenantIdMap: Array<{ sourceId: string; newId: string }> = [];
+      for (const t of source.tenants) {
+        const sel = tenantSelectionFor(selection, t.id);
+        if (!sel.include) continue;
+        const addrId = sel.address
+          ? await duplicateAddress(tx, t.addressId)
+          : null;
+        const empAddrId = sel.employment
+          ? await duplicateAddress(tx, t.employerAddressId)
+          : null;
+        const prevAddrId = sel.rentalHistory
+          ? await duplicateAddress(tx, t.previousRentalAddressId)
+          : null;
+        const created = await tx.tenant.create({
+          data: {
+            policyId: newPolicy.id,
+            ...buildTenantData(t, {
+              addressId: addrId,
+              employerAddressId: empAddrId,
+              previousRentalAddressId: prevAddrId,
+            }, sel),
+          },
+        });
+        tenantIdMap.push({ sourceId: t.id, newId: created.id });
       }
 
       // ---- Property details ----
@@ -442,6 +495,7 @@ export async function clonePolicyForRenewal(
             legalRepMiddleName: sel.basicInfo ? jo.legalRepMiddleName : null,
             legalRepPaternalLastName: sel.basicInfo ? jo.legalRepPaternalLastName : null,
             legalRepMaternalLastName: sel.basicInfo ? jo.legalRepMaternalLastName : null,
+            legalRepId: sel.basicInfo ? jo.legalRepId : null,
             legalRepPosition: sel.basicInfo ? jo.legalRepPosition : null,
             legalRepRfc: sel.basicInfo ? jo.legalRepRfc : null,
             legalRepPhone: sel.contact ? jo.legalRepPhone : null,
@@ -513,6 +567,7 @@ export async function clonePolicyForRenewal(
             legalRepMiddleName: sel.basicInfo ? av.legalRepMiddleName : null,
             legalRepPaternalLastName: sel.basicInfo ? av.legalRepPaternalLastName : null,
             legalRepMaternalLastName: sel.basicInfo ? av.legalRepMaternalLastName : null,
+            legalRepId: sel.basicInfo ? av.legalRepId : null,
             legalRepPosition: sel.basicInfo ? av.legalRepPosition : null,
             legalRepRfc: sel.basicInfo ? av.legalRepRfc : null,
             legalRepPhone: sel.contact ? av.legalRepPhone : null,
@@ -554,43 +609,44 @@ export async function clonePolicyForRenewal(
       }
 
       // ---- References ----
-      // Tenant references
-      if (t && tenantData && selection.tenant.include && selection.tenant.references) {
-        const newTenant = newPolicy.tenant!;
-        for (const r of t.personalReferences) {
-          await tx.personalReference.create({
-            data: {
-              firstName: r.firstName,
-              middleName: r.middleName,
-              paternalLastName: r.paternalLastName,
-              maternalLastName: r.maternalLastName,
-              phone: r.phone,
-              homePhone: r.homePhone,
-              cellPhone: r.cellPhone,
-              email: r.email,
-              relationship: r.relationship,
-              occupation: r.occupation,
-              address: r.address,
-              tenantId: newTenant.id,
-            },
-          });
-        }
-        for (const r of t.commercialReferences) {
-          await tx.commercialReference.create({
-            data: {
-              companyName: r.companyName,
-              contactFirstName: r.contactFirstName,
-              contactMiddleName: r.contactMiddleName,
-              contactPaternalLastName: r.contactPaternalLastName,
-              contactMaternalLastName: r.contactMaternalLastName,
-              phone: r.phone,
-              email: r.email,
-              relationship: r.relationship,
-              yearsOfRelationship: r.yearsOfRelationship,
-              tenantId: newTenant.id,
-            },
-          });
-        }
+      // Tenant references — per cloned tenant via the source → new id map.
+      for (const { sourceId, newId } of tenantIdMap) {
+          if (!tenantSelectionFor(selection, sourceId).references) continue;
+          const src = source.tenants.find((x) => x.id === sourceId)!;
+          for (const r of src.personalReferences) {
+            await tx.personalReference.create({
+              data: {
+                firstName: r.firstName,
+                middleName: r.middleName,
+                paternalLastName: r.paternalLastName,
+                maternalLastName: r.maternalLastName,
+                phone: r.phone,
+                homePhone: r.homePhone,
+                cellPhone: r.cellPhone,
+                email: r.email,
+                relationship: r.relationship,
+                occupation: r.occupation,
+                address: r.address,
+                tenantId: newId,
+              },
+            });
+          }
+          for (const r of src.commercialReferences) {
+            await tx.commercialReference.create({
+              data: {
+                companyName: r.companyName,
+                contactFirstName: r.contactFirstName,
+                contactMiddleName: r.contactMiddleName,
+                contactPaternalLastName: r.contactPaternalLastName,
+                contactMaternalLastName: r.contactMaternalLastName,
+                phone: r.phone,
+                email: r.email,
+                relationship: r.relationship,
+                yearsOfRelationship: r.yearsOfRelationship,
+                tenantId: newId,
+              },
+            });
+          }
       }
 
       // JO references
@@ -692,13 +748,13 @@ export async function clonePolicyForRenewal(
       });
 
       // ---- Create fresh PENDING investigations on new policy ----
-      const newTenant = newPolicy.tenant;
-      if (newTenant) {
+      // One investigation per tenant — all must be APPROVED to activate.
+      for (const { newId } of tenantIdMap) {
         await tx.actorInvestigation.create({
           data: {
             policyId: newPolicy.id,
             actorType: 'TENANT',
-            actorId: newTenant.id,
+            actorId: newId,
             submittedBy: initiatedById,
             status: ActorInvestigationStatus.PENDING,
           },
@@ -736,6 +792,7 @@ export async function clonePolicyForRenewal(
       return {
         newPolicy,
         landlordIdMap,
+        tenantIdMap,
         joIdMap,
         avalIdMap,
       };
@@ -743,7 +800,7 @@ export async function clonePolicyForRenewal(
     { maxWait: 10000, timeout: 60000 },
   );
 
-  const { newPolicy, landlordIdMap, joIdMap, avalIdMap } = txResult;
+  const { newPolicy, landlordIdMap, tenantIdMap, joIdMap, avalIdMap } = txResult;
 
   // ============================================================
   // 2. POST-COMMIT WORK — S3 copies, tokens, activity log
@@ -820,12 +877,14 @@ export async function clonePolicyForRenewal(
     });
   }
 
-  // Tenant docs
-  if (source.tenant && newPolicy.tenant && selection.tenant.include && selection.tenant.documents) {
+  // Tenant docs — every cloned tenant carries its own documents.
+  for (const { sourceId, newId } of tenantIdMap) {
+    if (!tenantSelectionFor(selection, sourceId).documents) continue;
+    const src = source.tenants.find((x) => x.id === sourceId)!;
     await copyDocsFor({
       actorType: 'tenant',
-      newActorId: newPolicy.tenant.id,
-      sourceDocs: source.tenant.documents,
+      newActorId: newId,
+      sourceDocs: src.documents,
     });
   }
 

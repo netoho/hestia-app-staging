@@ -32,6 +32,8 @@ interface ReplaceTenantModalProps {
   onClose: () => void;
   policyId: string;
   policyNumber: string;
+  /** The specific tenant being replaced (a policy has 1..N tenants, S5b #169). */
+  tenantId: string;
   currentTenantEmail: string;
   hasGuarantors: boolean;
   onSuccess: () => void;
@@ -42,6 +44,7 @@ export default function ReplaceTenantModal({
   onClose,
   policyId,
   policyNumber,
+  tenantId,
   currentTenantEmail,
   hasGuarantors,
   onSuccess,
@@ -88,6 +91,7 @@ export default function ReplaceTenantModal({
     if (!isValid) return;
     replaceMutation.mutate({
       policyId,
+      tenantId,
       replacementReason: replacementReason.trim(),
       newTenant: {
         tenantType,
@@ -115,14 +119,14 @@ export default function ReplaceTenantModal({
             Reemplazar Inquilino
           </DialogTitle>
           <DialogDescription>
-            Reemplazar inquilino en la protección {policyNumber}. El inquilino actual ({currentTenantEmail}) será archivado.
+            Reemplazar inquilino en la protección {policyNumber}. El inquilino seleccionado ({currentTenantEmail}) será archivado.
           </DialogDescription>
         </DialogHeader>
 
         <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
-            Esta acción archivará los datos del inquilino actual y sus documentos. La protección volverá al estado de recopilación de información.
+            Esta acción archivará los datos del inquilino seleccionado y sus documentos. La protección volverá al estado de recopilación de información.
           </AlertDescription>
         </Alert>
 

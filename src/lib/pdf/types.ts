@@ -282,7 +282,7 @@ export interface PDFPolicyData {
   // Related data
   property: PDFProperty | null;
   landlords: PDFLandlord[];
-  tenant: PDFTenant | null;
+  tenants: PDFTenant[];
   jointObligors: PDFJointObligor[];
   avals: PDFAval[];
   actorInvestigations: PDFActorInvestigation[];

@@ -335,6 +335,7 @@ export abstract class BaseActorService<
       if (companyData.legalRepMiddleName !== undefined) updateData.legalRepMiddleName = companyData.legalRepMiddleName || null;
       if (companyData.legalRepPaternalLastName !== undefined) updateData.legalRepPaternalLastName = companyData.legalRepPaternalLastName;
       if (companyData.legalRepMaternalLastName !== undefined) updateData.legalRepMaternalLastName = companyData.legalRepMaternalLastName || null;
+      if (companyData.legalRepId !== undefined) updateData.legalRepId = companyData.legalRepId || null;
       if (companyData.legalRepPosition !== undefined) updateData.legalRepPosition = companyData.legalRepPosition;
       if (companyData.legalRepRfc !== undefined) updateData.legalRepRfc = companyData.legalRepRfc || null;
       if (companyData.legalRepCurp !== undefined) updateData.legalRepCurp = companyData.legalRepCurp || null;

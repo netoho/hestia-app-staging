@@ -10,12 +10,12 @@ export interface RenewalSourceSummary {
     documentCount: number;
     isPrimary: boolean;
   }>;
-  tenant: {
+  tenants: Array<{
     id: string;
     displayName: string;
     documentCount: number;
     referenceCount: number;
-  } | null;
+  }>;
   jointObligors: Array<{
     id: string;
     displayName: string;

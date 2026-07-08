@@ -185,7 +185,7 @@ export async function seedActiveRenewablePolicy(): Promise<SeededRenewablePolicy
           contractSigningAddressDetails: { create: mkAddressData('Firma 200') },
         },
       },
-      tenant: {
+      tenants: {
         create: {
           tenantType: 'INDIVIDUAL',
           firstName: 'Julieta',
@@ -225,7 +225,7 @@ export async function seedActiveRenewablePolicy(): Promise<SeededRenewablePolicy
         },
       },
     },
-    include: { tenant: true },
+    include: { tenants: true },
   });
 
   const landlordPrimary = await prisma.landlord.create({
@@ -268,7 +268,7 @@ export async function seedActiveRenewablePolicy(): Promise<SeededRenewablePolicy
     },
   });
 
-  const tenantId = policy.tenant!.id;
+  const tenantId = policy.tenants[0]!.id;
   const docs = [
     ...['IDENTIFICATION', 'INCOME_PROOF', 'ADDRESS_PROOF', 'BANK_STATEMENT'].map((c) =>
       docData(c, 'tenant', { tenantId }),

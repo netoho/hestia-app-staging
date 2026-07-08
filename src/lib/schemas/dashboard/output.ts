@@ -35,6 +35,9 @@ const RecentPolicyShape = z.object({
   rentAmount: z.number(),
   status: z.nativeEnum(PolicyStatus),
   updatedAt: z.date(),
+  // Transition contract (S5b #169): plural `tenants` is canonical; the
+  // legacy singular `tenant` (first tenant) survives until consumers migrate.
+  tenants: z.array(RecentPolicyTenantShape),
   tenant: RecentPolicyTenantShape.nullable(),
 });
 

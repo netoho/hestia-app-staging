@@ -96,10 +96,11 @@ async function validateTenantReceiptAccess(token: string, receiptId: string) {
   if (!receipt) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
   }
-  // Direct match or email match
+  // Direct match, same-policy co-tenant (receipts are policy-scoped), or email match
   if (receipt.tenantId !== tokenTenant.id) {
+    const samePolicy = receipt.policyId === tokenTenant.policyId;
     const emailMatch = receipt.tenant.email?.toLowerCase() === tokenTenant.email?.toLowerCase();
-    if (!emailMatch) {
+    if (!samePolicy && !emailMatch) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Comprobante no encontrado' });
     }
   }
@@ -143,16 +144,19 @@ async function validateAdminPolicyAccess(ctx: Context, policyId: string) {
     where: { id: policyId },
     include: {
       propertyDetails: { include: { propertyAddressDetails: true } },
-      tenant: true,
+      tenants: { orderBy: { createdAt: 'asc' } },
     },
   });
   if (!policy) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Protección no encontrada' });
   }
-  if (!policy.tenant) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'La protección no tiene inquilino asignado' });
+  if (policy.tenants.length === 0) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'La protección no tiene inquilinos asignados' });
   }
-  return { tenant: policy.tenant, policy, userId: ctx.session.user.id };
+  // Admin-created receipts stamp the first tenant (createdAt asc) PURELY as
+  // uploader-attribution bookkeeping — receipts are policy-scoped, so this is
+  // non-semantic (flagged for post-demo revisit).
+  return { tenant: policy.tenants[0], policy, userId: ctx.session.user.id };
 }
 
 const ReceiptTypeSchema = z.nativeEnum(ReceiptType);
@@ -264,16 +268,18 @@ export const receiptRouter = createTRPCRouter({
               receiptConfigs: {
                 orderBy: [{ effectiveYear: 'asc' }, { effectiveMonth: 'asc' }],
               },
+              // Policy-scoped: any co-tenant's uploads count for the month,
+              // so the portal lists the POLICY's receipts, not the tenant's own
+              tenantReceipts: {
+                where: {
+                  OR: [
+                    { uploadStatus: DocumentUploadStatus.COMPLETE },
+                    { status: ReceiptStatus.NOT_APPLICABLE },
+                  ],
+                },
+                orderBy: [{ year: 'desc' }, { month: 'desc' }],
+              },
             },
-          },
-          receipts: {
-            where: {
-              OR: [
-                { uploadStatus: DocumentUploadStatus.COMPLETE },
-                { status: ReceiptStatus.NOT_APPLICABLE },
-              ],
-            },
-            orderBy: [{ year: 'desc' }, { month: 'desc' }],
           },
         },
       });
@@ -315,7 +321,7 @@ export const receiptRouter = createTRPCRouter({
             effectiveMonth: c.effectiveMonth,
             receiptTypes: c.receiptTypes,
           })),
-          receipts: t.receipts,
+          receipts: t.policy.tenantReceipts,
           activatedAt: t.policy.activatedAt,
         };
       });
@@ -439,6 +445,9 @@ export const receiptRouter = createTRPCRouter({
           uploadedByUserId,
         },
         update: {
+          // Re-stamp uploader attribution (receipts are policy-scoped; a
+          // co-tenant may replace another tenant's upload for the same slot)
+          tenantId,
           status: ReceiptStatus.UPLOADED,
           fileName: input.fileName,
           originalName: input.fileName,
@@ -682,7 +691,10 @@ export const receiptRouter = createTRPCRouter({
           propertyDetails: {
             include: { propertyAddressDetails: true },
           },
-          tenant: { select: { id: true, firstName: true, paternalLastName: true, companyName: true } },
+          tenants: {
+            orderBy: { createdAt: 'asc' },
+            select: { id: true, firstName: true, paternalLastName: true, companyName: true },
+          },
           receiptConfigs: {
             orderBy: [{ effectiveYear: 'asc' }, { effectiveMonth: 'asc' }],
           },
@@ -728,7 +740,10 @@ export const receiptRouter = createTRPCRouter({
           effectiveMonth: c.effectiveMonth,
           receiptTypes: c.receiptTypes,
         })),
-        tenant: policy.tenant,
+        // Legacy singular key (first tenant by createdAt) — transition contract,
+        // removal is post-demo. New consumers read `tenants`.
+        tenant: policy.tenants[0] ?? null,
+        tenants: policy.tenants,
         policyNumber: policy.policyNumber,
         activatedAt: policy.activatedAt,
         rentAmount: policy.rentAmount,

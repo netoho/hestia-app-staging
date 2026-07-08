@@ -27,6 +27,7 @@ import {
   ActorVerificationStatus,
   EmploymentStatus,
 } from '@/prisma/generated/prisma-client/enums';
+import { policyApiCoreShape } from '@/lib/domain/policy/adapters/api';
 
 // ===========================================================================
 // Shared building blocks
@@ -124,50 +125,11 @@ const PropertyDetailsShape = z.object({
   propertyAddressDetails: PropertyAddressShape.nullable(),
 });
 
-// Top-level Policy fields (no relations).
-const PolicyTopLevelShape = z.object({
-  id: z.string(),
-  policyNumber: z.string(),
-  internalCode: z.string().nullable(),
-  rentAmount: z.number(),
-  contractLength: z.number(),
-  guarantorType: z.nativeEnum(GuarantorType),
-  packageId: z.string().nullable(),
-  totalPrice: z.number(),
-  tenantPercentage: z.number(),
-  landlordPercentage: z.number(),
-  // Financial/contract details — previously ABSENT here, so the contract
-  // lock stripped them from policy.getById on the wire and the admin
-  // surfaces rendered false/empty fiscal data whatever the landlord portal
-  // saved (the #174 strip class, caught by the #180 parity walker).
-  tenantPaymentMethod: z.string().nullable(),
-  tenantRequiresCFDI: z.boolean(),
-  tenantCFDIData: z.string().nullable(),
-  hasIVA: z.boolean(),
-  issuesTaxReceipts: z.boolean(),
-  securityDeposit: z.number().nullable(),
-  maintenanceFee: z.number().nullable(),
-  maintenanceIncludedInRent: z.boolean(),
-  rentIncreasePercentage: z.number().nullable(),
-  paymentMethod: z.string().nullable(),
-  contractStartDate: z.date().nullable(),
-  contractEndDate: z.date().nullable(),
-  status: z.nativeEnum(PolicyStatus),
-  createdById: z.string(),
-  managedById: z.string().nullable(),
-  submittedAt: z.date().nullable(),
-  approvedAt: z.date().nullable(),
-  activatedAt: z.date().nullable(),
-  expiresAt: z.date().nullable(),
-  reviewNotes: z.string().nullable(),
-  cancelledAt: z.date().nullable(),
-  cancellationReason: z.nativeEnum(PolicyCancellationReason).nullable(),
-  cancellationComment: z.string().nullable(),
-  cancelledById: z.string().nullable(),
-  renewedToId: z.string().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
+// Top-level Policy fields (no relations) — the wire core now lives in the
+// domain api adapter and is drift-tested BIDIRECTIONALLY against the
+// canonical policySchema: a canonical field missing from the wire is the
+// #174 strip class (admin renders false/empty data the portals saved).
+const PolicyTopLevelShape = policyApiCoreShape;
 
 // ===========================================================================
 // policy.checkNumber
@@ -208,6 +170,9 @@ const PolicyCreatedTenant = z.object({
 
 export const PolicyCreatedShape = PolicyTopLevelShape.extend({
   landlords: z.array(PolicyCreatedLandlord),
+  // Transition contract (S5a #133): plural `tenants` is canonical; the
+  // singular stays until the component sweep in S5b. Iterate, never index.
+  tenants: z.array(PolicyCreatedTenant),
   tenant: PolicyCreatedTenant.nullable(),
 });
 
@@ -226,6 +191,9 @@ const PolicyListItemShape = PolicyTopLevelShape.extend({
   createdBy: UserRefShape,
   managedBy: UserRefShape.nullable(),
   landlords: z.array(LandlordShape),
+  // Transition contract (S5a #133): plural `tenants` is canonical; the
+  // singular stays until the component sweep in S5b. Iterate, never index.
+  tenants: z.array(TenantShape),
   tenant: TenantShape.nullable(),
   jointObligors: z.array(JointObligorShape),
   avals: z.array(AvalShape),
@@ -294,6 +262,9 @@ const PolicyGetByIdShape = PolicyTopLevelShape.extend({
   createdBy: UserRefShape,
   managedBy: UserRefShape.nullable(),
   landlords: z.array(PolicyGetByIdLandlord),
+  // Transition contract (S5a #133): plural `tenants` is canonical; the
+  // singular stays until the component sweep in S5b. Iterate, never index.
+  tenants: z.array(PolicyGetByIdTenant),
   tenant: PolicyGetByIdTenant.nullable(),
   jointObligors: z.array(PolicyGetByIdJointObligor),
   avals: z.array(PolicyGetByIdAval),

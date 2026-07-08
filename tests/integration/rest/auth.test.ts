@@ -140,10 +140,11 @@ describe('POST /api/auth/login', () => {
 });
 
 // ===========================================================================
-// /api/auth/register
+// /api/auth/register — REMOVED (#162): invite-only broker onboarding.
+// The route is a 410 tombstone; no account may ever be minted through it.
 // ===========================================================================
-describe('POST /api/auth/register', () => {
-  test('creates a BROKER user and returns 201 with token', async () => {
+describe('POST /api/auth/register (tombstone, #162)', () => {
+  test('returns 410 Gone and creates NO user', async () => {
     const email = `register-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@hestia.test`;
     const res = await registerPost(
       buildJsonRequest('POST', 'http://localhost/api/auth/register', {
@@ -154,38 +155,9 @@ describe('POST /api/auth/register', () => {
     );
     const { status, body } = await readJson(res);
 
-    expect(status).toBe(201);
-    expect(body).toMatchObject({
-      user: { email, role: UserRole.BROKER },
-      token: expect.any(String),
-    });
-
-    // User persisted with hashed password
-    const persisted = await prisma.user.findUnique({ where: { email } });
-    expect(persisted).not.toBeNull();
-    expect(persisted?.password).not.toBeNull();
-    expect(persisted?.password).not.toBe('TestPassword1');
-  });
-
-  test('returns 409 when email already exists', async () => {
-    const existing = await userFactory.create({ role: UserRole.BROKER });
-    const res = await registerPost(
-      buildJsonRequest('POST', 'http://localhost/api/auth/register', {
-        email: existing.email,
-        password: 'AnotherPass1',
-      }) as never,
-    );
-    expect(res.status).toBe(409);
-  });
-
-  test('returns 400 for invalid input (short password)', async () => {
-    const res = await registerPost(
-      buildJsonRequest('POST', 'http://localhost/api/auth/register', {
-        email: `bad-${Date.now()}@hestia.test`,
-        password: '123',
-      }) as never,
-    );
-    expect(res.status).toBe(400);
+    expect(status).toBe(410);
+    expect(body).toMatchObject({ error: expect.stringContaining('invitación') });
+    expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
   });
 });
 

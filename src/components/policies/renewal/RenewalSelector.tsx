@@ -106,8 +106,11 @@ export function RenewalSelector({
     next[idx] = { ...next[idx], ...patch };
     onSelectionChange({ ...selection, landlords: next });
   };
-  const setTenant = (patch: Partial<TenantRenewalSelection>) =>
-    onSelectionChange({ ...selection, tenant: { ...selection.tenant, ...patch } });
+  const setTenant = (idx: number, patch: Partial<TenantRenewalSelection>) => {
+    const next = [...selection.tenants];
+    next[idx] = { ...next[idx], ...patch };
+    onSelectionChange({ ...selection, tenants: next });
+  };
   const setJO = (idx: number, patch: Partial<JointObligorRenewalSelection>) => {
     const next = [...selection.jointObligors];
     next[idx] = { ...next[idx], ...patch };
@@ -196,17 +199,23 @@ export function RenewalSelector({
         );
       })}
 
-      {/* Tenant */}
-      {source.tenant ? (
-        <SectionCard
-          title={`${copy.tenantTitle}${source.tenant.displayName ? ` — ${source.tenant.displayName}` : ''}`}
-          included={selection.tenant.include}
-          onIncludedChange={(v) => setTenant({ include: v })}
-          subs={tenantSubs(copy)}
-          values={selection.tenant}
-          onChange={(k, v) => setTenant({ [k]: v } as Partial<TenantRenewalSelection>)}
-        />
-      ) : null}
+      {/* Tenants — every tenant is cloned (S5b clone-all; no include toggle) */}
+      {source.tenants.map((tn, idx) => {
+        const sel = selection.tenants.find((s) => s.sourceId === tn.id);
+        if (!sel) return null;
+        const selIdx = selection.tenants.indexOf(sel);
+        const numberedTitle =
+          source.tenants.length > 1 ? `${copy.tenantTitle} ${idx + 1}` : copy.tenantTitle;
+        return (
+          <SectionCard
+            key={tn.id}
+            title={`${numberedTitle}${tn.displayName ? ` — ${tn.displayName}` : ''}`}
+            subs={tenantSubs(copy)}
+            values={sel as unknown as Record<string, boolean>}
+            onChange={(k, v) => setTenant(selIdx, { [k]: v } as Partial<TenantRenewalSelection>)}
+          />
+        );
+      })}
 
       {/* Joint obligors */}
       {showJOs(gt) ? (

@@ -50,7 +50,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
         }
       },
       landlords: true,
-      tenant: true,
+      tenants: true,
       jointObligors: true,
       avals: true,
     },
@@ -98,37 +98,40 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
     }
   }
 
-  // Generate token for tenant
-  if (shouldProcessActor('tenant', actors) && policy.tenant && policy.tenant.email && (resend || !policy.tenant.informationComplete)) {
-    const tokenData = await generateTenantToken(policy.tenant.id);
+  // Generate tokens for all tenants — each gets their own invitation + link,
+  // mirroring the landlord loop above.
+  for (const tenant of policy.tenants) {
+    if (shouldProcessActor('tenant', actors) && tenant.email && (resend || !tenant.informationComplete)) {
+      const tokenData = await generateTenantToken(tenant.id);
 
-    const sent = await sendActorInvitation({
-      actorType: 'tenant',
-      isCompany: policy.tenant.tenantType === TenantType.COMPANY,
-      email: policy.tenant.email,
-      name: policy.tenant.companyName ||
-        (policy.tenant.firstName ? formatFullName(
-          policy.tenant.firstName,
-          policy.tenant.paternalLastName || '',
-          policy.tenant.maternalLastName || '',
-          policy.tenant.middleName || undefined
-        ) : 'Inquilino'),
-      token: tokenData.token,
-      url: tokenData.url,
-      policyNumber: policy.policyNumber,
-      propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
-      expiryDate: tokenData.expiresAt,
-      initiatorName,
-    });
+      const sent = await sendActorInvitation({
+        actorType: 'tenant',
+        isCompany: tenant.tenantType === TenantType.COMPANY,
+        email: tenant.email,
+        name: tenant.companyName ||
+          (tenant.firstName ? formatFullName(
+            tenant.firstName,
+            tenant.paternalLastName || '',
+            tenant.maternalLastName || '',
+            tenant.middleName || undefined
+          ) : 'Inquilino'),
+        token: tokenData.token,
+        url: tokenData.url,
+        policyNumber: policy.policyNumber,
+        propertyAddress: policy.propertyDetails?.propertyAddressDetails?.formattedAddress,
+        expiryDate: tokenData.expiresAt,
+        initiatorName,
+      });
 
-    invitations.push({
-      actorType: 'tenant',
-      email: policy.tenant.email,
-      sent,
-      token: tokenData.token,
-      url: tokenData.url,
-      expiresAt: tokenData.expiresAt,
-    });
+      invitations.push({
+        actorType: 'tenant',
+        email: tenant.email,
+        sent,
+        token: tokenData.token,
+        url: tokenData.url,
+        expiresAt: tokenData.expiresAt,
+      });
+    }
   }
 
   // Generate tokens for joint obligors

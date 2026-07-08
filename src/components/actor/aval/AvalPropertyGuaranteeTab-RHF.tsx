@@ -374,6 +374,27 @@ export default function AvalPropertyGuaranteeTab({
                         </FormItem>
                       )}
                     />
+
+                    {/* Marriage certificate — OPTIONAL by ruling (2026-07-07,
+                        #177): supports the spouse's consent over the property
+                        guarantee; never gates completion. */}
+                    <div className="md:col-span-2">
+                      <DocumentManagerCard
+                        category={DocumentCategory.MARRIAGE_CERTIFICATE}
+                        title="Acta de Matrimonio"
+                        description="Opcional — respalda el consentimiento del cónyuge sobre la garantía"
+                        documentType="marriage_certificate"
+                        documents={documents[DocumentCategory.MARRIAGE_CERTIFICATE] || []}
+                        required={false}
+                        allowMultiple={false}
+                        onUpload={(file) =>
+                          uploadDocument(file, DocumentCategory.MARRIAGE_CERTIFICATE, 'marriage_certificate')
+                        }
+                        onDelete={deleteDocument}
+                        onDownload={downloadDocument}
+                        operations={getCategoryOperations(DocumentCategory.MARRIAGE_CERTIFICATE)}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

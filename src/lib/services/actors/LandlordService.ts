@@ -86,21 +86,16 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
     if (landlordData.propertyRegistryFolio !== undefined) updateData.propertyRegistryFolio = landlordData.propertyRegistryFolio || null;
     if (landlordData.propertyValue !== undefined) updateData.propertyValue = landlordData.propertyValue || null;
 
-    // Financial fields
-    if (landlordData.hasAdditionalIncome !== undefined) updateData.hasAdditionalIncome = landlordData.hasAdditionalIncome;
-    if (landlordData.additionalIncomeSource !== undefined) updateData.additionalIncomeSource = landlordData.additionalIncomeSource || null;
-    if (landlordData.additionalIncomeAmount !== undefined) updateData.additionalIncomeAmount = landlordData.additionalIncomeAmount || null;
+    // hasAdditionalIncome / additionalIncomeSource / additionalIncomeAmount /
+    // monthlyIncome(company) / cfdiData were trimmed from the landlord
+    // schemas on #189 (no tab ever rendered them) — the dormant columns are
+    // no longer writable through actor.update.
 
     // Company specific
     if (landlordData.businessType !== undefined) updateData.businessType = landlordData.businessType || null;
-    if (landlordData.monthlyIncome !== undefined && data.isCompany) {
-      // Base service only handles monthlyIncome for persons
-      updateData.monthlyIncome = landlordData.monthlyIncome || null;
-    }
 
     // CFDI
     if (landlordData.requiresCFDI !== undefined) updateData.requiresCFDI = landlordData.requiresCFDI;
-    if (landlordData.cfdiData !== undefined) updateData.cfdiData = landlordData.cfdiData;
 
     return updateData;
   }
@@ -404,6 +399,54 @@ export class LandlordService extends BaseActorService<LandlordWithRelations, Lan
   /**
    * Remove a landlord (only if not primary)
    */
+  /**
+   * Create an empty co-owner row on a policy (admin-only surface, #189).
+   * The new landlord fills their own record via their portal link — never
+   * through another landlord's form.
+   */
+  async addCoOwner(landlordPolicyId: string): AsyncResult<{ id: string }> {
+    // Guards live OUTSIDE executeDbOperation — it wraps any throw into a
+    // generic database ServiceError, losing the typed code/status.
+    const policy = await this.prisma.policy.findUnique({
+      where: { id: landlordPolicyId },
+      select: { id: true },
+    });
+    if (!policy) {
+      return Result.error(new ServiceError(ErrorCode.NOT_FOUND, 'Policy not found', 404));
+    }
+
+    const count = await this.prisma.landlord.count({
+      where: { policyId: landlordPolicyId },
+    });
+    if (count >= 5) {
+      return Result.error(
+        new ServiceError(ErrorCode.VALIDATION_ERROR, 'Máximo 5 arrendadores permitidos', 400),
+      );
+    }
+
+    return this.executeDbOperation(async () => {
+      const landlord = await this.prisma.landlord.create({
+        // email/phone/address are legacy-REQUIRED columns; the co-owner
+        // arrives empty by design and fills their own record (#189).
+        data: {
+          policyId: landlordPolicyId,
+          isPrimary: false,
+          isCompany: false,
+          email: '',
+          phone: '',
+          address: '',
+        },
+        select: { id: true },
+      });
+
+      this.log('info', 'Co-owner landlord added', {
+        policyId: landlordPolicyId,
+        landlordId: landlord.id,
+      });
+      return landlord;
+    }, 'addCoOwner');
+  }
+
   async removeLandlord(landlordId: string): AsyncResult<void> {
     return this.executeDbOperation(async () => {
       const landlord = await this.prisma.landlord.findUnique({

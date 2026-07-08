@@ -39,7 +39,8 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
         status: PolicyStatus.ACTIVE,
       },
       include: {
-        tenant: {
+        tenants: {
+          orderBy: { createdAt: 'asc' },
           select: {
             id: true,
             email: true,
@@ -62,9 +63,10 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
       result.policiesProcessed++;
 
       try {
-        const tenant = policy.tenant;
-        if (!tenant || !tenant.email) {
-          console.log(`[RECEIPT-REMINDER] Policy ${policy.policyNumber}: no tenant or email, skipping`);
+        // Every tenant with an email gets reminded until the month is satisfied
+        const tenants = policy.tenants.filter(tenant => tenant.email);
+        if (tenants.length === 0) {
+          console.log(`[RECEIPT-REMINDER] Policy ${policy.policyNumber}: no tenant with email, skipping`);
           result.skipped++;
           continue;
         }
@@ -79,7 +81,8 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
           continue;
         }
 
-        // Check which receipts already exist for this month
+        // Check which receipts already exist for this month.
+        // Policy-scoped: any tenant's upload satisfies the month.
         const existingReceipts = await prisma.tenantReceipt.findMany({
           where: {
             policyId: policy.id,
@@ -102,58 +105,77 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
           continue;
         }
 
-        // Generate/renew tenant token for portal access
-        const { token } = await actorTokenService.generateTenantToken(tenant.id);
-        const portalUrl = `${process.env.NEXTAUTH_URL}/portal/receipts/${token}`;
-
-        // Build tenant name
-        const tenantName = tenant.companyName ||
-          formatFullName(
-            tenant.firstName || '',
-            tenant.paternalLastName || '',
-            tenant.maternalLastName || '',
-            tenant.middleName || undefined,
-          );
-
-        // Build property address
+        // Build property address (shared across tenants)
         const propertyAddress = formatAddress(policy.propertyDetails?.propertyAddressDetails);
 
-        // Send reminder
-        const success = await sendReceiptReminder({
-          tenantName,
-          email: tenant.email,
-          propertyAddress,
-          policyNumber: policy.policyNumber,
-          monthName,
-          year,
-          requiredReceipts: pendingTypes.map(type => t.types[type] || type),
-          portalUrl,
-        });
+        for (const tenant of tenants) {
+          try {
+            // Per-tenant portal link: each tenant has their own access token
+            const { token } = await actorTokenService.generateTenantToken(tenant.id);
+            const portalUrl = `${process.env.NEXTAUTH_URL}/portal/receipts/${token}`;
 
-        if (success) {
-          result.remindersSent++;
-          console.log(`[RECEIPT-REMINDER] Sent to ${tenant.email} for policy ${policy.policyNumber} (${pendingTypes.length} pending)`);
-        } else {
-          throw new Error('Email send returned false');
-        }
+            // Build tenant name
+            const tenantName = tenant.companyName ||
+              formatFullName(
+                tenant.firstName || '',
+                tenant.paternalLastName || '',
+                tenant.maternalLastName || '',
+                tenant.middleName || undefined,
+              );
 
-        // Log to ReminderLog
-        await prisma.reminderLog.create({
-          data: {
-            reminderType: 'tenant_receipt',
-            recipientEmail: tenant.email,
-            recipientName: tenantName,
-            policyId: policy.id,
-            status: success ? 'sent' : 'failed',
-            metadata: {
+            // Send reminder
+            const success = await sendReceiptReminder({
+              tenantName,
+              email: tenant.email,
+              propertyAddress,
+              policyNumber: policy.policyNumber,
+              monthName,
               year,
-              month,
-              pendingTypes,
-              totalRequired: requiredTypes.length,
-              alreadyCompleted: completedTypes.size,
-            },
-          },
-        });
+              requiredReceipts: pendingTypes.map(type => t.types[type] || type),
+              portalUrl,
+            });
+
+            if (success) {
+              result.remindersSent++;
+              console.log(`[RECEIPT-REMINDER] Sent to ${tenant.email} for policy ${policy.policyNumber} (${pendingTypes.length} pending)`);
+            } else {
+              throw new Error('Email send returned false');
+            }
+
+            // Log to ReminderLog (one row per tenant reminded)
+            await prisma.reminderLog.create({
+              data: {
+                reminderType: 'tenant_receipt',
+                recipientEmail: tenant.email,
+                recipientName: tenantName,
+                policyId: policy.id,
+                status: 'sent',
+                metadata: {
+                  year,
+                  month,
+                  pendingTypes,
+                  totalRequired: requiredTypes.length,
+                  alreadyCompleted: completedTypes.size,
+                },
+              },
+            });
+          } catch (error) {
+            // One tenant failing must not stop the rest of the fan-out
+            const msg = `Policy ${policy.policyNumber} (${tenant.email}): ${error instanceof Error ? error.message : error}`;
+            console.error(`[RECEIPT-REMINDER] ${msg}`);
+            result.errors.push(msg);
+
+            await prisma.reminderLog.create({
+              data: {
+                reminderType: 'tenant_receipt',
+                recipientEmail: tenant.email,
+                policyId: policy.id,
+                status: 'failed',
+                errorMessage: msg,
+              },
+            }).catch(() => {}); // Don't fail on log error
+          }
+        }
 
       } catch (error) {
         const msg = `Policy ${policy.policyNumber}: ${error instanceof Error ? error.message : error}`;
@@ -164,7 +186,7 @@ export async function sendMonthlyReceiptReminders(): Promise<ReminderResult> {
         await prisma.reminderLog.create({
           data: {
             reminderType: 'tenant_receipt',
-            recipientEmail: policy.tenant?.email || 'unknown',
+            recipientEmail: policy.tenants[0]?.email || 'unknown',
             policyId: policy.id,
             status: 'failed',
             errorMessage: msg,

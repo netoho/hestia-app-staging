@@ -138,6 +138,11 @@ export const createPolicy = {
       rfcCurp: 'RFC/CURP',
       rfcCompanyPlaceholder: 'RFC de la empresa',
       rfcOrCurpPlaceholder: 'RFC o CURP',
+      // Neutral numbered card titles — every tenant is first-class, never "principal"
+      tenantTitle: (index: number) => `Inquilino ${index}`,
+      coTenantHelp: 'Agregue coinquilinos si más de una persona rentará el inmueble. Cada uno recibirá un enlace para completar su información.',
+      addCoTenant: 'Agregar coinquilino',
+      removeCoTenant: 'Eliminar',
     },
     guarantors: {
       title: 'Obligado Solidario / Aval',
@@ -167,6 +172,7 @@ export const createPolicy = {
         packageAndPrice: 'Paquete y Precio',
         landlord: 'Arrendador',
         tenant: 'Inquilino',
+        tenants: (count: number) => (count > 1 ? `Inquilinos (${count})` : 'Inquilino'),
         guarantees: 'Garantías',
       },
       labels: {

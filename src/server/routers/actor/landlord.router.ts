@@ -20,7 +20,9 @@ import {
   ActorValidateLandlordOutput,
   ActorGetLandlordsByPolicyOutput,
   ActorDeleteCoOwnerOutput,
+  ActorAddCoOwnerOutput,
 } from '@/lib/schemas/actor/output';
+import { logPolicyActivity } from '@/lib/services/policyService';
 
 // ============================================
 // LANDLORD-SPECIFIC ROUTER
@@ -258,8 +260,19 @@ export const landlordRouter = createTRPCRouter({
       id: z.string(),
     }))
     .output(ActorDeleteCoOwnerOutput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const service = new LandlordService();
+
+      // Snapshot identity BEFORE deletion so the activity trail names who
+      // was removed (#183 — removal used to leave no audit trace).
+      const existing = await service.getById(input.id);
+      const removedName = existing.ok
+        ? existing.value.companyName ||
+          `${existing.value.firstName ?? ''} ${existing.value.paternalLastName ?? ''}`.trim() ||
+          input.id
+        : input.id;
+      const policyId = existing.ok ? existing.value.policyId : null;
+
       const result = await service.removeLandlord(input.id);
 
       if (!result.ok) {
@@ -269,6 +282,46 @@ export const landlordRouter = createTRPCRouter({
         });
       }
 
+      if (policyId) {
+        await logPolicyActivity({
+          policyId,
+          action: 'landlord_removed',
+          description: `Copropietario eliminado: ${removedName}`,
+          details: { landlordId: input.id, name: removedName },
+          performedById: ctx.session?.user?.id ?? undefined,
+        });
+      }
+
       return { success: true };
+    }),
+
+  /**
+   * Admin-only: create an empty co-owner on the policy (#189). The new
+   * landlord completes their own record through their own portal link —
+   * co-owner add/remove no longer lives inside any landlord's form.
+   */
+  addCoOwner: protectedProcedure
+    .input(z.object({ policyId: z.string() }))
+    .output(ActorAddCoOwnerOutput)
+    .mutation(async ({ input, ctx }) => {
+      const service = new LandlordService();
+      const result = await service.addCoOwner(input.policyId);
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: result.error?.statusCode === 404 ? 'NOT_FOUND' : 'BAD_REQUEST',
+          message: result.error?.message || 'Failed to add co-owner',
+        });
+      }
+
+      await logPolicyActivity({
+        policyId: input.policyId,
+        action: 'landlord_added',
+        description: 'Copropietario agregado',
+        details: { landlordId: result.value.id },
+        performedById: ctx.session?.user?.id ?? undefined,
+      });
+
+      return { success: true, landlordId: result.value.id };
     }),
 });

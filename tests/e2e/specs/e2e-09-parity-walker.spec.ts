@@ -41,6 +41,22 @@ import {
 
 const SAVE_BUTTON = 'Guardar y Continuar';
 
+/**
+ * Navigate, retrying the transient ERR_NETWORK_IO_SUSPENDED Chromium throws
+ * when the heavy post-wizard detail page is still streaming as we leave it.
+ */
+async function gotoStable(page: Page, url: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await page.goto(url);
+      return;
+    } catch (err) {
+      if (attempt >= 3 || !String(err).includes('ERR_NETWORK_IO_SUSPENDED')) throw err;
+      await page.waitForTimeout(1_000);
+    }
+  }
+}
+
 function tokenFor(walk: ActorWalk, tokens: ActorTokens): string {
   switch (walk.actorType) {
     case 'tenant':
@@ -439,3 +455,196 @@ function walkFirstField(tab: WalkTab): string {
   const fields = walkableFields(tab.schema);
   return fields.find((f) => !allowed.has(f) && !allowed.has(f.split('.')[0])) ?? fields[0];
 }
+
+// ─── E2E-09e: multi-landlord — per-record isolation + admin add/remove ──────
+
+test('E2E-09e: multi-landlord — per-record portals, zero cross-bleed, admin add/remove co-owner', async ({ page }) => {
+  test.setTimeout(420_000);
+  await freshDb();
+  const LANDLORD_A_EMAIL = 'walker.landlordA@example.com';
+  const LANDLORD_B_EMAIL = 'walker.landlordB@example.com';
+  await createPolicyViaWizard(page, {
+    tenant: { type: 'INDIVIDUAL', firstName: 'Wanda', paternalLastName: 'Walker', email: 'walker.tenant@example.com' },
+    landlord: { firstName: 'Aurelio', paternalLastName: 'Primero', email: LANDLORD_A_EMAIL },
+    coLandlords: [{ firstName: 'Berta', paternalLastName: 'Segunda', email: LANDLORD_B_EMAIL }],
+    guarantor: { type: 'NONE' },
+  });
+  const policy = await getOnlyPolicy();
+  const tokens = await getActorTokens(policy.id);
+  const landlordA = tokens.landlords.find((l) => l.email === LANDLORD_A_EMAIL)!;
+  const landlordB = tokens.landlords.find((l) => l.email === LANDLORD_B_EMAIL)!;
+  const ownerTab = walksFor('INDIVIDUAL')[1].tabs[0];
+
+  // Portal A: renders ONLY its own record — plain names, own email, no
+  // indexed collective fields, and the sibling is nowhere on the page.
+  await page.goto(`/actor/landlord/${landlordA.token}`);
+  await expect(page.locator('[name="email"]')).toHaveValue(LANDLORD_A_EMAIL, { timeout: 30_000 });
+  expect(await page.locator('[name^="landlords."]').count()).toBe(0);
+  await expect(page.getByText('Berta')).toHaveCount(0);
+
+  await fillTabBySchema(page, ownerTab);
+  await fillPlainField(page, 'firstName', 'SoloPropietarioA');
+  await fillPlainField(page, 'email', LANDLORD_A_EMAIL);
+  await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  await page.locator('[name="propertyDeliveryDate"]').waitFor({ timeout: 30_000 });
+
+  // Portal B: untouched by A's save; fill with DISTINCT values.
+  await page.goto(`/actor/landlord/${landlordB.token}`);
+  await expect(page.locator('[name="email"]')).toHaveValue(LANDLORD_B_EMAIL, { timeout: 30_000 });
+  await expect(page.locator('[name="firstName"]')).not.toHaveValue('SoloPropietarioA');
+  await fillTabBySchema(page, ownerTab);
+  await fillPlainField(page, 'firstName', 'CopropietariaB');
+  await fillPlainField(page, 'email', LANDLORD_B_EMAIL);
+  await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  await page.locator('[name="propertyDeliveryDate"]').waitFor({ timeout: 30_000 });
+
+  // DB: both rows hold their own values — no bleed in either direction.
+  const rowA = await prisma.landlord.findUnique({ where: { id: landlordA.id } });
+  const rowB = await prisma.landlord.findUnique({ where: { id: landlordB.id } });
+  expect(rowA?.firstName).toBe('SoloPropietarioA');
+  expect(rowB?.firstName).toBe('CopropietariaB');
+
+  // Admin: one editor per landlord card, each per-record.
+  await page.goto(`/dashboard/policies/${policy.id}?tab=landlord`);
+  const seen = new Set<string>();
+  for (const idx of [0, 1]) {
+    await page.getByRole('button', { name: 'Editar' }).nth(idx).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+    const control = dialog.locator('[data-field="firstName"]');
+    await control.waitFor({ timeout: 15_000 });
+    seen.add(await control.inputValue());
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    await expect(dialog).toBeHidden();
+  }
+  expect(seen).toEqual(new Set(['SoloPropietarioA', 'CopropietariaB']));
+
+  // Admin adds a co-owner: a third card appears, DB row exists empty, and
+  // the activity trail records it.
+  await page.getByRole('button', { name: 'Agregar Copropietario' }).click();
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(3, { timeout: 20_000 });
+  const added = await prisma.landlord.findFirst({
+    where: { policyId: policy.id, email: '' },
+  });
+  expect(added).not.toBeNull();
+  expect(
+    await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'landlord_added' },
+    }),
+  ).not.toBeNull();
+
+  // Admin removes it (confirm dialog) — card gone, row gone, event logged
+  // (#183: removal now leaves an audit trace).
+  await page.getByRole('button', { name: 'Eliminar' }).last().click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: 'Eliminar' })
+    .click();
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(2, { timeout: 20_000 });
+  expect(
+    await prisma.landlord.findUnique({ where: { id: added!.id } }),
+  ).toBeNull();
+  expect(
+    await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'landlord_removed' },
+    }),
+  ).not.toBeNull();
+});
+
+// ─── E2E-09f: multi-tenant — per-record isolation + admin add/remove ────────
+
+test('E2E-09f: multi-tenant — per-record portals, zero cross-bleed, admin add/remove co-tenant', async ({ page }) => {
+  test.setTimeout(420_000);
+  await freshDb();
+  const TENANT_A_EMAIL = 'walker.tenantA@example.com';
+  const TENANT_B_EMAIL = 'walker.tenantB@example.com';
+  await createPolicyViaWizard(page, {
+    tenant: { type: 'INDIVIDUAL', firstName: 'Aurelia', paternalLastName: 'Primera', email: TENANT_A_EMAIL },
+    coTenants: [{ type: 'INDIVIDUAL', firstName: 'Bruno', paternalLastName: 'Segundo', email: TENANT_B_EMAIL }],
+    landlord: { firstName: 'Lucas', paternalLastName: 'Dueño', email: 'walker.landlord@example.com' },
+    guarantor: { type: 'NONE' },
+  });
+  const policy = await getOnlyPolicy();
+  const tokens = await getActorTokens(policy.id);
+  // Two tenants, each with their OWN portal token — never a primary.
+  expect(tokens.tenants).toHaveLength(2);
+  const tenantA = tokens.tenants.find((t) => t.email === TENANT_A_EMAIL)!;
+  const tenantB = tokens.tenants.find((t) => t.email === TENANT_B_EMAIL)!;
+  expect(tenantA.token).not.toBe(tenantB.token);
+  const personalTab = walksFor('INDIVIDUAL')[0].tabs[0]; // tenant personal tab
+
+  // Portal A: renders ONLY its own record — own email, no indexed collective
+  // fields, and the sibling is nowhere on the page.
+  await gotoStable(page, `/actor/tenant/${tenantA.token}`);
+  await expect(page.locator('[name="email"]')).toHaveValue(TENANT_A_EMAIL, { timeout: 30_000 });
+  expect(await page.locator('[name^="tenants."]').count()).toBe(0);
+  await expect(page.getByText('Bruno')).toHaveCount(0);
+
+  await fillTabBySchema(page, personalTab);
+  await fillPlainField(page, 'firstName', 'SoloInquilinoA');
+  await fillPlainField(page, 'email', TENANT_A_EMAIL);
+  await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  await expect(page.getByText('✓ Guardado').first()).toBeVisible({ timeout: 30_000 });
+
+  // Portal B: untouched by A's save; fill with DISTINCT values.
+  await gotoStable(page, `/actor/tenant/${tenantB.token}`);
+  await expect(page.locator('[name="email"]')).toHaveValue(TENANT_B_EMAIL, { timeout: 30_000 });
+  await expect(page.locator('[name="firstName"]')).not.toHaveValue('SoloInquilinoA');
+  await fillTabBySchema(page, personalTab);
+  await fillPlainField(page, 'firstName', 'CoinquilinaB');
+  await fillPlainField(page, 'email', TENANT_B_EMAIL);
+  await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  await expect(page.getByText('✓ Guardado').first()).toBeVisible({ timeout: 30_000 });
+
+  // DB: both rows hold their own values — no bleed in either direction.
+  const rowA = await prisma.tenant.findUnique({ where: { id: tenantA.id } });
+  const rowB = await prisma.tenant.findUnique({ where: { id: tenantB.id } });
+  expect(rowA?.firstName).toBe('SoloInquilinoA');
+  expect(rowB?.firstName).toBe('CoinquilinaB');
+
+  // Admin: one editor per tenant card, each per-record.
+  await gotoStable(page, `/dashboard/policies/${policy.id}?tab=tenant`);
+  const seen = new Set<string>();
+  for (const idx of [0, 1]) {
+    await page.getByRole('button', { name: 'Editar' }).nth(idx).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+    const control = dialog.locator('[data-field="firstName"]');
+    await control.waitFor({ timeout: 15_000 });
+    seen.add(await control.inputValue());
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    await expect(dialog).toBeHidden();
+  }
+  expect(seen).toEqual(new Set(['SoloInquilinoA', 'CoinquilinaB']));
+
+  // Admin adds a co-tenant: a third card appears, an empty DB row exists, and
+  // the activity trail records it (no primary — count grows to three).
+  await page.getByRole('button', { name: 'Agregar inquilino' }).click();
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(3, { timeout: 20_000 });
+  const added = await prisma.tenant.findFirst({
+    where: { policyId: policy.id, email: '' },
+  });
+  expect(added).not.toBeNull();
+  expect(
+    await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'tenant_added' },
+    }),
+  ).not.toBeNull();
+
+  // Admin removes it (confirm dialog) — card gone, row archived+gone, event
+  // logged (#183: removal leaves an audit trace + a TenantHistory snapshot).
+  await page.getByRole('button', { name: 'Eliminar' }).last().click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: 'Eliminar' })
+    .click();
+  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(2, { timeout: 20_000 });
+  expect(
+    await prisma.tenant.findUnique({ where: { id: added!.id } }),
+  ).toBeNull();
+  expect(
+    await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'tenant_removed' },
+    }),
+  ).not.toBeNull();
+});

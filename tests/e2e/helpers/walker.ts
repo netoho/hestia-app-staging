@@ -149,11 +149,9 @@ const AVAL_PROPERTY_TAB = (variant: WalkVariant): WalkTab => ({
     : {}),
 });
 
-// The landlord portal is the COLLECTIVE form — RHF names are indexed. The
-// walker policy runs single-landlord policies (index 0 on both surfaces);
-// multi-landlord parity is blocked on the #171 save-hostage product call.
-const LANDLORD_PREFIX = 'landlords.0.';
-
+// Per-record landlord form since #189 — plain RHF names on both surfaces;
+// the collective indexed form (landlords.N.*) and its save-hostage died
+// with it. Multi-landlord isolation is E2E-09e.
 const landlordWalk = (variant: WalkVariant): ActorWalk => ({
   actorType: 'landlord',
   portalPath: '/actor/landlord',
@@ -163,7 +161,6 @@ const landlordWalk = (variant: WalkVariant): ActorWalk => ({
     {
       id: 'owner-info',
       label: 'Información',
-      prefix: LANDLORD_PREFIX,
       schema:
         variant === 'COMPANY'
           ? landlordOwnerInfoCompanySchema
@@ -171,14 +168,6 @@ const landlordWalk = (variant: WalkVariant): ActorWalk => ({
       allowedSkip: [
         ...PERSON_CONDITIONALS,
         'isPrimary', // legacy flag — a badge, not a control
-        ...(variant === 'COMPANY'
-          ? [
-              // The company schema declares legacy free-text `address` as
-              // REQUIRED, yet no surface renders a control for it and saves
-              // pass anyway — schema/resolver drift, flagged on #180/#160.
-              'address',
-            ]
-          : []),
       ],
     },
     {
@@ -258,12 +247,8 @@ export function walksFor(variant: WalkVariant): ActorWalk[] {
             {
               id: 'personal',
               label: 'Información',
+              // legalRepId gained its column + control on #150 — walked now.
               schema: jointObligorPersonalCompanyTabSchema,
-              allowedSkip: [
-                // Schema declares it but the JointObligor MODEL has no such
-                // column — nothing to render or persist (#150 family).
-                'legalRepId',
-              ],
             },
             JO_GUARANTEE_TAB,
           ]
@@ -288,12 +273,8 @@ export function walksFor(variant: WalkVariant): ActorWalk[] {
             {
               id: 'personal',
               label: 'Información',
+              // legalRepId gained its column + control on #150 — walked now.
               schema: AVAL_TAB_SCHEMAS.COMPANY.personal,
-              allowedSkip: [
-                // Schema declares it but the Aval MODEL has no such column —
-                // nothing to render or persist (#150 family).
-                'legalRepId',
-              ],
             },
             // Re-enabled (#190): the toastless save was stale pre-walk row
             // values spread into defaultValues failing validation on fields

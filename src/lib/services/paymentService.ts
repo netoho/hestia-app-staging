@@ -11,9 +11,11 @@ import Stripe from 'stripe';
 import { ServiceError, ErrorCode } from './types/errors';
 import { BaseService } from './base/BaseService';
 import { pricingService } from './pricingService';
+import { sendPaymentLinkEmail } from './emailService';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 import { calculateBreakdown } from '@/lib/utils/money';
 import { PAYMENT_LIMITS } from '@/lib/config/payments';
+import { formatFullName } from '@/lib/utils/names';
 
 // IVA multiplier for convenience (1 + 0.16 = 1.16)
 const IVA_MULTIPLIER = 1 + TAX_CONFIG.IVA_RATE;
@@ -252,8 +254,13 @@ class PaymentService extends BaseService {
     // Get policy details for line item description
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
-      select: { packageName: true, tenantEmail: true },
+      select: { packageName: true, tenants: { select: { email: true } } },
     });
+
+    // Prefill only when the policy has exactly one tenant — with co-tenants the
+    // shared link must not bind checkout to any single tenant's email.
+    const soleTenantEmail =
+      policy?.tenants.length === 1 ? policy.tenants[0].email || undefined : undefined;
 
     // Create checkout session in Stripe with idempotency key for retry safety
     const idempotencyKey = `checkout-${policyId}-${amount}`;
@@ -265,7 +272,7 @@ class PaymentService extends BaseService {
             currency: currency.toLowerCase(),
             product_data: {
               name: policy?.packageName || 'Protección de Garantía',
-              description: `Pago de protección para ${policy?.tenantEmail || 'inquilino'}`,
+              description: `Pago de protección para ${soleTenantEmail || 'inquilinos'}`,
             },
             unit_amount: Math.round(amount * 100), // Convert to cents
           },
@@ -275,7 +282,7 @@ class PaymentService extends BaseService {
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer_email: customerEmail || policy?.tenantEmail,
+      customer_email: customerEmail || soleTenantEmail,
       metadata: {
         policyId,
         ...metadata,
@@ -570,12 +577,16 @@ class PaymentService extends BaseService {
     // Get policy for metadata
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
-      select: { policyNumber: true, tenant: { select: { email: true } } },
+      select: { policyNumber: true, tenants: { select: { email: true } } },
     });
 
     if (!policy) {
       throw new ServiceError(ErrorCode.NOT_FOUND, 'Policy not found', 404, { policyId });
     }
+
+    // Prefill only when the policy has exactly one tenant (shared link, N>1 → no prefill)
+    const soleTenantEmail =
+      policy.tenants.length === 1 ? policy.tenants[0].email || undefined : undefined;
 
     // Calculate expiry (24 hours from now)
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -630,7 +641,7 @@ class PaymentService extends BaseService {
         mode: 'payment',
         success_url: successUrl,
         cancel_url: cancelUrl,
-        customer_email: customerEmail || policy.tenant?.email,
+        customer_email: customerEmail || soleTenantEmail,
         metadata: {
           paymentId: payment.id,
           policyId,
@@ -757,6 +768,114 @@ class PaymentService extends BaseService {
     });
 
     return result;
+  }
+
+  /**
+   * Email the shared payment link of a TENANT-paid payment to EVERY tenant
+   * of the policy. The link is the public /payments/[id] page (durable —
+   * checkout sessions are recreated on demand), so all tenants receive the
+   * SAME link and any of them can complete the payment.
+   */
+  async sendPaymentLinkToTenants(paymentId: string, sentById: string): Promise<{ sentTo: number }> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        policy: {
+          select: {
+            policyNumber: true,
+            tenants: {
+              orderBy: { createdAt: 'asc' },
+              select: {
+                email: true,
+                firstName: true,
+                middleName: true,
+                paternalLastName: true,
+                maternalLastName: true,
+                companyName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+    }
+
+    if (payment.paidBy !== PayerType.TENANT) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'Only tenant-paid payments can be sent to tenants',
+        400,
+        { paidBy: payment.paidBy }
+      );
+    }
+
+    // A link exists / can be created on demand only for PENDING non-manual payments
+    if (payment.isManual || payment.status !== PaymentStatus.PENDING) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'Payment has no shareable link',
+        400,
+        { status: payment.status, isManual: payment.isManual }
+      );
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const paymentUrl = `${baseUrl}/payments/${payment.id}`;
+
+    const recipients = payment.policy.tenants.filter(
+      (tenant: { email: string }) => tenant.email,
+    );
+    if (recipients.length === 0) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'No tenant has an email on file',
+        400,
+        { policyId: payment.policyId }
+      );
+    }
+
+    let sentTo = 0;
+    for (const tenant of recipients) {
+      const tenantName = tenant.companyName ||
+        formatFullName(
+          tenant.firstName || '',
+          tenant.paternalLastName || '',
+          tenant.maternalLastName || '',
+          tenant.middleName || undefined,
+        );
+
+      const sent = await sendPaymentLinkEmail({
+        email: tenant.email,
+        tenantName: tenantName || undefined,
+        policyNumber: payment.policy.policyNumber,
+        paymentDescription: payment.description || 'Pago de Protección',
+        amount: payment.amount,
+        paymentUrl,
+      });
+      if (sent) sentTo++;
+    }
+
+    await this.prisma.policyActivity.create({
+      data: {
+        policyId: payment.policyId,
+        action: 'payment_link_sent',
+        description: `Link de pago enviado a ${sentTo} inquilino(s)`,
+        details: {
+          paymentId,
+          paymentType: payment.type,
+          amount: payment.amount,
+          recipients: sentTo,
+          skippedNoEmail: payment.policy.tenants.length - recipients.length,
+        },
+        performedById: sentById,
+        performedByType: 'user',
+      },
+    });
+
+    return { sentTo };
   }
 
   /**
@@ -1114,7 +1233,7 @@ class PaymentService extends BaseService {
       where: { id: paymentId },
       include: {
         policy: {
-          select: { policyNumber: true, tenant: { select: { email: true } } },
+          select: { policyNumber: true, tenants: { select: { email: true } } },
         },
       },
     });
@@ -1161,6 +1280,12 @@ class PaymentService extends BaseService {
     // Idempotency key for on-demand session creation - uses existing sessionId or 'new'
     const idempotencyKey = `session-${paymentId}-${payment.stripeSessionId ?? 'new'}`;
 
+    // Prefill only when the policy has exactly one tenant (shared link, N>1 → no prefill)
+    const soleTenantEmail =
+      payment.policy.tenants.length === 1
+        ? payment.policy.tenants[0].email || undefined
+        : undefined;
+
     // Create new Stripe session
     const session = await stripeInstance.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -1181,7 +1306,7 @@ class PaymentService extends BaseService {
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer_email: payment.policy.tenant?.email,
+      customer_email: soleTenantEmail,
       metadata: {
         paymentId: payment.id,
         policyId: payment.policyId,
@@ -1303,7 +1428,7 @@ class PaymentService extends BaseService {
       where: { id: paymentId },
       include: {
         policy: {
-          select: { policyNumber: true, tenant: { select: { email: true, firstName: true } } },
+          select: { policyNumber: true, tenants: { select: { email: true, firstName: true } } },
         },
       },
     });
@@ -1336,10 +1461,16 @@ class PaymentService extends BaseService {
 
     const stripeInstance = await getStripe();
 
+    // The Customer exists only to carry the customer_balance CLABE. Attach
+    // email/name only when the policy has exactly one tenant; with co-tenants
+    // the shared SPEI reference must stay anonymous.
+    const soleTenant =
+      payment.policy.tenants.length === 1 ? payment.policy.tenants[0] : null;
+
     // Create Stripe Customer for this payment
     const customer = await stripeInstance.customers.create({
-      email: payment.policy.tenant?.email || undefined,
-      name: payment.policy.tenant?.firstName || undefined,
+      email: soleTenant?.email || undefined,
+      name: soleTenant?.firstName || undefined,
       metadata: {
         paymentId: payment.id,
         policyId: payment.policyId,
@@ -1489,7 +1620,7 @@ class PaymentService extends BaseService {
       where: { id: paymentId },
       include: {
         policy: {
-          select: { policyNumber: true, tenant: { select: { email: true } } },
+          select: { policyNumber: true, tenants: { select: { email: true } } },
         },
       },
     });
@@ -1539,6 +1670,12 @@ class PaymentService extends BaseService {
     const taxRateId = process.env.STRIPE_TAX_RATE_ID;
     const subtotalForStripe = taxRateId ? Math.round((newAmount / IVA_MULTIPLIER) * 100) : Math.round(newAmount * 100);
 
+    // Prefill only when the policy has exactly one tenant (shared link, N>1 → no prefill)
+    const soleTenantEmail =
+      payment.policy.tenants.length === 1
+        ? payment.policy.tenants[0].email || undefined
+        : undefined;
+
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       line_items: [
@@ -1558,7 +1695,7 @@ class PaymentService extends BaseService {
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer_email: payment.policy.tenant?.email,
+      customer_email: soleTenantEmail,
       metadata: {
         paymentId: payment.id,
         policyId: payment.policyId,
@@ -1679,6 +1816,7 @@ export const getOrCreateCheckoutSession = paymentService.getOrCreateCheckoutSess
 export const getPublicPaymentInfo = paymentService.getPublicPaymentInfo.bind(paymentService);
 export const createSpeiPaymentIntent = paymentService.createSpeiPaymentIntent.bind(paymentService);
 export const getSpeiDetails = paymentService.getSpeiDetails.bind(paymentService);
+export const sendPaymentLinkToTenants = paymentService.sendPaymentLinkToTenants.bind(paymentService);
 
 // Re-export class for type usage
 export { PaymentService };

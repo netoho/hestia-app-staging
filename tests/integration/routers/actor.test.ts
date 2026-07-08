@@ -32,6 +32,7 @@ import { createPolicyWithActors } from '../scenarios';
 import {
   jointObligorFactory,
   avalFactory,
+  landlordFactory,
   packageFactory,
   actorDocumentFactory,
   propertyDeedDocument,
@@ -638,6 +639,84 @@ describe('actor.deleteCoOwner (landlord)', () => {
       caller.actor.deleteCoOwner({ type: 'landlord', id: landlord.id }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
+
+  test('removes a co-owner and logs a landlord_removed activity (#183)', async () => {
+    const { policy } = await createPolicyWithActors();
+    const coOwner = await landlordFactory.create(
+      { isPrimary: false, firstName: 'Berta', paternalLastName: 'Saliente' },
+      { transient: { policyId: policy.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.actor.deleteCoOwner({ type: 'landlord', id: coOwner.id });
+    expect(result).toEqual({ success: true });
+
+    expect(await prisma.landlord.findUnique({ where: { id: coOwner.id } })).toBeNull();
+
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'landlord_removed' },
+    });
+    expect(activity).not.toBeNull();
+    expect(activity?.description).toContain('Berta');
+  });
+
+  test('rejects removing the primary landlord', async () => {
+    const { landlord } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.actor.deleteCoOwner({ type: 'landlord', id: landlord.id }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+});
+
+// ===========================================================================
+// landlord.addCoOwner — admin-only co-owner creation (#189)
+// ===========================================================================
+describe('actor.addCoOwner (landlord)', () => {
+  test('creates an empty co-owner and logs a landlord_added activity', async () => {
+    const { policy } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    const result = await caller.actor.addCoOwner({ policyId: policy.id });
+    expect(result.success).toBe(true);
+
+    const created = await prisma.landlord.findUnique({ where: { id: result.landlordId } });
+    expect(created).toMatchObject({ policyId: policy.id, isPrimary: false, isCompany: false });
+
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'landlord_added' },
+    });
+    expect(activity).not.toBeNull();
+  });
+
+  test('throws NOT_FOUND for an unknown policy', async () => {
+    const { caller } = await createAdminCaller();
+    await expect(caller.actor.addCoOwner({ policyId: 'nope' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('rejects a sixth landlord (max 5)', async () => {
+    const { policy } = await createPolicyWithActors(); // 1 landlord
+    for (let i = 0; i < 4; i++) {
+      await landlordFactory.create(
+        { isPrimary: false },
+        { transient: { policyId: policy.id } },
+      );
+    }
+    const { caller } = await createAdminCaller();
+    await expect(caller.actor.addCoOwner({ policyId: policy.id })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+  });
+
+  test('auth gate: any authed role allowed; PUBLIC blocked', async () => {
+    const { policy } = await createPolicyWithActors();
+    await expectAuthGate({
+      allowed: [UserRole.ADMIN, UserRole.STAFF, UserRole.BROKER],
+      invoke: (caller) => caller.actor.addCoOwner({ policyId: policy.id }),
+    });
+  });
 });
 
 // ===========================================================================
@@ -652,6 +731,30 @@ describe('actor.update (jointObligor) — domain toDb rewire', () => {
     const { token, caller } = await mintJointObligorToken(jo.id);
     return { jo, token, caller };
   }
+
+  test('company personal tab persists legalRepId (#150 tenant parity)', async () => {
+    const { jo, token, caller } = await makeJointObligor();
+    await caller.actor.update({
+      type: 'jointObligor',
+      identifier: token,
+      data: {
+        tabName: 'personal',
+        partial: true,
+        jointObligorType: 'COMPANY',
+        companyName: 'Obligada Solidaria SA de CV',
+        companyRfc: 'OSA010101AB1',
+        legalRepFirstName: 'Rita',
+        legalRepPaternalLastName: 'Poder',
+        legalRepId: 'PASAPORTE-G12345678',
+        email: 'os@hestia.test',
+        phone: '5553334455',
+      },
+    });
+
+    const refreshed = await prisma.jointObligor.findUnique({ where: { id: jo.id } });
+    expect(refreshed?.legalRepId).toBe('PASAPORTE-G12345678');
+    expect(refreshed?.companyName).toBe('Obligada Solidaria SA de CV');
+  });
 
   test('personal tab persists names and upserts the address relation', async () => {
     const { jo, token, caller } = await makeJointObligor();

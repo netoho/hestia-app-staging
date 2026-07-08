@@ -379,7 +379,7 @@ export const documentRouter = createTRPCRouter({
           where: {
             OR: [
               { landlords: { some: { id: actorId } } },
-              { tenant: { id: actorId } },
+              { tenants: { some: { id: actorId } } },
               { jointObligors: { some: { id: actorId } } },
               { avals: { some: { id: actorId } } },
             ],
@@ -420,7 +420,7 @@ export const documentRouter = createTRPCRouter({
       const policy = await ctx.prisma.policy.findUnique({
         where: { id: input.policyId },
         include: {
-          tenant: {
+          tenants: {
             include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
           },
           landlords: {
@@ -452,7 +452,7 @@ export const documentRouter = createTRPCRouter({
 
       // Collect all documents
       const documents = [
-        ...(policy.tenant?.documents || []).map(d => ({ ...d, actorType: 'tenant' as const })),
+        ...policy.tenants.flatMap(t => t.documents.map(d => ({ ...d, actorType: 'tenant' as const }))),
         ...policy.landlords.flatMap(l => l.documents.map(d => ({ ...d, actorType: 'landlord' as const }))),
         ...policy.jointObligors.flatMap(jo => jo.documents.map(d => ({ ...d, actorType: 'jointObligor' as const }))),
         ...policy.avals.flatMap(a => a.documents.map(d => ({ ...d, actorType: 'aval' as const }))),

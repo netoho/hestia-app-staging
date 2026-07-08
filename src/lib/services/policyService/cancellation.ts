@@ -57,6 +57,18 @@ export async function cancelPolicy(
     },
   });
 
+  // Kill every actor portal token (#165): a cancelled protección must not
+  // remain reachable through emailed links — tenant, all landlords, joint
+  // obligors and avals lose access immediately (the receipt portal rides
+  // the tenant token, so it dies with it).
+  const expireNow = { accessToken: null, tokenExpiry: null };
+  await prisma.$transaction([
+    prisma.tenant.updateMany({ where: { policyId: input.policyId }, data: expireNow }),
+    prisma.landlord.updateMany({ where: { policyId: input.policyId }, data: expireNow }),
+    prisma.jointObligor.updateMany({ where: { policyId: input.policyId }, data: expireNow }),
+    prisma.aval.updateMany({ where: { policyId: input.policyId }, data: expireNow }),
+  ]);
+
   // Log activity
   await logPolicyActivity({
     policyId: input.policyId,

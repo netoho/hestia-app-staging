@@ -186,45 +186,54 @@ export default function ReviewStep({
           </div>
         </div>
 
-        {/* Tenant Summary */}
+        {/* Tenants Summary */}
         <div>
-          <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.tenant}</h3>
-          <dl className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.tenantType}</dt>
-              <dd>{formData.tenant.tenantType === TenantType.INDIVIDUAL ? t.pages.createPolicy.steps.review.labels.individual : t.pages.createPolicy.steps.review.labels.companyType}</dd>
-            </div>
-            {formData.tenant.tenantType === TenantType.COMPANY && formData.tenant.companyName && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.company}</dt>
-                <dd>{formData.tenant.companyName}</dd>
-              </div>
-            )}
-            {(formData.tenant.tenantType === TenantType.INDIVIDUAL ||
-              (formData.tenant.tenantType === TenantType.COMPANY && formData.tenant.firstName)) && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">
-                  {formData.tenant.tenantType === TenantType.COMPANY ? t.pages.createPolicy.steps.review.labels.representative : t.pages.createPolicy.steps.review.labels.name}
-                </dt>
-                <dd>{formatFullName(
-                  formData.tenant.firstName,
-                  formData.tenant.paternalLastName,
-                  formData.tenant.maternalLastName,
-                  formData.tenant.middleName
-                )}</dd>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.email}</dt>
-              <dd>{formData.tenant.email}</dd>
-            </div>
-            {formData.tenant.phone && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.phone}</dt>
-                <dd>{formData.tenant.phone}</dd>
-              </div>
-            )}
-          </dl>
+          <h3 className="font-medium mb-2">{t.pages.createPolicy.steps.review.sections.tenants(formData.tenants.length)}</h3>
+          <div className="space-y-4">
+            {formData.tenants.map((tenant, index) => (
+              <dl key={index} className="space-y-1 text-sm">
+                {formData.tenants.length > 1 && (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {t.pages.createPolicy.steps.tenant.tenantTitle(index + 1)}
+                  </p>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.tenantType}</dt>
+                  <dd>{tenant.tenantType === TenantType.INDIVIDUAL ? t.pages.createPolicy.steps.review.labels.individual : t.pages.createPolicy.steps.review.labels.companyType}</dd>
+                </div>
+                {tenant.tenantType === TenantType.COMPANY && tenant.companyName && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.company}</dt>
+                    <dd>{tenant.companyName}</dd>
+                  </div>
+                )}
+                {(tenant.tenantType === TenantType.INDIVIDUAL ||
+                  (tenant.tenantType === TenantType.COMPANY && tenant.firstName)) && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">
+                      {tenant.tenantType === TenantType.COMPANY ? t.pages.createPolicy.steps.review.labels.representative : t.pages.createPolicy.steps.review.labels.name}
+                    </dt>
+                    <dd>{formatFullName(
+                      tenant.firstName,
+                      tenant.paternalLastName,
+                      tenant.maternalLastName,
+                      tenant.middleName
+                    )}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.email}</dt>
+                  <dd>{tenant.email}</dd>
+                </div>
+                {tenant.phone && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">{t.pages.createPolicy.steps.review.labels.phone}</dt>
+                    <dd>{tenant.phone}</dd>
+                  </div>
+                )}
+              </dl>
+            ))}
+          </div>
         </div>
 
         {/* Guarantors Summary */}

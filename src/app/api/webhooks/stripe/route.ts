@@ -40,15 +40,24 @@ function landlordEmailName(l: LandlordEmailFields): string {
   return `${l.firstName || ''} ${l.paternalLastName || ''} ${l.maternalLastName || ''}`.trim();
 }
 
-/** Payment confirmation for a tenant payment: goes to the payer (Stripe email or tenant email). */
-function buildTenantRecipient(
-  tenant: { email?: string | null; firstName?: string | null; paternalLastName?: string | null; maternalLastName?: string | null } | null,
-  customerEmail: string | null,
-): EmailRecipient[] {
-  const email = customerEmail || tenant?.email;
-  if (!email) return [];
-  const name = `${tenant?.firstName || ''} ${tenant?.paternalLastName || ''} ${tenant?.maternalLastName || ''}`.trim();
-  return [{ email, name }];
+type TenantEmailFields = {
+  email: string;
+  companyName?: string | null;
+  firstName?: string | null;
+  paternalLastName?: string | null;
+  maternalLastName?: string | null;
+};
+
+function tenantEmailName(t: TenantEmailFields): string {
+  if (t.companyName) return t.companyName;
+  return `${t.firstName || ''} ${t.paternalLastName || ''} ${t.maternalLastName || ''}`.trim();
+}
+
+/** Payment confirmation for a tenant payment: notifies every tenant of the policy. */
+function buildTenantRecipients(tenants: TenantEmailFields[]): EmailRecipient[] {
+  return tenants
+    .filter((t) => t.email)
+    .map((t) => ({ email: t.email, name: tenantEmailName(t) }));
 }
 
 /** Payment confirmation for a landlord payment: notifies every landlord (primary + co-owners). */
@@ -195,16 +204,16 @@ export async function POST(request: NextRequest) {
             where: { id: policyId },
             select: {
               policyNumber: true,
-              tenant: { select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
+              tenants: { where: { email: { not: '' } }, select: { email: true, companyName: true, firstName: true, paternalLastName: true, maternalLastName: true } },
               landlords: { where: { email: { not: '' } }, select: { email: true, isCompany: true, companyName: true, firstName: true, paternalLastName: true, maternalLastName: true } }
             }
           });
 
-          // Send payment confirmation. Tenant payments go to the payer; landlord
-          // payments notify every landlord (primary + co-owners) of the policy.
+          // Send payment confirmation. Tenant payments notify every tenant of
+          // the policy; landlord payments notify every landlord.
           if (policy) {
             const recipients = paidBy === 'TENANT'
-              ? buildTenantRecipient(policy.tenant, session.customer_email)
+              ? buildTenantRecipients(policy.tenants)
               : buildLandlordRecipients(policy.landlords);
 
             for (const recipient of recipients) {
@@ -533,16 +542,16 @@ export async function POST(request: NextRequest) {
             where: { id: policyId },
             select: {
               policyNumber: true,
-              tenant: { select: { email: true, firstName: true, paternalLastName: true, maternalLastName: true } },
+              tenants: { where: { email: { not: '' } }, select: { email: true, companyName: true, firstName: true, paternalLastName: true, maternalLastName: true } },
               landlords: { where: { email: { not: '' } }, select: { email: true, isCompany: true, companyName: true, firstName: true, paternalLastName: true, maternalLastName: true } },
             },
           });
 
-          // Send payment confirmation. Tenant payments go to the payer; landlord
-          // payments notify every landlord (primary + co-owners) of the policy.
+          // Send payment confirmation. Tenant payments notify every tenant of
+          // the policy; landlord payments notify every landlord.
           if (policy) {
             const recipients = paidBy === 'TENANT'
-              ? buildTenantRecipient(policy.tenant, null)
+              ? buildTenantRecipients(policy.tenants)
               : buildLandlordRecipients(policy.landlords);
 
             for (const recipient of recipients) {

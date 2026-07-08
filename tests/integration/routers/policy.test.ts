@@ -30,6 +30,7 @@ import {
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
 import { packageFactory, policyFactory, landlordFactory } from '../factories';
+import { mintTenantToken, mintLandlordToken } from '../actorTokens';
 import { actorTokenService } from '@/lib/services/actorTokenService';
 
 // ---------------------------------------------------------------------------
@@ -59,14 +60,17 @@ function buildCreatePolicyInput(packageId: string, overrides: Partial<Record<str
         phone: '5555555555',
       },
     ],
-    tenant: {
-      tenantType: TenantType.INDIVIDUAL,
-      firstName: 'Beto',
-      paternalLastName: 'Test',
-      maternalLastName: 'Tenant',
-      email: 'tenant@hestia.test',
-      phone: '5555555556',
-    },
+    // 1..N tenants (S5b #169) — the singular `tenant` input key is gone.
+    tenants: [
+      {
+        tenantType: TenantType.INDIVIDUAL,
+        firstName: 'Beto',
+        paternalLastName: 'Test',
+        maternalLastName: 'Tenant',
+        email: 'tenant@hestia.test',
+        phone: '5555555556',
+      },
+    ],
     sendInvitations: false,
     ...overrides,
   };
@@ -131,6 +135,46 @@ describe('policy.cancelPolicy', () => {
     expect(after?.cancelledAt).toBeInstanceOf(Date);
   });
 
+  test('kills every actor portal token — cancelled links must die (#165)', async () => {
+    const { policy, tenant, landlord } = await createPolicyWithActors({
+      status: PolicyStatus.COLLECTING_INFO,
+    });
+    // Live tokens before cancellation.
+    const { token: tenantToken, caller: tokenCaller } = await mintTenantToken(tenant.id);
+    await mintLandlordToken(landlord.id);
+    await tokenCaller.actor.getByToken({ type: 'tenant', token: tenantToken });
+
+    const { caller } = await createAdminCaller();
+    await caller.policy.cancelPolicy({
+      policyId: policy.id,
+      reason: PolicyCancellationReason.OTHER,
+      comment: 'Token-death check',
+    });
+
+    // Every actor row lost its token…
+    const [tenantAfter, landlordAfter] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: tenant.id } }),
+      prisma.landlord.findUnique({ where: { id: landlord.id } }),
+    ]);
+    expect(tenantAfter?.accessToken).toBeNull();
+    expect(tenantAfter?.tokenExpiry).toBeNull();
+    expect(landlordAfter?.accessToken).toBeNull();
+    expect(landlordAfter?.tokenExpiry).toBeNull();
+
+    // …and the old link is dead at the API.
+    await expect(
+      tokenCaller.actor.getByToken({ type: 'tenant', token: tenantToken }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('actor tokens expire 180 days out, not 1000 (#165)', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { expiresAt } = await mintTenantToken(tenant.id);
+    const days = (expiresAt.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(179);
+    expect(days).toBeLessThan(181);
+  });
+
   test('throws BAD_REQUEST when cancelling an already-cancelled policy', async () => {
     const { policy } = await createPolicyWithActors({ status: PolicyStatus.CANCELLED });
     const { caller } = await createAdminCaller();
@@ -193,17 +237,22 @@ describe('policy.create', () => {
     expect(result.policy.landlords).toHaveLength(1);
     expect(result.policy.landlords[0]!.isPrimary).toBe(true);
     expect(result.policy.landlords[0]!.email).toBe(input.landlords[0]!.email);
+    // Plural tenants array is canonical (S5b #169)…
+    expect(result.policy.tenants).toHaveLength(1);
+    expect(result.policy.tenants[0]!.email).toBe(input.tenants[0]!.email);
+    // …and the legacy singular alias still mirrors tenants[0] (transition contract).
     expect(result.policy.tenant).not.toBeNull();
-    expect(result.policy.tenant!.email).toBe(input.tenant.email);
+    expect(result.policy.tenant!.id).toBe(result.policy.tenants[0]!.id);
+    expect(result.policy.tenant!.email).toBe(input.tenants[0]!.email);
 
     // Side effects persisted.
     const persisted = await prisma.policy.findUnique({
       where: { id: result.policy.id },
-      include: { landlords: true, tenant: true, propertyDetails: true },
+      include: { landlords: true, tenants: true, propertyDetails: true },
     });
     expect(persisted).not.toBeNull();
     expect(persisted!.landlords).toHaveLength(1);
-    expect(persisted!.tenant).not.toBeNull();
+    expect(persisted!.tenants).toHaveLength(1);
     expect(persisted!.propertyDetails).not.toBeNull();
   });
 
@@ -317,7 +366,10 @@ describe('policy.getById', () => {
     expect(result.id).toBe(policy.id);
     expect(result.policyNumber).toBe(policy.policyNumber);
     expect(result.allActorsComplete).toBe(false);
+    // Plural tenants canonical + legacy singular alias mirrors tenants[0] (S5b #169).
+    expect(result.tenants.length).toBeGreaterThanOrEqual(1);
     expect(result.tenant).not.toBeNull();
+    expect(result.tenant!.id).toBe(result.tenants[0]!.id);
     expect(result.landlords.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -596,13 +648,15 @@ describe('policy.sendInvitations', () => {
 // ===========================================================================
 describe('policy.replaceTenant', () => {
   test('auth gate: ADMIN/STAFF allowed; BROKER and PUBLIC blocked', async () => {
-    const { policy } = await createPolicyWithActors({ status: PolicyStatus.COLLECTING_INFO });
+    const { policy, tenant } = await createPolicyWithActors({ status: PolicyStatus.COLLECTING_INFO });
 
     await expectAuthGate({
       allowed: [UserRole.ADMIN, UserRole.STAFF],
       invoke: (caller) =>
         caller.policy.replaceTenant({
           policyId: policy.id,
+          // 1..N tenants (S5b #169): name WHICH tenant row to replace.
+          tenantId: tenant.id,
           replacementReason: 'auth probe',
           newTenant: {
             tenantType: TenantType.INDIVIDUAL,
@@ -642,7 +696,7 @@ describe('policy.changeGuarantorType', () => {
 // ===========================================================================
 describe('policy.renew', () => {
   test('clones every landlord (primary + co-owners), preserving isPrimary', async () => {
-    const { policy } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    const { policy, tenant } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
     // Add a co-owner (non-primary) landlord, no documents → no S3 copy.
     await landlordFactory.create(
       { firstName: 'CoOwner', paternalLastName: 'Renew' },
@@ -674,17 +728,21 @@ describe('policy.renew', () => {
           cfdi: true,
           documents: false,
         })),
-        tenant: {
-          include: false,
-          basicInfo: false,
-          contact: false,
-          address: false,
-          employment: false,
-          rentalHistory: false,
-          references: false,
-          paymentPreferences: false,
-          documents: false,
-        },
+        // One entry per tenant (S5b #169); renewal clones ALL tenants.
+        tenants: [
+          {
+            sourceId: tenant.id,
+            include: true,
+            basicInfo: false,
+            contact: false,
+            address: false,
+            employment: false,
+            rentalHistory: false,
+            references: false,
+            paymentPreferences: false,
+            documents: false,
+          },
+        ],
         jointObligors: [],
         avals: [],
       },
@@ -701,7 +759,7 @@ describe('policy.renew', () => {
   });
 
   test('drops a co-owner whose include is false (per-landlord selection)', async () => {
-    const { policy, landlord } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
+    const { policy, landlord, tenant } = await createPolicyWithActors({ status: PolicyStatus.ACTIVE });
     const coOwner = await landlordFactory.create(
       { firstName: 'Dropped', paternalLastName: 'CoOwner' },
       { transient: { policyId: policy.id } },
@@ -724,10 +782,12 @@ describe('policy.renew', () => {
           { sourceId: landlord.id, include: true, basicInfo: true, contact: true, address: true, banking: true, propertyDeed: true, cfdi: true, documents: false },
           { sourceId: coOwner.id, include: false, basicInfo: true, contact: true, address: true, banking: true, propertyDeed: true, cfdi: true, documents: false },
         ],
-        tenant: {
-          include: false, basicInfo: false, contact: false, address: false, employment: false,
-          rentalHistory: false, references: false, paymentPreferences: false, documents: false,
-        },
+        tenants: [
+          {
+            sourceId: tenant.id, include: true, basicInfo: false, contact: false, address: false, employment: false,
+            rentalHistory: false, references: false, paymentPreferences: false, documents: false,
+          },
+        ],
         jointObligors: [],
         avals: [],
       },
@@ -742,7 +802,7 @@ describe('policy.renew', () => {
   });
 
   test('auth gate: ADMIN/STAFF allowed; BROKER and PUBLIC blocked', async () => {
-    const { policy, landlord } = await createPolicyWithActors();
+    const { policy, landlord, tenant } = await createPolicyWithActors();
 
     await expectAuthGate({
       allowed: [UserRole.ADMIN, UserRole.STAFF],
@@ -772,17 +832,20 @@ describe('policy.renew', () => {
                 documents: true,
               },
             ],
-            tenant: {
-              include: false,
-              basicInfo: false,
-              contact: false,
-              address: false,
-              employment: false,
-              rentalHistory: false,
-              references: false,
-              paymentPreferences: false,
-              documents: false,
-            },
+            tenants: [
+              {
+                sourceId: tenant.id,
+                include: true,
+                basicInfo: false,
+                contact: false,
+                address: false,
+                employment: false,
+                rentalHistory: false,
+                references: false,
+                paymentPreferences: false,
+                documents: false,
+              },
+            ],
             jointObligors: [],
             avals: [],
           },
