@@ -1,75 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { generateToken } from '@/lib/auth';
-import { z } from 'zod';
-import { userService } from '@/lib/services/userService';
+import { NextResponse } from 'next/server';
 
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string().optional(),
-});
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const validation = registerSchema.safeParse(body);
-
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: validation.error.errors },
-        { status: 400 }
-      );
-    }
-
-    const { email, password, name } = validation.data;
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
-    }
-
-    // Public registration only creates BROKER accounts
-    // ADMIN/STAFF accounts must be created via admin invitation
-    const result = await userService.create({
-      email,
-      password,
-      name,
-      role: 'BROKER',
-    });
-
-    if (!result.ok) {
-      return NextResponse.json(
-        { error: result.error.getUserMessage?.() ?? result.error.message },
-        { status: result.error.statusCode ?? 400 }
-      );
-    }
-
-    const user = result.value;
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email || '',
-      role: user.role
-    });
-
-    return NextResponse.json({
-      user,
-      token
-    }, { status: 201 });
-
-  } catch {
-    return NextResponse.json(
-      { error: 'Failed to register user' },
-      { status: 500 }
-    );
-  }
+/**
+ * Self-service registration was removed (#162, 2026-07-05 security
+ * decision): brokers join invite-only, exactly like staff — dashboard
+ * invitation (staff.create supports the BROKER role) → join link →
+ * onboard.* token flow.
+ *
+ * This tombstone answers 410 Gone so cached clients, bookmarks and
+ * crawlers get a definitive signal instead of a soft 404.
+ */
+export async function POST() {
+  return NextResponse.json(
+    { error: 'El registro público fue deshabilitado. Solicite una invitación.' },
+    { status: 410 },
+  );
 }
