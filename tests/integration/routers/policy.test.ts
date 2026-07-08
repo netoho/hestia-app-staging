@@ -30,6 +30,7 @@ import {
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
 import { packageFactory, policyFactory, landlordFactory } from '../factories';
+import { mintTenantToken, mintLandlordToken } from '../actorTokens';
 import { actorTokenService } from '@/lib/services/actorTokenService';
 
 // ---------------------------------------------------------------------------
@@ -129,6 +130,46 @@ describe('policy.cancelPolicy', () => {
     expect(after?.cancellationReason).toBe(PolicyCancellationReason.OTHER);
     expect(after?.cancellationComment).toBe('Test cancellation');
     expect(after?.cancelledAt).toBeInstanceOf(Date);
+  });
+
+  test('kills every actor portal token — cancelled links must die (#165)', async () => {
+    const { policy, tenant, landlord } = await createPolicyWithActors({
+      status: PolicyStatus.COLLECTING_INFO,
+    });
+    // Live tokens before cancellation.
+    const { token: tenantToken, caller: tokenCaller } = await mintTenantToken(tenant.id);
+    await mintLandlordToken(landlord.id);
+    await tokenCaller.actor.getByToken({ type: 'tenant', token: tenantToken });
+
+    const { caller } = await createAdminCaller();
+    await caller.policy.cancelPolicy({
+      policyId: policy.id,
+      reason: PolicyCancellationReason.OTHER,
+      comment: 'Token-death check',
+    });
+
+    // Every actor row lost its token…
+    const [tenantAfter, landlordAfter] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: tenant.id } }),
+      prisma.landlord.findUnique({ where: { id: landlord.id } }),
+    ]);
+    expect(tenantAfter?.accessToken).toBeNull();
+    expect(tenantAfter?.tokenExpiry).toBeNull();
+    expect(landlordAfter?.accessToken).toBeNull();
+    expect(landlordAfter?.tokenExpiry).toBeNull();
+
+    // …and the old link is dead at the API.
+    await expect(
+      tokenCaller.actor.getByToken({ type: 'tenant', token: tenantToken }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('actor tokens expire 180 days out, not 1000 (#165)', async () => {
+    const { tenant } = await createPolicyWithActors();
+    const { expiresAt } = await mintTenantToken(tenant.id);
+    const days = (expiresAt.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(179);
+    expect(days).toBeLessThan(181);
   });
 
   test('throws BAD_REQUEST when cancelling an already-cancelled policy', async () => {
