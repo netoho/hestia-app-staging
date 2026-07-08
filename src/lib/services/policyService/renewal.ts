@@ -8,6 +8,7 @@ import {
 import { documentService } from '@/lib/services/documentService';
 import { getStorageProvider } from '@/lib/storage';
 import { generatePolicyActorTokens } from '@/lib/services/actorTokenService';
+import { policyRenewalPreconditionsSchema } from '@/lib/domain/policy/schema';
 import { logPolicyActivity } from './index';
 import type { PolicyRenewalSelection } from '@/lib/schemas/policy/renewalSelection';
 
@@ -130,14 +131,16 @@ export async function clonePolicyForRenewal(
   });
 
   if (!source) throw new Error('Source policy not found');
-  if (source.status !== PolicyStatus.ACTIVE && source.status !== PolicyStatus.EXPIRED) {
-    throw new Error(`Cannot renew policy in status ${source.status}`);
+  // Renewal preconditions are formalized on the canonical policy schema
+  // (S5a #133): ACTIVE|EXPIRED + at least one landlord. renewedToId may be
+  // set — overwriting an existing renewal is allowed per product decision.
+  const preconditions = policyRenewalPreconditionsSchema.safeParse(source);
+  if (!preconditions.success) {
+    throw new Error(
+      preconditions.error.issues[0]?.message ??
+        `Cannot renew policy in status ${source.status}`,
+    );
   }
-  if (source.renewedToId) {
-    // Overwriting is allowed per product decision; continue but we'll update renewedToId.
-  }
-
-  if (source.landlords.length === 0) throw new Error('Source policy has no landlords');
 
   const selectedLandlords = source.landlords.filter((ld) =>
     selection.landlords.find((s) => s.sourceId === ld.id && s.include),

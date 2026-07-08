@@ -155,6 +155,20 @@ export const policySelectList = {
     },
     orderBy: { createdAt: 'desc' as const },
   },
+  activities: {
+    select: {
+      id: true,
+      action: true,
+      description: true,
+      details: true,
+      performedById: true,
+      performedByType: true,
+      ipAddress: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' as const },
+    take: 10, // list tier caps the activity trail
+  },
 } satisfies Prisma.PolicyInclude;
 
 export type PolicyListRow = Prisma.PolicyGetPayload<{
