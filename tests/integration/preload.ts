@@ -419,6 +419,26 @@ mock.module('@/lib/services/notificationService', () => ({
   sendPolicyPendingApprovalNotification: mock(async () => undefined),
 }));
 
+// --- micfdi CFDI API (outbound HTTP) — mocked so no test hits the network.
+// submitPayment returns a canned registered record; tests assert call args
+// via spyOn.
+mock.module('@/lib/services/micfdiService', () => ({
+  micfdiService: {
+    submitPayment: mock(async () => ({
+      recordId: 'rec_test_fake',
+      portalUrl: 'https://portal.micfdi.test/rec_test_fake',
+      status: 'registered',
+      idempotentReplay: false,
+    })),
+  },
+  submitPaymentToMicfdi: mock(async () => ({
+    recordId: 'rec_test_fake',
+    portalUrl: 'https://portal.micfdi.test/rec_test_fake',
+    status: 'registered',
+    idempotentReplay: false,
+  })),
+}));
+
 // ---------------------------------------------------------------------------
 // 3. Per-test DB lifecycle.
 // ---------------------------------------------------------------------------
