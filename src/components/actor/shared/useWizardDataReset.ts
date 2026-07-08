@@ -58,6 +58,12 @@ export function useWizardDataReset<T extends FieldValues>(
   useEffect(() => {
     if (version === seenVersion.current) return;
     seenVersion.current = version;
+    // An active edit session wins outright: `keepDirtyValues` does NOT
+    // protect useFieldArray items (RHF rebuilds arrays on reset), so a
+    // refetch landing mid-typing on a references tab would clobber
+    // just-typed cards. Clean forms (fresh mounts, reopened editors) still
+    // re-seed — which is the #171 stale-open case this hook exists for.
+    if (Object.keys(form.formState.dirtyFields).length > 0) return;
     form.reset(valuesRef.current, { keepDirtyValues: true });
   }, [version, form]);
 
