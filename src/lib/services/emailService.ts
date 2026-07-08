@@ -799,6 +799,61 @@ Monto total: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MX
   }
 };
 
+// Payment link email data (the SAME shared link is sent to every tenant of the policy)
+export interface PaymentLinkData {
+  email: string;
+  tenantName?: string;
+  policyNumber: string;
+  paymentDescription: string;
+  amount: number;
+  paymentUrl: string;
+}
+
+export const sendPaymentLinkEmail = async (data: PaymentLinkData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { PaymentLinkEmail } = await import('../../templates/email/react-email/PaymentLinkEmail');
+
+    const html = await render(await PaymentLinkEmail({
+      tenantName: data.tenantName,
+      policyNumber: data.policyNumber,
+      paymentDescription: data.paymentDescription,
+      amount: data.amount,
+      paymentUrl: data.paymentUrl,
+    }));
+
+    const subject = emailSubject(`Link de Pago - ${data.policyNumber}`);
+
+    const text = `
+Hola${data.tenantName ? ` ${data.tenantName}` : ''},
+
+Te compartimos el link para realizar el pago de tu protección.
+
+Protección: ${data.policyNumber}
+Concepto: ${data.paymentDescription}
+Monto: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.amount)}
+
+Realiza tu pago aquí: ${data.paymentUrl}
+
+Este link es el mismo para todos los inquilinos de la protección; cualquiera puede completar el pago.
+
+¿Necesitas ayuda? Contáctanos en ${SUPPORT_EMAIL}
+
+© ${new Date().getFullYear()} ${COMPANY_NAME}. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send payment link email:', error);
+    return false;
+  }
+};
+
 // Send policy cancellation notification to admin
 export const sendPolicyCancellationEmail = async (data: PolicyCancellationEmailData): Promise<boolean> => {
   try {

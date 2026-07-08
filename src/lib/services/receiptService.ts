@@ -97,11 +97,12 @@ class ReceiptService extends BaseService {
   }
 
   /**
-   * Get receipt status for a specific month, combining required types with existing receipts
+   * Get receipt status for a specific month, combining required types with existing receipts.
+   * Month satisfaction is policy-scoped: a receipt uploaded by ANY tenant of the
+   * policy counts (TenantReceipt.tenantId is uploader attribution only).
    */
   async getMonthStatus(
     policyId: string,
-    tenantId: string,
     year: number,
     month: number,
     requiredTypes: ReceiptType[]
@@ -109,7 +110,6 @@ class ReceiptService extends BaseService {
     const receipts = await this.prisma.tenantReceipt.findMany({
       where: {
         policyId,
-        tenantId,
         year,
         month,
         uploadStatus: { not: DocumentUploadStatus.PENDING },
@@ -150,7 +150,6 @@ class ReceiptService extends BaseService {
    */
   async getMonthsStatus(
     policyId: string,
-    tenantId: string,
     requiredTypes: ReceiptType[],
     fromYear: number,
     fromMonth: number,
@@ -162,7 +161,7 @@ class ReceiptService extends BaseService {
     let m = fromMonth;
 
     while (y < toYear || (y === toYear && m <= toMonth)) {
-      const summary = await this.getMonthStatus(policyId, tenantId, y, m, requiredTypes);
+      const summary = await this.getMonthStatus(policyId, y, m, requiredTypes);
       summaries.push(summary);
       m++;
       if (m > 12) {
