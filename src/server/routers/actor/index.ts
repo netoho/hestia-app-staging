@@ -5,11 +5,13 @@
  * Split into:
  * - shared.router.ts: Generic endpoints that work for all actor types
  * - landlord.router.ts: Landlord-specific endpoints (property details, co-ownership, etc.)
+ * - tenant.router.ts: Tenant-specific endpoints (co-tenant add/remove, S5b #169)
  */
 
 import { createTRPCRouter } from '@/server/trpc';
 import { sharedActorRouter } from './shared.router';
 import { landlordRouter } from './landlord.router';
+import { tenantRouter } from './tenant.router';
 
 // Combine routers using nested routing (tRPC v11 approach)
 // All shared endpoints are at actor.*, landlord-specific at actor.landlord.*
@@ -19,6 +21,8 @@ export const actorRouter = createTRPCRouter({
   ...sharedActorRouter._def.procedures,
   // Spread landlord procedures
   ...landlordRouter._def.procedures,
+  // Spread tenant procedures
+  ...tenantRouter._def.procedures,
 });
 
 // Re-export utilities for use by other routers if needed
