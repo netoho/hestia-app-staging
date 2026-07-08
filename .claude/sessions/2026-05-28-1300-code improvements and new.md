@@ -967,3 +967,17 @@ Train #197-#200 + #202 all merged by user. **PR #203 completes S5a**:
 **Verified**: integration **429/0** (+ new mint-on-open test locking token-less→link); `bun run build` clean; ratchet **354** (unchanged). E2E (nightly): **E2E-09g** added (admin inline edit → outer ActorCard refreshes without reopening; fails pre-fix, passes post-fix — needed full personal-tab fill since CURP/RFC/phone are required, + page-level toast + Close-button close); **E2E-01 @core** re-verified green (items 3/4 don't break the tenant portal doc flow). PR #208 CI green.
 
 **HANDOFF**: merge #208 → release/2.16.0; when shipping, release/2.16.0 → main (= deploy) — **NO manual migration this release**. Follow-up #209 (Enviar Correo per-row). Turnstile #163 + deferred → 2.17.0.
+
+### Update — 2026-07-08 (later) — #209 fixed on the 2.16.0 track (per-actor invitation resend)
+
+**Folded #209 into PR #208** (the follow-up bug found during the share-links fix). Session was cut right after pushing; resumed, CI confirmed green on the final commit `c647b96`.
+
+**Bug**: share modal's per-row "Enviar Correo" (and batch) sent `{ actors: [type] }` → `notificationService` loops ALL actors of that type → resending to one tenant emailed every tenant.
+
+**Fix**: `sendInvitations` gains an optional `actorIds` filter. Threaded router (`policy.router.ts` input + pass-through) → `notificationService` (`shouldProcessActorRow` helper applied per-row in all 4 actor loops). Backward-compatible: omitted `actorIds` = every actor of the given types (creation flow unchanged). Modal passes the specific row id(s): per-row `[actorId]`, batch `Array.from(selectedActors)`.
+
+**Test constraint**: `sendIncompleteActorInfoNotification` is MOCKED at integration preload (line 416), so the real filter logic isn't integration-reachable — added a spyOn wiring test asserting the router forwards `actorIds` (the preload comment prescribes exactly this). Full logic verified by reading (3-line predicate on existing loops).
+
+**Verified**: integration **430/0** (+1 forwarding test, 432 total w/ 2 Stripe skips); `bun run build` clean; ratchet **354** (unchanged — the tsc errors in the touched files are all pre-existing baseline, line-shifted). PR #208 CI green on c647b96.
+
+**PR #208 now = 5 fixes** (share links, inline refresh, ADDRESS_PROOF optional, Buró de crédito, per-actor resend). Commit carries `Closes #209` → auto-closes when 2.16.0 → main. Commented on #209. **Handoff unchanged: merge #208 → release/2.16.0; ship = release/2.16.0 → main (NO migration). Turnstile #163 + deferred → 2.17.0.**
