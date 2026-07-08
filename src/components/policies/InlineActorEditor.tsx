@@ -130,6 +130,17 @@ export default function InlineActorEditor({
     onClose();
   };
 
+  // Fires after EACH inline tab save (the dialog stays open). Refetches the
+  // OUTER policy so ActorCard/tabs/overview reflect the edit, and bumps
+  // actor.getById.dataUpdatedAt so the open editor's own tabs re-seed from
+  // fresh data via useWizardDataReset (#216). The field-save path previously
+  // invalidated only the actor's portal query, never these.
+  const handleTabSaved = () => {
+    utils.policy.getById.invalidate();
+    utils.actor.getById.invalidate();
+    utils.actor.listByPolicy.invalidate({ policyId });
+  };
+
   // Build initialData matching public page structure exactly
   const getInitialData = () => {
     if (actorType === 'landlord') {
@@ -190,6 +201,7 @@ export default function InlineActorEditor({
       initialData={getInitialData()}
       policy={policy}
       onComplete={handleComplete}
+      onSaved={handleTabSaved}
       isAdminEdit
       dataUpdatedAt={singleActorQuery.dataUpdatedAt}
     />

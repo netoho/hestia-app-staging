@@ -1,5 +1,5 @@
 import { getPolicyById } from './index';
-import { generateActorUrl } from '@/lib/services/actorTokenService';
+import { generateActorToken, type ActorType } from '@/lib/services/actorTokenService';
 import { formatFullName } from '@/lib/utils/names';
 
 export interface ShareLink {
@@ -18,12 +18,66 @@ export interface GetShareLinksResult {
   shareLinks: ShareLink[];
 }
 
+/** Fields every actor collection shares that a share link needs. */
+interface ShareableActor {
+  id: string;
+  email: string;
+  phone: string;
+  companyName: string | null;
+  firstName: string | null;
+  middleName: string | null;
+  paternalLastName: string | null;
+  maternalLastName: string | null;
+  informationComplete: boolean;
+}
+
+function actorDisplayName(actor: ShareableActor): string {
+  return (
+    actor.companyName ||
+    (actor.firstName
+      ? formatFullName(
+          actor.firstName,
+          actor.paternalLastName || '',
+          actor.maternalLastName || '',
+          actor.middleName || undefined,
+        )
+      : 'Sin nombre')
+  );
+}
+
 /**
- * Get share links for all actors on a policy.
- * Returns URLs with access tokens for landlords, tenants, joint obligors, and avals.
+ * Build a share link for one actor, MINTING (or reusing) its portal token.
+ *
+ * `generateActorToken` is generate-or-reuse (idempotent): actors with a valid
+ * token keep it, tokenless actors get one. This is what makes the modal show
+ * ALL links — an admin-added co-tenant/co-owner (created empty, no token) or
+ * anyone not yet invited would otherwise never appear (#216).
+ */
+async function buildActorShareLink(
+  actor: ShareableActor,
+  tokenActorType: ActorType,
+  linkActorType: string,
+): Promise<ShareLink> {
+  const { url, expiresAt } = await generateActorToken(tokenActorType, actor.id);
+  return {
+    actorId: actor.id,
+    actorType: linkActorType,
+    actorName: actorDisplayName(actor),
+    email: actor.email,
+    phone: actor.phone,
+    url,
+    tokenExpiry: expiresAt,
+    informationComplete: actor.informationComplete,
+  };
+}
+
+/**
+ * Get share links for EVERY actor on a policy (all landlords, all tenants,
+ * all joint obligors, all avals). Each actor's portal token is minted-or-reused
+ * so no actor is ever silently hidden for lack of a token.
  */
 export async function getShareLinksForPolicy(
-  policyId: string
+  policyId: string,
 ): Promise<GetShareLinksResult | null> {
   const policy = await getPolicyById(policyId);
 
@@ -31,107 +85,19 @@ export async function getShareLinksForPolicy(
     return null;
   }
 
-  // Build share links for all actors
   const shareLinks: ShareLink[] = [];
 
-  // Landlords (all of them — every landlord gets a share link)
   for (const landlord of policy.landlords || []) {
-    if (landlord.accessToken) {
-      shareLinks.push({
-        actorId: landlord.id,
-        actorType: 'landlord',
-        actorName:
-          landlord.companyName ||
-          (landlord.firstName
-            ? formatFullName(
-                landlord.firstName,
-                landlord.paternalLastName || '',
-                landlord.maternalLastName || '',
-                landlord.middleName || undefined
-              )
-            : 'Sin nombre'),
-        email: landlord.email,
-        phone: landlord.phone,
-        url: generateActorUrl(landlord.accessToken, 'landlord'),
-        tokenExpiry: landlord.tokenExpiry,
-        informationComplete: landlord.informationComplete,
-      });
-    }
+    shareLinks.push(await buildActorShareLink(landlord, 'landlord', 'landlord'));
   }
-
-  // Tenants (all of them — every tenant gets their own share link)
   for (const tenant of policy.tenants || []) {
-    if (tenant.accessToken) {
-      shareLinks.push({
-        actorId: tenant.id,
-        actorType: 'tenant',
-        actorName:
-          tenant.companyName ||
-          (tenant.firstName
-            ? formatFullName(
-                tenant.firstName,
-                tenant.paternalLastName || '',
-                tenant.maternalLastName || '',
-                tenant.middleName || undefined
-              )
-            : 'Sin nombre'),
-        email: tenant.email,
-        phone: tenant.phone,
-        url: generateActorUrl(tenant.accessToken, 'tenant'),
-        tokenExpiry: tenant.tokenExpiry,
-        informationComplete: tenant.informationComplete,
-      });
-    }
+    shareLinks.push(await buildActorShareLink(tenant, 'tenant', 'tenant'));
   }
-
-  // Joint Obligors
   for (const jo of policy.jointObligors || []) {
-    if (jo.accessToken) {
-      shareLinks.push({
-        actorId: jo.id,
-        actorType: 'joint-obligor',
-        actorName:
-          jo.companyName ||
-          (jo.firstName
-            ? formatFullName(
-                jo.firstName,
-                jo.paternalLastName || '',
-                jo.maternalLastName || '',
-                jo.middleName || undefined
-              )
-            : 'Sin nombre'),
-        email: jo.email,
-        phone: jo.phone,
-        url: generateActorUrl(jo.accessToken, 'joint-obligor'),
-        tokenExpiry: jo.tokenExpiry,
-        informationComplete: jo.informationComplete,
-      });
-    }
+    shareLinks.push(await buildActorShareLink(jo, 'jointObligor', 'joint-obligor'));
   }
-
-  // Avals
   for (const aval of policy.avals || []) {
-    if (aval.accessToken) {
-      shareLinks.push({
-        actorId: aval.id,
-        actorType: 'aval',
-        actorName:
-          aval.companyName ||
-          (aval.firstName
-            ? formatFullName(
-                aval.firstName,
-                aval.paternalLastName || '',
-                aval.maternalLastName || '',
-                aval.middleName || undefined
-              )
-            : 'Sin nombre'),
-        email: aval.email,
-        phone: aval.phone,
-        url: generateActorUrl(aval.accessToken, 'aval'),
-        tokenExpiry: aval.tokenExpiry,
-        informationComplete: aval.informationComplete,
-      });
-    }
+    shareLinks.push(await buildActorShareLink(aval, 'aval', 'aval'));
   }
 
   return {

@@ -124,6 +124,7 @@ export default function ShareInvitationModal({
       await sendInvitations.mutateAsync({
         policyId,
         actors: [actorType],
+        actorIds: [actorId], // target THIS row, not every actor of the type (#209)
         resend: true,
       });
     } finally {
@@ -157,6 +158,7 @@ export default function ShareInvitationModal({
       await sendInvitations.mutateAsync({
         policyId,
         actors: selectedTypes,
+        actorIds: Array.from(selectedActors), // only the selected rows (#209)
         resend: true,
       });
 
