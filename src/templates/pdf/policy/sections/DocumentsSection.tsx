@@ -26,9 +26,12 @@ export function DocumentsSection({ data }: DocumentsSectionProps) {
   });
 
   // Tenant documents
-  if (data.tenant && data.tenant.documents.length > 0) {
-    allDocuments.push({ source: 'Inquilino', docs: data.tenant.documents });
-  }
+  data.tenants.forEach((tenant, index) => {
+    if (tenant.documents.length > 0) {
+      const label = data.tenants.length > 1 ? `Inquilino ${index + 1}` : 'Inquilino';
+      allDocuments.push({ source: label, docs: tenant.documents });
+    }
+  });
 
   // Joint obligor documents
   data.jointObligors.forEach((jo, index) => {
