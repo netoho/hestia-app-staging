@@ -26,7 +26,7 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
     individual: [
       { category: DocumentCategory.IDENTIFICATION, required: true },
       { category: DocumentCategory.INCOME_PROOF, required: true },
-      { category: DocumentCategory.ADDRESS_PROOF, required: true },
+      { category: DocumentCategory.ADDRESS_PROOF, required: false },
       { category: DocumentCategory.BANK_STATEMENT, required: true },
       { category: DocumentCategory.IMMIGRATION_DOCUMENT, required: true, condition: 'foreign' },
     ],
