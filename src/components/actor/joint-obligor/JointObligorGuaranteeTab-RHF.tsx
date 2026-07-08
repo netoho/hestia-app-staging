@@ -19,6 +19,7 @@ import {
   FormMessage,
   FormDescription
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { Label } from '@/components/ui/label';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { DocumentManagerCard } from '@/components/documents/DocumentManagerCard';
@@ -47,17 +48,20 @@ export default function JointObligorGuaranteeTab({
   jointObligorId,
   initialDocuments = [],
 }: JointObligorGuaranteeTabProps) {
+  const defaultValues = {
+    guaranteeMethod: 'INCOME', // Default to income
+    hasPropertyGuarantee: false,
+    propertyUnderLegalProceeding: false,
+    ...initialData,
+  };
+
   // Use discriminated union schema - automatically validates based on guaranteeMethod
   const form = useForm({
     resolver: zodResolver(jointObligorGuaranteeTabSchema),
     mode: 'onChange',
-    defaultValues: {
-      guaranteeMethod: 'INCOME', // Default to income
-      hasPropertyGuarantee: false,
-      propertyUnderLegalProceeding: false,
-      ...initialData,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch guarantee method for conditional rendering
   const guaranteeMethod = form.watch('guaranteeMethod');

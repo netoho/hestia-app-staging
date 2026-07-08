@@ -188,6 +188,20 @@ export default function PolicyDetailsContent({
     }
   };
 
+  // PolicyHeader refresh = TRUE full refresh (2026-07-06 decision, #171/#180):
+  // invalidate every tRPC cache feeding this page (actors, documents,
+  // payments, investigations, …) — active queries refetch, and any open
+  // inline editor re-seeds through useWizardDataReset. Section-level refresh
+  // buttons keep their narrower scopes.
+  const handleFullRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([utils.invalidate(), onRefresh()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Handle actor tabs refresh (policy + documents + actor caches)
   const handleActorRefresh = async () => {
     setIsRefreshing(true);
@@ -239,7 +253,7 @@ export default function PolicyDetailsContent({
           onCancelClick={() => setShowCancelModal(true)}
           onDownloadPdf={handleDownloadPdf}
           onDownloadDocx={handleDownloadDocx}
-          onRefresh={handleRefresh}
+          onRefresh={handleFullRefresh}
         />
 
         {/* Progress Bar */}

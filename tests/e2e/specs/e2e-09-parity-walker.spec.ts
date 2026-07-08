@@ -1,13 +1,17 @@
 import { test, expect, Page } from '@playwright/test';
 import { freshDb, prisma, getOnlyPolicy, getActorTokens, type ActorTokens } from '../helpers/db';
 import { createPolicyViaWizard } from '../helpers/wizard';
+import { seedActorDocument, s3ObjectExists } from '../helpers/seed';
 import {
   walksFor,
+  walkableFields,
   fillTabBySchema,
+  fillPlainField,
   readFieldsBack,
   diffSurfaces,
   assertSkipsAllowed,
   type ActorWalk,
+  type WalkTab,
   type WalkVariant,
 } from '../helpers/walker';
 
@@ -23,9 +27,16 @@ import {
  *
  * Landlord runs the collective form with a SINGLE landlord (indexed names,
  * `landlords.0.*`); multi-landlord parity is blocked on the #171
- * save-hostage product call. COMPANY variants are DB-seeded (the type-flip
- * dance itself is E2E-02/06 territory). Reverse direction + deletes +
- * staleness choreography are the next PRs of #180.
+ * save-hostage product call (de-collectivization = #189). COMPANY variants
+ * are DB-seeded (the type-flip dance itself is E2E-02/06 territory).
+ *
+ * E2E-09c is the REVERSE direction: after a forward walk, the admin edits a
+ * probe field per tab in the inline editor and the portal must render every
+ * probe. INDIVIDUAL only — both surfaces render the same ActorWizard, so the
+ * COMPANY forward walk (09b) plus one reverse direction covers the
+ * invariant. E2E-09d: admin deletes (a personal reference + a document)
+ * propagate to the portal, the DB, and S3. Staleness choreography is
+ * E2E-10 (own spec).
  */
 
 const SAVE_BUTTON = 'Guardar y Continuar';
@@ -183,3 +194,248 @@ test('E2E-09b: COMPANY variants — portal fields identical in the inline admin 
   test.setTimeout(600_000);
   await runWalk(page, 'COMPANY');
 });
+
+// ─── E2E-09c: reverse direction — admin probes render in the portal ─────────
+
+/**
+ * Probe fields are restricted to format-free text controls so a plain
+ * `.fill()` stays resolver-valid. First match wins; a tab with no candidate
+ * is skipped (the forward walk already proved its parity) — but every actor
+ * must yield at least one probe.
+ */
+const PROBE_PREFERENCE: RegExp[] = [
+  /email$/i,
+  /^employerName$/,
+  /^occupation$/,
+  /^bankName$/,
+  /^accountHolder$/,
+  /^propertyDeedNumber$/,
+  /^previousLandlordName$/,
+  /^companyName$/,
+  /^businessDescription$/,
+];
+
+function pickProbe(filledFields: string[]): string | null {
+  for (const rule of PROBE_PREFERENCE) {
+    const hit = filledFields.find((f) => rule.test(f));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function probeValueFor(field: string, actor: string, tabId: string): string {
+  return /email$/i.test(field)
+    ? `probe.${actor}.${tabId}@example.com`.toLowerCase()
+    : `Probe ${actor} ${tabId}`;
+}
+
+test('E2E-09c: reverse direction — admin inline probe edits render in the actor portals', async ({ page }) => {
+  test.setTimeout(600_000);
+  await freshDb();
+  await createPolicyViaWizard(page, {
+    tenant: { type: 'INDIVIDUAL', firstName: 'Wanda', paternalLastName: 'Walker', email: 'walker.tenant@example.com' },
+    landlord: { firstName: 'Luis', paternalLastName: 'Dueño', email: 'walker.landlord@example.com' },
+    guarantor: {
+      type: 'BOTH',
+      jointObligor: { email: 'walker.jo@example.com', firstName: 'Jorge', paternalLastName: 'Obligado' },
+      aval: { email: 'walker.aval@example.com', firstName: 'Alma', paternalLastName: 'Avalista' },
+    },
+  });
+  const policy = await getOnlyPolicy();
+  const tokens = await getActorTokens(policy.id);
+  const walks = walksFor('INDIVIDUAL');
+
+  // Forward pass: make every tab resolver-valid so bare saves advance later.
+  const expectedByActor: Record<string, Record<string, Record<string, string>>> = {};
+  for (const walk of walks) {
+    expectedByActor[walk.actorType] = await walkPortal(page, walk, tokenFor(walk, tokens));
+  }
+
+  // Admin pass: one probe per tab through the inline editor (free tab nav).
+  const probes: Record<string, Record<string, { field: string; value: string }>> = {};
+  for (const walk of walks) {
+    await page.goto(`/dashboard/policies/${policy.id}?tab=${walk.adminTab}`);
+    await page.getByRole('button', { name: 'Editar' }).nth(walk.editorIndex).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    probes[walk.actorType] = {};
+    for (const tab of walk.tabs) {
+      if (tab.transitFill) continue;
+      const probeField = pickProbe(Object.keys(expectedByActor[walk.actorType][tab.id]));
+      if (!probeField) continue;
+      const value = probeValueFor(probeField, walk.actorType, tab.id);
+
+      await dialog.getByRole('tab', { name: tab.label, exact: true }).click();
+      const name = (tab.prefix ?? '') + probeField;
+      await fillPlainField(dialog, name, value);
+      await dialog.getByRole('button', { name: SAVE_BUTTON }).click();
+      // Save barrier: the wizard auto-advances on success, unmounting this
+      // tab (a documents tab always follows the walked tabs, so there is
+      // always somewhere to advance to).
+      await dialog
+        .locator(`[data-field="${name}"]`)
+        .waitFor({ state: 'hidden', timeout: 30_000 });
+
+      probes[walk.actorType][tab.id] = { field: probeField, value };
+    }
+    expect(
+      Object.keys(probes[walk.actorType]).length,
+      `${walk.actorType}: no probe-able tab`,
+    ).toBeGreaterThan(0);
+
+    // Close via the X button — Escape proved unreliable right after a save's
+    // auto-advance (dialog stayed open under the walker).
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    await expect(dialog).toBeHidden();
+  }
+
+  // Portal pass: every probe must render on the actor's own surface.
+  const drift: Record<string, unknown> = {};
+  for (const walk of walks) {
+    await page.goto(`${walk.portalPath}/${tokenFor(walk, tokens)}`);
+    for (const [i, tab] of walk.tabs.entries()) {
+      if (tab.transitFill) {
+        await tab.transitFill(page);
+        await page.getByRole('button', { name: SAVE_BUTTON }).click();
+        continue;
+      }
+      const probe = probes[walk.actorType][tab.id];
+      const waitField = (tab.prefix ?? '') + (probe?.field ?? Object.keys(expectedByActor[walk.actorType][tab.id])[0]);
+      await page.locator(`[data-field="${waitField}"]`).first().waitFor({ timeout: 30_000 });
+
+      if (probe) {
+        const { values } = await readFieldsBack(page, tab, [probe.field]);
+        if (values[probe.field] !== probe.value) {
+          drift[`${walk.actorType}/${tab.id}/${probe.field}`] = {
+            admin: probe.value,
+            portal: values[probe.field],
+          };
+        }
+      }
+      // Advance (sequential portal gating) — not needed after the last tab.
+      if (i < walk.tabs.length - 1) {
+        await page.getByRole('button', { name: SAVE_BUTTON }).click();
+      }
+    }
+  }
+  expect(drift).toEqual({});
+});
+
+// ─── E2E-09d: admin deletes propagate to portal + DB + S3 ────────────────────
+
+test('E2E-09d: admin deletes — reference and document removal propagate to portal, DB and S3', async ({ page }) => {
+  test.setTimeout(420_000);
+  // Document deletion asks for a NATIVE window.confirm — Playwright dismisses
+  // native dialogs by default, which silently aborts the delete.
+  page.on('dialog', (d) => void d.accept());
+  await freshDb();
+  await createPolicyViaWizard(page, {
+    tenant: { type: 'INDIVIDUAL', firstName: 'Wanda', paternalLastName: 'Walker', email: 'walker.tenant@example.com' },
+    landlord: { firstName: 'Luis', paternalLastName: 'Dueño', email: 'walker.landlord@example.com' },
+    guarantor: {
+      type: 'BOTH',
+      jointObligor: { email: 'walker.jo@example.com', firstName: 'Jorge', paternalLastName: 'Obligado' },
+      aval: { email: 'walker.aval@example.com', firstName: 'Alma', paternalLastName: 'Avalista' },
+    },
+  });
+  const policy = await getOnlyPolicy();
+  const tokens = await getActorTokens(policy.id);
+  const tenantWalk = walksFor('INDIVIDUAL')[0];
+  const tenantId = tokens.tenant!.id;
+
+  // Seed 4 references (one above the UI minimum of 3, so one is deletable)
+  // and one document with a REAL MinIO object behind it.
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: {
+      personalReferences: {
+        create: Array.from({ length: 4 }, (_, i) => ({
+          firstName: `Referencia${i + 1}`,
+          paternalLastName: 'Borrable',
+          phone: `55222222${String(i).padStart(2, '0')}`,
+          relationship: 'Amistad',
+          email: `ref${i + 1}@example.com`,
+          occupation: 'Comerciante',
+        })),
+      },
+    },
+  });
+  const doc = await seedActorDocument('BANK_STATEMENT', 'tenant', { tenantId });
+  expect(await s3ObjectExists(doc.s3Key)).toBe(true);
+
+  const refFieldCount = (scope: Page | ReturnType<Page['locator']>) =>
+    scope.locator('[data-field^="personalReferences."][data-field$=".firstName"]').count();
+
+  // Portal pre-state: advance to the references tab; the 4 seeded cards render.
+  const token = tokenFor(tenantWalk, tokens);
+  await page.goto(`${tenantWalk.portalPath}/${token}`);
+  for (const tab of tenantWalk.tabs) {
+    await fillTabBySchema(page, tab);
+    await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  }
+  await page.locator('[data-field="personalReferences.0.firstName"]').waitFor({ timeout: 30_000 });
+  expect(await refFieldCount(page)).toBe(4);
+
+  // Admin: delete reference #4, save; then delete the document.
+  await page.goto(`/dashboard/policies/${policy.id}?tab=tenant`);
+  await page.getByRole('button', { name: 'Editar' }).nth(0).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+  await dialog.getByRole('tab', { name: 'Referencias', exact: true }).click();
+  await dialog.locator('[data-field="personalReferences.3.firstName"]').waitFor({ timeout: 15_000 });
+  expect(await refFieldCount(dialog)).toBe(4);
+  await dialog
+    .getByText('Referencia Personal 4', { exact: true })
+    .locator('..')
+    .getByRole('button')
+    .click();
+  await expect(dialog.locator('[data-field="personalReferences.3.firstName"]')).toBeHidden();
+  await dialog.getByRole('button', { name: SAVE_BUTTON }).click();
+  // Save barrier: auto-advance unmounts the references tab.
+  await dialog
+    .locator('[data-field="personalReferences.0.firstName"]')
+    .waitFor({ state: 'hidden', timeout: 30_000 });
+
+  await dialog.getByRole('tab', { name: 'Documentos', exact: true }).click();
+  await dialog.getByText(doc.fileName).waitFor({ timeout: 15_000 });
+  await dialog.getByTitle('Eliminar documento').click();
+  await expect(dialog.getByText(doc.fileName)).toBeHidden({ timeout: 15_000 });
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+
+  // DB + S3: the row is gone everywhere; deleteDocument removes the S3
+  // object BEFORE the row (documentService.ts) — avatars are the remaining
+  // #172 gap, not actor documents.
+  expect(
+    await prisma.personalReference.count({ where: { tenantId } }),
+  ).toBe(3);
+  expect(
+    await prisma.actorDocument.findUnique({ where: { id: doc.id } }),
+  ).toBeNull();
+  expect(await s3ObjectExists(doc.s3Key)).toBe(false);
+
+  // Portal post-state: 3 cards; the document is gone from the documents tab.
+  await page.goto(`${tenantWalk.portalPath}/${token}`);
+  for (const tab of tenantWalk.tabs) {
+    await page
+      .locator(`[data-field="${(tab.prefix ?? '') + walkFirstField(tab)}"]`)
+      .first()
+      .waitFor({ timeout: 30_000 });
+    await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  }
+  await page.locator('[data-field="personalReferences.0.firstName"]').waitFor({ timeout: 30_000 });
+  expect(await refFieldCount(page)).toBe(3);
+  // Save the (3 valid seeded) references to unlock the documents tab.
+  await page.getByRole('button', { name: SAVE_BUTTON }).click();
+  await expect(page.getByRole('button', { name: 'Enviar Información' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(doc.fileName)).toHaveCount(0);
+});
+
+/** First expected-rendered field of a walked tab (barrier helper). */
+function walkFirstField(tab: WalkTab): string {
+  const allowed = new Set(tab.allowedSkip ?? []);
+  const fields = walkableFields(tab.schema);
+  return fields.find((f) => !allowed.has(f) && !allowed.has(f.split('.')[0])) ?? fields[0];
+}

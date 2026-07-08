@@ -13,6 +13,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { getJointObligorTabSchema, type JointObligorTypeEnum } from '@/lib/schemas/joint-obligor';
 
 interface JointObligorReferencesTabProps {
@@ -33,22 +34,25 @@ export default function JointObligorReferencesTabRHF({
   // Get schema - automatically validates exactly 3 references
   const schema = getJointObligorTabSchema('references', jointObligorType);
 
+  const defaultValues = {
+    personalReferences: initialData?.personalReferences?.length > 0 ? initialData?.personalReferences : [
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
+      { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
+    ],
+    commercialReferences: initialData?.commercialReferences?.length > 0 ? initialData?.commercialReferences : [
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+      { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
+    ],
+  };
+
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: {
-      personalReferences: initialData?.personalReferences.length > 0 ? initialData?.personalReferences : [
-        { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
-        { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
-        { firstName: '', middleName: '', paternalLastName: '', maternalLastName: '', phone: '', email: '', relationship: '', occupation: '', address: '' },
-      ],
-      commercialReferences: initialData?.commercialReferences.length > 0 ? initialData?.commercialReferences : [
-        { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-        { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-        { companyName: '', contactFirstName: '', contactMiddleName: '', contactPaternalLastName: '', contactMaternalLastName: '', phone: '', email: '', relationship: '', yearsOfRelationship: 0 },
-      ],
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Use fieldArray for references (fixed 3)
   const { fields: personalFields } = useFieldArray({

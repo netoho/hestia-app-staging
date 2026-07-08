@@ -30,7 +30,7 @@ export default function LandlordPortalPage() {
   }, [token]);
 
   // Use tRPC to fetch actor data
-  const { data, isLoading, error, refetch } = trpc.actor.getManyByToken.useQuery(
+  const { data, isLoading, error, refetch, dataUpdatedAt } = trpc.actor.getManyByToken.useQuery(
     {
       type: 'landlord',
       token
@@ -260,6 +260,7 @@ export default function LandlordPortalPage() {
           policy={policy}
           selfId={data?.selfId ?? null}
           onComplete={handleComplete}
+          dataUpdatedAt={dataUpdatedAt}
         />
       </div>
     </div>

@@ -23,6 +23,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { DocumentCategory } from "@/prisma/generated/prisma-client/enums";
 import { InlineDocumentManager } from '@/components/documents/InlineDocumentManager';
 import { useDocumentOperations } from '@/hooks/useDocumentOperations';
@@ -78,28 +79,31 @@ export default function FinancialInfoFormRHF({
     isAdminEdit,
   });
 
+  const defaultValues = {
+    // Banking
+    bankName: landlord?.bankName || '',
+    accountNumber: landlord?.accountNumber || '',
+    clabe: landlord?.clabe || '',
+    accountHolder: landlord?.accountHolder || '',
+    // CFDI
+    requiresCFDI: landlord?.requiresCFDI ?? false,
+    // Policy financial
+    securityDeposit: policyFinancial?.securityDeposit || null,
+    maintenanceFee: policyFinancial?.maintenanceFee || null,
+    maintenanceIncludedInRent: policyFinancial?.maintenanceIncludedInRent ?? false,
+    issuesTaxReceipts: policyFinancial?.issuesTaxReceipts ?? false,
+    hasIVA: policyFinancial?.hasIVA ?? false,
+    rentIncreasePercentage: policyFinancial?.rentIncreasePercentage || null,
+    paymentMethod: policyFinancial?.paymentMethod || '',
+    additionalInfo: landlord?.additionalInfo || '',
+  };
+
   const form = useForm<z.input<typeof financialFormSchema>>({
     resolver: zodResolver(financialFormSchema),
     mode: 'onChange',
-    defaultValues: {
-      // Banking
-      bankName: landlord?.bankName || '',
-      accountNumber: landlord?.accountNumber || '',
-      clabe: landlord?.clabe || '',
-      accountHolder: landlord?.accountHolder || '',
-      // CFDI
-      requiresCFDI: landlord?.requiresCFDI ?? false,
-      // Policy financial
-      securityDeposit: policyFinancial?.securityDeposit || null,
-      maintenanceFee: policyFinancial?.maintenanceFee || null,
-      maintenanceIncludedInRent: policyFinancial?.maintenanceIncludedInRent ?? false,
-      issuesTaxReceipts: policyFinancial?.issuesTaxReceipts ?? false,
-      hasIVA: policyFinancial?.hasIVA ?? false,
-      rentIncreasePercentage: policyFinancial?.rentIncreasePercentage || null,
-      paymentMethod: policyFinancial?.paymentMethod || '',
-      additionalInfo: landlord?.additionalInfo || '',
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   const requiresCFDI = form.watch('requiresCFDI');
   const showRentIncrease = policy?.contractLength > 12;

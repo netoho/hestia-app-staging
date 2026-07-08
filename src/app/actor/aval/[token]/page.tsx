@@ -28,7 +28,7 @@ export default function AvalPortalPage({
   }, [token]);
 
   // Use tRPC to fetch actor data
-  const { data, isLoading, error, refetch } = trpc.actor.getByToken.useQuery(
+  const { data, isLoading, error, refetch, dataUpdatedAt } = trpc.actor.getByToken.useQuery(
     {
       type: 'aval',
       token
@@ -213,6 +213,7 @@ export default function AvalPortalPage({
           initialData={avalData}
           policy={policy}
           onComplete={handleComplete}
+          dataUpdatedAt={dataUpdatedAt}
         />
       </div>
     </div>

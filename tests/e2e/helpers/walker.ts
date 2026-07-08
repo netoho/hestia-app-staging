@@ -295,12 +295,13 @@ export function walksFor(variant: WalkVariant): ActorWalk[] {
                 'legalRepId',
               ],
             },
-            // TODO(#180): the company property save is toastless under the
-            // walker (resolver clean, no request — requestSubmit-class) while
-            // E2E-06's helper path saves it AFTER a reload that reseeds the
-            // form from the post-personal-save row. Suspect: stale pre-walk
-            // row values on unmounted literal fields. Open investigation;
-            // E2E-06 keeps the flow covered meanwhile.
+            // Re-enabled (#190): the toastless save was stale pre-walk row
+            // values spread into defaultValues failing validation on fields
+            // the COMPANY variant renders no control for — invisible errors,
+            // no request. useWizardDataReset re-seeds the tab from the
+            // post-personal-save row (and surfaces any invisible error as a
+            // toast the walker's diagnostics catch).
+            AVAL_PROPERTY_TAB('COMPANY'),
           ]
         : [
             {
@@ -402,7 +403,7 @@ function isAddressComposite(leaf: z.ZodTypeAny): boolean {
   return leaf instanceof z.ZodObject && 'street' in leaf.shape;
 }
 
-async function fillAddressComposite(root: Locator): Promise<string> {
+export async function fillAddressComposite(root: Locator): Promise<string> {
   const parts: string[] = [];
   for (const id of ADDRESS_GRID_IDS) {
     const input = root.locator(`#${id}`).first();
@@ -604,6 +605,23 @@ export async function readFieldsBack(
       : await readControl(control);
   }
   return { values, missing };
+}
+
+/**
+ * Fill ONE plain input/textarea field by its data-field name (reverse-probe
+ * driver — probes are restricted to format-free text fields by construction,
+ * so the full control-type dispatch of fillTabBySchema is unnecessary).
+ */
+export async function fillPlainField(
+  scope: Page | Locator,
+  name: string,
+  value: string,
+): Promise<void> {
+  const control = scope.locator(`[data-field="${name}"]`).first();
+  await control.waitFor({ state: 'visible', timeout: 15_000 });
+  await control.fill(value);
+  // Blur so onChange-mode validation settles before the save click.
+  await control.blur();
 }
 
 /** Diff helper producing readable failures: field → { portal, admin }. */

@@ -109,16 +109,26 @@ export default function InlineActorEditor({
 
   // Fetch data using admin endpoints (same data shape as public pages)
 
-  // For non-landlord actors: use getById
+  // For non-landlord actors: use getById.
+  // refetchOnMount 'always': an EDIT surface must never trust the app-wide
+  // 5-minute staleTime — every open revalidates in the background and
+  // useWizardDataReset re-seeds the mounted tabs when fresh data lands
+  // (#171 stale-open case; a portal save may have changed the row).
   const singleActorQuery = trpc.actor.getById.useQuery(
     { type: actorType, id: actorId },
-    { enabled: actorType !== 'landlord' && isOpen && !!actorId }
+    {
+      enabled: actorType !== 'landlord' && isOpen && !!actorId,
+      refetchOnMount: 'always',
+    }
   );
 
   // For landlords: get ALL landlords for this policy (to match public page behavior)
   const landlordsQuery = trpc.actor.listByPolicy.useQuery(
     { policyId, type: 'landlord' },
-    { enabled: actorType === 'landlord' && isOpen && !!policyId }
+    {
+      enabled: actorType === 'landlord' && isOpen && !!policyId,
+      refetchOnMount: 'always',
+    }
   );
 
   const handleComplete = () => {
@@ -203,6 +213,11 @@ export default function InlineActorEditor({
       policy={policy}
       onComplete={handleComplete}
       isAdminEdit
+      dataUpdatedAt={
+        actorType === 'landlord'
+          ? landlordsQuery.dataUpdatedAt
+          : singleActorQuery.dataUpdatedAt
+      }
     />
   );
 

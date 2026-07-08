@@ -15,6 +15,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getAvalTabSchema } from '@/lib/schemas/aval';
 import type { AvalType } from "@/prisma/generated/prisma-client/enums";
@@ -32,6 +33,11 @@ export default function AvalPersonalInfoTab({
   onSave,
   disabled = false,
 }: AvalPersonalInfoTabProps) {
+  const defaultValues = {
+    avalType,
+    ...initialData,
+  };
+
   // Get appropriate schema based on aval type
   // Initialize form with RHF + Zod validation. Resolve against the schema for
   // the type currently selected in the form — a resolver pinned to the
@@ -41,11 +47,9 @@ export default function AvalPersonalInfoTab({
     resolver: (values, ctx, options) =>
       zodResolver(getAvalTabSchema(values.avalType ?? avalType, 'personal'))(values, ctx, options),
     mode: 'onChange', // Real-time validation
-    defaultValues: {
-      avalType,
-      ...initialData,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch avalType for dynamic UI
   const currentAvalType = form.watch('avalType');

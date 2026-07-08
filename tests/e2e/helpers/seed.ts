@@ -80,6 +80,45 @@ const personalRefs = (n: number) =>
     email: `ref${i + 1}@example.com`,
   }));
 
+/**
+ * One actor document row + a REAL MinIO object behind it (so specs exercising
+ * the delete path can assert both the DB row and the S3 object go away).
+ */
+export async function seedActorDocument(
+  category: string,
+  actorTag: string,
+  fk: Record<string, string>,
+): Promise<{ id: string; s3Key: string; fileName: string }> {
+  const data = docData(category, actorTag, fk);
+  const row = await prisma.actorDocument.create({ data: data as never });
+  await putS3Objects([data.s3Key]);
+  return { id: row.id, s3Key: data.s3Key, fileName: data.fileName };
+}
+
+/** True if the seeded object still exists in MinIO. */
+export async function s3ObjectExists(key: string): Promise<boolean> {
+  const { S3Client, HeadObjectCommand } = await import('@aws-sdk/client-s3');
+  const client = new S3Client({
+    region: APP_ENV.AWS_S3_REGION,
+    endpoint: APP_ENV.AWS_S3_ENDPOINT,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: APP_ENV.AWS_ACCESS_KEY_ID,
+      secretAccessKey: APP_ENV.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+  try {
+    await client.send(
+      new HeadObjectCommand({ Bucket: APP_ENV.AWS_S3_BUCKET, Key: key }),
+    );
+    return true;
+  } catch {
+    return false;
+  } finally {
+    client.destroy();
+  }
+}
+
 export interface SeededRenewablePolicy {
   policyId: string;
   policyNumber: string;

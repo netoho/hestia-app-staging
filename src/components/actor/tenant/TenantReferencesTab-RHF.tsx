@@ -15,6 +15,7 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { getTenantTabSchema, type TenantType } from '@/lib/domain/tenant/schema';
 
 // Constants for reference limits
@@ -63,21 +64,24 @@ export default function TenantReferencesTabRHF({
   const isCompany = tenantType === 'COMPANY';
   const schema = getTenantTabSchema(tenantType, 'references');
 
+  const defaultValues = isCompany
+    ? {
+        commercialReferences: initialData?.commercialReferences?.length >= REFERENCE_LIMITS.MIN
+          ? initialData.commercialReferences
+          : Array.from({ length: REFERENCE_LIMITS.MIN }, (_, i) => initialData?.commercialReferences?.[i] || createEmptyCommercialReference()),
+      }
+    : {
+        personalReferences: initialData?.personalReferences?.length >= REFERENCE_LIMITS.MIN
+          ? initialData.personalReferences
+          : Array.from({ length: REFERENCE_LIMITS.MIN }, (_, i) => initialData?.personalReferences?.[i] || createEmptyPersonalReference()),
+      };
+
   const form = useForm({
     resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]),
     mode: 'onChange',
-    defaultValues: isCompany
-      ? {
-          commercialReferences: initialData?.commercialReferences?.length >= REFERENCE_LIMITS.MIN
-            ? initialData.commercialReferences
-            : Array.from({ length: REFERENCE_LIMITS.MIN }, (_, i) => initialData?.commercialReferences?.[i] || createEmptyCommercialReference()),
-        }
-      : {
-          personalReferences: initialData?.personalReferences?.length >= REFERENCE_LIMITS.MIN
-            ? initialData.personalReferences
-            : Array.from({ length: REFERENCE_LIMITS.MIN }, (_, i) => initialData?.personalReferences?.[i] || createEmptyPersonalReference()),
-        },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Personal references field array
   const {

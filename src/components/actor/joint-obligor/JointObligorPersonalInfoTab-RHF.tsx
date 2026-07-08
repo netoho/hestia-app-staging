@@ -16,6 +16,7 @@ import {
   FormControl,
   FormMessage
 } from '@/components/ui/form';
+import { useWizardDataReset } from '@/components/actor/shared/useWizardDataReset';
 import { AddressAutocomplete } from '@/components/forms/AddressAutocomplete';
 import { getJointObligorTabSchema, type JointObligorTypeEnum } from '@/lib/schemas/joint-obligor';
 
@@ -43,6 +44,12 @@ export default function JointObligorPersonalInfoTabRHF({
   onSave,
   disabled = false,
 }: JointObligorPersonalInfoTabProps) {
+  const defaultValues = {
+    jointObligorType,
+    nationality: 'MEXICAN',
+    ...initialData,
+  };
+
   // Initialize form with RHF + Zod validation. The schema must follow the
   // type currently SELECTED in the form, not the mount-time prop: the wizard
   // always creates JOs as INDIVIDUAL and this tab's radio is the only way to
@@ -54,12 +61,9 @@ export default function JointObligorPersonalInfoTabRHF({
         getJointObligorTabSchema('personal', values.jointObligorType ?? jointObligorType) as any,
       )(values, ctx, options),
     mode: 'onChange',
-    defaultValues: {
-      jointObligorType,
-      nationality: 'MEXICAN',
-      ...initialData,
-    },
+    defaultValues,
   });
+  useWizardDataReset(form, defaultValues);
 
   // Watch type and nationality for dynamic UI
   const currentType = form.watch('jointObligorType');
