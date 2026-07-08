@@ -913,7 +913,7 @@ class DocumentService extends BaseService {
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       include: {
-        tenant: {
+        tenants: {
           include: { documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } } },
         },
         jointObligors: {
@@ -930,17 +930,20 @@ class DocumentService extends BaseService {
 
     if (!policy) return { valid: false, missing: requiredCategories };
 
-    const tenantDocs = policy.tenant?.documents || [];
-    const tenantCategories = new Set(tenantDocs.map((d) => d.category));
-
+    // Every tenant must carry the required categories (S5b #169 — 1..N tenants).
     const missing: DocumentCategory[] = [];
-    for (const category of requiredCategories) {
-      if (!tenantCategories.has(category)) missing.push(category);
+    for (const tenant of policy.tenants || []) {
+      const tenantCategories = new Set(
+        (tenant.documents || []).map((d: { category: DocumentCategory }) => d.category),
+      );
+      for (const category of requiredCategories) {
+        if (!tenantCategories.has(category)) missing.push(category);
+      }
     }
 
     for (const jo of policy.jointObligors || []) {
       const joDocs = jo.documents || [];
-      const joCategories = new Set(joDocs.map((d) => d.category));
+      const joCategories = new Set(joDocs.map((d: { category: DocumentCategory }) => d.category));
       for (const category of requiredCategories) {
         if (!joCategories.has(category)) missing.push(category);
       }
@@ -948,7 +951,7 @@ class DocumentService extends BaseService {
 
     for (const aval of policy.avals || []) {
       const avalDocs = aval.documents || [];
-      const avalCategories = new Set(avalDocs.map((d) => d.category));
+      const avalCategories = new Set(avalDocs.map((d: { category: DocumentCategory }) => d.category));
       const avalRequired = [...requiredCategories, DocumentCategory.PROPERTY_DEED];
       for (const category of avalRequired) {
         if (!avalCategories.has(category)) missing.push(category);
