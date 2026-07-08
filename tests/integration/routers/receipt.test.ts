@@ -20,6 +20,7 @@ import {
   UserRole,
 } from '@/prisma/generated/prisma-client/enums';
 import { prisma } from '../../utils/database';
+import { receiptService } from '@/lib/services/receiptService';
 import { createAdminCaller, createPublicCaller } from '../callers';
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
@@ -28,6 +29,7 @@ import {
   uploadedReceipt,
   notApplicableReceipt,
   pendingUploadReceipt,
+  tenantFactory,
 } from '../factories';
 import { mintTenantToken } from '../actorTokens';
 
@@ -92,6 +94,59 @@ describe('receipt.getPortalData', () => {
     await expect(
       caller.receipt.getPortalData({ token: 'does-not-exist' }),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  // S5b: receipts are POLICY-scoped. A receipt uploaded by ONE co-tenant
+  // satisfies the month for the whole policy, and every co-tenant's portal
+  // lists the policy-wide receipts (not just their own uploads).
+  test('co-tenant B sees the receipt uploaded by tenant A (policy-scoped)', async () => {
+    const { policy, tenant: tenantA } = await activePolicyWithTenant();
+    const tenantB = await tenantFactory.create(
+      { email: 'co-tenant-b@hestia.test' },
+      { transient: { policyId: policy.id } },
+    );
+
+    // Tenant A uploads the RENT receipt for month 5.
+    const receiptA = await uploadedReceipt.create(
+      { year: 2026, month: 5, receiptType: ReceiptType.RENT },
+      { transient: { tenantId: tenantA.id, policyId: policy.id } },
+    );
+
+    // Tenant B opens the portal with THEIR OWN token.
+    const { token, caller } = await mintTenantToken(tenantB.id);
+    const result = await caller.receipt.getPortalData({ token });
+
+    // The portal entry is tenant B's row, but its policy-scoped receipts list
+    // includes the receipt uploaded by tenant A.
+    const portalPolicy = result.policies.find((p) => p.policyId === policy.id);
+    expect(portalPolicy).toBeDefined();
+    expect(portalPolicy!.tenantId).toBe(tenantB.id);
+
+    const monthFive = portalPolicy!.receipts.find(
+      (r) => r.month === 5 && r.receiptType === ReceiptType.RENT,
+    );
+    expect(monthFive).toBeDefined();
+    expect(monthFive!.id).toBe(receiptA.id);
+    // Uploader attribution stays with tenant A even though B can see it.
+    expect(monthFive!.tenantId).toBe(tenantA.id);
+  });
+
+  test('policy-scoped month status: A upload satisfies the month for the policy', async () => {
+    const { policy, tenant: tenantA } = await activePolicyWithTenant();
+    await tenantFactory.create(
+      { email: 'co-tenant-b2@hestia.test' },
+      { transient: { policyId: policy.id } },
+    );
+    await uploadedReceipt.create(
+      { year: 2026, month: 7, receiptType: ReceiptType.RENT },
+      { transient: { tenantId: tenantA.id, policyId: policy.id } },
+    );
+
+    // getMonthStatus is policy-scoped: any tenant's upload fills the RENT slot.
+    const status = await receiptService.getMonthStatus(policy.id, 2026, 7, [ReceiptType.RENT]);
+    expect(status.uploaded).toBe(1);
+    expect(status.pending).toBe(0);
+    expect(status.slots[0]!.status).toBe('uploaded');
   });
 });
 

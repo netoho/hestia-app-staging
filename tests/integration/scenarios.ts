@@ -39,6 +39,35 @@ export async function createPolicyWithActors(overrides: { status?: PolicyStatus 
   return { policy, pkg, creator, landlord, tenant };
 }
 
+export interface MultiTenantPolicyResult extends PolicyWithActorsResult {
+  /** All tenants on the policy in createdAt-asc order; tenants[0] === tenant. */
+  tenants: Array<Awaited<ReturnType<typeof tenantFactory.create>>>;
+}
+
+/**
+ * Create a policy with one landlord and N co-tenants (S5b #169).
+ *
+ * Builds on createPolicyWithActors (whose tenant becomes tenants[0]) and adds
+ * `tenantCount - 1` extra tenant rows with strictly increasing createdAt so
+ * that createdAt-asc ordering (the service ordering for tenants) is stable.
+ */
+export async function createMultiTenantPolicy(
+  opts: { tenantCount?: number; status?: PolicyStatus } = {},
+): Promise<MultiTenantPolicyResult> {
+  const tenantCount = opts.tenantCount ?? 2;
+  const base = await createPolicyWithActors({ status: opts.status });
+  const tenants = [base.tenant];
+  for (let i = 1; i < tenantCount; i++) {
+    tenants.push(
+      await tenantFactory.create(
+        { createdAt: new Date(base.tenant.createdAt.getTime() + i * 1000) },
+        { transient: { policyId: base.policy.id } },
+      ),
+    );
+  }
+  return { ...base, tenants };
+}
+
 export async function createCancelledPolicy() {
   return createPolicyWithActors({ status: PolicyStatus.CANCELLED });
 }

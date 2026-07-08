@@ -146,6 +146,7 @@ const POLICY_EXCLUDED = [
 
 const allTrueSelection = (
   landlordIds: string[],
+  tenantIds: string[],
   joIds: string[],
   avalIds: string[],
 ): PolicyRenewalSelection => ({
@@ -162,7 +163,9 @@ const allTrueSelection = (
     cfdi: true,
     documents: true,
   })),
-  tenant: {
+  // One entry per tenant (S5b #169); renewal clones ALL tenants.
+  tenants: tenantIds.map((sourceId) => ({
+    sourceId,
     include: true,
     basicInfo: true,
     contact: true,
@@ -172,7 +175,7 @@ const allTrueSelection = (
     references: true,
     paymentPreferences: true,
     documents: true,
-  },
+  })),
   jointObligors: joIds.map((sourceId) => ({
     sourceId,
     include: true,
@@ -377,7 +380,7 @@ describe('renewal clone (#159)', () => {
 
     const result = await clonePolicyForRenewal({
       sourcePolicyId: policy.id,
-      selection: allTrueSelection([landlord.id], [jo.id], [aval.id]),
+      selection: allTrueSelection([landlord.id], [tenant.id], [jo.id], [aval.id]),
       startDate: '2027-01-01',
       endDate: '2028-01-01',
       initiatedById: creator.id,
@@ -386,7 +389,7 @@ describe('renewal clone (#159)', () => {
     const clone = await prisma.policy.findUniqueOrThrow({
       where: { id: result.newPolicyId },
       include: {
-        tenant: {
+        tenants: {
           include: {
             addressDetails: true,
             employerAddressDetails: true,
@@ -425,7 +428,7 @@ describe('renewal clone (#159)', () => {
       tenant: compareRows(
         COLS.tenant,
         src.tenant,
-        clone.tenant as unknown as Record<string, unknown>,
+        clone.tenants[0] as unknown as Record<string, unknown>,
         RENEWAL_EXCLUDED.tenant,
       ),
       landlord: compareRows(
@@ -470,9 +473,9 @@ describe('renewal clone (#159)', () => {
 
     // ---- Structured addresses are recreated with identical content ----
     const addressPairs: Array<[string, Record<string, unknown> | null | undefined]> = [
-      [addr.tenant.id, clone.tenant?.addressDetails as never],
-      [addr.tenantEmployer.id, clone.tenant?.employerAddressDetails as never],
-      [addr.tenantPrevious.id, clone.tenant?.previousRentalAddressDetails as never],
+      [addr.tenant.id, clone.tenants[0]?.addressDetails as never],
+      [addr.tenantEmployer.id, clone.tenants[0]?.employerAddressDetails as never],
+      [addr.tenantPrevious.id, clone.tenants[0]?.previousRentalAddressDetails as never],
       [addr.landlord.id, clone.landlords[0].addressDetails as never],
       [addr.jo.id, clone.jointObligors[0].addressDetails as never],
       [addr.joEmployer.id, clone.jointObligors[0].employerAddressDetails as never],
@@ -503,8 +506,8 @@ describe('renewal clone (#159)', () => {
     // ---- References are recreated with identical content ----
     const refMismatches: Record<string, unknown> = {};
     const refSets: Array<[string, Record<string, unknown>[], 'personalReference' | 'commercialReference']> = [
-      ['tenant.personal', clone.tenant?.personalReferences as never, 'personalReference'],
-      ['tenant.commercial', clone.tenant?.commercialReferences as never, 'commercialReference'],
+      ['tenant.personal', clone.tenants[0]?.personalReferences as never, 'personalReference'],
+      ['tenant.commercial', clone.tenants[0]?.commercialReferences as never, 'commercialReference'],
       ['jo.personal', clone.jointObligors[0].personalReferences as never, 'personalReference'],
       ['jo.commercial', clone.jointObligors[0].commercialReferences as never, 'commercialReference'],
       ['aval.personal', clone.avals[0].personalReferences as never, 'personalReference'],
@@ -539,8 +542,8 @@ describe('renewal clone (#159)', () => {
     expect(norm(clone.activatedAt)).toBe('2027-01-01T00:00:00.000Z');
     expect(norm(clone.expiresAt)).toBe('2028-01-01T00:00:00.000Z');
     expect((await row('Policy', policy.id)).renewedToId).toBe(clone.id);
-    expect(clone.tenant?.accessToken).toBeTruthy(); // fresh tokens minted
-    expect(clone.tenant?.informationComplete).toBe(false);
+    expect(clone.tenants[0]?.accessToken).toBeTruthy(); // fresh tokens minted
+    expect(clone.tenants[0]?.informationComplete).toBe(false);
     expect(
       await prisma.actorInvestigation.count({ where: { policyId: clone.id, status: 'PENDING' } }),
     ).toBe(3);
@@ -561,6 +564,8 @@ describe('tenant replacement (#159)', () => {
 
     const result = await replaceTenantOnPolicy({
       policyId: policy.id,
+      // 1..N tenants (S5b #169): target the specific tenant row.
+      tenantId: tenant.id,
       replacementReason: 'drift roundtrip',
       newTenant: {
         tenantType: 'INDIVIDUAL',

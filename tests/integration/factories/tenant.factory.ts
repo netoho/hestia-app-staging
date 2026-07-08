@@ -1,7 +1,8 @@
 /**
  * Tenant factory.
  *
- * Requires a policyId. A Policy has at most one Tenant (Tenant.policyId is unique).
+ * Requires a policyId. A Policy has 1..N Tenants (S5b #169) — create the
+ * factory multiple times with the same transient policyId for co-tenants.
  */
 import { Factory } from 'fishery';
 import { TenantType, NationalityType, ActorVerificationStatus } from '@/prisma/generated/prisma-client/enums';
