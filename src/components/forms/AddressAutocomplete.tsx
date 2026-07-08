@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, MapPin, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import debounce from 'lodash/debounce';
+// lodash was never declared — it resolved through recharts@2 hoisting and
+// vanishes with recharts 3 (#166). The repo util is a drop-in here.
+import { debounce } from '@/lib/utils/optimisticUpdates';
 import { trpc } from '@/lib/trpc/client';
 import { isAddressComplete } from '@/lib/schemas/shared/address.schema';
 
