@@ -949,3 +949,35 @@ Train #197-#200 + #202 all merged by user. **PR #203 completes S5a**:
 **Gotchas hit + fixed**: (1) `ERR_NETWORK_IO_SUSPENDED` on the first portal goto (heavy post-wizard page still streaming) → `gotoStable` retry wrapper. (2) card-scope `getByText('Inquilino 1', {exact:true})` matched nothing (h3 also holds Reemplazar/Eliminar) → dropped `exact` (mirror completeActorStrict).
 
 **Regression proof**: @core **E2E-01 (1.1m) + E2E-07 (23s) reverified GREEN** — the wizard change did not regress the single-tenant path. Ratchet still **354** (no new tsc). Env verified runnable: docker pg 5433 + MinIO 9100 up, browsers installed, e2e DB `hestia_e2e_test` provisioned on the 1:N schema, dev:e2e server warm-then-killed. New specs stay nightly (not @core) per the E2E cadence — they don't gate the ship. Commits: e2e isolation (wizard/db/09f) + e2e gate (13/admin.ts). Pushed 105a0e4. PR body + #205 updated.
+
+### Update — 2026-07-08 (later) — 2.16.0 staging-smoke fixes → PR #208 (CI green), MIGRATION-FREE
+
+**2.15.0 shipped to prod (#207 → main).** Staging smoke surfaced 4 items; grilled + fixed on `fix/216-staging-smoke-fixes` → PR #208 → `release/2.16.0` (cut from main). **No migration** — all config/UI/service/query.
+
+**Grill rulings**: 2.16.0 minor (Turnstile batch shifts to 2.17.0); item 1 = mint-on-open; item 4 = CREDIT_REPORT optional on individual+company for tenant/aval/JO; item 2 = complete fix (outer refetch + open-form re-seed).
+
+**Fixes**:
+1. **Share links** — `getShareLinksForPolicy` skipped token-less actors (`if accessToken`). Admin-added co-tenant = blank email → invite path never mints token → modal hides it (catch-22). Now mints-or-reuses each actor's token (idempotent) → ALL actors show. `shareLinks.ts` rewritten with a `buildActorShareLink` helper.
+2. **Inline-edit invalidation** — inline field-save (ActorWizard→actor.update) only invalidated `actor.getByToken`, never `policy.getById` (what ActorCard/tabs/overview render from) → stale. Added `onSaved` hook to ActorWizard (fires per tab save, admin-scoped — portal passes none); InlineActorEditor invalidates policy.getById + actor.getById (re-seeds open form via useWizardDataReset) + actor.listByPolicy.
+3. **Tenant ADDRESS_PROOF optional** — one-line flip (tenant individual; company already false).
+4. **Buró de crédito** — `CREDIT_REPORT` enum ALREADY existed (no migration); added `{CREDIT_REPORT, required:false}` to 6 arrays (tenant/aval/JO × ind/company); label→'Buró de crédito'. DocumentsSection auto-renders the optional slot.
+
+**Recon** (4 Explore agents): confirmed all mechanisms; item-1 agent found the exact catch-22 + flagged a RELATED bug → filed **#209** (per-row 'Enviar Correo' keys off actorType not actorId → resends to ALL tenants).
+
+**Verified**: integration **429/0** (+ new mint-on-open test locking token-less→link); `bun run build` clean; ratchet **354** (unchanged). E2E (nightly): **E2E-09g** added (admin inline edit → outer ActorCard refreshes without reopening; fails pre-fix, passes post-fix — needed full personal-tab fill since CURP/RFC/phone are required, + page-level toast + Close-button close); **E2E-01 @core** re-verified green (items 3/4 don't break the tenant portal doc flow). PR #208 CI green.
+
+**HANDOFF**: merge #208 → release/2.16.0; when shipping, release/2.16.0 → main (= deploy) — **NO manual migration this release**. Follow-up #209 (Enviar Correo per-row). Turnstile #163 + deferred → 2.17.0.
+
+### Update — 2026-07-08 (later) — #209 fixed on the 2.16.0 track (per-actor invitation resend)
+
+**Folded #209 into PR #208** (the follow-up bug found during the share-links fix). Session was cut right after pushing; resumed, CI confirmed green on the final commit `c647b96`.
+
+**Bug**: share modal's per-row "Enviar Correo" (and batch) sent `{ actors: [type] }` → `notificationService` loops ALL actors of that type → resending to one tenant emailed every tenant.
+
+**Fix**: `sendInvitations` gains an optional `actorIds` filter. Threaded router (`policy.router.ts` input + pass-through) → `notificationService` (`shouldProcessActorRow` helper applied per-row in all 4 actor loops). Backward-compatible: omitted `actorIds` = every actor of the given types (creation flow unchanged). Modal passes the specific row id(s): per-row `[actorId]`, batch `Array.from(selectedActors)`.
+
+**Test constraint**: `sendIncompleteActorInfoNotification` is MOCKED at integration preload (line 416), so the real filter logic isn't integration-reachable — added a spyOn wiring test asserting the router forwards `actorIds` (the preload comment prescribes exactly this). Full logic verified by reading (3-line predicate on existing loops).
+
+**Verified**: integration **430/0** (+1 forwarding test, 432 total w/ 2 Stripe skips); `bun run build` clean; ratchet **354** (unchanged — the tsc errors in the touched files are all pre-existing baseline, line-shifted). PR #208 CI green on c647b96.
+
+**PR #208 now = 5 fixes** (share links, inline refresh, ADDRESS_PROOF optional, Buró de crédito, per-actor resend). Commit carries `Closes #209` → auto-closes when 2.16.0 → main. Commented on #209. **Handoff unchanged: merge #208 → release/2.16.0; ship = release/2.16.0 → main (NO migration). Turnstile #163 + deferred → 2.17.0.**

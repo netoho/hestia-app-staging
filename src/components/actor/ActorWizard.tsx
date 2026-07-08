@@ -44,6 +44,12 @@ export interface ActorWizardProps {
   onComplete?: () => void;
   isAdminEdit?: boolean;
   /**
+   * Fires after EACH successful tab save. The admin editor uses it to refetch
+   * the outer policy so ActorCard/tabs/overview reflect the edit (#216). The
+   * portal doesn't pass it — so this is inherently admin-scoped.
+   */
+  onSaved?: () => void;
+  /**
    * The feeding query's `dataUpdatedAt`. Tabs adopting useWizardDataReset
    * re-seed from fresh `initialData` whenever this bumps (#171 edit half).
    */
@@ -131,6 +137,7 @@ export default function ActorWizard({
   selfId = null,
   onComplete,
   isAdminEdit = false,
+  onSaved,
   dataUpdatedAt = 0,
 }: ActorWizardProps) {
   const { toast } = useToast();
@@ -167,6 +174,10 @@ export default function ActorWizard({
         wizard.markTabSaved(tabName);
         wizard.goToNextTab(newTabSaved);
 
+        // Refetch the outer policy so admin ActorCard/tabs/overview reflect
+        // this edit (#216) — no-op on the portal, which passes no onSaved.
+        onSaved?.();
+
         // Only the public portal completes; admin closes via its own CTA.
         if (wizard.isLastTabAndAllSaved() && !isAdminEdit) {
           onComplete?.();
@@ -181,7 +192,7 @@ export default function ActorWizard({
         });
       }
     },
-    [saveTab, wizard, toast, isAdminEdit, onComplete],
+    [saveTab, wizard, toast, isAdminEdit, onComplete, onSaved],
   );
 
   const allTabsSaved = tabs

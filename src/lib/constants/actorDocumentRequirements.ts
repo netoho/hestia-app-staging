@@ -26,9 +26,10 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
     individual: [
       { category: DocumentCategory.IDENTIFICATION, required: true },
       { category: DocumentCategory.INCOME_PROOF, required: true },
-      { category: DocumentCategory.ADDRESS_PROOF, required: true },
+      { category: DocumentCategory.ADDRESS_PROOF, required: false },
       { category: DocumentCategory.BANK_STATEMENT, required: true },
       { category: DocumentCategory.IMMIGRATION_DOCUMENT, required: true, condition: 'foreign' },
+      { category: DocumentCategory.CREDIT_REPORT, required: false },
     ],
     company: [
       { category: DocumentCategory.COMPANY_CONSTITUTION, required: true },
@@ -37,6 +38,7 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.TAX_STATUS_CERTIFICATE, required: true },
       { category: DocumentCategory.BANK_STATEMENT, required: true },
       { category: DocumentCategory.ADDRESS_PROOF, required: false },
+      { category: DocumentCategory.CREDIT_REPORT, required: false },
     ],
   },
   landlord: {
@@ -62,6 +64,7 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.BANK_STATEMENT, required: true },
       { category: DocumentCategory.IMMIGRATION_DOCUMENT, required: true, condition: 'foreign' },
       { category: DocumentCategory.PROPERTY_REGISTRY, required: false },
+      { category: DocumentCategory.CREDIT_REPORT, required: false },
     ],
     company: [
       { category: DocumentCategory.COMPANY_CONSTITUTION, required: true },
@@ -70,6 +73,7 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.TAX_STATUS_CERTIFICATE, required: true },
       { category: DocumentCategory.BANK_STATEMENT, required: true },
       { category: DocumentCategory.PROPERTY_REGISTRY, required: false },
+      { category: DocumentCategory.CREDIT_REPORT, required: false },
     ],
   },
   jointObligor: {
@@ -82,6 +86,7 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.PROPERTY_DEED, required: true, condition: 'propertyGuarantee' },
       { category: DocumentCategory.PROPERTY_TAX_STATEMENT, required: true, condition: 'propertyGuarantee' },
       { category: DocumentCategory.PROPERTY_REGISTRY, required: false, condition: 'propertyGuarantee' },
+      { category: DocumentCategory.CREDIT_REPORT, required: false },
     ],
     company: [
       { category: DocumentCategory.COMPANY_CONSTITUTION, required: true },
@@ -93,6 +98,7 @@ export const ACTOR_DOCUMENT_REQUIREMENTS = {
       { category: DocumentCategory.PROPERTY_DEED, required: true, condition: 'propertyGuarantee' },
       { category: DocumentCategory.PROPERTY_TAX_STATEMENT, required: true, condition: 'propertyGuarantee' },
       { category: DocumentCategory.PROPERTY_REGISTRY, required: false, condition: 'propertyGuarantee' },
+      { category: DocumentCategory.CREDIT_REPORT, required: false },
     ],
   },
 } as const satisfies Record<ActorType, { individual: DocumentRequirement[]; company: DocumentRequirement[] }>;

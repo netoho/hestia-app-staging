@@ -10,7 +10,8 @@
  *     service silently dropped a field)
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, spyOn } from 'bun:test';
+import * as notificationService from '@/lib/services/notificationService';
 import { TRPCError } from '@trpc/server';
 import {
   PolicyStatus,
@@ -29,7 +30,7 @@ import {
 } from '../callers';
 import { expectAuthGate } from '../expectAuthGate';
 import { createPolicyWithActors } from '../scenarios';
-import { packageFactory, policyFactory, landlordFactory } from '../factories';
+import { packageFactory, policyFactory, landlordFactory, tenantFactory } from '../factories';
 import { mintTenantToken, mintLandlordToken } from '../actorTokens';
 import { actorTokenService } from '@/lib/services/actorTokenService';
 
@@ -590,6 +591,26 @@ describe('policy.getShareLinks', () => {
     expect(urls.some((u) => u.includes('tok-landlord-coowner'))).toBe(true);
   });
 
+  test('mints a link for a token-less actor (e.g. an admin-added co-tenant)', async () => {
+    const { policy } = await createPolicyWithActors();
+    // A co-tenant added by admin arrives empty, with no access token — it
+    // must still surface a shareable link (#216).
+    const coTenant = await tenantFactory.create(
+      { accessToken: null, tokenExpiry: null },
+      { transient: { policyId: policy.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.policy.getShareLinks({ policyId: policy.id });
+
+    const coTenantLink = result.shareLinks.find((l) => l.actorId === coTenant.id);
+    expect(coTenantLink).toBeDefined();
+    expect(coTenantLink!.url).toMatch(/\/actor\/tenant\/.+/);
+    // The token was minted and persisted on the row.
+    const refreshed = await prisma.tenant.findUnique({ where: { id: coTenant.id } });
+    expect(refreshed?.accessToken).toBeTruthy();
+  });
+
   test('throws NOT_FOUND when policy does not exist', async () => {
     const { caller } = await createAdminCaller();
     await expect(caller.policy.getShareLinks({ policyId: 'nope' })).rejects.toMatchObject({
@@ -627,6 +648,30 @@ describe('policy.sendInvitations', () => {
     await expect(
       caller.policy.sendInvitations({ policyId: 'does-not-exist' }),
     ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
+  });
+
+  test('forwards actorIds to the notification service so a per-row resend targets one actor (#209)', async () => {
+    const { policy, tenant } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    const spy = spyOn(notificationService, 'sendIncompleteActorInfoNotification');
+    spy.mockClear();
+
+    await caller.policy.sendInvitations({
+      policyId: policy.id,
+      actors: ['tenant'],
+      actorIds: [tenant.id],
+      resend: true,
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]![0]).toMatchObject({
+      policyId: policy.id,
+      actors: ['tenant'],
+      actorIds: [tenant.id],
+    });
+
+    spy.mockRestore();
   });
 
   test('auth gate: ADMIN/STAFF allowed; PUBLIC blocked (BROKER coverage deferred)', async () => {
