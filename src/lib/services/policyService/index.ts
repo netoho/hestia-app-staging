@@ -3,6 +3,8 @@ import { PolicyStatus, DocumentUploadStatus } from "@/prisma/generated/prisma-cl
 import { PropertyDetailsService } from '../PropertyDetailsService';
 import { CreatePolicyData, logPolicyActivityParams } from './types';
 import { validatePolicyNumberFormat } from "@/lib/utils/policy";
+import { policySelect, policySelectList } from '@/lib/domain/policy/select';
+import { policyRowToAggregate } from '@/lib/domain/policy/adapters/db';
 
 export { getPolicyForCover } from './getPolicyForCover';
 export type {
@@ -192,7 +194,8 @@ export async function createPolicy(data: CreatePolicyData) {
     });
   }
 
-  return policy;
+  // Aggregate view: plural `tenants` (S5a #133); legacy `tenant` retained.
+  return policyRowToAggregate(policy);
 }
 
 export async function getPolicies(params?: {
@@ -266,64 +269,8 @@ export async function getPolicies(params?: {
       where,
       skip,
       take: limit,
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          }
-        },
-        managedBy: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          }
-        },
-        landlords: {
-          orderBy: [
-            { isPrimary: 'desc' },
-            { createdAt: 'asc' }
-          ]
-        },
-        tenant: true,
-        jointObligors: true,
-        avals: true,
-        propertyDetails: {
-          include: {
-            propertyAddressDetails: true,
-          },
-        },
-        documents: {
-          select: {
-            id: true,
-            category: true,
-            originalName: true,
-            fileSize: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        },
-        activities: {
-          select: {
-            id: true,
-            action: true,
-            description: true,
-            details: true,
-            performedById: true,
-            performedByType: true,
-            ipAddress: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 10 // Limit activities to last 10
-        }
-      },
+      // Centralized list-tier include — see src/lib/domain/policy/select.ts
+      include: policySelectList,
       orderBy: {
         createdAt: 'desc'
       }
@@ -332,7 +279,9 @@ export async function getPolicies(params?: {
   ]);
 
   return {
-    policies,
+    // Aggregate view: plural `tenants` (S5a #133); legacy `tenant` retained
+    // for the transition — see the db adapter.
+    policies: policies.map((p) => policyRowToAggregate(p)),
     pagination: {
       page,
       limit,
@@ -343,155 +292,14 @@ export async function getPolicies(params?: {
 }
 
 export async function getPolicyById(id: string) {
-  return prisma.policy.findUnique({
+  const row = await prisma.policy.findUnique({
     where: { id },
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        }
-      },
-      managedBy: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        }
-      },
-      landlords: {
-        include: {
-          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
-          addressDetails: true,
-        },
-        orderBy: [
-          { isPrimary: 'desc' },
-          { createdAt: 'asc' }
-        ]
-      },
-      tenant: {
-        include: {
-          personalReferences: true,
-          commercialReferences: true,
-          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
-          addressDetails: true,
-          employerAddressDetails: true,
-          previousRentalAddressDetails: true,
-        }
-      },
-      jointObligors: {
-        include: {
-          personalReferences: true,
-          commercialReferences: true,
-          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
-          addressDetails: true,
-          employerAddressDetails: true,
-          guaranteePropertyDetails: true,
-        }
-      },
-      avals: {
-        include: {
-          personalReferences: true,
-          commercialReferences: true,
-          documents: { where: { uploadStatus: DocumentUploadStatus.COMPLETE } },
-          addressDetails: true,
-          employerAddressDetails: true,
-          guaranteePropertyDetails: true,
-        }
-      },
-      tenantHistory: {
-        select: {
-          id: true,
-          tenantType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          replacedAt: true,
-          replacementReason: true,
-          verificationStatus: true,
-        },
-        orderBy: { replacedAt: 'desc' },
-      },
-      jointObligorHistory: {
-        select: {
-          id: true,
-          jointObligorType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          replacedAt: true,
-          replacementReason: true,
-          verificationStatus: true,
-        },
-        orderBy: { replacedAt: 'desc' },
-      },
-      avalHistory: {
-        select: {
-          id: true,
-          avalType: true,
-          firstName: true,
-          middleName: true,
-          paternalLastName: true,
-          maternalLastName: true,
-          companyName: true,
-          email: true,
-          phone: true,
-          replacedAt: true,
-          replacementReason: true,
-          verificationStatus: true,
-        },
-        orderBy: { replacedAt: 'desc' },
-      },
-      propertyDetails: {
-        include: {
-          propertyAddressDetails: true,
-          contractSigningAddressDetails: true,
-        }
-      },
-      documents: {
-        select: {
-          id: true,
-          category: true,
-          originalName: true,
-          fileSize: true,
-          createdAt: true,
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      },
-      activities: {
-        select: {
-          id: true,
-          action: true,
-          description: true,
-          details: true,
-          performedById: true,
-          performedByType: true,
-          ipAddress: true,
-          createdAt: true,
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      },
-      payments: {
-        select: {
-          id: true,
-          status: true,
-        }
-      }
-    }
+    // Centralized full-aggregate include — see src/lib/domain/policy/select.ts
+    include: policySelect,
   });
+  // Aggregate view: plural `tenants` (S5a #133); legacy `tenant` retained
+  // for the transition — see the db adapter.
+  return policyRowToAggregate(row);
 }
 
 

@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { GuarantorType, PolicyStatus } from '@/prisma/generated/prisma-client/enums';
+import { guarantorTypeChangePreconditionsSchema } from '@/lib/domain/policy/schema';
 import { generateJointObligorToken, generateAvalToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from './index';
 import { sendIncompleteActorInfoNotification } from '@/lib/services/notificationService';
@@ -72,8 +73,10 @@ export async function changeGuarantorType(
     return { success: false, error: 'Policy not found' };
   }
 
-  // Check if policy status allows change
-  if (!CHANGEABLE_STATUSES.includes(policy.status)) {
+  // Preconditions formalized on the canonical policy schema (S5a #133):
+  // guarantor type changes only before activation. CHANGEABLE_STATUSES
+  // remains exported for UI gating copies.
+  if (!guarantorTypeChangePreconditionsSchema.safeParse(policy).success) {
     return {
       success: false,
       error: `Cannot change guarantor type on policy with status ${policy.status}`,
