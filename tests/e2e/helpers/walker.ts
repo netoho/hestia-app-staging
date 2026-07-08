@@ -247,12 +247,8 @@ export function walksFor(variant: WalkVariant): ActorWalk[] {
             {
               id: 'personal',
               label: 'Información',
+              // legalRepId gained its column + control on #150 — walked now.
               schema: jointObligorPersonalCompanyTabSchema,
-              allowedSkip: [
-                // Schema declares it but the JointObligor MODEL has no such
-                // column — nothing to render or persist (#150 family).
-                'legalRepId',
-              ],
             },
             JO_GUARANTEE_TAB,
           ]
@@ -277,12 +273,8 @@ export function walksFor(variant: WalkVariant): ActorWalk[] {
             {
               id: 'personal',
               label: 'Información',
+              // legalRepId gained its column + control on #150 — walked now.
               schema: AVAL_TAB_SCHEMAS.COMPANY.personal,
-              allowedSkip: [
-                // Schema declares it but the Aval MODEL has no such column —
-                // nothing to render or persist (#150 family).
-                'legalRepId',
-              ],
             },
             // Re-enabled (#190): the toastless save was stale pre-walk row
             // values spread into defaultValues failing validation on fields

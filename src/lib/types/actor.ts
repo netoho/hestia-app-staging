@@ -93,6 +93,7 @@ export interface CompanyActorData extends BaseActorData {
   legalRepMiddleName?: string;
   legalRepPaternalLastName: string;
   legalRepMaternalLastName: string;
+  legalRepId?: string; // ID document (CURP, passport, etc.) — #150 parity
   legalRepPosition: string;
   legalRepRfc?: string;
   legalRepCurp?: string;
