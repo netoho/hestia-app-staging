@@ -732,6 +732,30 @@ describe('actor.update (jointObligor) — domain toDb rewire', () => {
     return { jo, token, caller };
   }
 
+  test('company personal tab persists legalRepId (#150 tenant parity)', async () => {
+    const { jo, token, caller } = await makeJointObligor();
+    await caller.actor.update({
+      type: 'jointObligor',
+      identifier: token,
+      data: {
+        tabName: 'personal',
+        partial: true,
+        jointObligorType: 'COMPANY',
+        companyName: 'Obligada Solidaria SA de CV',
+        companyRfc: 'OSA010101AB1',
+        legalRepFirstName: 'Rita',
+        legalRepPaternalLastName: 'Poder',
+        legalRepId: 'PASAPORTE-G12345678',
+        email: 'os@hestia.test',
+        phone: '5553334455',
+      },
+    });
+
+    const refreshed = await prisma.jointObligor.findUnique({ where: { id: jo.id } });
+    expect(refreshed?.legalRepId).toBe('PASAPORTE-G12345678');
+    expect(refreshed?.companyName).toBe('Obligada Solidaria SA de CV');
+  });
+
   test('personal tab persists names and upserts the address relation', async () => {
     const { jo, token, caller } = await makeJointObligor();
     await caller.actor.update({

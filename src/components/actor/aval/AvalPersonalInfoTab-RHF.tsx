@@ -237,6 +237,22 @@ export default function AvalPersonalInfoTab({
                         </FormItem>
                       )}
                     />
+
+                    {/* Column added on #150 (tenant parity); the schema always
+                        declared it — the walker had it allowedSkip'd until now. */}
+                    <FormField
+                      control={form.control}
+                      name="legalRepId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel optional>Identificación del Representante</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} disabled={disabled} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mt-4">
