@@ -82,7 +82,7 @@ export default function InvestigationsPage({ params }: InvestigationsPageProps) 
         policy={{
           id: policy.id,
           policyNumber: policy.policyNumber,
-          tenant: policy.tenant,
+          tenants: policy.tenants,
           jointObligors: policy.jointObligors,
           avals: policy.avals,
         }}

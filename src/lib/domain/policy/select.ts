@@ -52,7 +52,7 @@ export const policySelect = {
     },
     orderBy: [{ isPrimary: 'desc' as const }, { createdAt: 'asc' as const }],
   },
-  tenant: {
+  tenants: {
     include: {
       personalReferences: true,
       commercialReferences: true,
@@ -61,6 +61,9 @@ export const policySelect = {
       employerAddressDetails: true,
       previousRentalAddressDetails: true,
     },
+    // Display-only ordering (S5b #169): no primary tenant exists — never
+    // attach semantics to array position.
+    orderBy: { createdAt: 'asc' as const },
   },
   jointObligors: {
     include: {
@@ -139,7 +142,7 @@ export const policySelectList = {
   landlords: {
     orderBy: [{ isPrimary: 'desc' as const }, { createdAt: 'asc' as const }],
   },
-  tenant: true,
+  tenants: { orderBy: { createdAt: 'asc' as const } },
   jointObligors: true,
   avals: true,
   propertyDetails: {

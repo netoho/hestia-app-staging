@@ -22,11 +22,16 @@ interface RecentPoliciesCardProps {
 
 type RecentPolicy = DashboardRecentPoliciesOutput['policies'][number];
 
-function tenantDisplay(tenant: RecentPolicy['tenant']): string {
-  if (!tenant) return t.pages.dashboard.recent.noTenant;
+function tenantName(tenant: RecentPolicy['tenants'][number]): string {
   if (tenant.companyName) return tenant.companyName;
   const parts = [tenant.firstName, tenant.paternalLastName, tenant.maternalLastName].filter(Boolean);
   return parts.length > 0 ? parts.join(' ') : t.pages.dashboard.recent.noTenant;
+}
+
+function tenantsDisplay(tenants: RecentPolicy['tenants']): string {
+  if (tenants.length === 0) return t.pages.dashboard.recent.noTenant;
+  const first = tenantName(tenants[0]);
+  return tenants.length > 1 ? `${first} (+${tenants.length - 1})` : first;
 }
 
 function formatRent(amount: number): string {
@@ -93,7 +98,7 @@ export function RecentPoliciesCard({ data, isLoading, isError, isBroker }: Recen
                     onClick={() => router.push(`/dashboard/policies/${p.id}`)}
                   >
                     <TableCell className="font-medium">{p.policyNumber}</TableCell>
-                    <TableCell>{tenantDisplay(p.tenant)}</TableCell>
+                    <TableCell>{tenantsDisplay(p.tenants)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatRent(p.rentAmount)}</TableCell>
                     <TableCell>
                       <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>

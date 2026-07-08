@@ -143,20 +143,23 @@ export type ReceiptGetDownloadUrlOutput = z.infer<typeof ReceiptGetDownloadUrlOu
 // ===========================================================================
 // receipt.listByPolicy (admin)
 // ===========================================================================
-const TenantSummaryShape = z
-  .object({
-    id: z.string(),
-    firstName: z.string().nullable(),
-    paternalLastName: z.string().nullable(),
-    companyName: z.string().nullable(),
-  })
-  .nullable();
+const TenantSummaryFields = z.object({
+  id: z.string(),
+  firstName: z.string().nullable(),
+  paternalLastName: z.string().nullable(),
+  companyName: z.string().nullable(),
+});
+
+const TenantSummaryShape = TenantSummaryFields.nullable();
 
 export const ReceiptListByPolicyOutput = z.object({
   receipts: z.array(TenantReceiptShape),
   requiredTypes: z.array(z.nativeEnum(ReceiptType)),
   receiptConfigs: z.array(ReceiptConfigSummaryShape),
+  /** Legacy singular (first tenant by createdAt) — transition contract, removal post-demo. */
   tenant: TenantSummaryShape,
+  /** All tenants of the policy, createdAt asc. */
+  tenants: z.array(TenantSummaryFields),
   policyNumber: z.string(),
   activatedAt: z.date().nullable(),
   rentAmount: z.number(),

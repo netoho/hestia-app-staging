@@ -9,12 +9,13 @@
  * left to follow-up coverage.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, spyOn } from 'bun:test';
+import * as emailService from '@/lib/services/emailService';
 import { POST as stripeWebhookPost } from '@/app/api/webhooks/stripe/route';
-import { PaymentStatus } from '@/prisma/generated/prisma-client/enums';
+import { PaymentStatus, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { prisma } from '../../utils/database';
 import { createPolicyWithActors } from '../scenarios';
-import { pendingPayment } from '../factories';
+import { pendingPayment, tenantFactory } from '../factories';
 
 function buildWebhookRequest(eventBody: unknown, signature: string | null): Request {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
@@ -116,5 +117,52 @@ describe('POST /api/webhooks/stripe', () => {
     const secondBody = await second.json();
     // Second call hits the atomic PENDING-only filter and is skipped.
     expect(secondBody).toMatchObject({ received: true, skipped: true });
+  });
+
+  // S5b: a TENANT-paid payment confirmation fans out to EVERY tenant of the
+  // policy (not just a single "primary" tenant).
+  test('tenant-paid completion emails a confirmation to BOTH tenants', async () => {
+    const { policy, tenant: tenantA } = await createPolicyWithActors();
+    const tenantB = await tenantFactory.create(
+      { email: 'co-tenant-webhook@hestia.test' },
+      { transient: { policyId: policy.id } },
+    );
+    const payment = await pendingPayment.create(
+      { paidBy: PayerType.TENANT },
+      { transient: { policyId: policy.id } },
+    );
+
+    const spy = spyOn(emailService, 'sendPaymentCompletedEmail').mockImplementation(async () => true);
+    // Earlier tests in this file drive the same email fn through the preload
+    // mock, so clear the accumulated call log before asserting on OUR send.
+    spy.mockClear();
+
+    const event = {
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_test_fanout',
+          amount_total: 500000,
+          currency: 'mxn',
+          payment_intent: 'pi_test_fanout',
+          payment_method_types: ['card'],
+          metadata: {
+            paymentId: payment.id,
+            paymentType: payment.type,
+            paidBy: PayerType.TENANT,
+            policyId: policy.id,
+          },
+        },
+      },
+    };
+
+    const res = await stripeWebhookPost(buildWebhookRequest(event, 'fake-signature') as never);
+    expect(res.status).toBe(200);
+
+    // Confirmation sent to every tenant of the policy with an email on file.
+    const emailed = new Set(spy.mock.calls.map((c) => (c[0] as { email: string }).email));
+    expect(emailed).toEqual(new Set([tenantA.email, tenantB.email]));
+
+    spy.mockRestore();
   });
 });

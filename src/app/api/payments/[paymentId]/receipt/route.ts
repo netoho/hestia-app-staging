@@ -181,7 +181,7 @@ export async function GET(
           select: {
             createdById: true,
             managedById: true,
-            tenant: { select: { id: true } },
+            tenants: { select: { id: true } },
             landlords: { select: { id: true } },
           },
         },
@@ -200,7 +200,9 @@ export async function GET(
     if (!isStaffOrAdmin) {
       const isCreator = payment.policy.createdById === userId;
       const isManager = payment.policy.managedById === userId;
-      const isTenant = payment.policy.tenant?.id === userId;
+      // Pre-existing dead check: actor rows have their own cuids, never session
+      // user ids, so this never matches a real session (pluralized mechanically).
+      const isTenant = payment.policy.tenants.some(t => t.id === userId);
       const isLandlord = payment.policy.landlords.some(l => l.id === userId);
 
       // Must be associated with policy

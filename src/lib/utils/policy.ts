@@ -46,6 +46,9 @@ interface PolicyProgress {
 
 interface PolicyForProgress {
   landlords?: PolicyActor[];
+  // Transition contract (S5b #169): plural `tenants` is canonical; legacy
+  // singular `tenant` still accepted while consumers migrate.
+  tenants?: PolicyActor[];
   tenant?: PolicyActor | null;
   jointObligors?: PolicyActor[];
   avals?: PolicyActor[];
@@ -65,13 +68,10 @@ export function calculatePolicyProgress(policy: PolicyForProgress): PolicyProgre
   totalActors += landlordCount;
   completedActors += policy.landlords?.filter(l => l.informationComplete).length || 0;
 
-  // Count tenant (always required)
-  if (policy.tenant) {
-    totalActors++;
-    if (policy.tenant.informationComplete) completedActors++;
-  } else {
-    totalActors++; // Tenant slot required
-  }
+  // Count tenants (at least 1 required)
+  const tenants = policy.tenants ?? (policy.tenant ? [policy.tenant] : []);
+  totalActors += tenants.length || 1; // Tenant slot required even when empty
+  completedActors += tenants.filter(tn => tn.informationComplete).length;
 
   // Count joint obligors (if applicable)
   if (policy.guarantorType === 'JOINT_OBLIGOR' || policy.guarantorType === 'BOTH') {

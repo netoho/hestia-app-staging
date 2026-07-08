@@ -55,7 +55,8 @@ const ActorBaseShape = z.object({
 // API output now lives in `@/lib/domain/tenant/adapters/api`; this
 // file just re-exports it under the legacy name so existing callers
 // (router-imports, frontend type-imports) keep working.
-export { tenantApiOutput as TenantOutputShape } from '@/lib/domain/tenant/adapters/api';
+import { tenantApiOutput } from '@/lib/domain/tenant/adapters/api';
+export { tenantApiOutput as TenantOutputShape };
 
 // Landlord is migrated to the hexagonal domain layer (S2). The canonical
 // API output now lives in `@/lib/domain/landlord/adapters/api`; aliased
@@ -245,3 +246,19 @@ export const ActorAddCoOwnerOutput = z.object({
   landlordId: z.string(),
 });
 export type ActorAddCoOwnerOutput = z.infer<typeof ActorAddCoOwnerOutput>;
+
+// ===========================================================================
+// actor.addTenant — the created (empty) co-tenant row (S5b #169, admin-only).
+// Locked to the domain tenant API shape (Pattern F — no passthrough).
+// ===========================================================================
+export const ActorAddTenantOutput = tenantApiOutput;
+export type ActorAddTenantOutput = z.infer<typeof ActorAddTenantOutput>;
+
+// ===========================================================================
+// actor.removeTenant — { success: true } (S5b #169, admin-only; the removed
+// tenant is archived to TenantHistory before deletion)
+// ===========================================================================
+export const ActorRemoveTenantOutput = z.object({
+  success: z.literal(true),
+});
+export type ActorRemoveTenantOutput = z.infer<typeof ActorRemoveTenantOutput>;

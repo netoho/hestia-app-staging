@@ -52,18 +52,19 @@ describe('policy api adapter — drift', () => {
   });
 });
 
-describe('policyRowToAggregate — the tenants wrap (S5b enabler)', () => {
-  it('wraps a present tenant into a one-element tenants array', () => {
-    const row = { id: 'p1', tenant: { id: 't1' }, landlords: [] };
+describe('policyRowToAggregate — native plural, legacy singular (S5b)', () => {
+  it('passes the native tenants array through and derives legacy singular from tenants[0]', () => {
+    const row = { id: 'p1', tenants: [{ id: 't1' }, { id: 't2' }], landlords: [] };
     const aggregate = policyRowToAggregate(row);
-    expect(aggregate.tenants).toEqual([{ id: 't1' }]);
-    // Legacy singular retained during the transition.
+    expect(aggregate.tenants).toEqual([{ id: 't1' }, { id: 't2' }]);
+    // Legacy singular = tenants[0] during the transition (never index-1 semantics).
     expect(aggregate.tenant).toEqual({ id: 't1' });
   });
 
-  it('wraps a missing tenant into an empty array', () => {
-    const aggregate = policyRowToAggregate({ id: 'p1', tenant: null });
+  it('derives a null legacy singular from an empty tenants array', () => {
+    const aggregate = policyRowToAggregate({ id: 'p1', tenants: [] });
     expect(aggregate.tenants).toEqual([]);
+    expect(aggregate.tenant).toBeNull();
   });
 
   it('passes null through for missing rows', () => {

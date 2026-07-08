@@ -27,7 +27,7 @@ interface Actor {
 interface Policy {
   id: string;
   policyNumber: string;
-  tenant?: Actor | null;
+  tenants?: Actor[];
   jointObligors?: Actor[];
   avals?: Actor[];
 }
@@ -82,14 +82,15 @@ export default function ActorSelectionDialog({
   // Build list of actors
   const actors: ActorOption[] = [];
 
-  if (policy.tenant) {
+  // One investigation per tenant: every tenant is a selectable actor
+  policy.tenants?.forEach((tenant) => {
     actors.push({
-      id: policy.tenant.id,
-      name: getActorName(policy.tenant),
+      id: tenant.id,
+      name: getActorName(tenant),
       type: 'TENANT',
       icon: User,
     });
-  }
+  });
 
   policy.jointObligors?.forEach((jo) => {
     actors.push({

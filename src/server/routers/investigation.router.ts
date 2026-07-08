@@ -94,7 +94,7 @@ export const investigationRouter = createTRPCRouter({
       const policy = await ctx.prisma.policy.findUnique({
         where: { id: input.policyId },
         include: {
-          tenant: true,
+          tenants: true,
           jointObligors: true,
           avals: true,
           landlords: { where: { isPrimary: true } },
@@ -108,8 +108,8 @@ export const investigationRouter = createTRPCRouter({
 
       // Verify actor exists in policy
       let actorExists = false;
-      if (input.actorType === 'TENANT' && policy.tenant?.id === input.actorId) {
-        actorExists = true;
+      if (input.actorType === 'TENANT') {
+        actorExists = policy.tenants.some(t => t.id === input.actorId);
       } else if (input.actorType === 'JOINT_OBLIGOR') {
         actorExists = policy.jointObligors.some(jo => jo.id === input.actorId);
       } else if (input.actorType === 'AVAL') {
@@ -167,7 +167,7 @@ export const investigationRouter = createTRPCRouter({
           documents: true,
           policy: {
             include: {
-              tenant: true,
+              tenants: true,
               jointObligors: true,
               avals: true,
               landlords: { where: { isPrimary: true } },
@@ -184,7 +184,7 @@ export const investigationRouter = createTRPCRouter({
       // Get actor details
       let actor = null;
       if (investigation.actorType === 'TENANT') {
-        actor = investigation.policy.tenant;
+        actor = investigation.policy.tenants.find(t => t.id === investigation.actorId) ?? null;
       } else if (investigation.actorType === 'JOINT_OBLIGOR') {
         actor = investigation.policy.jointObligors.find(jo => jo.id === investigation.actorId);
       } else if (investigation.actorType === 'AVAL') {
@@ -304,7 +304,7 @@ export const investigationRouter = createTRPCRouter({
       const policy = await ctx.prisma.policy.findUnique({
         where: { id: input.policyId },
         include: {
-          tenant: {
+          tenants: {
             select: { id: true, firstName: true, middleName: true, paternalLastName: true, maternalLastName: true, companyName: true },
           },
           jointObligors: {
@@ -344,7 +344,7 @@ export const investigationRouter = createTRPCRouter({
       const investigationsWithActorNames = investigations.map((inv) => {
         let actor = null;
         if (inv.actorType === 'TENANT') {
-          actor = policy.tenant;
+          actor = policy.tenants.find(t => t.id === inv.actorId);
         } else if (inv.actorType === 'JOINT_OBLIGOR') {
           actor = policy.jointObligors.find(jo => jo.id === inv.actorId);
         } else if (inv.actorType === 'AVAL') {
@@ -584,7 +584,7 @@ export const investigationRouter = createTRPCRouter({
         include: {
           policy: {
             include: {
-              tenant: true,
+              tenants: true,
               jointObligors: true,
               avals: true,
               landlords: true,
@@ -644,7 +644,7 @@ export const investigationRouter = createTRPCRouter({
       // Get actor details
       let actor = null;
       if (investigation.actorType === 'TENANT') {
-        actor = investigation.policy.tenant;
+        actor = investigation.policy.tenants.find(t => t.id === investigation.actorId);
       } else if (investigation.actorType === 'JOINT_OBLIGOR') {
         actor = investigation.policy.jointObligors.find(jo => jo.id === investigation.actorId);
       } else if (investigation.actorType === 'AVAL') {
@@ -981,7 +981,7 @@ export const investigationRouter = createTRPCRouter({
         include: {
           policy: {
             include: {
-              tenant: true,
+              tenants: true,
               jointObligors: true,
               avals: true,
               landlords: true,
@@ -1077,7 +1077,7 @@ export const investigationRouter = createTRPCRouter({
       // Get actor name
       let actor = null;
       if (investigation.actorType === 'TENANT') {
-        actor = investigation.policy.tenant;
+        actor = investigation.policy.tenants.find(t => t.id === investigation.actorId);
       } else if (investigation.actorType === 'JOINT_OBLIGOR') {
         actor = investigation.policy.jointObligors.find(jo => jo.id === investigation.actorId);
       } else if (investigation.actorType === 'AVAL') {
@@ -1193,7 +1193,7 @@ export const investigationRouter = createTRPCRouter({
         include: {
           policy: {
             include: {
-              tenant: true,
+              tenants: true,
               jointObligors: true,
               avals: true,
               landlords: true,
@@ -1290,7 +1290,7 @@ export const investigationRouter = createTRPCRouter({
       // Get actor name
       let actor = null;
       if (investigation.actorType === 'TENANT') {
-        actor = investigation.policy.tenant;
+        actor = investigation.policy.tenants.find(t => t.id === investigation.actorId);
       } else if (investigation.actorType === 'JOINT_OBLIGOR') {
         actor = investigation.policy.jointObligors.find(jo => jo.id === investigation.actorId);
       } else if (investigation.actorType === 'AVAL') {

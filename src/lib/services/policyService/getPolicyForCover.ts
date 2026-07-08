@@ -2,7 +2,7 @@
  * Focused Prisma fetch for the contract cover-letter (.docx) generator.
  *
  * Loads only the scalars and relations the cover letter actually renders:
- * actors (landlords/tenant/jointObligors/avals) with their postal address and
+ * actors (landlords/tenants/jointObligors/avals) with their postal address and
  * guarantee-property address, plus the policy's contract terms and the
  * property's address. No documents / payments / activities / investigations /
  * references / employer addresses — the carátula doesn't use them.
@@ -73,13 +73,14 @@ export async function getPolicyForCover(id: string) {
           { createdAt: 'asc' },
         ],
       },
-      tenant: {
+      tenants: {
         select: {
           ...ACTOR_SCALARS,
           tenantType: true,
           nationality: true,
           addressDetails: true,
         },
+        orderBy: { createdAt: 'asc' },
       },
       jointObligors: {
         select: {
@@ -115,7 +116,7 @@ export async function getPolicyForCover(id: string) {
 
 export type PolicyForCover = NonNullable<Awaited<ReturnType<typeof getPolicyForCover>>>;
 export type CoverLandlord = PolicyForCover['landlords'][number];
-export type CoverTenant = NonNullable<PolicyForCover['tenant']>;
+export type CoverTenant = PolicyForCover['tenants'][number];
 export type CoverJointObligor = PolicyForCover['jointObligors'][number];
 export type CoverAval = PolicyForCover['avals'][number];
 export type CoverPropertyDetails = NonNullable<PolicyForCover['propertyDetails']>;

@@ -25,6 +25,9 @@ export interface PolicyListItem {
   totalPrice?: number | null;
   createdAt: Date | string;
   package?: { name: string } | null;
+  // Transition contract (S5b #169): plural `tenants` is canonical; legacy
+  // singular `tenant` (first tenant) kept until consumers migrate.
+  tenants?: PolicyListActor[];
   tenant?: PolicyListActor | null;
   landlords?: PolicyListActor[];
   jointObligors?: PolicyListActor[];

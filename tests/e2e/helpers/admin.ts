@@ -159,10 +159,21 @@ export async function approvePolicyToActive(page: Page, policyId: string): Promi
  */
 export async function forceCompleteActor(
   page: Page,
-  opts: { policyId: string; actorType: 'tenant' | 'landlord'; actorId: string },
+  opts: { policyId: string; actorType: 'tenant' | 'landlord'; actorId: string; cardName?: string },
 ): Promise<void> {
   await page.goto(`/dashboard/policies/${opts.policyId}?tab=${opts.actorType}`);
-  await page.getByRole('button', { name: 'Completar' }).first().click();
+  if (opts.cardName) {
+    // Scope the click to a specific card when a tab renders several (N
+    // tenants / co-owners) — `.first()` cannot target the 2nd of N.
+    const card = page
+      .locator('div')
+      .filter({ has: page.getByText(opts.cardName) })
+      .filter({ has: page.getByRole('button', { name: 'Completar' }) })
+      .last();
+    await card.getByRole('button', { name: 'Completar' }).click();
+  } else {
+    await page.getByRole('button', { name: 'Completar' }).first().click();
+  }
 
   const dialog = page.getByRole('alertdialog');
   await expect(dialog.getByRole('button', { name: 'Marcar Completo' })).toBeVisible({ timeout: 15_000 });

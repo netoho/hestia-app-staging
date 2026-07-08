@@ -8,7 +8,7 @@ import { t } from '@/lib/i18n';
 
 interface ActorsListProps {
   landlords?: PolicyListActor[];
-  tenant?: PolicyListActor | null;
+  tenants?: PolicyListActor[];
   jointObligors?: PolicyListActor[];
   avals?: PolicyListActor[];
   guarantorType?: string;
@@ -16,11 +16,11 @@ interface ActorsListProps {
 
 /**
  * Combined display of all policy actors
- * Shows landlords, tenant, joint obligors, and avals in a single column
+ * Shows landlords, tenants, joint obligors, and avals in a single column
  */
 export default function ActorsList({
   landlords = [],
-  tenant,
+  tenants = [],
   jointObligors = [],
   avals = [],
   guarantorType,
@@ -40,6 +40,9 @@ export default function ActorsList({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-medium truncate">{name}</span>
+              {label && (
+                <span className="text-xs text-muted-foreground flex-shrink-0">{label}</span>
+              )}
               <CompletionIcon
                 className={`h-3.5 w-3.5 flex-shrink-0 ${
                   actor.informationComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/60'
@@ -70,8 +73,21 @@ export default function ActorsList({
         </div>
       ))}
 
-      {/* Tenant */}
-      {tenant && renderActor(tenant, <User className="h-4 w-4" />)}
+      {/* Tenants — compact single row: first tenant + (+N); the completion
+          icon reflects ALL tenants (gate = every tenant complete) */}
+      {tenants.length > 0 &&
+        renderActor(
+          tenants.length === 1
+            ? tenants[0]
+            : {
+                ...tenants[0],
+                informationComplete: tenants.every((tn) => tn.informationComplete),
+                email: null,
+                phone: null,
+              },
+          <User className="h-4 w-4" />,
+          tenants.length > 1 ? `(+${tenants.length - 1})` : undefined
+        )}
 
       {/* Joint Obligors */}
       {(guarantorType === 'JOINT_OBLIGOR' || guarantorType === 'BOTH') &&
@@ -96,7 +112,7 @@ export default function ActorsList({
         ))}
 
       {/* Empty state */}
-      {landlords.length === 0 && !tenant && (
+      {landlords.length === 0 && tenants.length === 0 && (
         <span className="text-muted-foreground text-sm">{t.pages.createPolicy.list.noActors}</span>
       )}
     </div>

@@ -308,9 +308,9 @@ export function buildCoverPageData(policy: PolicyForCover): CoverPageData {
   const landlords = policy.landlords.map((l, i) =>
     transformActor(l, formatActorLabel(actorLabels.landlord, i, policy.landlords.length), 'landlord'),
   );
-  const tenants = policy.tenant
-    ? [transformActor(policy.tenant, formatActorLabel(actorLabels.tenant, 0, 1), 'tenant')]
-    : [];
+  const tenants = policy.tenants.map((tenant, i) =>
+    transformActor(tenant, formatActorLabel(actorLabels.tenant, i, policy.tenants.length), 'tenant'),
+  );
   const jointObligors = expandActorsWithSpouses(policy.jointObligors, actorLabels.jointObligor, 'jointObligor');
   const avals = expandActorsWithSpouses(policy.avals, actorLabels.aval, 'aval');
 

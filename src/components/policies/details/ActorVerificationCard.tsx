@@ -30,7 +30,7 @@ import { t } from '@/lib/i18n';
 interface Actor {
   id: string;
   fullName?: string;
-  isPrimary: boolean;
+  isPrimary?: boolean;
   companyName?: string;
   informationComplete: boolean;
   verificationStatus?: string;
@@ -41,7 +41,7 @@ interface ActorVerificationCardProps {
   policy: {
     id: string;
     landlords?: Actor[];
-    tenant?: Actor;
+    tenants?: Actor[];
     jointObligors?: Actor[];
     avals?: Actor[];
   };
@@ -173,11 +173,13 @@ export default function ActorVerificationCard({
             )
           )}
 
-          {renderActorVerification(
-            policy.tenant,
-            'tenant',
-            <User className="h-5 w-5" />,
-            'Inquilino'
+          {policy.tenants?.map((tenant, index) =>
+            renderActorVerification(
+              tenant,
+              'tenant',
+              <User className="h-5 w-5" />,
+              (policy.tenants?.length ?? 0) > 1 ? `Inquilino ${index + 1}` : 'Inquilino'
+            )
           )}
 
           {policy.jointObligors?.map((jo) =>

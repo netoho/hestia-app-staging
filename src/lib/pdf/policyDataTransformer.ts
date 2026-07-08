@@ -248,9 +248,7 @@ function transformLandlord(landlord: PolicyWithRelations['landlords'][0]): PDFLa
 /**
  * Transform tenant data
  */
-function transformTenant(tenant: PolicyWithRelations['tenant']): PDFTenant | null {
-  if (!tenant) return null;
-
+function transformTenant(tenant: PolicyWithRelations['tenants'][0]): PDFTenant {
   const isCompany = tenant.tenantType === 'COMPANY';
   const name = isCompany
     ? tenant.companyName || ''
@@ -574,7 +572,7 @@ export function transformPolicyForPDF(policy: PolicyWithRelations): PDFPolicyDat
     // Related data
     property: transformProperty(policy.propertyDetails),
     landlords: policy.landlords?.map(transformLandlord) || [],
-    tenant: transformTenant(policy.tenant),
+    tenants: policy.tenants?.map(transformTenant) || [],
     jointObligors: policy.jointObligors?.map(transformJointObligor) || [],
     avals: policy.avals?.map(transformAval) || [],
     actorInvestigations: transformActorInvestigations(policy.actorInvestigations),

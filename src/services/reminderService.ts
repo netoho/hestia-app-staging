@@ -6,6 +6,7 @@ import {
   type ActorIncompleteReminderData,
   type PolicyCreatorSummaryData
 } from '@/lib/services/emailService';
+import { generateActorToken } from '@/lib/services/actorTokenService';
 
 type ActorType = 'landlord' | 'tenant' | 'jointObligor' | 'aval';
 
@@ -53,7 +54,16 @@ export async function sendIncompleteActorReminders(): Promise<ReminderResult> {
             informationComplete: true
           }
         },
-        tenant: true,
+        tenants: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            paternalLastName: true,
+            companyName: true,
+            informationComplete: true
+          }
+        },
         jointObligors: true,
         avals: true,
         createdBy: {
@@ -88,17 +98,19 @@ export async function sendIncompleteActorReminders(): Promise<ReminderResult> {
           }
         });
 
-        // Check tenant (singular)
-        if (policy.tenant && !policy.tenant.informationComplete) {
-          incompleteActors.push({
-            type: 'tenant' as ActorType,
-            id: policy.tenant.id,
-            email: policy.tenant.email,
-            firstName: policy.tenant.firstName,
-            paternalLastName: policy.tenant.paternalLastName,
-            companyName: policy.tenant.companyName
-          });
-        }
+        // Check all tenants (plural), mirroring landlords / joint obligors / avals
+        policy.tenants.forEach(tenant => {
+          if (!tenant.informationComplete) {
+            incompleteActors.push({
+              type: 'tenant' as ActorType,
+              id: tenant.id,
+              email: tenant.email,
+              firstName: tenant.firstName,
+              paternalLastName: tenant.paternalLastName,
+              companyName: tenant.companyName
+            });
+          }
+        });
 
         // Check joint obligors (plural)
         policy.jointObligors.forEach(jointObligor => {
@@ -143,8 +155,9 @@ export async function sendIncompleteActorReminders(): Promise<ReminderResult> {
           }
 
           try {
-            // Generate the actor access link
-            const actorLink = `${process.env.NEXTAUTH_URL}/actors/${actor.type}/${actor.id}`;
+            // Generate the actor's portal link (reuses a valid token or mints
+            // a new one) — the old `/actors/<type>/<id>` URL was not a real route.
+            const { url: actorLink } = await generateActorToken(actor.type, actor.id);
 
             // Send reminder email using the email service
             const emailData: ActorIncompleteReminderData = {

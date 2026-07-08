@@ -52,13 +52,14 @@ export async function getRecentPolicies(scope: RecentPoliciesScope = {}) {
       rentAmount: true,
       status: true,
       updatedAt: true,
-      tenant: {
+      tenants: {
         select: {
           firstName: true,
           paternalLastName: true,
           maternalLastName: true,
           companyName: true,
         },
+        orderBy: { createdAt: 'asc' as const },
       },
     },
     orderBy: { updatedAt: 'desc' },

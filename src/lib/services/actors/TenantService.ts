@@ -5,7 +5,12 @@
 
 import { PrismaClient, Prisma } from "@/prisma/generated/prisma-client/client";
 import { getRequiredDocuments } from '@/lib/constants/actorDocumentRequirements';
-import { DocumentCategory, DocumentUploadStatus } from "@/prisma/generated/prisma-client/enums";
+import {
+  DocumentCategory,
+  DocumentUploadStatus,
+  PolicyStatus,
+  TenantType,
+} from "@/prisma/generated/prisma-client/enums";
 import { BaseActorService } from './BaseActorService';
 import { Result, AsyncResult } from '../types/result';
 import { ServiceError, ErrorCode } from '../types/errors';
@@ -22,7 +27,17 @@ import { tenantSelect } from '@/lib/domain/tenant/select';
 import { toDb as tenantToDb } from '@/lib/domain/tenant/adapters/db';
 import { validateTenantToken } from '@/lib/services/actorTokenService';
 import { logPolicyActivity } from '@/lib/services/policyService';
+import { archiveAndCleanupTenant } from '@/lib/services/policyService/actorArchive';
 import type { TenantWithRelations } from './types';
+
+/**
+ * Admin may change tenant membership (add/remove) only before the
+ * protección is active (S5b #169).
+ */
+const TENANT_MEMBERSHIP_EDITABLE_STATUSES: PolicyStatus[] = [
+  PolicyStatus.COLLECTING_INFO,
+  PolicyStatus.PENDING_APPROVAL,
+];
 
 export class TenantService extends BaseActorService<TenantWithRelations, ActorData> {
   constructor(prisma?: PrismaClient) {
@@ -209,6 +224,142 @@ export class TenantService extends BaseActorService<TenantWithRelations, ActorDa
 
       return tenant as TenantWithRelations;
     }, 'getByPolicyId');
+  }
+
+  /**
+   * Get ALL tenants for a policy (S5b #169 — a policy has 1..N tenants).
+   * Display order is createdAt asc; card numbering ("Inquilino N")
+   * derives from this order — there is no primary tenant.
+   */
+  async getAllByPolicyId(policyId: string): AsyncResult<TenantWithRelations[]> {
+    return this.executeDbOperation(async () => {
+      const tenants = await this.prisma.tenant.findMany({
+        where: { policyId },
+        include: this.getIncludes(),
+        orderBy: { createdAt: 'asc' },
+      });
+
+      return tenants as TenantWithRelations[];
+    }, 'getAllByPolicyId');
+  }
+
+  /**
+   * Create an empty co-tenant row on a policy (admin-only surface,
+   * S5b #169 — mirrors LandlordService.addCoOwner). The new tenant
+   * completes their own record through their own portal link.
+   */
+  async addTenant(policyId: string): AsyncResult<TenantWithRelations> {
+    // Guards live OUTSIDE executeDbOperation — it wraps any throw into a
+    // generic database ServiceError, losing the typed code/status.
+    const policy = await this.prisma.policy.findUnique({
+      where: { id: policyId },
+      select: { id: true, status: true },
+    });
+    if (!policy) {
+      return Result.error(new ServiceError(ErrorCode.NOT_FOUND, 'Policy not found', 404));
+    }
+
+    if (!TENANT_MEMBERSHIP_EDITABLE_STATUSES.includes(policy.status)) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Solo se pueden agregar inquilinos antes de que la protección esté activa',
+          400,
+        ),
+      );
+    }
+
+    return this.executeDbOperation(async () => {
+      const tenant = await this.prisma.tenant.create({
+        // email/phone are REQUIRED columns; the co-tenant arrives empty
+        // by design and fills their own record via their portal link.
+        data: {
+          policyId,
+          tenantType: TenantType.INDIVIDUAL,
+          email: '',
+          phone: '',
+        },
+        include: this.getIncludes(),
+      });
+
+      this.log('info', 'Co-tenant added', { policyId, tenantId: tenant.id });
+      return tenant as TenantWithRelations;
+    }, 'addTenant');
+  }
+
+  /**
+   * Remove a tenant from a policy (admin-only surface, S5b #169).
+   * Unlike landlord co-owner removal, this is NOT a hard delete: the
+   * tenant is archived to TenantHistory (summary + full snapshot via
+   * archiveAndCleanupTenant) before the row is deleted. Refuses to
+   * remove the last tenant — every policy keeps at least one.
+   */
+  async removeTenant(
+    tenantId: string,
+    opts: { removedById: string; reason?: string },
+  ): AsyncResult<void> {
+    // Guards live OUTSIDE executeDbOperation (see addTenant).
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, policyId: true, policy: { select: { status: true } } },
+    });
+    if (!tenant) {
+      return Result.error(new ServiceError(ErrorCode.NOT_FOUND, 'Tenant not found', 404));
+    }
+
+    if (!TENANT_MEMBERSHIP_EDITABLE_STATUSES.includes(tenant.policy.status)) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'Solo se pueden eliminar inquilinos antes de que la protección esté activa',
+          400,
+        ),
+      );
+    }
+
+    const count = await this.prisma.tenant.count({
+      where: { policyId: tenant.policyId },
+    });
+    if (count <= 1) {
+      return Result.error(
+        new ServiceError(
+          ErrorCode.VALIDATION_ERROR,
+          'No se puede eliminar al único inquilino de la protección',
+          400,
+        ),
+      );
+    }
+
+    // executeTransaction (unlike executeDbOperation) passes ServiceErrors
+    // through verbatim, so archive failures keep their typed code/status.
+    const result = await this.executeTransaction(async (tx) => {
+      // TenantReceipt.tenantId cascades on tenant delete — re-stamp this
+      // tenant's uploads to a remaining co-tenant so already-satisfied
+      // months survive. Receipts are policy-scoped; tenantId is non-semantic
+      // uploader attribution. A survivor always exists (count>1 guard above).
+      const survivor = await tx.tenant.findFirst({
+        where: { policyId: tenant.policyId, id: { not: tenantId } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (survivor) {
+        await tx.tenantReceipt.updateMany({
+          where: { tenantId },
+          data: { tenantId: survivor.id },
+        });
+      }
+      await archiveAndCleanupTenant(tx, tenantId, {
+        policyId: tenant.policyId,
+        replacedById: opts.removedById,
+        replacementReason: opts.reason?.trim() || 'Eliminado por administrador',
+      });
+      await tx.tenant.delete({ where: { id: tenantId } });
+    });
+
+    if (!result.ok) return result;
+
+    this.log('info', 'Tenant removed', { tenantId, policyId: tenant.policyId });
+    return Result.ok(undefined);
   }
 
   /**

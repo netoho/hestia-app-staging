@@ -92,16 +92,14 @@ export default function PolicyRenewPage({ params }: RenewPageProps) {
       documentCount: l.documents?.length ?? 0,
       isPrimary: !!l.isPrimary,
     })),
-    tenant: policy.tenant
-      ? {
-          id: policy.tenant.id,
-          displayName: displayNameFor(policy.tenant, 'Arrendatario'),
-          documentCount: policy.tenant.documents?.length ?? 0,
-          referenceCount:
-            (policy.tenant.personalReferences?.length ?? 0) +
-            (policy.tenant.commercialReferences?.length ?? 0),
-        }
-      : null,
+    // S5b #169: renewal clones ALL tenants of the source policy
+    tenants: (policy.tenants ?? []).map((tn: any) => ({
+      id: tn.id,
+      displayName: displayNameFor(tn, 'Arrendatario'),
+      documentCount: tn.documents?.length ?? 0,
+      referenceCount:
+        (tn.personalReferences?.length ?? 0) + (tn.commercialReferences?.length ?? 0),
+    })),
     jointObligors: (policy.jointObligors ?? []).map((jo: any) => ({
       id: jo.id,
       displayName: displayNameFor(jo, 'Obligado Solidario'),

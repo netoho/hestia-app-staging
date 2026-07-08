@@ -193,7 +193,7 @@ model Policy {
 
   // Related Actors
   landlords     Landlord[]
-  tenant        Tenant?
+  tenants       Tenant[]
   jointObligors JointObligor[]
   avals         Aval[]
 
@@ -369,7 +369,7 @@ model Landlord {
 
 model Tenant {
   id       String @id @default(cuid())
-  policyId String @unique
+  policyId String
 
   // Type
   tenantType TenantType @default(INDIVIDUAL)
@@ -477,6 +477,8 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   additionalInfo String? @db.Char(1000)
+
+  @@index([policyId])
 }
 
 model JointObligor {
