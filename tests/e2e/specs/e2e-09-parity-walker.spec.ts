@@ -648,3 +648,39 @@ test('E2E-09f: multi-tenant — per-record portals, zero cross-bleed, admin add/
     }),
   ).not.toBeNull();
 });
+
+// ─── E2E-09g: admin inline edit refreshes the OUTER policy view (#216) ───────
+
+test('E2E-09g: an admin inline field edit updates the outer ActorCard without reopening', async ({ page }) => {
+  test.setTimeout(300_000);
+  await freshDb();
+  await createPolicyViaWizard(page, {
+    tenant: { type: 'INDIVIDUAL', firstName: 'Original', paternalLastName: 'Nombre', email: 'walker.tenant@example.com' },
+    landlord: { firstName: 'Luis', paternalLastName: 'Dueño', email: 'walker.landlord@example.com' },
+    guarantor: { type: 'NONE' },
+  });
+  const policy = await getOnlyPolicy();
+
+  // The tenant ActorCard shows the wizard-entered name.
+  await gotoStable(page, `/dashboard/policies/${policy.id}?tab=tenant`);
+  await expect(page.getByText('Original', { exact: false }).first()).toBeVisible({ timeout: 30_000 });
+
+  // Open the inline editor; fill the whole personal tab (its CURP/RFC/phone are
+  // required) with a DISTINCT firstName, save, close.
+  await page.getByRole('button', { name: 'Editar' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 30_000 });
+  const personalTab = walksFor('INDIVIDUAL')[0].tabs[0];
+  await fillTabBySchema(dialog, personalTab);
+  await fillPlainField(dialog, 'firstName', 'Refrescado');
+  await dialog.getByRole('button', { name: SAVE_BUTTON }).click();
+  // Toasts portal to a page-level toaster, not inside the dialog.
+  await expect(page.getByText('✓ Guardado').first()).toBeVisible({ timeout: 30_000 });
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+
+  // The OUTER card reflects the edit with NO manual refresh — before #216 the
+  // field-save invalidated only the actor's portal query, so this stayed stale.
+  await expect(page.getByText('Refrescado', { exact: false }).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Original', { exact: false })).toHaveCount(0);
+});
