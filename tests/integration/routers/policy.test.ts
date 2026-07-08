@@ -10,7 +10,8 @@
  *     service silently dropped a field)
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, spyOn } from 'bun:test';
+import * as notificationService from '@/lib/services/notificationService';
 import { TRPCError } from '@trpc/server';
 import {
   PolicyStatus,
@@ -647,6 +648,30 @@ describe('policy.sendInvitations', () => {
     await expect(
       caller.policy.sendInvitations({ policyId: 'does-not-exist' }),
     ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
+  });
+
+  test('forwards actorIds to the notification service so a per-row resend targets one actor (#209)', async () => {
+    const { policy, tenant } = await createPolicyWithActors();
+    const { caller } = await createAdminCaller();
+
+    const spy = spyOn(notificationService, 'sendIncompleteActorInfoNotification');
+    spy.mockClear();
+
+    await caller.policy.sendInvitations({
+      policyId: policy.id,
+      actors: ['tenant'],
+      actorIds: [tenant.id],
+      resend: true,
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]![0]).toMatchObject({
+      policyId: policy.id,
+      actors: ['tenant'],
+      actorIds: [tenant.id],
+    });
+
+    spy.mockRestore();
   });
 
   test('auth gate: ADMIN/STAFF allowed; PUBLIC blocked (BROKER coverage deferred)', async () => {

@@ -22,9 +22,28 @@ const shouldProcessActor = (actorType: string, actors: string[]) => {
   return !actors || actors.length === 0 || actors.includes(actorType);
 };
 
+/**
+ * Whether to send to a specific actor ROW. `actors` filters by type (empty =
+ * all types); `actorIds` narrows to specific rows (empty/undefined = every row
+ * of the allowed types). Both must pass — this is what makes a per-row resend
+ * target exactly one actor instead of everyone of that type (#209).
+ */
+const shouldProcessActorRow = (
+  actorType: string,
+  actorId: string,
+  actors: string[],
+  actorIds?: string[],
+) => {
+  if (!shouldProcessActor(actorType, actors)) return false;
+  if (actorIds && actorIds.length > 0) return actorIds.includes(actorId);
+  return true;
+};
+
 interface InvitationRequest {
   policyId: string;
   actors: string[];
+  /** When set, restrict the send to these specific actor rows (#209). */
+  actorIds?: string[];
   resend: boolean;
   initiatorName: string;
   initiatorId: string;
@@ -35,6 +54,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   const {
     policyId,
     actors,
+    actorIds,
     resend,
     initiatorName,
     initiatorId,
@@ -65,7 +85,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   // Generate tokens for all landlords (primary + co-owners), mirroring the
   // joint obligor / aval loops below.
   for (const landlord of policy.landlords) {
-    if (shouldProcessActor('landlord', actors) && landlord.email && (resend || !landlord.informationComplete)) {
+    if (shouldProcessActorRow('landlord', landlord.id, actors, actorIds) && landlord.email && (resend || !landlord.informationComplete)) {
       const tokenData = await generateLandlordToken(landlord.id);
 
       const sent = await sendActorInvitation({
@@ -101,7 +121,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
   // Generate tokens for all tenants — each gets their own invitation + link,
   // mirroring the landlord loop above.
   for (const tenant of policy.tenants) {
-    if (shouldProcessActor('tenant', actors) && tenant.email && (resend || !tenant.informationComplete)) {
+    if (shouldProcessActorRow('tenant', tenant.id, actors, actorIds) && tenant.email && (resend || !tenant.informationComplete)) {
       const tokenData = await generateTenantToken(tenant.id);
 
       const sent = await sendActorInvitation({
@@ -136,7 +156,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
   // Generate tokens for joint obligors
   for (const jo of policy.jointObligors) {
-    if (shouldProcessActor('joint-obligor', actors) && jo.email && (resend || !jo.informationComplete)) {
+    if (shouldProcessActorRow('joint-obligor', jo.id, actors, actorIds) && jo.email && (resend || !jo.informationComplete)) {
       const tokenData = await generateJointObligorToken(jo.id);
 
       const sent = await sendActorInvitation({
@@ -171,7 +191,7 @@ export const sendIncompleteActorInfoNotification = async (opts: InvitationReques
 
   // Generate tokens for avals
   for (const aval of policy.avals) {
-    if (shouldProcessActor('aval', actors) && aval.email && (resend || !aval.informationComplete)) {
+    if (shouldProcessActorRow('aval', aval.id, actors, actorIds) && aval.email && (resend || !aval.informationComplete)) {
       const tokenData = await generateAvalToken(aval.id);
 
       const sent = await sendActorInvitation({

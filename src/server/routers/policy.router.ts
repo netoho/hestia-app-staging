@@ -400,6 +400,9 @@ export const policyRouter = createTRPCRouter({
     .input(z.object({
       policyId: z.string(),
       actors: z.array(z.string()).optional(),
+      // Restrict the send to specific actor rows (e.g. one tenant's row from
+      // the share modal); omit to send to every actor of the given types (#209).
+      actorIds: z.array(z.string()).optional(),
       resend: z.boolean().optional().default(false),
     }))
     .output(PolicySendInvitationsOutput)
@@ -428,6 +431,7 @@ export const policyRouter = createTRPCRouter({
         const invitations = await sendIncompleteActorInfoNotification({
           policyId: input.policyId,
           actors: input.actors,
+          actorIds: input.actorIds,
           resend: input.resend,
           initiatorName: ctx.session?.user?.name || 'Sistema',
           initiatorId: ctx.userId,
