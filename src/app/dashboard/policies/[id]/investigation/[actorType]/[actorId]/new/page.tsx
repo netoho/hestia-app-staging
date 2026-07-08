@@ -138,8 +138,8 @@ export default function NewInvestigationPage({ params }: PageProps) {
 
   // Get actor data
   let actor = null;
-  if (actorType === 'TENANT' && policy.tenant?.id === actorId) {
-    actor = policy.tenant;
+  if (actorType === 'TENANT') {
+    actor = policy.tenants?.find((tn: any) => tn.id === actorId);
   } else if (actorType === 'JOINT_OBLIGOR') {
     actor = policy.jointObligors?.find((jo: any) => jo.id === actorId);
   } else if (actorType === 'AVAL') {

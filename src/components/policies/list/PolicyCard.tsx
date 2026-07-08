@@ -65,7 +65,7 @@ export default function PolicyCard({ policy, onView }: PolicyCardProps) {
           <p className="text-xs font-medium text-muted-foreground mb-2">{t.pages.createPolicy.list.headers.actors}</p>
           <ActorsList
             landlords={policy.landlords}
-            tenant={policy.tenant}
+            tenants={policy.tenants}
             jointObligors={policy.jointObligors}
             avals={policy.avals}
             guarantorType={policy.guarantorType}

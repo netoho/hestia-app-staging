@@ -30,7 +30,14 @@ export const dashboardRouter = createTRPCRouter({
         limit: input?.limit ?? 5,
         ...brokerScopeWhere(ctx.userRole, ctx.userId),
       };
-      const policies = await getRecentPolicies(scope);
+      const rows = await getRecentPolicies(scope);
+      // Transition contract (S5b #169): expose plural `tenants` and keep the
+      // legacy singular `tenant` (first tenant) until consumers migrate.
+      const policies = rows.map(({ tenants, ...policy }) => ({
+        ...policy,
+        tenants,
+        tenant: tenants[0] ?? null,
+      }));
       return { policies };
     }),
 });

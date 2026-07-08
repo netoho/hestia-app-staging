@@ -10,14 +10,14 @@ import ActorSelectionDialog from './ActorSelectionDialog';
 interface Policy {
   id: string;
   policyNumber: string;
-  tenant?: {
+  tenants?: Array<{
     id: string;
     firstName?: string | null;
     middleName?: string | null;
     paternalLastName?: string | null;
     maternalLastName?: string | null;
     companyName?: string | null;
-  } | null;
+  }>;
   jointObligors?: Array<{
     id: string;
     firstName?: string | null;

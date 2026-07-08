@@ -83,7 +83,7 @@ export default function PoliciesTable({ policies }: PoliciesTableProps) {
                     <TableCell>
                       <ActorsList
                         landlords={policy.landlords}
-                        tenant={policy.tenant}
+                        tenants={policy.tenants}
                         jointObligors={policy.jointObligors}
                         avals={policy.avals}
                         guarantorType={policy.guarantorType}

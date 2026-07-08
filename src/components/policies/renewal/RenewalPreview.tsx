@@ -119,23 +119,30 @@ export function RenewalPreview({
         );
       })}
 
-      {source.tenant ? (
-        <Section
-          title={`${copy.tenantTitle}${source.tenant.displayName ? ` — ${source.tenant.displayName}` : ''}`}
-        >
-          <Row label={copy.tenantBasicInfo} copied={selection.tenant.include && selection.tenant.basicInfo} />
-          <Row label={copy.tenantContact} copied={selection.tenant.include && selection.tenant.contact} />
-          <Row label={copy.tenantAddress} copied={selection.tenant.include && selection.tenant.address} />
-          <Row label={copy.tenantEmployment} copied={selection.tenant.include && selection.tenant.employment} />
-          <Row label={copy.tenantRentalHistory} copied={selection.tenant.include && selection.tenant.rentalHistory} />
-          <Row label={copy.tenantReferences} copied={selection.tenant.include && selection.tenant.references} />
-          <Row label={copy.tenantPaymentPreferences} copied={selection.tenant.include && selection.tenant.paymentPreferences} />
-          <Row
-            label={`${copy.tenantDocuments} (${copy.previewDocuments(source.tenant.documentCount)})`}
-            copied={selection.tenant.include && selection.tenant.documents}
-          />
-        </Section>
-      ) : null}
+      {source.tenants.map((tn, idx) => {
+        const sel = selection.tenants.find((s) => s.sourceId === tn.id);
+        if (!sel) return null;
+        const numberedTitle =
+          source.tenants.length > 1 ? `${copy.tenantTitle} ${idx + 1}` : copy.tenantTitle;
+        return (
+          <Section
+            key={tn.id}
+            title={`${numberedTitle}${tn.displayName ? ` — ${tn.displayName}` : ''}`}
+          >
+            <Row label={copy.tenantBasicInfo} copied={sel.include && sel.basicInfo} />
+            <Row label={copy.tenantContact} copied={sel.include && sel.contact} />
+            <Row label={copy.tenantAddress} copied={sel.include && sel.address} />
+            <Row label={copy.tenantEmployment} copied={sel.include && sel.employment} />
+            <Row label={copy.tenantRentalHistory} copied={sel.include && sel.rentalHistory} />
+            <Row label={copy.tenantReferences} copied={sel.include && sel.references} />
+            <Row label={copy.tenantPaymentPreferences} copied={sel.include && sel.paymentPreferences} />
+            <Row
+              label={`${copy.tenantDocuments} (${copy.previewDocuments(tn.documentCount)})`}
+              copied={sel.include && sel.documents}
+            />
+          </Section>
+        );
+      })}
 
       {showJOs &&
         source.jointObligors.map((jo) => {

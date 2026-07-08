@@ -105,7 +105,11 @@ export default function PolicyDetailsContent({
   const [tabLoading, setTabLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showReplaceTenantModal, setShowReplaceTenantModal] = useState(false);
+  // Tenant whose card triggered the replace flow (S5b: 1..N tenants per policy)
+  const [replaceTenantTarget, setReplaceTenantTarget] = useState<{
+    tenantId: string;
+    email: string;
+  } | null>(null);
   const [showChangeGuarantorTypeModal, setShowChangeGuarantorTypeModal] = useState(false);
   const [isTabsScrollable, setIsTabsScrollable] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -159,6 +163,8 @@ export default function PolicyDetailsContent({
   const totalPayments = activePayments.length;
 
   const allActorsComplete = policy.allActorsComplete ?? false;
+
+  const tenantSectionLabel = (policy.tenants?.length ?? 0) > 1 ? 'Inquilinos' : 'Inquilino';
 
   // Handle tab change with skeleton loading + URL persistence
   const handleTabChange = (value: string) => {
@@ -277,7 +283,7 @@ export default function PolicyDetailsContent({
             <TabsList className={`inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max min-w-full md:w-full md:grid ${isStaffOrAdmin ? 'md:grid-cols-7' : 'md:grid-cols-6'}`}>
               <TabsTrigger value="overview" className="whitespace-nowrap">General</TabsTrigger>
               <TabsTrigger value="landlord" className="whitespace-nowrap">Arrendador</TabsTrigger>
-              <TabsTrigger value="tenant" className="whitespace-nowrap">Inquilino</TabsTrigger>
+              <TabsTrigger value="tenant" className="whitespace-nowrap">{tenantSectionLabel}</TabsTrigger>
               <TabsTrigger value="guarantors" className="whitespace-nowrap">Obligado S. / Aval</TabsTrigger>
               {isStaffOrAdmin && <TabsTrigger value="payments" className="whitespace-nowrap">Pagos</TabsTrigger>}
               <TabsTrigger value="documents" className="whitespace-nowrap">Documentos</TabsTrigger>
@@ -318,12 +324,12 @@ export default function PolicyDetailsContent({
 
         {/* Tenant Tab */}
         <TabsContent value="tenant">
-          <SectionHeader title="Inquilino" onRefresh={handleActorRefresh} isRefreshing={isRefreshing} />
+          <SectionHeader title={tenantSectionLabel} onRefresh={handleActorRefresh} isRefreshing={isRefreshing} />
           {tabLoading && currentTab === 'tenant' ? (
             <ActorTabSkeleton />
           ) : (
             <TenantTab
-              tenant={policy.tenant}
+              tenants={policy.tenants || []}
               activities={policy.activities || []}
               policyId={policyId}
               permissions={permissions}
@@ -334,7 +340,10 @@ export default function PolicyDetailsContent({
               isStaffOrAdmin={isStaffOrAdmin}
               policyStatus={policy.status}
               tenantHistory={policy.tenantHistory}
-              onReplaceTenant={() => setShowReplaceTenantModal(true)}
+              onReplaceTenant={(tenant: { id: string; email?: string | null }) =>
+                setReplaceTenantTarget({ tenantId: tenant.id, email: tenant.email || '' })
+              }
+              onActorsChanged={handleActorRefresh}
             />
           )}
         </TabsContent>
@@ -418,11 +427,12 @@ export default function PolicyDetailsContent({
       />
 
       <ReplaceTenantModal
-        isOpen={showReplaceTenantModal}
-        onClose={() => setShowReplaceTenantModal(false)}
+        isOpen={!!replaceTenantTarget}
+        onClose={() => setReplaceTenantTarget(null)}
         policyId={policyId}
         policyNumber={policy.policyNumber}
-        currentTenantEmail={policy.tenant?.email || ''}
+        tenantId={replaceTenantTarget?.tenantId ?? ''}
+        currentTenantEmail={replaceTenantTarget?.email ?? ''}
         hasGuarantors={(policy.jointObligors?.length > 0) || (policy.avals?.length > 0)}
         onSuccess={onRefresh}
       />
