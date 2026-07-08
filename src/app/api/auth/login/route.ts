@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
       where: { email }
     });
 
-    if (!user) {
+    // Deactivated accounts get the same generic error as unknown ones —
+    // login must not disclose which accounts exist or their state (#164).
+    if (!user || !user.isActive) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
