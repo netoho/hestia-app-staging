@@ -28,8 +28,12 @@ export const VALIDATION_CONFIG = {
 
 /** Token configuration */
 export const TOKEN_CONFIG = {
-  /** Token expiration in days */
-  EXPIRATION_DAYS: 1000,
+  /**
+   * Actor portal token expiration in days (#165, 2026-07-05 security
+   * decision: 1000d was effectively permanent). Tokens also die when the
+   * policy is cancelled — see policyService/cancellation.ts.
+   */
+  EXPIRATION_DAYS: 180,
 } as const;
 
 /** Locale configuration */
