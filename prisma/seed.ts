@@ -227,7 +227,7 @@ async function main() {
         }
       },
       // Create tenant with enhanced fields
-      tenant: {
+      tenants: {
         create: {
           tenantType: 'INDIVIDUAL',
           firstName: 'María',
@@ -254,7 +254,7 @@ async function main() {
     },
     include: {
       landlords: true,
-      tenant: true,
+      tenants: true,
     }
   });
   console.log(`Created sample policy: ${samplePolicy.policyNumber}`);
@@ -388,7 +388,7 @@ async function main() {
         ]
       },
       // Create tenant company
-      tenant: {
+      tenants: {
         create: {
           tenantType: 'COMPANY',
           companyName: 'Consultores Digitales SA de CV',
@@ -409,7 +409,7 @@ async function main() {
     },
     include: {
       landlords: true,
-      tenant: true,
+      tenants: true,
     }
   });
   console.log(`Created active policy: ${activePolicy.policyNumber}`);
