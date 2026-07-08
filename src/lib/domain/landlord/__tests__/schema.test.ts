@@ -114,8 +114,12 @@ describe('landlordFinancialInfoTabSchema', () => {
     }
   });
 
-  it('rejects a non-positive monthlyIncome', () => {
-    expect(landlordFinancialInfoTabSchema.safeParse({ monthlyIncome: -1 }).success).toBe(false);
+  it('declares exactly the three rendered fiscal toggles (#189 surplus trim)', () => {
+    expect(Object.keys(landlordFinancialInfoTabSchema.shape).sort()).toEqual([
+      'hasIVA',
+      'issuesTaxReceipts',
+      'requiresCFDI',
+    ]);
   });
 });
 

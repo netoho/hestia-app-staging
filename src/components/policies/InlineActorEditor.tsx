@@ -80,9 +80,7 @@ export default function InlineActorEditor({
       setForceState(null);
       // Invalidate queries
       utils.actor.listByPolicy.invalidate({ policyId });
-      if (actorType !== 'landlord') {
-        utils.actor.getById.invalidate({ type: actorType, id: actorId });
-      }
+      utils.actor.getById.invalidate({ type: actorType, id: actorId });
       onSave?.();
       onClose();
     },
@@ -107,9 +105,9 @@ export default function InlineActorEditor({
     },
   });
 
-  // Fetch data using admin endpoints (same data shape as public pages)
-
-  // For non-landlord actors: use getById.
+  // Fetch data using admin endpoints (same data shape as public pages).
+  // Landlord included: since #189 the editor is per-record for EVERY actor —
+  // each landlord card opens its own editor on its own row.
   // refetchOnMount 'always': an EDIT surface must never trust the app-wide
   // 5-minute staleTime — every open revalidates in the background and
   // useWizardDataReset re-seeds the mounted tabs when fresh data lands
@@ -117,27 +115,14 @@ export default function InlineActorEditor({
   const singleActorQuery = trpc.actor.getById.useQuery(
     { type: actorType, id: actorId },
     {
-      enabled: actorType !== 'landlord' && isOpen && !!actorId,
-      refetchOnMount: 'always',
-    }
-  );
-
-  // For landlords: get ALL landlords for this policy (to match public page behavior)
-  const landlordsQuery = trpc.actor.listByPolicy.useQuery(
-    { policyId, type: 'landlord' },
-    {
-      enabled: actorType === 'landlord' && isOpen && !!policyId,
+      enabled: isOpen && !!actorId,
       refetchOnMount: 'always',
     }
   );
 
   const handleComplete = () => {
     // Invalidate admin queries to ensure fresh data
-    if (actorType === 'landlord') {
-      utils.actor.listByPolicy.invalidate({ policyId, type: 'landlord' });
-    } else {
-      utils.actor.getById.invalidate({ type: actorType, id: actorId });
-    }
+    utils.actor.getById.invalidate({ type: actorType, id: actorId });
     // Also invalidate the general listByPolicy for policy details refresh
     utils.actor.listByPolicy.invalidate({ policyId });
 
@@ -148,9 +133,10 @@ export default function InlineActorEditor({
   // Build initialData matching public page structure exactly
   const getInitialData = () => {
     if (actorType === 'landlord') {
-      const landlords = landlordsQuery.data?.map(l => l.actor) || [];
+      // The landlord wizard's property/financial tabs read policy-level data
+      // alongside the landlord's own record (same shape the portal builds).
       return {
-        landlords,
+        ...singleActorQuery.data,
         propertyDetails: policy?.propertyDetails,
         policyFinancialData: {
           securityDeposit: policy?.securityDeposit,
@@ -167,19 +153,11 @@ export default function InlineActorEditor({
     return singleActorQuery.data;
   };
 
-  // Check loading state
-  const isLoading = actorType === 'landlord'
-    ? landlordsQuery.isLoading
-    : singleActorQuery.isLoading;
-
-  const hasData = actorType === 'landlord'
-    ? landlordsQuery.data && landlordsQuery.data.length > 0
-    : !!singleActorQuery.data;
+  const isLoading = singleActorQuery.isLoading;
+  const hasData = !!singleActorQuery.data;
 
   // Check if actor is already complete
-  const isActorComplete = actorType === 'landlord'
-    ? landlordsQuery.data?.some(l => l.actor?.informationComplete)
-    : singleActorQuery.data?.informationComplete;
+  const isActorComplete = singleActorQuery.data?.informationComplete;
 
   // First attempt: try a normal submit. If the server says
   // `requiresForce`, the mutation's onError populates forceState and the
@@ -213,11 +191,7 @@ export default function InlineActorEditor({
       policy={policy}
       onComplete={handleComplete}
       isAdminEdit
-      dataUpdatedAt={
-        actorType === 'landlord'
-          ? landlordsQuery.dataUpdatedAt
-          : singleActorQuery.dataUpdatedAt
-      }
+      dataUpdatedAt={singleActorQuery.dataUpdatedAt}
     />
   );
 

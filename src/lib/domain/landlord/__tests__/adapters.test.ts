@@ -191,6 +191,13 @@ describe('landlord api adapter — landlordApiOutput', () => {
       'address',
       'addressId',
       'occupation',
+      // Trimmed from the tab/canonical schemas on #189 (no tab ever rendered
+      // them); the columns still exist and the API emits them.
+      'cfdiData',
+      'monthlyIncome',
+      'hasAdditionalIncome',
+      'additionalIncomeSource',
+      'additionalIncomeAmount',
     ]);
 
     for (const apiField of landlordApiOutputFields) {

@@ -1,14 +1,13 @@
 'use client';
 
-import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { User, Building2, Plus, Trash2 } from 'lucide-react';
+import { User, Building2 } from 'lucide-react';
 import {
   Form,
   FormField,
@@ -24,12 +23,6 @@ import {
   landlordOwnerInfoCompanySchema,
 } from '@/lib/schemas/landlord';
 
-// Constants
-const LANDLORD_LIMITS = {
-  MIN: 1,
-  MAX: 5,
-} as const;
-
 // Create discriminated union schema for a single landlord entry
 const landlordIndividualEntrySchema = landlordOwnerInfoIndividualSchema.extend({
   id: z.string().optional().nullable(),
@@ -40,20 +33,6 @@ const landlordCompanyEntrySchema = landlordOwnerInfoCompanySchema.extend({
   id: z.string().optional().nullable(),
   isCompany: z.literal(true),
 });
-
-const landlordEntrySchema = z.discriminatedUnion('isCompany', [
-  landlordIndividualEntrySchema,
-  landlordCompanyEntrySchema,
-]);
-
-// Form schema for array of landlords
-const landlordsFormSchema = z.object({
-  landlords: z.array(landlordEntrySchema)
-    .min(1, 'Al menos un arrendador es requerido')
-    .max(5, 'Máximo 5 arrendadores permitidos'),
-});
-
-type LandlordsFormData = z.infer<typeof landlordsFormSchema>;
 
 // Factory functions for empty landlords
 const createEmptyIndividualLandlord = (isPrimary: boolean = false) => ({
@@ -101,199 +80,106 @@ const createEmptyCompanyLandlord = (isPrimary: boolean = false) => ({
 });
 
 interface LandlordOwnerInfoTabRHFProps {
-  initialData: any[];
+  /** THIS landlord's record — per-record surface, #189. */
+  initialData: any;
   onSave: (data: any) => Promise<void>;
-  onDelete?: (landlordId: string) => Promise<void>;
   disabled?: boolean;
 }
 
+/**
+ * Single-record owner-info form (#189): each landlord edits ONLY their own
+ * record — the token-scoped portal and the per-card admin editor render the
+ * exact same form. The collective indexed form (landlords.N.*) and its
+ * in-form add/remove died with the "primary landlord" special case;
+ * co-owner add/remove is admin-only on the policy's landlord tab.
+ */
 export default function LandlordOwnerInfoTabRHF({
   initialData,
   onSave,
-  onDelete,
   disabled = false,
 }: LandlordOwnerInfoTabRHFProps) {
-  // Initialize form
-  const landlords = initialData.map((l) => ({
-    ...l,  // Spreads id and isPrimary from backend
-    isCompany: l.isCompany ?? false,
-  }))
+  const isCompanyInitial = initialData?.isCompany ?? false;
+  const defaultValues = {
+    ...(isCompanyInitial ? createEmptyCompanyLandlord() : createEmptyIndividualLandlord()),
+    ...initialData,
+    isCompany: isCompanyInitial,
+  };
 
-  if (landlords.length === 0) {
-    landlords[0] = createEmptyIndividualLandlord(true)
-  }
-
-  const defaultValues = { landlords };
-
-  const form = useForm<LandlordsFormData>({
-    resolver: zodResolver(landlordsFormSchema) as Resolver<LandlordsFormData>,
+  const form = useForm({
+    // Resolve against the branch for the type currently SELECTED in the
+    // form — a resolver pinned to the mount-time prop rejects the type
+    // switch on the isCompany literal (dead-toggle class, same as
+    // tenant/JO/aval personal tabs).
+    resolver: ((values: any, ctx: any, options: any) =>
+      zodResolver(
+        (values.isCompany
+          ? landlordCompanyEntrySchema
+          : landlordIndividualEntrySchema) as unknown as Parameters<typeof zodResolver>[0],
+      )(values, ctx, options)) as Resolver<any>,
     mode: 'onChange',
     defaultValues,
   });
-  // Replaces the bespoke reset-on-initialData effect: version-keyed on the
-  // feeding query's dataUpdatedAt (via ActorWizard), so it fires on real
-  // refetches (e.g. a save bringing new IDs) instead of on every re-render.
   useWizardDataReset(form, defaultValues);
 
-  // useFieldArray for landlords
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'landlords',
-  });
+  const isCompany = form.watch('isCompany');
 
-  // Computed values
-  const canAddMore = fields.length < LANDLORD_LIMITS.MAX;
-  const canRemove = fields.length > LANDLORD_LIMITS.MIN;
-
-  // Handler to add new co-owner
-  const handleAddCoOwner = () => {
-    if (canAddMore) {
-      append(createEmptyIndividualLandlord(false));
-    }
-  };
-
-  // Handler to remove co-owner (cannot remove primary/first)
-  const handleRemoveCoOwner = async (index: number, isPrimary: boolean) => {
-    if (!canRemove || isPrimary) return;  // Can't remove primary
-
-    const landlord = form.getValues(`landlords.${index}`);
-
-    if (landlord?.id) {
-      // Has ID → delete from DB first
-      try {
-        await onDelete?.(landlord.id);
-      } catch (error) {
-        console.error('Failed to delete landlord:', error);
-        return;  // Don't remove from form if DB delete failed
-      }
-    }
-
-    // Remove from form
-    remove(index);
-  };
-
-  // Handler for type switching per landlord
-  const handleTypeChange = (index: number, isCompany: boolean) => {
-    const isPrimary = index === 0;
-    const newData = isCompany
-      ? createEmptyCompanyLandlord(isPrimary)
-      : createEmptyIndividualLandlord(isPrimary);
-
-    form.setValue(`landlords.${index}`, newData as LandlordsFormData['landlords'][number], {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
-  };
-
-  // Handle form submission
-  const handleSubmit = async (data: LandlordsFormData) => {
+  const handleSubmit = async (data: any) => {
     await onSave(data);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {fields.map((field, index) => {
-          const isCompany = form.watch(`landlords.${index}.isCompany`);
-          const isPrimary = form.watch(`landlords.${index}.isPrimary`);
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Información del Arrendador</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Type Selector */}
+            <FormField
+              control={form.control}
+              name="isCompany"
+              render={({ field: formField }) => (
+                <FormItem>
+                  <FormLabel required>Tipo de Arrendador</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      value={formField.value ? 'COMPANY' : 'INDIVIDUAL'}
+                      onValueChange={(val) =>
+                        formField.onChange(val === 'COMPANY')
+                      }
+                      disabled={disabled}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="INDIVIDUAL" id="individual" />
+                        <Label htmlFor="individual" className="flex items-center cursor-pointer">
+                          <User className="h-4 w-4 mr-2" />
+                          Persona Física
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="COMPANY" id="company" />
+                        <Label htmlFor="company" className="flex items-center cursor-pointer">
+                          <Building2 className="h-4 w-4 mr-2" />
+                          Persona Moral
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          return (
-            <Card key={field.id}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">
-                  {isPrimary ? 'Arrendador Principal' : `Copropietario ${index + 1}`}
-                </CardTitle>
-                {!isPrimary && canRemove && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveCoOwner(index, isPrimary)}
-                    disabled={disabled}
-                    className="text-destructive hover:text-destructive/90"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Eliminar
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Type Selector */}
-                <FormField
-                  control={form.control}
-                  name={`landlords.${index}.isCompany`}
-                  render={({ field: formField }) => (
-                    <FormItem>
-                      <FormLabel required>Tipo de Arrendador</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          value={formField.value ? 'COMPANY' : 'INDIVIDUAL'}
-                          onValueChange={(val) => handleTypeChange(index, val === 'COMPANY')}
-                          disabled={disabled}
-                          className="flex gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="INDIVIDUAL" id={`individual-${index}`} />
-                            <Label htmlFor={`individual-${index}`} className="flex items-center cursor-pointer">
-                              <User className="h-4 w-4 mr-2" />
-                              Persona Física
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="COMPANY" id={`company-${index}`} />
-                            <Label htmlFor={`company-${index}`} className="flex items-center cursor-pointer">
-                              <Building2 className="h-4 w-4 mr-2" />
-                              Persona Moral
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Conditional Fields based on isCompany */}
-                {isCompany ? (
-                  <LandlordCompanyFields
-                    form={form}
-                    index={index}
-                    disabled={disabled}
-                    showAdditionalContact={isPrimary}
-                  />
-                ) : (
-                  <LandlordIndividualFields
-                    form={form}
-                    index={index}
-                    disabled={disabled}
-                    showAdditionalContact={isPrimary}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-
-        {/* Array-level validation errors */}
-        {form.formState.errors.landlords?.root?.message && (
-          <p className="text-sm text-destructive">
-            {String(form.formState.errors.landlords.root.message)}
-          </p>
-        )}
-
-        {/* Add co-owner button */}
-        {canAddMore && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleAddCoOwner}
-            disabled={disabled}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Copropietario
-          </Button>
-        )}
+            {/* Conditional Fields based on isCompany */}
+            {isCompany ? (
+              <LandlordCompanyFields form={form} disabled={disabled} />
+            ) : (
+              <LandlordIndividualFields form={form} disabled={disabled} />
+            )}
+          </CardContent>
+        </Card>
       </form>
     </Form>
   );
@@ -302,14 +188,10 @@ export default function LandlordOwnerInfoTabRHF({
 // Sub-component for Individual landlord fields
 function LandlordIndividualFields({
   form,
-  index,
   disabled,
-  showAdditionalContact,
 }: {
   form: any;
-  index: number;
   disabled: boolean;
-  showAdditionalContact: boolean;
 }) {
   return (
     <>
@@ -317,7 +199,7 @@ function LandlordIndividualFields({
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={form.control}
-          name={`landlords.${index}.firstName`}
+          name="firstName"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Nombre</FormLabel>
@@ -331,7 +213,7 @@ function LandlordIndividualFields({
 
         <FormField
           control={form.control}
-          name={`landlords.${index}.middleName`}
+          name="middleName"
           render={({ field }) => (
             <FormItem>
               <FormLabel optional>Segundo Nombre</FormLabel>
@@ -347,7 +229,7 @@ function LandlordIndividualFields({
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={form.control}
-          name={`landlords.${index}.paternalLastName`}
+          name="paternalLastName"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Apellido Paterno</FormLabel>
@@ -361,7 +243,7 @@ function LandlordIndividualFields({
 
         <FormField
           control={form.control}
-          name={`landlords.${index}.maternalLastName`}
+          name="maternalLastName"
           render={({ field }) => (
             <FormItem>
               <FormLabel optional>Apellido Materno</FormLabel>
@@ -378,7 +260,7 @@ function LandlordIndividualFields({
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={form.control}
-          name={`landlords.${index}.curp`}
+          name="curp"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>CURP</FormLabel>
@@ -392,7 +274,7 @@ function LandlordIndividualFields({
 
         <FormField
           control={form.control}
-          name={`landlords.${index}.rfc`}
+          name="rfc"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>RFC</FormLabel>
@@ -407,7 +289,7 @@ function LandlordIndividualFields({
 
       <FormField
         control={form.control}
-        name={`landlords.${index}.nationality`}
+        name="nationality"
         render={({ field }) => (
           <FormItem>
             <FormLabel required>Nacionalidad</FormLabel>
@@ -419,12 +301,12 @@ function LandlordIndividualFields({
                 className="flex gap-4"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="MEXICAN" id={`mexican-${index}`} />
-                  <Label htmlFor={`mexican-${index}`}>Mexicana</Label>
+                  <RadioGroupItem value="MEXICAN" id="mexican" />
+                  <Label htmlFor="mexican">Mexicana</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="FOREIGN" id={`foreign-${index}`} />
-                  <Label htmlFor={`foreign-${index}`}>Extranjera</Label>
+                  <RadioGroupItem value="FOREIGN" id="foreign" />
+                  <Label htmlFor="foreign">Extranjera</Label>
                 </div>
               </RadioGroup>
             </FormControl>
@@ -437,7 +319,7 @@ function LandlordIndividualFields({
       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
         <FormField
           control={form.control}
-          name={`landlords.${index}.email`}
+          name="email"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Email</FormLabel>
@@ -451,7 +333,7 @@ function LandlordIndividualFields({
 
         <FormField
           control={form.control}
-          name={`landlords.${index}.phone`}
+          name="phone"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Teléfono Celular</FormLabel>
@@ -464,59 +346,58 @@ function LandlordIndividualFields({
         />
       </div>
 
-      {/* Additional Contact (only for primary) */}
-      {showAdditionalContact && (
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name={`landlords.${index}.personalEmail`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel optional>Email Personal</FormLabel>
-                <FormControl>
-                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {/* Additional Contact — every landlord is first-class (#189 un-gated
+          the legacy isPrimary condition; co-owners fill their own). */}
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="personalEmail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel optional>Email Personal</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name={`landlords.${index}.workPhone`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel optional>Teléfono de Trabajo</FormLabel>
-                <FormControl>
-                  <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="workPhone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel optional>Teléfono de Trabajo</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          {/* Declared by the landlord owner-info schema but previously
-              unrendered on the individual card — #180 walker finding. */}
-          <FormField
-            control={form.control}
-            name={`landlords.${index}.workEmail`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel optional>Email de Trabajo</FormLabel>
-                <FormControl>
-                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
+        {/* Declared by the landlord owner-info schema but previously
+            unrendered on the individual card — #180 walker finding. */}
+        <FormField
+          control={form.control}
+          name="workEmail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel optional>Email de Trabajo</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
       {/* Address */}
       <FormField
         control={form.control}
-        name={`landlords.${index}.addressDetails`}
+        name="addressDetails"
         render={({ field }) => (
           <FormItem>
             <FormLabel required>Dirección Actual</FormLabel>
@@ -524,13 +405,7 @@ function LandlordIndividualFields({
               <AddressAutocomplete
                 label=""
                 value={field.value || {}}
-                onChange={(addressData) => {
-                  field.onChange(addressData);
-                  form.setValue(
-                    `landlords.${index}.address`,
-                    `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
-                  );
-                }}
+                onChange={field.onChange}
                 required
                 disabled={disabled}
               />
@@ -546,21 +421,17 @@ function LandlordIndividualFields({
 // Sub-component for Company landlord fields
 function LandlordCompanyFields({
   form,
-  index,
   disabled,
-  showAdditionalContact,
 }: {
   form: any;
-  index: number;
   disabled: boolean;
-  showAdditionalContact: boolean;
 }) {
   return (
     <>
       {/* Company Info */}
       <FormField
         control={form.control}
-        name={`landlords.${index}.companyName`}
+        name="companyName"
         render={({ field }) => (
           <FormItem>
             <FormLabel required>Razón Social</FormLabel>
@@ -575,7 +446,7 @@ function LandlordCompanyFields({
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={form.control}
-          name={`landlords.${index}.companyRfc`}
+          name="companyRfc"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>RFC de la Empresa</FormLabel>
@@ -589,7 +460,7 @@ function LandlordCompanyFields({
 
         <FormField
           control={form.control}
-          name={`landlords.${index}.businessType`}
+          name="businessType"
           render={({ field }) => (
             <FormItem>
               <FormLabel optional>Giro de la Empresa</FormLabel>
@@ -609,7 +480,7 @@ function LandlordCompanyFields({
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepFirstName`}
+            name="legalRepFirstName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Nombre</FormLabel>
@@ -623,7 +494,7 @@ function LandlordCompanyFields({
 
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepMiddleName`}
+            name="legalRepMiddleName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel optional>Segundo Nombre</FormLabel>
@@ -639,7 +510,7 @@ function LandlordCompanyFields({
         <div className="grid grid-cols-2 gap-4 mt-4">
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepPaternalLastName`}
+            name="legalRepPaternalLastName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Apellido Paterno</FormLabel>
@@ -653,7 +524,7 @@ function LandlordCompanyFields({
 
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepMaternalLastName`}
+            name="legalRepMaternalLastName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel optional>Apellido Materno</FormLabel>
@@ -669,7 +540,7 @@ function LandlordCompanyFields({
         <div className="grid grid-cols-2 gap-4 mt-4">
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepPosition`}
+            name="legalRepPosition"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Cargo</FormLabel>
@@ -683,7 +554,7 @@ function LandlordCompanyFields({
 
           {/*<FormField*/}
           {/*  control={form.control}*/}
-          {/*  name={`landlords.${index}.legalRepNationality`}*/}
+          {/*  name="legalRepNationality"*/}
           {/*  render={({ field }) => (*/}
           {/*    <FormItem>*/}
           {/*      <FormLabel optional>Nacionalidad</FormLabel>*/}
@@ -699,7 +570,7 @@ function LandlordCompanyFields({
         <div className="grid grid-cols-2 gap-4 mt-4">
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepCurp`}
+            name="legalRepCurp"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>CURP del Representante</FormLabel>
@@ -713,7 +584,7 @@ function LandlordCompanyFields({
 
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepRfc`}
+            name="legalRepRfc"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>RFC del Representante</FormLabel>
@@ -729,7 +600,7 @@ function LandlordCompanyFields({
         <div className="grid grid-cols-2 gap-4 mt-4">
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepEmail`}
+            name="legalRepEmail"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Email del Representante</FormLabel>
@@ -743,7 +614,7 @@ function LandlordCompanyFields({
 
           <FormField
             control={form.control}
-            name={`landlords.${index}.legalRepPhone`}
+            name="legalRepPhone"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Teléfono Celular del Representante</FormLabel>
@@ -761,7 +632,7 @@ function LandlordCompanyFields({
       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
         <FormField
           control={form.control}
-          name={`landlords.${index}.email`}
+          name="email"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Email de la Empresa</FormLabel>
@@ -775,7 +646,7 @@ function LandlordCompanyFields({
 
         <FormField
           control={form.control}
-          name={`landlords.${index}.phone`}
+          name="phone"
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Teléfono de la Empresa</FormLabel>
@@ -788,59 +659,58 @@ function LandlordCompanyFields({
         />
       </div>
 
-      {/* Additional Contact (only for primary) */}
-      {showAdditionalContact && (
-        <div className="grid grid-cols-2 gap-4">
-          {/* Declared by the landlord company schema but previously
-              unrendered — #180 walker finding. */}
-          <FormField
-            control={form.control}
-            name={`landlords.${index}.personalEmail`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel optional>Email Personal</FormLabel>
-                <FormControl>
-                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {/* Additional Contact — every landlord is first-class (#189 un-gated
+          the legacy isPrimary condition). */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Declared by the landlord company schema but previously
+            unrendered — #180 walker finding. */}
+        <FormField
+          control={form.control}
+          name="personalEmail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel optional>Email Personal</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name={`landlords.${index}.workEmail`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel optional>Email Adicional</FormLabel>
-                <FormControl>
-                  <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="workEmail"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel optional>Email Adicional</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} value={field.value || ''} disabled={disabled} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name={`landlords.${index}.workPhone`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel optional>Teléfono Adicional</FormLabel>
-                <FormControl>
-                  <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
+        <FormField
+          control={form.control}
+          name="workPhone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel optional>Teléfono Adicional</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value || ''} disabled={disabled} maxLength={10} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
       {/* Address */}
       <FormField
         control={form.control}
-        name={`landlords.${index}.addressDetails`}
+        name="addressDetails"
         render={({ field }) => (
           <FormItem>
             <FormLabel required>Dirección de la Empresa</FormLabel>
@@ -848,13 +718,7 @@ function LandlordCompanyFields({
               <AddressAutocomplete
                 label=""
                 value={field.value || {}}
-                onChange={(addressData) => {
-                  field.onChange(addressData);
-                  form.setValue(
-                    `landlords.${index}.address`,
-                    `${addressData.street} ${addressData.exteriorNumber}${addressData.interiorNumber ? ` Int. ${addressData.interiorNumber}` : ''}, ${addressData.neighborhood}, ${addressData.municipality}, ${addressData.state}`
-                  );
-                }}
+                onChange={field.onChange}
                 required
                 disabled={disabled}
               />

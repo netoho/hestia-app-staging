@@ -236,3 +236,12 @@ export const ActorDeleteCoOwnerOutput = z.object({
   success: z.literal(true),
 });
 export type ActorDeleteCoOwnerOutput = z.infer<typeof ActorDeleteCoOwnerOutput>;
+
+// ===========================================================================
+// landlord.addCoOwner — { success: true, landlordId } (#189, admin-only)
+// ===========================================================================
+export const ActorAddCoOwnerOutput = z.object({
+  success: z.literal(true),
+  landlordId: z.string(),
+});
+export type ActorAddCoOwnerOutput = z.infer<typeof ActorAddCoOwnerOutput>;
