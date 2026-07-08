@@ -311,6 +311,7 @@ export default function PolicyDetailsContent({
               onEditClick={handleEditActor}
               onSendInvitation={sendIndividualInvitation}
               onMarkComplete={handleMarkActorComplete}
+              onActorsChanged={handleActorRefresh}
             />
           )}
         </TabsContent>

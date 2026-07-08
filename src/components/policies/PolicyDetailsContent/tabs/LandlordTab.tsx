@@ -3,6 +3,21 @@
 import { useState } from 'react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { trpc } from '@/lib/trpc/client';
+import { getFriendlyError } from '@/lib/utils/trpcErrors';
 import ActorCard from '@/components/policies/details/ActorCard';
 import ActorActivityTimeline from '@/components/policies/ActorActivityTimeline';
 import { ActorViewToggle } from '../components/ActorViewToggle';
@@ -22,6 +37,8 @@ interface LandlordTabProps {
   onEditClick: (type: ActorType, actorId: string) => void;
   onSendInvitation: (actorType: string, actorId: string) => void;
   onMarkComplete: (type: ActorType, actorId: string, name: string) => void;
+  /** Refresh actor caches + policy after add/remove (#189 admin-only ops). */
+  onActorsChanged?: () => void;
   isLoading?: boolean;
 }
 
@@ -34,9 +51,41 @@ export function LandlordTab({
   onEditClick,
   onSendInvitation,
   onMarkComplete,
+  onActorsChanged,
   isLoading,
 }: LandlordTabProps) {
   const [view, setView] = useState<'info' | 'history'>('info');
+  const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null);
+  const { toast } = useToast();
+
+  // Co-owner add/remove is ADMIN-ONLY since #189 — each landlord's portal
+  // edits only their own record.
+  const addCoOwnerMutation = trpc.actor.addCoOwner.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Copropietario agregado',
+        description: 'Complete su información o envíele su enlace de acceso',
+      });
+      onActorsChanged?.();
+    },
+    onError: (error) => {
+      const friendly = getFriendlyError(error);
+      toast({ title: friendly.title, description: friendly.description, variant: 'destructive' });
+    },
+  });
+
+  const deleteCoOwnerMutation = trpc.actor.deleteCoOwner.useMutation({
+    onSuccess: () => {
+      toast({ title: 'Copropietario eliminado' });
+      setPendingRemove(null);
+      onActorsChanged?.();
+    },
+    onError: (error) => {
+      const friendly = getFriendlyError(error);
+      setPendingRemove(null);
+      toast({ title: friendly.title, description: friendly.description, variant: 'destructive' });
+    },
+  });
 
   if (isLoading) {
     return <ActorTabSkeleton />;
@@ -65,6 +114,20 @@ export function LandlordTab({
             <h3 className="text-lg font-semibold flex items-center gap-2">
               {landlord.isPrimary ? 'Arrendador Principal' : `Co-propietario ${coOwnerNumber}`}
               {landlord.isPrimary && <Badge variant="outline" className="ml-2">Principal</Badge>}
+              {permissions.canEdit && !landlord.isPrimary && landlords.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto text-destructive hover:text-destructive/90"
+                  onClick={() =>
+                    setPendingRemove({ id: landlord.id, name: getActorName(landlord) })
+                  }
+                  disabled={deleteCoOwnerMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Eliminar
+                </Button>
+              )}
             </h3>
             {view === 'info' ? (
               <ActorCard
@@ -99,6 +162,59 @@ export function LandlordTab({
       ) : (
         <EmptyState title="No se ha registrado información del arrendador" />
       )}
+
+      {/* Add co-owner — admin-only (#189); the new landlord fills their own
+          record through their own portal link. */}
+      {permissions.canEdit && landlords.length > 0 && landlords.length < 5 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => addCoOwnerMutation.mutate({ policyId })}
+          disabled={addCoOwnerMutation.isPending}
+          className="w-full sm:w-auto"
+        >
+          {addCoOwnerMutation.isPending ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          Agregar Copropietario
+        </Button>
+      )}
+
+      {/* Confirm-remove dialog — deletion is permanent and now leaves an
+          activity-trail event (#183). */}
+      <AlertDialog
+        open={pendingRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemove(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar copropietario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará a {pendingRemove?.name} de esta protección. Esta
+              acción es permanente y quedará registrada en el historial.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                pendingRemove &&
+                deleteCoOwnerMutation.mutate({ type: 'landlord', id: pendingRemove.id })
+              }
+              disabled={deleteCoOwnerMutation.isPending}
+            >
+              {deleteCoOwnerMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

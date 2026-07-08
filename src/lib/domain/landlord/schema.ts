@@ -66,7 +66,10 @@ export const landlordOwnerInfoCompanySchema = z.object({
 
   // Company contact
   ...extendedContactSchema.shape,
-  address: z.string().min(1, 'Dirección requerida'),
+  // Legacy free-text `address` was REQUIRED here yet no surface rendered a
+  // control for it — strict completeness demanded an unfillable field
+  // (walker finding, ruled dropped 2026-07-07 on #189). The DB column
+  // survives as a Prisma-emitted field (see the api drift allowlist).
   addressDetails: partialAddressSchema.optional(),
   isPrimary: z.boolean().default(false),
 });
@@ -79,16 +82,17 @@ export const landlordPropertyInfoTabSchema = propertyDeedSchema.extend({
   propertyValue: z.number().positive().optional().nullable(),
 });
 
-/** FINANCIAL INFO TAB — additional financial details */
+/**
+ * FINANCIAL INFO TAB — exactly the three fiscal toggles the form renders.
+ * cfdiData, monthlyIncome, hasAdditionalIncome, additionalIncomeSource and
+ * additionalIncomeAmount were schema-only surplus (no tab ever rendered
+ * them — landlords aren't underwritten; ruled trimmed 2026-07-07 on #189).
+ * The DB columns survive as Prisma-emitted fields (api drift allowlist).
+ */
 export const landlordFinancialInfoTabSchema = z.object({
   requiresCFDI: z.boolean().default(false),
-  cfdiData: z.string().optional().nullable(), // JSON string with fiscal data
   hasIVA: z.boolean().default(false),
   issuesTaxReceipts: z.boolean().default(false),
-  monthlyIncome: z.number().positive().optional().nullable(),
-  hasAdditionalIncome: z.boolean().default(false),
-  additionalIncomeSource: z.string().optional().nullable(),
-  additionalIncomeAmount: z.number().positive().optional().nullable(),
 });
 
 /** DOCUMENTS TAB — additional info only (documents handled separately) */
