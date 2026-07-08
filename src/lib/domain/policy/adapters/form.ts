@@ -140,7 +140,7 @@ export const landlordsStepSchema = z.object({
 });
 
 /**
- * Step 4: Tenant
+ * Step 4: Tenant (per-record shape)
  */
 export const tenantStepSchema = z.object({
   tenantType: z.nativeEnum(TenantType).default(TenantType.INDIVIDUAL),
@@ -152,6 +152,19 @@ export const tenantStepSchema = z.object({
   email: emailSchema,
   phone: z.string().optional(),
   rfc: z.string().optional(),
+});
+
+/**
+ * Step 4: Tenants (1..N co-tenants)
+ * Every tenant is first-class — no primary, no upper cap (product ruling).
+ * Display order is creation order (createdAt asc).
+ */
+export const TENANT_STEP_LIMITS = { MIN: 1 } as const;
+
+export const tenantsStepSchema = z.object({
+  tenants: z
+    .array(tenantStepSchema)
+    .min(TENANT_STEP_LIMITS.MIN, 'Al menos un inquilino es requerido'),
 });
 
 /**
@@ -201,7 +214,7 @@ export function getPolicyStepSchema(step: string) {
     case 'landlord':
       return landlordsStepSchema;
     case 'tenant':
-      return tenantStepSchema;
+      return tenantsStepSchema;
     case 'guarantors':
       return guarantorStepSchema;
     default:
@@ -217,4 +230,7 @@ export type PricingStepData = z.infer<typeof pricingStepSchema>;
 export type LandlordStepData = z.infer<typeof landlordStepSchema>;
 export type LandlordsStepData = z.infer<typeof landlordsStepSchema>;
 export type TenantStepData = z.infer<typeof tenantStepSchema>;
+export type TenantsStepData = z.infer<typeof tenantsStepSchema>;
+// RHF field-values type: tenantType is optional pre-parse (schema default)
+export type TenantsStepInput = z.input<typeof tenantsStepSchema>;
 export type GuarantorStepData = z.infer<typeof guarantorStepSchema>;

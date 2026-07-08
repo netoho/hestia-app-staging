@@ -89,11 +89,18 @@ export interface LandlordFormData extends Partial<ActorFormData> {
 }
 
 /**
- * Tenant form data
+ * Tenant form data (per-record shape — mirrors tenantStepSchema output)
  */
-export interface TenantFormData extends ActorFormData {
+export interface TenantFormData {
   tenantType: TenantType;
+  firstName?: string;
+  middleName?: string;
+  paternalLastName?: string;
+  maternalLastName?: string;
   companyName?: string;
+  email: string;
+  phone?: string;
+  rfc?: string;
 }
 
 /**
@@ -103,7 +110,7 @@ export interface PolicyCreationFormData {
   property: PropertyFormData;
   pricing: PricingFormData;
   landlords: LandlordFormData[];
-  tenant: TenantFormData;
+  tenants: TenantFormData[];
   guarantorType: GuarantorType;
   jointObligors: ActorFormData[];
   avals: ActorFormData[];
