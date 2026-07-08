@@ -9,7 +9,8 @@ interface ActorWithDocuments {
 
 interface PolicyWithActors {
   landlords: (Landlord & { documents?: any[] })[];
-  tenant?: (Tenant & { documents?: any[]; references?: any[] }) | null;
+  // 1..N tenants (S5b #169) — iterate all; there is no primary tenant.
+  tenants: (Tenant & { documents?: any[]; references?: any[] })[];
   jointObligors: (JointObligor & { documents?: any[]; references?: any[] })[];
   avals: (Aval & { documents?: any[]; references?: any[] })[];
   guarantorType: string;
@@ -141,14 +142,20 @@ export function calculatePolicyProgress(policy: PolicyWithActors): PolicyProgres
     totalDocumentsRequired += getRequiredDocumentsCount('landlord');
   }
 
-  // Process tenant
-  if (policy.tenant) {
-    const progress = calculateActorProgress(policy.tenant, 'tenant');
-    actorProgressMap[`tenant-${policy.tenant.id}`] = progress;
+  // Process all tenants (every co-tenant counts toward progress)
+  if (policy.tenants && policy.tenants.length > 0) {
+    policy.tenants.forEach((tenant) => {
+      const progress = calculateActorProgress(tenant, 'tenant');
+      actorProgressMap[`tenant-${tenant.id}`] = progress;
+      totalActors++;
+      if (tenant.informationComplete) completedActors++;
+      totalDocumentsUploaded += progress.documentsUploaded;
+      totalDocumentsRequired += progress.documentsRequired;
+    });
+  } else {
+    // Count as pending actor if no tenants exist
     totalActors++;
-    if (policy.tenant.informationComplete) completedActors++;
-    totalDocumentsUploaded += progress.documentsUploaded;
-    totalDocumentsRequired += progress.documentsRequired;
+    totalDocumentsRequired += getRequiredDocumentsCount('tenant');
   }
 
   // Process joint obligors

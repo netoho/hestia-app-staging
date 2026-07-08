@@ -37,13 +37,13 @@ class PolicyWorkflowService extends BaseService {
 
   /**
    * Check if all investigated actors have approved investigations.
-   * Only checks tenant, joint obligors, and avals (landlords excluded).
+   * Only checks tenants, joint obligors, and avals (landlords excluded).
    */
   async checkAllInvestigationsApproved(policyId: string): Promise<boolean> {
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       select: {
-        tenant: { select: { id: true } },
+        tenants: { select: { id: true } },
         jointObligors: { select: { id: true } },
         avals: { select: { id: true } },
       }
@@ -54,8 +54,9 @@ class PolicyWorkflowService extends BaseService {
     // Collect all actor IDs that need investigation
     const actorChecks: { actorType: string; actorId: string }[] = [];
 
-    if (policy.tenant) {
-      actorChecks.push({ actorType: 'TENANT', actorId: policy.tenant.id });
+    // Every tenant needs its own APPROVED investigation
+    for (const tenant of policy.tenants) {
+      actorChecks.push({ actorType: 'TENANT', actorId: tenant.id });
     }
     for (const jo of policy.jointObligors) {
       actorChecks.push({ actorType: 'JOINT_OBLIGOR', actorId: jo.id });
@@ -177,7 +178,7 @@ class PolicyWorkflowService extends BaseService {
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       include: {
-        tenant: true,
+        tenants: true,
         jointObligors: true,
         avals: true,
       }
@@ -235,18 +236,25 @@ class PolicyWorkflowService extends BaseService {
       performedById: userId,
     });
 
-    // Send email notification on ACTIVE
-    if (newStatus === 'ACTIVE' && policy.tenant?.email) {
-      const reviewer = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      });
-      sendPolicyStatusUpdate({
-        tenantEmail: policy.tenant.email,
-        tenantName: policy.tenant.firstName ?? undefined,
-        status: 'approved',
-        reviewerName: reviewer?.name ?? 'Equipo Hestia',
-      }).catch((err) => console.error('Failed to send approval email:', err));
+    // Send email notification on ACTIVE — every tenant with an email gets one
+    if (newStatus === 'ACTIVE') {
+      const tenantsWithEmail = policy.tenants.filter(
+        (t: { email: string }) => !!t.email
+      );
+      if (tenantsWithEmail.length > 0) {
+        const reviewer = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true },
+        });
+        for (const tenant of tenantsWithEmail) {
+          sendPolicyStatusUpdate({
+            tenantEmail: tenant.email,
+            tenantName: tenant.firstName ?? tenant.companyName ?? undefined,
+            status: 'approved',
+            reviewerName: reviewer?.name ?? 'Equipo Hestia',
+          }).catch((err) => console.error('Failed to send approval email:', err));
+        }
+      }
     }
 
     // Notify admins when policy reaches PENDING_APPROVAL
@@ -357,7 +365,7 @@ class PolicyWorkflowService extends BaseService {
     const policy = await this.prisma.policy.findUnique({
       where: { id: policyId },
       include: {
-        tenant: true,
+        tenants: true,
         jointObligors: true,
         avals: true,
       },

@@ -92,25 +92,26 @@ export async function createPolicy(data: CreatePolicyData) {
           address: '', // Will be updated when landlord fills their info
         })),
       },
-      tenant: {
-        create: {
-          tenantType: policyData.tenant.tenantType || 'INDIVIDUAL',
+      // 1..N tenants (S5b #169) — every entry is a first-class co-tenant.
+      tenants: {
+        create: policyData.tenants.map((tenant) => ({
+          tenantType: tenant.tenantType || 'INDIVIDUAL',
           // Personal fields
-          firstName: policyData.tenant.firstName,
-          middleName: policyData.tenant.middleName,
-          paternalLastName: policyData.tenant.paternalLastName,
-          maternalLastName: policyData.tenant.maternalLastName,
+          firstName: tenant.firstName,
+          middleName: tenant.middleName,
+          paternalLastName: tenant.paternalLastName,
+          maternalLastName: tenant.maternalLastName,
           // Company fields
-          companyName: policyData.tenant.tenantType === 'COMPANY' ? policyData.tenant.companyName : undefined,
-          email: policyData.tenant.email,
-          phone: policyData.tenant.phone || '',
-          rfc: policyData.tenant.rfc || '',
-        }
+          companyName: tenant.tenantType === 'COMPANY' ? tenant.companyName : undefined,
+          email: tenant.email,
+          phone: tenant.phone || '',
+          rfc: tenant.rfc || '',
+        })),
       }
     },
     include: {
       landlords: true,
-      tenant: true,
+      tenants: { orderBy: { createdAt: 'asc' } },
     }
   });
 
@@ -228,13 +229,13 @@ export async function getPolicies(params?: {
       { propertyDetails: { propertyAddressDetails: { formattedAddress: { contains: params.search, mode: 'insensitive' } } } },
       { propertyDetails: { propertyAddressDetails: { street: { contains: params.search, mode: 'insensitive' } } } },
 
-      // Tenant - search across name fields
-      { tenant: { firstName: { contains: params.search, mode: 'insensitive' } } },
-      { tenant: { paternalLastName: { contains: params.search, mode: 'insensitive' } } },
-      { tenant: { maternalLastName: { contains: params.search, mode: 'insensitive' } } },
-      { tenant: { companyName: { contains: params.search, mode: 'insensitive' } } },
-      { tenant: { email: { contains: params.search, mode: 'insensitive' } } },
-      { tenant: { phone: { contains: params.search, mode: 'insensitive' } } },
+      // Tenants - search matches ANY tenant of the policy (S5b #169)
+      { tenants: { some: { firstName: { contains: params.search, mode: 'insensitive' } } } },
+      { tenants: { some: { paternalLastName: { contains: params.search, mode: 'insensitive' } } } },
+      { tenants: { some: { maternalLastName: { contains: params.search, mode: 'insensitive' } } } },
+      { tenants: { some: { companyName: { contains: params.search, mode: 'insensitive' } } } },
+      { tenants: { some: { email: { contains: params.search, mode: 'insensitive' } } } },
+      { tenants: { some: { phone: { contains: params.search, mode: 'insensitive' } } } },
 
       // Landlords - search across name fields
       { landlords: { some: { firstName: { contains: params.search, mode: 'insensitive' } } } },
@@ -409,7 +410,7 @@ export async function getPolicyForPDF(id: string) {
           { createdAt: 'asc' }
         ]
       },
-      tenant: {
+      tenants: {
         include: {
           personalReferences: true,
           commercialReferences: true,
@@ -417,7 +418,8 @@ export async function getPolicyForPDF(id: string) {
           addressDetails: true,
           employerAddressDetails: true,
           previousRentalAddressDetails: true,
-        }
+        },
+        orderBy: { createdAt: 'asc' }
       },
       jointObligors: {
         include: {

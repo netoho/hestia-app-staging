@@ -58,7 +58,8 @@ export interface CreatePolicyData {
     legalRepPaternalLastName?: string;
     legalRepMaternalLastName?: string;
   }>;
-  tenant: {
+  // 1..N tenants (S5b #169) — every entry is a first-class co-tenant.
+  tenants: Array<{
     tenantType?: TenantType;
     firstName?: string;
     middleName?: string;
@@ -68,7 +69,7 @@ export interface CreatePolicyData {
     email: string;
     phone?: string;
     rfc?: string;
-  };
+  }>;
   jointObligors?: Array<{
     firstName: string;
     middleName?: string;

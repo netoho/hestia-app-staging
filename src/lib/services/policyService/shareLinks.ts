@@ -20,7 +20,7 @@ export interface GetShareLinksResult {
 
 /**
  * Get share links for all actors on a policy.
- * Returns URLs with access tokens for landlords, tenant, joint obligors, and avals.
+ * Returns URLs with access tokens for landlords, tenants, joint obligors, and avals.
  */
 export async function getShareLinksForPolicy(
   policyId: string
@@ -59,27 +59,29 @@ export async function getShareLinksForPolicy(
     }
   }
 
-  // Tenant
-  if (policy.tenant?.accessToken) {
-    shareLinks.push({
-      actorId: policy.tenant.id,
-      actorType: 'tenant',
-      actorName:
-        policy.tenant.companyName ||
-        (policy.tenant.firstName
-          ? formatFullName(
-              policy.tenant.firstName,
-              policy.tenant.paternalLastName || '',
-              policy.tenant.maternalLastName || '',
-              policy.tenant.middleName || undefined
-            )
-          : 'Sin nombre'),
-      email: policy.tenant.email,
-      phone: policy.tenant.phone,
-      url: generateActorUrl(policy.tenant.accessToken, 'tenant'),
-      tokenExpiry: policy.tenant.tokenExpiry,
-      informationComplete: policy.tenant.informationComplete,
-    });
+  // Tenants (all of them — every tenant gets their own share link)
+  for (const tenant of policy.tenants || []) {
+    if (tenant.accessToken) {
+      shareLinks.push({
+        actorId: tenant.id,
+        actorType: 'tenant',
+        actorName:
+          tenant.companyName ||
+          (tenant.firstName
+            ? formatFullName(
+                tenant.firstName,
+                tenant.paternalLastName || '',
+                tenant.maternalLastName || '',
+                tenant.middleName || undefined
+              )
+            : 'Sin nombre'),
+        email: tenant.email,
+        phone: tenant.phone,
+        url: generateActorUrl(tenant.accessToken, 'tenant'),
+        tokenExpiry: tenant.tokenExpiry,
+        informationComplete: tenant.informationComplete,
+      });
+    }
   }
 
   // Joint Obligors

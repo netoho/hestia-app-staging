@@ -352,6 +352,9 @@ export interface PolicyData {
 
   // Actors
   landlord?: LandlordData;
+  // 1..N tenants (S5b #169) — iterate all; `tenant` is the legacy singular
+  // (tenants[0]) the aggregate still emits during the transition.
+  tenants?: TenantData[];
   tenant?: TenantData;
   jointObligors?: JointObligorData[];
   avals?: AvalData[];

@@ -43,6 +43,8 @@ import { sendIncompleteActorInfoNotification } from "@/lib/services/notification
 // Schema for replacing tenant
 const ReplaceTenantSchema = z.object({
   policyId: z.string(),
+  // 1..N tenants (S5b #169): the caller names WHICH tenant row to replace.
+  tenantId: z.string(),
   replacementReason: z.string().min(1, 'Replacement reason is required'),
   newTenant: z.object({
     tenantType: z.nativeEnum(TenantType),
@@ -150,7 +152,8 @@ const CreatePolicySchema = z.object({
     legalRepEmail: z.string().optional(),
   })).min(1).max(5),
 
-  tenant: z.object({
+  // 1..N tenants (S5b #169) — every entry is a first-class co-tenant.
+  tenants: z.array(z.object({
     tenantType: z.nativeEnum(TenantType),
     firstName: z.string().optional(),
     middleName: z.string().optional(),
@@ -160,7 +163,7 @@ const CreatePolicySchema = z.object({
     email: z.string().email(),
     phone: z.string().optional(),
     rfc: z.string().optional(),
-  }),
+  })).min(1),
 
   jointObligors: z.array(z.object({
     firstName: z.string(),
