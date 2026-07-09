@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import { PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
-import { PAYMENT_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { PAYMENT_TYPE_LABELS, SAT_FORMA_PAGO_OPTIONS, DEFAULT_SAT_FORMA_PAGO } from '@/lib/constants/paymentConfig';
 import { uploadToS3WithProgress } from '@/lib/documentManagement/upload';
 
 interface ManualPaymentDialogProps {
@@ -42,7 +42,6 @@ const PAYER_TYPE_OPTIONS: { value: PayerType; label: string }[] = [
   { value: PayerType.LANDLORD, label: 'Arrendador' },
   { value: PayerType.JOINT_OBLIGOR, label: 'Obligado Solidario' },
   { value: PayerType.AVAL, label: 'Aval' },
-  { value: PayerType.COMPANY, label: 'Empresa' },
 ];
 
 export function ManualPaymentDialog({
@@ -54,14 +53,28 @@ export function ManualPaymentDialog({
   paymentId,
   onSuccess,
 }: ManualPaymentDialogProps) {
-  const [paidBy, setPaidBy] = useState<PayerType>(
-    paymentType === PaymentType.LANDLORD_PORTION ? PayerType.LANDLORD : PayerType.TENANT
-  );
+  const defaultPaidBy =
+    paymentType === PaymentType.LANDLORD_PORTION ? PayerType.LANDLORD : PayerType.TENANT;
+  const [paidBy, setPaidBy] = useState<PayerType>(defaultPaidBy);
   const [amount, setAmount] = useState<string>(expectedAmount.toString());
   const [reference, setReference] = useState<string>('');
+  const [satFormaPago, setSatFormaPago] = useState<string>(DEFAULT_SAT_FORMA_PAGO);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // The dialog stays mounted in PaymentsTab (only toggled via `open`), so the
+  // useState initializers run once. Reset from props each time it (re)opens,
+  // otherwise the amount/payer keep the previously-recorded payment's values.
+  useEffect(() => {
+    if (!open) return;
+    setPaidBy(defaultPaidBy);
+    setAmount(expectedAmount.toString());
+    setReference('');
+    setSatFormaPago(DEFAULT_SAT_FORMA_PAGO);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [open, expectedAmount, defaultPaidBy]);
 
   const { toast } = useToast();
   const recordManualPayment = trpc.payment.recordManualPayment.useMutation();
@@ -125,6 +138,7 @@ export function ManualPaymentDialog({
         amount: parsedAmount,
         paidBy,
         reference: reference || undefined,
+        satFormaPago,
       });
 
       // 2. Get presigned upload URL
@@ -166,9 +180,10 @@ export function ManualPaymentDialog({
       }
 
       // Reset form
-      setPaidBy(paymentType === PaymentType.LANDLORD_PORTION ? PayerType.LANDLORD : PayerType.TENANT);
+      setPaidBy(defaultPaidBy);
       setAmount(expectedAmount.toString());
       setReference('');
+      setSatFormaPago(DEFAULT_SAT_FORMA_PAGO);
       setSelectedFile(null);
 
       toast({
@@ -259,6 +274,26 @@ export function ManualPaymentDialog({
               placeholder="0"
               required
             />
+          </div>
+
+          {/* SAT forma de pago — drives the CFDI (factura) for this payment */}
+          <div className="space-y-2">
+            <Label htmlFor="satFormaPago">Forma de Pago (SAT)</Label>
+            <Select value={satFormaPago} onValueChange={setSatFormaPago}>
+              <SelectTrigger id="satFormaPago">
+                <SelectValue placeholder="Seleccionar forma de pago" />
+              </SelectTrigger>
+              <SelectContent>
+                {SAT_FORMA_PAGO_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Se usará para la factura (CFDI) del pago.
+            </p>
           </div>
 
           {/* Reference input */}

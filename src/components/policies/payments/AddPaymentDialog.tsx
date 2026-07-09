@@ -39,7 +39,6 @@ const PAYER_TYPE_OPTIONS: { value: PayerType; label: string }[] = [
   { value: PayerType.LANDLORD, label: 'Arrendador' },
   { value: PayerType.JOINT_OBLIGOR, label: 'Obligado Solidario' },
   { value: PayerType.AVAL, label: 'Aval' },
-  { value: PayerType.COMPANY, label: 'Empresa' },
 ];
 
 export function AddPaymentDialog({
