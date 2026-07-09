@@ -18,6 +18,7 @@ import { GET as policyExpirationReminderGet } from '@/app/api/cron/policy-expira
 import { GET as policyQuarterlyFollowupGet } from '@/app/api/cron/policy-quarterly-followup/route';
 import { GET as receiptReminderGet } from '@/app/api/cron/receipt-reminder/route';
 import { GET as testReminderGet } from '@/app/api/cron/test-reminder/route';
+import { GET as cfdiReconcileGet } from '@/app/api/cron/cfdi-reconcile/route';
 import { PolicyStatus } from '@/prisma/generated/prisma-client/enums';
 import { prisma } from '../../utils/database';
 import { createPolicyWithActors } from '../scenarios';
@@ -292,5 +293,64 @@ describe('GET /api/cron/test-reminder', () => {
     expect(typeof envelope.message).toBe('string');
     expect(envelope.result.policiesProcessed).toBeGreaterThanOrEqual(1);
     expect(envelope.result.remindersSent).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('GET /api/cron/cfdi-reconcile', () => {
+  test('polls non-terminal CfdiRecords and persists the stamped state', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await prisma.payment.create({
+      data: {
+        policyId: policy.id,
+        amount: 116,
+        subtotal: 100,
+        iva: 16,
+        currency: 'MXN',
+        status: 'COMPLETED',
+        type: 'TENANT_PORTION',
+        paidBy: 'TENANT',
+        isManual: false,
+      },
+    });
+    const record = await prisma.cfdiRecord.create({
+      data: {
+        paymentId: payment.id,
+        externalRef: payment.id,
+        micfdiRecordId: 'rec_cron',
+        portalUrl: 'https://portal.micfdi.test/r/cron',
+        status: 'registered',
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+
+    const res = await cfdiReconcileGet(
+      buildRequest('GET', 'http://localhost/api/cron/cfdi-reconcile'),
+    );
+    const { status, body } = await readJson(res);
+
+    expect(status).toBe(200);
+    const envelope = body as {
+      success: boolean;
+      timestamp: string;
+      result: { scanned: number; updated: number; invoiced: number; failed: number };
+    };
+    expect(envelope.success).toBe(true);
+    expect(envelope.result).toMatchObject({ scanned: 1, updated: 1, invoiced: 1, failed: 0 });
+
+    // The preload micfdi mock returns the canned stamped record.
+    const updated = await prisma.cfdiRecord.findUniqueOrThrow({ where: { id: record.id } });
+    expect(updated.status).toBe('invoiced');
+    expect(updated.folio).toBe('F-TEST-001');
+    expect(updated.uuid).toBe('UUID-TEST-0001');
+  });
+
+  test('returns a success envelope with zero counters when nothing is pending', async () => {
+    const res = await cfdiReconcileGet(
+      buildRequest('GET', 'http://localhost/api/cron/cfdi-reconcile'),
+    );
+    const { status, body } = await readJson(res);
+    expect(status).toBe(200);
+    expect((body as { result: { scanned: number } }).result.scanned).toBe(0);
   });
 });

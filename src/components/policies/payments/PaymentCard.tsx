@@ -89,6 +89,24 @@ export function PaymentCard({
   const utils = trpc.useUtils();
   const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
 
+  const refreshCfdi = trpc.payment.refreshCfdiStatus.useMutation({
+    onSuccess: (record) => {
+      const label = CFDI_STATUS_CONFIG[record.status]?.label ?? record.status;
+      toast({
+        title: 'Estado actualizado',
+        description: `Factura (CFDI): ${label}${record.folio ? ` — folio ${record.folio}` : ''}`,
+      });
+      utils.payment.getPaymentDetails.invalidate({ policyId: payment.policyId });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al actualizar el estado de la factura',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const resendCfdi = trpc.payment.resendCfdiPortalLink.useMutation({
     onSuccess: (result) => {
       toast({
@@ -348,6 +366,19 @@ export function PaymentCard({
                 <Badge variant={cfdiStatusConfig.variant}>{cfdiStatusConfig.label}</Badge>
               ) : (
                 <Badge variant="muted">Sin registrar</Badge>
+              )}
+              {/* micfdi has no webhooks — staff can poll the stamped state on demand (#216) */}
+              {!isHistorical && isStaffOrAdmin && cfdi && cfdi.status !== 'invoiced' && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  title="Actualizar estado"
+                  onClick={() => refreshCfdi.mutate({ paymentId: payment.id })}
+                  disabled={refreshCfdi.isPending}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${refreshCfdi.isPending ? 'animate-spin' : ''}`} />
+                </Button>
               )}
             </div>
             <div className="flex gap-1">

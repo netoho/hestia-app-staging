@@ -438,6 +438,88 @@ describe('payment.resendCfdiPortalLink', () => {
 });
 
 // ===========================================================================
+// payment.refreshCfdiStatus — adminProcedure (#216, on-demand reconcile)
+// ===========================================================================
+describe('payment.refreshCfdiStatus', () => {
+  test('pulls the stamped state from micfdi and returns the refreshed summary', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+    await prisma.cfdiRecord.create({
+      data: {
+        paymentId: payment.id,
+        externalRef: payment.id,
+        micfdiRecordId: 'rec_refresh',
+        portalUrl: 'https://portal.micfdi.test/r/refresh',
+        status: 'registered',
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.payment.refreshCfdiStatus({ paymentId: payment.id });
+
+    // Preload micfdi mock's canned stamped record.
+    expect(result.status).toBe('invoiced');
+    expect(result.folio).toBe('F-TEST-001');
+    expect(result.uuid).toBe('UUID-TEST-0001');
+
+    const row = await prisma.cfdiRecord.findUniqueOrThrow({ where: { paymentId: payment.id } });
+    expect(row.status).toBe('invoiced');
+    expect(row.total).toBe(116);
+  });
+
+  test('throws NOT_FOUND when the payment has no CfdiRecord', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.payment.refreshCfdiStatus({ paymentId: payment.id }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('throws BAD_REQUEST when the record has no micfdi id', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+    await prisma.cfdiRecord.create({
+      data: {
+        paymentId: payment.id,
+        externalRef: payment.id,
+        micfdiRecordId: null,
+        status: 'registered',
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.payment.refreshCfdiStatus({ paymentId: payment.id }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('auth gate: ADMIN/STAFF allowed; BROKER + PUBLIC blocked', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+    await prisma.cfdiRecord.create({
+      data: {
+        paymentId: payment.id,
+        externalRef: payment.id,
+        micfdiRecordId: 'rec_gate',
+        status: 'registered',
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+    await expectAuthGate({
+      allowed: [UserRole.ADMIN, UserRole.STAFF],
+      invoke: (caller) => caller.payment.refreshCfdiStatus({ paymentId: payment.id }),
+    });
+  });
+});
+
+// ===========================================================================
 // payment.updatePaymentReceipt — adminProcedure
 // ===========================================================================
 describe('payment.updatePaymentReceipt', () => {

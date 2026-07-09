@@ -421,8 +421,9 @@ mock.module('@/lib/services/notificationService', () => ({
 }));
 
 // --- micfdi CFDI API (outbound HTTP) — mocked so no test hits the network.
-// submitPayment returns a canned registered record; tests assert call args
-// via spyOn.
+// submitPayment returns a canned registered record; getRecord returns a canned
+// STAMPED (invoiced) record so reconcile tests can assert the DB transition.
+// Assert DB outcomes, not spyOn on these mocks (ESM binding flake).
 mock.module('@/lib/services/micfdiService', () => ({
   micfdiService: {
     submitPayment: mock(async () => ({
@@ -430,6 +431,17 @@ mock.module('@/lib/services/micfdiService', () => ({
       portalUrl: 'https://portal.micfdi.test/rec_test_fake',
       status: 'registered',
       idempotentReplay: false,
+    })),
+    getRecord: mock(async (recordId: string) => ({
+      recordId,
+      status: 'invoiced',
+      portalUrl: 'https://portal.micfdi.test/rec_test_fake',
+      folio: 'F-TEST-001',
+      uuid: 'UUID-TEST-0001',
+      subtotal: 100,
+      iva: 16,
+      total: 116,
+      stampedAt: new Date('2026-07-01T12:00:00Z'),
     })),
   },
   submitPaymentToMicfdi: mock(async () => ({
