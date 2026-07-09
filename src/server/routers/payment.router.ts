@@ -28,6 +28,15 @@ import { PAYMENT_LIMITS } from '@/lib/config/payments';
 import { calculateIVA } from '@/lib/utils/money';
 
 /**
+ * Payment payer input — COMPANY excluded (not a real payment actor, #213). Kept
+ * as a runtime refine on the full enum so the field's TS type stays PayerType
+ * (no frontend enum→literal friction); COMPANY is simply rejected at parse time.
+ */
+const payerInputSchema = z
+  .nativeEnum(PayerType)
+  .refine((v) => v !== PayerType.COMPANY, 'COMPANY no es un pagador válido');
+
+/**
  * Payment Router
  *
  * Handles all payment-related operations:
@@ -230,9 +239,10 @@ export const paymentRouter = createTRPCRouter({
         PaymentType.INVESTIGATION_FEE,
       ]),
       amount: z.number().positive(),
-      paidBy: z.nativeEnum(PayerType),
+      paidBy: payerInputSchema,
       reference: z.string().optional(),
       description: z.string().optional(),
+      satFormaPago: z.string().optional(),
     }))
     .output(PaymentRecordOutput)
     .mutation(async ({ input, ctx }) => {
@@ -244,6 +254,7 @@ export const paymentRouter = createTRPCRouter({
             reference: input.reference,
             description: input.description,
             createdById: ctx.userId,
+            satFormaPago: input.satFormaPago,
           });
         }
         return await paymentService.createManualPayment({
@@ -271,14 +282,16 @@ export const paymentRouter = createTRPCRouter({
       paymentId: z.string(),
       approved: z.boolean(),
       notes: z.string().optional(),
+      // SAT c_FormaPago the approver confirms/overrides for the CFDI (#213).
+      satFormaPago: z.string().optional(),
     }))
     .output(PaymentRecordOutput)
     .mutation(async ({ input, ctx }) => {
-      const { paymentId, approved, notes } = input;
+      const { paymentId, approved, notes, satFormaPago } = input;
       const { userId } = ctx;
 
       try {
-        return await paymentService.verifyManualPayment(paymentId, approved, userId, notes);
+        return await paymentService.verifyManualPayment(paymentId, approved, userId, notes, satFormaPago);
       } catch (error) {
         if (error instanceof Error && error.message.includes('not pending verification')) {
           throw new TRPCError({
@@ -471,7 +484,7 @@ export const paymentRouter = createTRPCRouter({
     .input(z.object({
       policyId: z.string(),
       amount: z.number().positive().max(PAYMENT_LIMITS.MAX_SUBTOTAL), // Max subtotal so total stays under 1M
-      paidBy: z.nativeEnum(PayerType),
+      paidBy: payerInputSchema,
       description: z.string().optional(),
     }))
     .output(PaymentSessionOutput)

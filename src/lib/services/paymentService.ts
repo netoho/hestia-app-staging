@@ -140,6 +140,7 @@ export interface CreateManualPaymentParams {
   reference?: string;
   description?: string;
   createdById?: string;  // User ID who recorded the manual payment
+  satFormaPago?: string; // SAT c_FormaPago code for the CFDI (defaults to picker's 03)
 }
 
 export interface CreateTypedCheckoutParams {
@@ -951,6 +952,7 @@ class PaymentService extends BaseService {
     reference,
     description,
     createdById,
+    satFormaPago,
   }: CreateManualPaymentParams): Promise<Payment> {
     // Verify policy exists
     const policy = await this.prisma.policy.findUnique({
@@ -1006,6 +1008,7 @@ class PaymentService extends BaseService {
         paidBy,
         isManual: true,
         reference,
+        satFormaPago,
         description: description || `Pago manual - ${type}`,
         createdById,
       },
@@ -1042,12 +1045,14 @@ class PaymentService extends BaseService {
       reference,
       description,
       createdById,
+      satFormaPago,
     }: {
       amount: number;
       paidBy: PayerType;
       reference?: string;
       description?: string;
       createdById?: string;
+      satFormaPago?: string;
     }
   ): Promise<Payment> {
     // Validate amount
@@ -1102,6 +1107,7 @@ class PaymentService extends BaseService {
         isManual: true,
         paidBy,
         reference,
+        satFormaPago,
         description: description || `Pago manual - ${payment.type}`,
         createdById,
         // Clear Stripe checkout fields (keep SPEI fields for audit)
@@ -1139,7 +1145,8 @@ class PaymentService extends BaseService {
     paymentId: string,
     approved: boolean,
     verifierId: string,
-    notes?: string
+    notes?: string,
+    satFormaPago?: string
   ): Promise<Payment> {
     const newStatus = approved ? PaymentStatus.COMPLETED : PaymentStatus.CANCELLED;
 
@@ -1157,6 +1164,9 @@ class PaymentService extends BaseService {
           verifiedAt: new Date(),
           verificationNotes: notes,
           paidAt: approved ? new Date() : undefined,
+          // Approver may override the SAT forma de pago; undefined keeps the
+          // code chosen when the payment was recorded.
+          satFormaPago: approved ? satFormaPago : undefined,
         },
       });
 
@@ -1204,6 +1214,15 @@ class PaymentService extends BaseService {
 
       return payment;
     });
+
+    // After commit: register a CFDI for the approved (now COMPLETED) manual
+    // payment (#213). Fire-and-forget — a micfdi failure must never roll back or
+    // block verification. Mirrors the updatePaymentById hook on the Stripe rail.
+    if (approved) {
+      void cfdiIssuanceService.issueForPayment(paymentId).catch((err) =>
+        console.error('CFDI issuance error:', err),
+      );
+    }
 
     return updatedPayment;
   }
