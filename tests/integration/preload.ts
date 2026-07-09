@@ -392,6 +392,7 @@ mock.module('@/lib/services/emailService', () => ({
   sendPasswordResetEmail: noopEmail(),
   sendPaymentCompletedEmail: noopEmail(),
   sendPaymentLinkEmail: noopEmail(),
+  sendCfdiPortalEmail: noopEmail(),
   sendAllPaymentsCompletedEmail: noopEmail(),
   sendPolicyCancellationEmail: noopEmail(),
   sendSimpleNotificationEmail: noopEmail(),

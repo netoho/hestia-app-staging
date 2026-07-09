@@ -8,6 +8,7 @@
 import { BaseService } from '../base/BaseService';
 import { micfdiService } from '../micfdiService';
 import { buildCfdiSubmission, isCfdiEligible } from './payloadBuilder';
+import { deliverCfdiPortalLink } from './delivery';
 
 class CfdiIssuanceService extends BaseService {
   async issueForPayment(paymentId: string): Promise<void> {
@@ -22,6 +23,8 @@ class CfdiIssuanceService extends BaseService {
         description: true,
         method: true,
         satFormaPago: true,
+        paidBy: true,
+        policyId: true,
       },
     });
 
@@ -61,6 +64,26 @@ class CfdiIssuanceService extends BaseService {
         },
       });
       this.log('info', 'CFDI record created', { paymentId, micfdiRecordId: result.recordId });
+
+      // Deliver the portal link to the payer (#214). Isolated so a delivery
+      // failure is logged but never masks the successful issuance above.
+      try {
+        await deliverCfdiPortalLink(
+          {
+            id: payment.id,
+            policyId: payment.policyId,
+            paidBy: payment.paidBy,
+            amount: payment.amount,
+            description: payment.description,
+          },
+          result.portalUrl,
+        );
+      } catch (deliveryError) {
+        this.log('error', 'CFDI portal delivery failed', {
+          paymentId,
+          error: deliveryError instanceof Error ? deliveryError.message : String(deliveryError),
+        });
+      }
     } catch (error) {
       this.log('error', 'CFDI issuance failed', {
         paymentId,
