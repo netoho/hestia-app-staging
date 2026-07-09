@@ -14,15 +14,15 @@ export const SAT_FORMA_PAGO = {
   POR_DEFINIR: '99',
 } as const;
 
-/** Types that must NEVER be auto-invoiced — micfdi is PUE (single exhibition). */
-const NON_INVOICEABLE_TYPES: ReadonlySet<PaymentType> = new Set([
-  PaymentType.REFUND,
-  PaymentType.PARTIAL_PAYMENT,
-]);
-
-/** A payment is CFDI-eligible when it is COMPLETED and a PUE-compatible type. */
+/**
+ * A payment is CFDI-eligible when it reaches COMPLETED. Eligibility keys on
+ * STATUS, not payment type: a completed PARTIAL_PAYMENT is a real payment (a
+ * "type of payment", not a non-completion state) and is invoiced. REFUND stays
+ * excluded — a refund is a nota de crédito, never an ingreso CFDI; today refunds
+ * carry the REFUNDED status (never COMPLETED), so this is a defensive guard.
+ */
 export function isCfdiEligible(payment: { status: PaymentStatus; type: PaymentType }): boolean {
-  return payment.status === PaymentStatus.COMPLETED && !NON_INVOICEABLE_TYPES.has(payment.type);
+  return payment.status === PaymentStatus.COMPLETED && payment.type !== PaymentType.REFUND;
 }
 
 /**
