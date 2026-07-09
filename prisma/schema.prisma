@@ -1226,6 +1226,11 @@ model CfdiRecord {
   paymentForm String
   description String?
 
+  /// Ownership match snapshot (#225): what the client must type at the partner
+  /// search portal to claim this record — as SUBMITTED, immune to later policy edits.
+  matchPolicyNumber  String?
+  matchContractStart String?
+
   /// Reconciliation (populated later by the poll, T5) — the stamped CFDI.
   folio     String?
   uuid      String?
