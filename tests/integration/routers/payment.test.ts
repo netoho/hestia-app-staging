@@ -420,6 +420,20 @@ describe('payment.resendCfdiPortalLink', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
+  test('throws BAD_REQUEST naming the missing contract start date (#225)', async () => {
+    const { policy } = await createPolicyWithActors();
+    await prisma.policy.update({ where: { id: policy.id }, data: { contractStartDate: null } });
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.payment.resendCfdiPortalLink({ paymentId: payment.id }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: expect.stringContaining('fecha de inicio de contrato'),
+    });
+  });
+
   test('throws NOT_FOUND when the payment does not exist', async () => {
     const { caller } = await createAdminCaller();
     await expect(

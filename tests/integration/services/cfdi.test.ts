@@ -32,6 +32,19 @@ describe('cfdiIssuanceService.issueForPayment', () => {
     expect(record!.status).toBe('registered');
     expect(record!.unitPrice).toBe(4310.34); // IVA-exclusive subtotal → unit_price
     expect(record!.paymentForm).toBe('04'); // CARD → SAT c_FormaPago 04
+    // Ownership match snapshot (#225) — what the client types at the portal.
+    expect(record!.matchPolicyNumber).toBe(policy.policyNumber);
+    expect(record!.matchContractStart).toBe('2026-05-01'); // factory contract start, UTC date-only
+  });
+
+  test('skips (no record) when the policy has no contractStartDate — ownership key missing (#225)', async () => {
+    const { policy } = await createPolicyWithActors();
+    await prisma.policy.update({ where: { id: policy.id }, data: { contractStartDate: null } });
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+
+    await cfdiIssuanceService.issueForPayment(payment.id);
+
+    expect(await prisma.cfdiRecord.findUnique({ where: { paymentId: payment.id } })).toBeNull();
   });
 
   test('skips REFUND — no record created (nota de crédito, not an ingreso CFDI)', async () => {

@@ -5,6 +5,7 @@ import {
   formaPagoFromMethod,
   conceptFromType,
   buildCfdiSubmission,
+  formatContractStart,
   SAT_FORMA_PAGO,
 } from '../payloadBuilder';
 
@@ -48,6 +49,15 @@ describe('formaPagoFromMethod', () => {
   });
 });
 
+describe('formatContractStart', () => {
+  test('formats as date-only ISO using UTC (no local-timezone day shift)', () => {
+    // 2026-05-01T00:00:00Z is 2026-04-30 in America/Mexico_City local time —
+    // the UTC-based format must still say 2026-05-01.
+    expect(formatContractStart(new Date('2026-05-01T00:00:00.000Z'))).toBe('2026-05-01');
+    expect(formatContractStart(new Date('2026-12-31T23:00:00.000Z'))).toBe('2026-12-31');
+  });
+});
+
 describe('buildCfdiSubmission', () => {
   const base = {
     id: 'pay_1',
@@ -56,15 +66,27 @@ describe('buildCfdiSubmission', () => {
     description: 'Pago del Inquilino',
     type: PaymentType.TENANT_PORTION,
     method: PaymentMethod.CARD,
+    policy: {
+      policyNumber: 'POL-20260501-ABC',
+      contractStartDate: new Date('2026-05-01T00:00:00.000Z'),
+    },
   };
 
-  test('uses the stored IVA-exclusive subtotal as unit_price', () => {
-    expect(buildCfdiSubmission(base).unit_price).toBe(4310.34);
+  test('unit_price is the stored IVA-exclusive subtotal as a 2-decimal string', () => {
+    expect(buildCfdiSubmission(base).unit_price).toBe('4310.34');
   });
 
   test('falls back to reverse-IVA of the gross amount when subtotal is null', () => {
     const out = buildCfdiSubmission({ ...base, subtotal: null });
-    expect(out.unit_price).toBeCloseTo(5000 / 1.16, 2);
+    expect(out.unit_price).toBe((5000 / 1.16).toFixed(2));
+  });
+
+  test('always carries both ownership match_fields (#225)', () => {
+    const out = buildCfdiSubmission(base);
+    expect(out.match_fields).toEqual({
+      policy_number: 'POL-20260501-ABC',
+      contract_start: '2026-05-01',
+    });
   });
 
   test('external_ref is the payment id; payment_form derives from method', () => {
