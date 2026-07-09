@@ -139,6 +139,37 @@ describe('payment.getPaymentDetails', () => {
     expect(Array.isArray(result.payments)).toBe(true);
   });
 
+  test('each payment carries its cfdiRecord (null without one, populated with one)', async () => {
+    const { policy } = await createPolicyWithActors();
+    const bare = await completedPayment.create({}, { transient: { policyId: policy.id } });
+    const invoiced = await completedPayment.create(
+      { type: PaymentType.LANDLORD_PORTION },
+      { transient: { policyId: policy.id } },
+    );
+    await prisma.cfdiRecord.create({
+      data: {
+        paymentId: invoiced.id,
+        externalRef: invoiced.id,
+        micfdiRecordId: 'rec_badge',
+        portalUrl: 'https://portal.micfdi.test/r/badge',
+        status: 'registered',
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.payment.getPaymentDetails({ policyId: policy.id });
+
+    const bareOut = result.payments.find((p) => p.id === bare.id);
+    const invoicedOut = result.payments.find((p) => p.id === invoiced.id);
+    expect(bareOut!.cfdiRecord).toBeNull();
+    expect(invoicedOut!.cfdiRecord).toMatchObject({
+      status: 'registered',
+      portalUrl: 'https://portal.micfdi.test/r/badge',
+    });
+  });
+
   test('throws NOT_FOUND when policy does not exist', async () => {
     const { caller } = await createAdminCaller();
     await expect(
@@ -307,6 +338,101 @@ describe('payment.verifyPayment', () => {
     await expectAuthGate({
       allowed: [UserRole.ADMIN, UserRole.STAFF],
       invoke: (caller) => caller.payment.verifyPayment({ paymentId: payment.id, approved: true }),
+    });
+  });
+});
+
+// ===========================================================================
+// payment.resendCfdiPortalLink — adminProcedure (#215, self-healing resend)
+// ===========================================================================
+describe('payment.resendCfdiPortalLink', () => {
+  test('re-emails an existing record without creating a new one (generated=false)', async () => {
+    const { policy, tenant } = await createPolicyWithActors();
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+    await prisma.cfdiRecord.create({
+      data: {
+        paymentId: payment.id,
+        externalRef: payment.id,
+        micfdiRecordId: 'rec_existing',
+        portalUrl: 'https://portal.micfdi.test/r/existing',
+        status: 'registered',
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.payment.resendCfdiPortalLink({ paymentId: payment.id });
+
+    expect(result.generated).toBe(false);
+    expect(result.portalUrl).toBe('https://portal.micfdi.test/r/existing');
+    // TENANT-paid → the policy's tenant received the link.
+    expect(result.recipients.map((r) => r.email)).toEqual([tenant.email]);
+    expect(await prisma.cfdiRecord.count({ where: { paymentId: payment.id } })).toBe(1);
+  });
+
+  test('self-heals: generates the record when missing, then emails (generated=true)', async () => {
+    const { policy, tenant } = await createPolicyWithActors();
+    // Completed but recordless — the silent-failure state the button recovers.
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+
+    const { caller, user } = await createAdminCaller();
+    const result = await caller.payment.resendCfdiPortalLink({ paymentId: payment.id });
+
+    expect(result.generated).toBe(true);
+    expect(result.portalUrl).toContain('portal.micfdi.test');
+    expect(result.recipients.map((r) => r.email)).toEqual([tenant.email]);
+
+    const record = await prisma.cfdiRecord.findUnique({ where: { paymentId: payment.id } });
+    expect(record).not.toBeNull();
+    expect(record!.externalRef).toBe(payment.id);
+
+    // The resend is a significant admin action — logged as a PolicyActivity.
+    const activity = await prisma.policyActivity.findFirst({
+      where: { policyId: policy.id, action: 'cfdi_link_resent' },
+    });
+    expect(activity).not.toBeNull();
+    expect(activity!.performedById).toBe(user.id);
+  });
+
+  test('JOINT_OBLIGOR-paid: link is generated but no auto-recipients (#219)', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await completedPayment.create(
+      { paidBy: PayerType.JOINT_OBLIGOR },
+      { transient: { policyId: policy.id } },
+    );
+
+    const { caller } = await createAdminCaller();
+    const result = await caller.payment.resendCfdiPortalLink({ paymentId: payment.id });
+
+    expect(result.generated).toBe(true);
+    expect(result.portalUrl).toContain('portal.micfdi.test'); // copyable from the UI
+    expect(result.recipients).toEqual([]);
+  });
+
+  test('throws BAD_REQUEST for a non-completed payment', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await pendingPayment.create({}, { transient: { policyId: policy.id } });
+
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.payment.resendCfdiPortalLink({ paymentId: payment.id }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  test('throws NOT_FOUND when the payment does not exist', async () => {
+    const { caller } = await createAdminCaller();
+    await expect(
+      caller.payment.resendCfdiPortalLink({ paymentId: 'nope' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  test('auth gate: ADMIN/STAFF allowed; BROKER + PUBLIC blocked', async () => {
+    const { policy } = await createPolicyWithActors();
+    const payment = await completedPayment.create({}, { transient: { policyId: policy.id } });
+    await expectAuthGate({
+      allowed: [UserRole.ADMIN, UserRole.STAFF],
+      invoke: (caller) => caller.payment.resendCfdiPortalLink({ paymentId: payment.id }),
     });
   });
 });

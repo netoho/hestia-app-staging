@@ -118,9 +118,23 @@ export interface PaymentTransferInfo {
   receivedAt: Date;
 }
 
+/** CFDI summary shown per payment in the admin PaymentsTab (#215). */
+export interface CfdiRecordSummary {
+  id: string;
+  status: string;
+  portalUrl: string | null;
+  folio: string | null;
+  uuid: string | null;
+  stampedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+}
+
 export interface PaymentWithStatus extends Payment {
   isExpired?: boolean;
   transfers?: PaymentTransferInfo[];
+  /** Always selected by getPaymentSummary; null when the payment has no CFDI. */
+  cfdiRecord: CfdiRecordSummary | null;
 }
 
 export interface PaymentSummary {
@@ -905,6 +919,19 @@ class PaymentService extends BaseService {
           transfers: {
             select: { id: true, amount: true, cumulativeAmount: true, receivedAt: true },
             orderBy: { receivedAt: 'asc' },
+          },
+          // Mirrored by CfdiRecordSummaryShape in schemas/payment/output.ts (#215).
+          cfdiRecord: {
+            select: {
+              id: true,
+              status: true,
+              portalUrl: true,
+              folio: true,
+              uuid: true,
+              stampedAt: true,
+              errorMessage: true,
+              createdAt: true,
+            },
           },
         },
       }),

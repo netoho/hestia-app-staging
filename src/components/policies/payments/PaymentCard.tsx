@@ -31,6 +31,8 @@ import {
   RefreshCw,
   ChevronDown,
   Building2,
+  Receipt,
+  Send,
 } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +41,7 @@ import { PaymentStatus, PaymentType, PayerType } from '@/prisma/generated/prisma
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDateTime } from '@/lib/utils/formatting';
-import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS, CFDI_STATUS_CONFIG } from '@/lib/constants/paymentConfig';
 import { TAX_CONFIG } from '@/lib/constants/businessConfig';
 
 interface PaymentCardProps {
@@ -81,9 +83,31 @@ export function PaymentCard({
   const [isDownloadingStripeReceipt, setIsDownloadingStripeReceipt] = useState(false);
   const [isCopiedCard, setIsCopiedCard] = useState(false);
   const [isCopiedSpei, setIsCopiedSpei] = useState(false);
+  const [isCopiedCfdi, setIsCopiedCfdi] = useState(false);
   const cancelDialog = useDialogState();
   const { toast } = useToast();
+  const utils = trpc.useUtils();
   const getStripeReceipt = trpc.payment.getStripeReceipt.useMutation();
+
+  const resendCfdi = trpc.payment.resendCfdiPortalLink.useMutation({
+    onSuccess: (result) => {
+      toast({
+        title: result.generated ? 'Factura generada' : 'Factura reenviada',
+        description:
+          result.recipients.length > 0
+            ? `Enlace de factura enviado a ${result.recipients.length} destinatario(s)`
+            : 'Enlace listo — sin destinatarios automáticos para este pagador, copie el enlace',
+      });
+      utils.payment.getPaymentDetails.invalidate({ policyId: payment.policyId });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Error al reenviar la factura',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const getPaymentUrl = (type: 'card' | 'spei') => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -105,6 +129,25 @@ export function PaymentCard({
       toast({
         title: 'Error',
         description: 'No se pudo copiar el link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCopyCfdiUrl = async () => {
+    if (!payment.cfdiRecord?.portalUrl) return;
+    try {
+      await navigator.clipboard.writeText(payment.cfdiRecord.portalUrl);
+      setIsCopiedCfdi(true);
+      toast({
+        title: 'Enlace copiado',
+        description: 'El enlace del portal de facturación ha sido copiado al portapapeles',
+      });
+      setTimeout(() => setIsCopiedCfdi(false), 2000);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'No se pudo copiar el enlace',
         variant: 'destructive',
       });
     }
@@ -160,6 +203,15 @@ export function PaymentCard({
   const isPendingVerification = payment.status === PaymentStatus.PENDING_VERIFICATION;
   const isCompleted = payment.status === PaymentStatus.COMPLETED;
   const isFailed = payment.status === PaymentStatus.FAILED;
+
+  // CFDI (#215): any COMPLETED non-refund payment is invoiceable. A completed
+  // payment with no record means issuance failed silently — staff can self-heal
+  // via "Generar factura".
+  const cfdi = payment.cfdiRecord;
+  const cfdiEligible = isCompleted && payment.type !== PaymentType.REFUND;
+  const cfdiStatusConfig = cfdi
+    ? CFDI_STATUS_CONFIG[cfdi.status] ?? { label: cfdi.status, variant: 'outline' as const }
+    : null;
 
   return (
     <Card>
@@ -283,6 +335,55 @@ export function PaymentCard({
                 </>
               )}
             </Button>
+          </div>
+        )}
+
+        {/* CFDI (factura) status + actions (#215) */}
+        {cfdiEligible && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Receipt className="h-4 w-4" />
+              <span>Factura (CFDI)</span>
+              {cfdiStatusConfig ? (
+                <Badge variant={cfdiStatusConfig.variant}>{cfdiStatusConfig.label}</Badge>
+              ) : (
+                <Badge variant="muted">Sin registrar</Badge>
+              )}
+            </div>
+            <div className="flex gap-1">
+              {cfdi?.portalUrl && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  onClick={handleCopyCfdiUrl}
+                  disabled={isCopiedCfdi}
+                >
+                  {isCopiedCfdi ? (
+                    <Check className="h-4 w-4 mr-1" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-1" />
+                  )}
+                  {isCopiedCfdi ? 'Copiado' : 'Copiar enlace'}
+                </Button>
+              )}
+              {!isHistorical && isStaffOrAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                  onClick={() => resendCfdi.mutate({ paymentId: payment.id })}
+                  disabled={resendCfdi.isPending}
+                >
+                  {resendCfdi.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-1" />
+                  )}
+                  {cfdi ? 'Reenviar factura' : 'Generar factura'}
+                </Button>
+              )}
+            </div>
           </div>
         )}
 

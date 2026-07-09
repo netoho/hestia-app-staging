@@ -48,6 +48,7 @@ export const PaymentShape = z.object({
   receiptUrl: z.string().nullable(),
   receiptS3Key: z.string().nullable(),
   receiptFileName: z.string().nullable(),
+  satFormaPago: z.string().nullable(),
   verifiedBy: z.string().nullable(),
   verifiedAt: z.date().nullable(),
   verificationNotes: z.string().nullable(),
@@ -92,9 +93,22 @@ const PaymentBreakdownShape = z.object({
   includesInvestigationFee: z.boolean(),
 });
 
+/** Mirrors the cfdiRecord select in paymentService.getPaymentSummary (#215). */
+const CfdiRecordSummaryShape = z.object({
+  id: z.string(),
+  status: z.string(),
+  portalUrl: z.string().nullable(),
+  folio: z.string().nullable(),
+  uuid: z.string().nullable(),
+  stampedAt: z.date().nullable(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.date(),
+});
+
 const PaymentWithStatusShape = PaymentShape.extend({
   isExpired: z.boolean().optional(),
   transfers: z.array(PaymentTransferInfoShape).optional(),
+  cfdiRecord: CfdiRecordSummaryShape.nullable(),
 });
 
 export const PaymentSummaryOutput = z.object({
@@ -149,6 +163,20 @@ export type PaymentGetByIdOutput = z.infer<typeof PaymentGetByIdOutput>;
 // ===========================================================================
 export const PaymentSessionOutput = PaymentSessionResultShape;
 export type PaymentSessionOutput = z.infer<typeof PaymentSessionOutput>;
+
+// ===========================================================================
+// payment.resendCfdiPortalLink — self-healing CFDI resend result (#215)
+// ===========================================================================
+export const PaymentCfdiResendOutput = z.object({
+  paymentId: z.string(),
+  /** true when the CfdiRecord had to be created (or re-registered) now. */
+  generated: z.boolean(),
+  portalUrl: z.string().nullable(),
+  status: z.string(),
+  /** Who received the portal link (empty for payer types with no auto-rule, #219). */
+  recipients: z.array(z.object({ email: z.string(), name: z.string() })),
+});
+export type PaymentCfdiResendOutput = z.infer<typeof PaymentCfdiResendOutput>;
 
 // ===========================================================================
 // payment.sendPaymentLinkToTenants — { sentTo }
