@@ -9,8 +9,15 @@ import {
 } from '../payloadBuilder';
 
 describe('isCfdiEligible', () => {
-  test('COMPLETED + an invoiceable type is eligible', () => {
-    for (const type of [PaymentType.TENANT_PORTION, PaymentType.LANDLORD_PORTION, PaymentType.INVESTIGATION_FEE, PaymentType.POLICY_PREMIUM, PaymentType.INCIDENT_PAYMENT]) {
+  test('any COMPLETED payment is eligible — gate is on status, incl. PARTIAL_PAYMENT', () => {
+    for (const type of [
+      PaymentType.TENANT_PORTION,
+      PaymentType.LANDLORD_PORTION,
+      PaymentType.INVESTIGATION_FEE,
+      PaymentType.POLICY_PREMIUM,
+      PaymentType.INCIDENT_PAYMENT,
+      PaymentType.PARTIAL_PAYMENT,
+    ]) {
       expect(isCfdiEligible({ status: PaymentStatus.COMPLETED, type })).toBe(true);
     }
   });
@@ -21,9 +28,8 @@ describe('isCfdiEligible', () => {
     expect(isCfdiEligible({ status: PaymentStatus.CANCELLED, type: PaymentType.TENANT_PORTION })).toBe(false);
   });
 
-  test('REFUND and PARTIAL_PAYMENT are excluded even when COMPLETED (PUE only)', () => {
+  test('REFUND is excluded even when COMPLETED (nota de crédito, not an ingreso CFDI)', () => {
     expect(isCfdiEligible({ status: PaymentStatus.COMPLETED, type: PaymentType.REFUND })).toBe(false);
-    expect(isCfdiEligible({ status: PaymentStatus.COMPLETED, type: PaymentType.PARTIAL_PAYMENT })).toBe(false);
   });
 });
 

@@ -32,17 +32,38 @@ describe('cfdiIssuanceService.issueForPayment', () => {
     expect(record!.paymentForm).toBe('04'); // CARD → SAT c_FormaPago 04
   });
 
-  test('skips REFUND and PARTIAL_PAYMENT — no record created', async () => {
+  test('skips REFUND — no record created (nota de crédito, not an ingreso CFDI)', async () => {
     const { policy } = await createPolicyWithActors();
+    const p = await paymentFactory.create(
+      { status: PaymentStatus.COMPLETED, type: PaymentType.REFUND, method: PaymentMethod.CARD },
+      { transient: { policyId: policy.id } },
+    );
+    await cfdiIssuanceService.issueForPayment(p.id);
+    expect(await prisma.cfdiRecord.findUnique({ where: { paymentId: p.id } })).toBeNull();
+  });
 
-    for (const type of [PaymentType.REFUND, PaymentType.PARTIAL_PAYMENT]) {
-      const p = await paymentFactory.create(
-        { status: PaymentStatus.COMPLETED, type, method: PaymentMethod.CARD },
-        { transient: { policyId: policy.id } },
-      );
-      await cfdiIssuanceService.issueForPayment(p.id);
-      expect(await prisma.cfdiRecord.findUnique({ where: { paymentId: p.id } })).toBeNull();
-    }
+  test('issues for a COMPLETED PARTIAL_PAYMENT — gate is status, not type', async () => {
+    const { policy } = await createPolicyWithActors();
+    const p = await paymentFactory.create(
+      { status: PaymentStatus.COMPLETED, type: PaymentType.PARTIAL_PAYMENT, method: PaymentMethod.CARD },
+      { transient: { policyId: policy.id } },
+    );
+    await cfdiIssuanceService.issueForPayment(p.id);
+    expect(await prisma.cfdiRecord.findUnique({ where: { paymentId: p.id } })).not.toBeNull();
+  });
+
+  test('honors the admin-picked SAT forma de pago from a manual payment', async () => {
+    const { policy } = await createPolicyWithActors();
+    // MANUAL method would derive 99; the stored satFormaPago must win.
+    const payment = await completedPayment.create(
+      { method: PaymentMethod.MANUAL, satFormaPago: '01', type: PaymentType.TENANT_PORTION },
+      { transient: { policyId: policy.id } },
+    );
+
+    await cfdiIssuanceService.issueForPayment(payment.id);
+
+    const record = await prisma.cfdiRecord.findUnique({ where: { paymentId: payment.id } });
+    expect(record!.paymentForm).toBe('01');
   });
 
   test('is idempotent — a duplicate completion yields exactly one record', async () => {
@@ -80,6 +101,47 @@ describe('updatePaymentById → CFDI hook', () => {
     await paymentService.updatePaymentById(payment.id, PaymentStatus.COMPLETED, { paidAt: new Date() });
     expect(issueSpy).toHaveBeenCalledTimes(1);
     expect(issueSpy).toHaveBeenCalledWith(payment.id);
+
+    issueSpy.mockRestore();
+  });
+});
+
+describe('verifyManualPayment → CFDI hook', () => {
+  test('approving fires issuance and persists the approver forma; rejecting does neither', async () => {
+    const { policy, creator } = await createPolicyWithActors();
+    const approved = await paymentFactory.create(
+      {
+        status: PaymentStatus.PENDING_VERIFICATION,
+        type: PaymentType.TENANT_PORTION,
+        method: PaymentMethod.MANUAL,
+        isManual: true,
+        satFormaPago: '03', // recorded forma
+      },
+      { transient: { policyId: policy.id } },
+    );
+    const rejected = await paymentFactory.create(
+      {
+        status: PaymentStatus.PENDING_VERIFICATION,
+        type: PaymentType.LANDLORD_PORTION,
+        method: PaymentMethod.MANUAL,
+        isManual: true,
+      },
+      { transient: { policyId: policy.id } },
+    );
+
+    // spyOn the REAL singleton (reliable) — the hook is fire-and-forget, so we
+    // assert it was invoked, then assert the persisted forma directly.
+    const issueSpy = spyOn(cfdiIssuanceService, 'issueForPayment').mockImplementation(async () => {});
+
+    await paymentService.verifyManualPayment(rejected.id, false, creator.id, 'sin comprobante');
+    expect(issueSpy).not.toHaveBeenCalled();
+
+    await paymentService.verifyManualPayment(approved.id, true, creator.id, undefined, '02');
+    expect(issueSpy).toHaveBeenCalledWith(approved.id);
+
+    const updated = await prisma.payment.findUnique({ where: { id: approved.id } });
+    expect(updated!.status).toBe(PaymentStatus.COMPLETED);
+    expect(updated!.satFormaPago).toBe('02'); // approver override wins over the recorded 03
 
     issueSpy.mockRestore();
   });
