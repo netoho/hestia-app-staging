@@ -4,6 +4,7 @@ import { verifyWebhookSignature, updatePaymentById } from '@/lib/services/paymen
 import { logPolicyActivity } from '@/lib/services/policyService';
 import { sendPaymentCompletedEmail, sendAllPaymentsCompletedEmail } from '@/lib/services/emailService';
 import { getActiveAdmins } from '@/lib/services/userService';
+import { buildTenantRecipients, buildLandlordRecipients } from '@/lib/services/paymentRecipients';
 import prisma from '@/lib/prisma';
 import { PaymentStatus } from '@/prisma/generated/prisma-client/enums';
 
@@ -24,48 +25,8 @@ const PAYMENT_TYPE_DESCRIPTIONS: Record<string, string> = {
   LANDLORD_PORTION: 'Pago del Arrendador',
 };
 
-type EmailRecipient = { email: string; name: string };
-
-type LandlordEmailFields = {
-  email: string;
-  isCompany?: boolean | null;
-  companyName?: string | null;
-  firstName?: string | null;
-  paternalLastName?: string | null;
-  maternalLastName?: string | null;
-};
-
-function landlordEmailName(l: LandlordEmailFields): string {
-  if (l.isCompany && l.companyName) return l.companyName;
-  return `${l.firstName || ''} ${l.paternalLastName || ''} ${l.maternalLastName || ''}`.trim();
-}
-
-type TenantEmailFields = {
-  email: string;
-  companyName?: string | null;
-  firstName?: string | null;
-  paternalLastName?: string | null;
-  maternalLastName?: string | null;
-};
-
-function tenantEmailName(t: TenantEmailFields): string {
-  if (t.companyName) return t.companyName;
-  return `${t.firstName || ''} ${t.paternalLastName || ''} ${t.maternalLastName || ''}`.trim();
-}
-
-/** Payment confirmation for a tenant payment: notifies every tenant of the policy. */
-function buildTenantRecipients(tenants: TenantEmailFields[]): EmailRecipient[] {
-  return tenants
-    .filter((t) => t.email)
-    .map((t) => ({ email: t.email, name: tenantEmailName(t) }));
-}
-
-/** Payment confirmation for a landlord payment: notifies every landlord (primary + co-owners). */
-function buildLandlordRecipients(landlords: LandlordEmailFields[]): EmailRecipient[] {
-  return landlords
-    .filter((l) => l.email)
-    .map((l) => ({ email: l.email, name: landlordEmailName(l) }));
-}
+// Recipient builders live in @/lib/services/paymentRecipients (shared with the
+// CFDI-portal fan-out, #214) — imported at the top of this file.
 
 /**
  * Check if all active payments for a policy are complete and notify admins.
