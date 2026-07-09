@@ -33,6 +33,18 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   {brandInfo.supportEmail}
                 </a>
               </p>
+              {process.env.NEXT_PUBLIC_FACTURACION_URL && (
+                <p>
+                  <a
+                    href={process.env.NEXT_PUBLIC_FACTURACION_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium hover:underline text-primary"
+                  >
+                    Facturación
+                  </a>
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-3">
                 {brandInfo.supportPhone}
               </p>
