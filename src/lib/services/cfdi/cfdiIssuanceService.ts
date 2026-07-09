@@ -28,6 +28,13 @@ const CFDI_PAYMENT_SELECT = {
   satFormaPago: true,
   paidBy: true,
   policyId: true,
+  // Ownership match facts for the partner search portal (#225).
+  policy: {
+    select: {
+      policyNumber: true,
+      contractStartDate: true,
+    },
+  },
 } as const;
 
 export interface CfdiResendResult {
@@ -55,6 +62,17 @@ class CfdiIssuanceService extends BaseService {
       return; // refund / not completed — never invoiced
     }
 
+    // Business rule (#225): a paid policy MUST have its contract start date —
+    // it is the client's ownership key at the partner search portal. Skip (no
+    // record) so staff can self-heal via "Generar factura" once it's fixed.
+    if (!payment.policy.contractStartDate) {
+      this.log('error', 'CFDI issuance skipped: policy has no contractStartDate', {
+        paymentId,
+        policyNumber: payment.policy.policyNumber,
+      });
+      return;
+    }
+
     // Idempotency: one CfdiRecord per payment. A duplicate completion is a
     // no-op; the paymentId unique constraint is the backstop against a race.
     const existing = await this.prisma.cfdiRecord.findUnique({
@@ -65,7 +83,10 @@ class CfdiIssuanceService extends BaseService {
 
     // Manually-recorded payments carry an admin-picked SAT forma de pago; Stripe
     // payments leave it null and fall back to the method-derived code.
-    const submission = buildCfdiSubmission(payment, payment.satFormaPago ?? undefined);
+    const submission = buildCfdiSubmission(
+      { ...payment, policy: { ...payment.policy, contractStartDate: payment.policy.contractStartDate } },
+      payment.satFormaPago ?? undefined,
+    );
 
     try {
       const result = await micfdiService.submitPayment(submission);
@@ -76,9 +97,11 @@ class CfdiIssuanceService extends BaseService {
           micfdiRecordId: result.recordId,
           portalUrl: result.portalUrl,
           status: result.status,
-          unitPrice: submission.unit_price,
+          unitPrice: Number(submission.unit_price),
           paymentForm: submission.payment_form,
           description: submission.description,
+          matchPolicyNumber: submission.match_fields.policy_number,
+          matchContractStart: submission.match_fields.contract_start,
         },
       });
       this.log('info', 'CFDI record created', { paymentId, micfdiRecordId: result.recordId });
@@ -139,12 +162,27 @@ class CfdiIssuanceService extends BaseService {
       );
     }
 
+    const contractStartDate = payment.policy.contractStartDate;
+    if (!contractStartDate) {
+      // Ownership key for the partner search portal (#225) — cannot register
+      // without it. Interactive path: tell the admin exactly what to fix.
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'La protección no tiene fecha de inicio de contrato — captúrala antes de generar la factura',
+        400,
+        { paymentId, policyNumber: payment.policy.policyNumber },
+      );
+    }
+
     const existing = await this.prisma.cfdiRecord.findUnique({ where: { paymentId } });
 
     let record = existing;
     const generated = !existing || !existing.portalUrl;
     if (generated) {
-      const submission = buildCfdiSubmission(payment, payment.satFormaPago ?? undefined);
+      const submission = buildCfdiSubmission(
+        { ...payment, policy: { ...payment.policy, contractStartDate } },
+        payment.satFormaPago ?? undefined,
+      );
       // Throws on micfdi failure — surfaced to the admin, unlike the hooks.
       const result = await micfdiService.submitPayment(submission);
       record = await this.prisma.cfdiRecord.upsert({
@@ -155,18 +193,22 @@ class CfdiIssuanceService extends BaseService {
           micfdiRecordId: result.recordId,
           portalUrl: result.portalUrl,
           status: result.status,
-          unitPrice: submission.unit_price,
+          unitPrice: Number(submission.unit_price),
           paymentForm: submission.payment_form,
           description: submission.description,
+          matchPolicyNumber: submission.match_fields.policy_number,
+          matchContractStart: submission.match_fields.contract_start,
         },
         update: {
           micfdiRecordId: result.recordId,
           portalUrl: result.portalUrl,
           status: result.status,
           errorMessage: null,
-          unitPrice: submission.unit_price,
+          unitPrice: Number(submission.unit_price),
           paymentForm: submission.payment_form,
           description: submission.description,
+          matchPolicyNumber: submission.match_fields.policy_number,
+          matchContractStart: submission.match_fields.contract_start,
         },
       });
     }

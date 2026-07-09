@@ -62,12 +62,26 @@ export function conceptFromType(type: PaymentType): string {
   }
 }
 
+/**
+ * Date-only ISO string ("2026-05-01") for micfdi's match_fields. UTC-based on
+ * purpose: contract dates are stored as UTC midnight, and a local-timezone
+ * format would shift the calendar day west of UTC.
+ */
+export function formatContractStart(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 export interface CfdiSubmission {
   external_ref: string;
-  /** IVA-EXCLUSIVE unit price; micfdi adds the 16% IVA automatically. */
-  unit_price: number;
+  /** IVA-EXCLUSIVE unit price as a 2-decimal string; micfdi adds the 16% IVA. */
+  unit_price: string;
   description: string;
   payment_form: string;
+  /** Ownership facts the client types at the partner search portal (#225). */
+  match_fields: {
+    policy_number: string;
+    contract_start: string;
+  };
 }
 
 export interface BuildCfdiInput {
@@ -77,22 +91,32 @@ export interface BuildCfdiInput {
   description: string | null;
   type: PaymentType;
   method: PaymentMethod | null;
+  /** Ownership facts — the issuance service guarantees contractStartDate is set. */
+  policy: {
+    policyNumber: string;
+    contractStartDate: Date;
+  };
 }
 
 /**
  * Build the micfdi /v1/records payload. `unit_price` is the stored IVA-exclusive
- * subtotal, falling back to the reverse-IVA of the gross amount for legacy rows.
- * `formaPagoOverride` lets the manual-payment picker (T2) set the SAT code.
+ * subtotal (2-decimal string per the micfdi contract), falling back to the
+ * reverse-IVA of the gross amount for legacy rows. `formaPagoOverride` lets the
+ * manual-payment picker (T2) set the SAT code.
  */
 export function buildCfdiSubmission(
   payment: BuildCfdiInput,
   formaPagoOverride?: string,
 ): CfdiSubmission {
-  const unit_price = payment.subtotal ?? calculateSubtotalFromTotal(payment.amount).subtotal;
+  const unitPrice = payment.subtotal ?? calculateSubtotalFromTotal(payment.amount).subtotal;
   return {
     external_ref: payment.id,
-    unit_price,
+    unit_price: unitPrice.toFixed(2),
     description: payment.description ?? conceptFromType(payment.type),
     payment_form: formaPagoOverride ?? formaPagoFromMethod(payment.method),
+    match_fields: {
+      policy_number: payment.policy.policyNumber,
+      contract_start: formatContractStart(payment.policy.contractStartDate),
+    },
   };
 }
