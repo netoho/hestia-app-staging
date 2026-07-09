@@ -788,7 +788,7 @@ Hola${data.payerName ? ` ${data.payerName}` : ''},
 Registramos tu pago y ya puedes generar tu factura (CFDI). En el portal ingresarás
 tu RFC y datos fiscales; el enlace es permanente y puedes usarlo cuando lo necesites.
 
-Póliza: ${data.policyNumber}
+Protección: ${data.policyNumber}
 Concepto: ${data.paymentDescription}
 Monto: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.amount)}
 
