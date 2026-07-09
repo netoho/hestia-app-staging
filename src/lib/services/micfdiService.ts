@@ -29,6 +29,19 @@ export interface MicfdiRecordResult {
   idempotentReplay: boolean;
 }
 
+/** Full record detail from GET /v1/records/:id — the stamped-CFDI fields appear once the client invoices. */
+export interface MicfdiRecordDetail {
+  recordId: string | null;
+  status: string | null;
+  portalUrl: string | null;
+  folio: string | null;
+  uuid: string | null;
+  subtotal: number | null;
+  iva: number | null;
+  total: number | null;
+  stampedAt: Date | null;
+}
+
 class MiCfdiService extends BaseService {
   private apiKey: string | undefined;
   private baseUrl: string;
@@ -86,6 +99,59 @@ class MiCfdiService extends BaseService {
       portalUrl: data.portal_url ?? null,
       status: data.record?.status ?? 'registered',
       idempotentReplay: data.idempotent_replay === true || response.status === 200,
+    };
+  }
+
+  /**
+   * GET /v1/records/:id — fetch a record's current state for reconciliation
+   * (#216). micfdi sends no webhooks, so the stamped-CFDI fields (folio, uuid,
+   * totals) are learned by polling. Field names parsed defensively pending live
+   * confirmation of the /v1/records response shape (HITL).
+   */
+  async getRecord(recordId: string): Promise<MicfdiRecordDetail> {
+    this.ensureConfigured();
+
+    const response = await fetch(`${this.baseUrl}/v1/records/${encodeURIComponent(recordId)}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${this.apiKey!}` },
+      cache: 'no-store',
+    });
+
+    const data = (await response.json().catch(() => ({}))) as {
+      record?: {
+        id?: string;
+        status?: string;
+        folio?: string;
+        uuid?: string;
+        subtotal?: number;
+        iva?: number;
+        total?: number;
+        stamped_at?: string;
+      };
+      portal_url?: string;
+      error?: { code?: string; message?: string };
+    };
+
+    if (!response.ok) {
+      const code = data.error?.code ?? `http_${response.status}`;
+      const message = data.error?.message ?? `micfdi request failed (${response.status})`;
+      this.log('error', 'micfdi getRecord failed', { status: response.status, code, recordId });
+      throw new ServiceError(ErrorCode.INTERNAL_ERROR, `micfdi: ${message}`, 502, { code });
+    }
+
+    const stampedAtRaw = data.record?.stamped_at;
+    const stampedAt = stampedAtRaw ? new Date(stampedAtRaw) : null;
+
+    return {
+      recordId: data.record?.id ?? null,
+      status: data.record?.status ?? null,
+      portalUrl: data.portal_url ?? null,
+      folio: data.record?.folio ?? null,
+      uuid: data.record?.uuid ?? null,
+      subtotal: data.record?.subtotal ?? null,
+      iva: data.record?.iva ?? null,
+      total: data.record?.total ?? null,
+      stampedAt: stampedAt && !isNaN(stampedAt.getTime()) ? stampedAt : null,
     };
   }
 }
