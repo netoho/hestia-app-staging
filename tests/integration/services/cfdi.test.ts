@@ -4,6 +4,7 @@ import { createPolicyWithActors, createMultiTenantPolicy } from '../scenarios';
 import { paymentFactory, completedPayment, landlordFactory } from '../factories';
 import { PaymentStatus, PaymentType, PaymentMethod, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { cfdiIssuanceService } from '@/lib/services/cfdi/cfdiIssuanceService';
+import { cfdiReconciliationService } from '@/lib/services/cfdi/reconciliationService';
 import { deliverCfdiPortalLink } from '@/lib/services/cfdi/delivery';
 import { paymentService } from '@/lib/services/paymentService';
 
@@ -145,6 +146,72 @@ describe('verifyManualPayment → CFDI hook', () => {
     expect(updated!.satFormaPago).toBe('02'); // approver override wins over the recorded 03
 
     issueSpy.mockRestore();
+  });
+});
+
+// micfdiService.getRecord is preload-mocked to return a canned STAMPED record
+// (invoiced, folio F-TEST-001, uuid UUID-TEST-0001, total 116) — we assert the
+// DB transition, never spyOn the mock.
+describe('cfdiReconciliationService (#216)', () => {
+  async function createRecord(
+    policyId: string,
+    overrides: Partial<{ status: string; micfdiRecordId: string | null; folio: string }> = {},
+  ) {
+    const payment = await completedPayment.create(
+      { type: PaymentType.TENANT_PORTION },
+      { transient: { policyId } },
+    );
+    return prisma.cfdiRecord.create({
+      data: {
+        paymentId: payment.id,
+        externalRef: payment.id,
+        micfdiRecordId: overrides.micfdiRecordId === undefined ? 'rec_pending' : overrides.micfdiRecordId,
+        portalUrl: 'https://portal.micfdi.test/r/pending',
+        status: overrides.status ?? 'registered',
+        folio: overrides.folio,
+        unitPrice: 100,
+        paymentForm: '03',
+      },
+    });
+  }
+
+  test('sweep advances a registered record to the stamped state (status/folio/uuid/totals)', async () => {
+    const { policy } = await createPolicyWithActors();
+    const record = await createRecord(policy.id);
+
+    const result = await cfdiReconciliationService.reconcilePending();
+
+    expect(result).toMatchObject({ scanned: 1, updated: 1, invoiced: 1, failed: 0 });
+    const updated = await prisma.cfdiRecord.findUniqueOrThrow({ where: { id: record.id } });
+    expect(updated.status).toBe('invoiced');
+    expect(updated.folio).toBe('F-TEST-001');
+    expect(updated.uuid).toBe('UUID-TEST-0001');
+    expect(updated.total).toBe(116);
+    expect(updated.stampedAt).not.toBeNull();
+  });
+
+  test('terminal (invoiced) records are not polled — their stamped facts stay put', async () => {
+    const { policy } = await createPolicyWithActors();
+    const done = await createRecord(policy.id, { status: 'invoiced', folio: 'KEEP-ME' });
+
+    const result = await cfdiReconciliationService.reconcilePending();
+
+    // Nothing non-terminal to scan; the mock's F-TEST-001 never overwrote it.
+    expect(result.scanned).toBe(0);
+    const untouched = await prisma.cfdiRecord.findUniqueOrThrow({ where: { id: done.id } });
+    expect(untouched.folio).toBe('KEEP-ME');
+    expect(untouched.status).toBe('invoiced');
+  });
+
+  test('records without a micfdi id are skipped by the sweep', async () => {
+    const { policy } = await createPolicyWithActors();
+    const orphan = await createRecord(policy.id, { micfdiRecordId: null });
+
+    const result = await cfdiReconciliationService.reconcilePending();
+
+    expect(result.scanned).toBe(0);
+    const untouched = await prisma.cfdiRecord.findUniqueOrThrow({ where: { id: orphan.id } });
+    expect(untouched.status).toBe('registered');
   });
 });
 
