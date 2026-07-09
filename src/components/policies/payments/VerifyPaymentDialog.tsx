@@ -23,13 +23,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, CheckCircle2, XCircle, FileText, Download } from 'lucide-react';
 import { PaymentType, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { trpc } from '@/lib/trpc/client';
 import type { PaymentWithStatus } from '@/lib/services/paymentService';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDateTime } from '@/lib/utils/formatting';
-import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS } from '@/lib/constants/paymentConfig';
+import { PAYMENT_TYPE_LABELS, PAYER_TYPE_LABELS, SAT_FORMA_PAGO_OPTIONS, DEFAULT_SAT_FORMA_PAGO } from '@/lib/constants/paymentConfig';
 
 interface VerifyPaymentDialogProps {
   open: boolean;
@@ -46,6 +53,11 @@ export function VerifyPaymentDialog({
 }: VerifyPaymentDialogProps) {
   const [notes, setNotes] = useState('');
   const [action, setAction] = useState<'approve' | 'reject' | null>(null);
+  // Prefilled from the code chosen at record time; the approver can override it
+  // before the CFDI is issued. (Dialog remounts per payment, so no stale state.)
+  const [satFormaPago, setSatFormaPago] = useState<string>(
+    payment.satFormaPago ?? DEFAULT_SAT_FORMA_PAGO
+  );
   const rejectConfirmDialog = useDialogState();
 
   const verifyPayment = trpc.payment.verifyPayment.useMutation();
@@ -60,6 +72,7 @@ export function VerifyPaymentDialog({
         paymentId: payment.id,
         approved,
         notes: notes || undefined,
+        satFormaPago,
       });
 
       setNotes('');
@@ -144,6 +157,26 @@ export function VerifyPaymentDialog({
               </Button>
             </div>
           )}
+
+          {/* SAT forma de pago — confirmed/overridden before the CFDI is issued on approval */}
+          <div className="space-y-2">
+            <Label htmlFor="satFormaPago">Forma de Pago (SAT)</Label>
+            <Select value={satFormaPago} onValueChange={setSatFormaPago}>
+              <SelectTrigger id="satFormaPago">
+                <SelectValue placeholder="Seleccionar forma de pago" />
+              </SelectTrigger>
+              <SelectContent>
+                {SAT_FORMA_PAGO_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Se usará para la factura (CFDI) al aprobar el pago.
+            </p>
+          </div>
 
           {/* Notes input */}
           <div className="space-y-2">

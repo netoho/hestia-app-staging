@@ -21,6 +21,7 @@ class CfdiIssuanceService extends BaseService {
         amount: true,
         description: true,
         method: true,
+        satFormaPago: true,
       },
     });
 
@@ -41,7 +42,9 @@ class CfdiIssuanceService extends BaseService {
     });
     if (existing) return;
 
-    const submission = buildCfdiSubmission(payment);
+    // Manually-recorded payments carry an admin-picked SAT forma de pago; Stripe
+    // payments leave it null and fall back to the method-derived code.
+    const submission = buildCfdiSubmission(payment, payment.satFormaPago ?? undefined);
 
     try {
       const result = await micfdiService.submitPayment(submission);
