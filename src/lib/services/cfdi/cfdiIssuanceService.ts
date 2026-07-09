@@ -4,28 +4,46 @@
  * payment) and safe to call fire-and-forget — a micfdi failure is logged, never
  * thrown into the payment flow, and no record is written so a later completion
  * or manual resend (T4) can retry.
+ *
+ * resendForPayment (#215) is the interactive, staff-triggered counterpart: it
+ * self-heals (registers with micfdi when the record is missing or link-less),
+ * re-emails the payer group, and — unlike the fire-and-forget path — THROWS on
+ * failure so the admin sees what went wrong.
  */
 import { BaseService } from '../base/BaseService';
+import { ServiceError, ErrorCode } from '../types/errors';
 import { micfdiService } from '../micfdiService';
 import { buildCfdiSubmission, isCfdiEligible } from './payloadBuilder';
 import { deliverCfdiPortalLink } from './delivery';
+import type { EmailRecipient } from '../paymentRecipients';
+
+const CFDI_PAYMENT_SELECT = {
+  id: true,
+  status: true,
+  type: true,
+  subtotal: true,
+  amount: true,
+  description: true,
+  method: true,
+  satFormaPago: true,
+  paidBy: true,
+  policyId: true,
+} as const;
+
+export interface CfdiResendResult {
+  paymentId: string;
+  /** true when the record had to be created (or re-registered) now. */
+  generated: boolean;
+  portalUrl: string | null;
+  status: string;
+  recipients: EmailRecipient[];
+}
 
 class CfdiIssuanceService extends BaseService {
   async issueForPayment(paymentId: string): Promise<void> {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
-      select: {
-        id: true,
-        status: true,
-        type: true,
-        subtotal: true,
-        amount: true,
-        description: true,
-        method: true,
-        satFormaPago: true,
-        paidBy: true,
-        policyId: true,
-      },
+      select: CFDI_PAYMENT_SELECT,
     });
 
     if (!payment) {
@@ -34,7 +52,7 @@ class CfdiIssuanceService extends BaseService {
     }
 
     if (!isCfdiEligible(payment)) {
-      return; // refund / partial / not completed — never invoiced
+      return; // refund / not completed — never invoiced
     }
 
     // Idempotency: one CfdiRecord per payment. A duplicate completion is a
@@ -90,6 +108,107 @@ class CfdiIssuanceService extends BaseService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /**
+   * Staff "Reenviar factura" (#215). Self-healing across every record state:
+   *   - no record            → register with micfdi, persist, email
+   *   - record without link  → re-register (micfdi is idempotent on
+   *                            external_ref), refresh the row, email
+   *   - record with link     → re-email the existing permanent link (works for
+   *                            invoiced records too — the link never expires)
+   * Interactive: micfdi/eligibility failures THROW so the admin gets feedback.
+   * The resend is logged as a PolicyActivity.
+   */
+  async resendForPayment(paymentId: string, resentById: string): Promise<CfdiResendResult> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: CFDI_PAYMENT_SELECT,
+    });
+
+    if (!payment) {
+      throw new ServiceError(ErrorCode.NOT_FOUND, 'Payment not found', 404, { paymentId });
+    }
+
+    if (!isCfdiEligible(payment)) {
+      throw new ServiceError(
+        ErrorCode.VALIDATION_ERROR,
+        'Solo los pagos completados pueden generar factura',
+        400,
+        { paymentId, status: payment.status, type: payment.type },
+      );
+    }
+
+    const existing = await this.prisma.cfdiRecord.findUnique({ where: { paymentId } });
+
+    let record = existing;
+    const generated = !existing || !existing.portalUrl;
+    if (generated) {
+      const submission = buildCfdiSubmission(payment, payment.satFormaPago ?? undefined);
+      // Throws on micfdi failure — surfaced to the admin, unlike the hooks.
+      const result = await micfdiService.submitPayment(submission);
+      record = await this.prisma.cfdiRecord.upsert({
+        where: { paymentId },
+        create: {
+          paymentId: payment.id,
+          externalRef: submission.external_ref,
+          micfdiRecordId: result.recordId,
+          portalUrl: result.portalUrl,
+          status: result.status,
+          unitPrice: submission.unit_price,
+          paymentForm: submission.payment_form,
+          description: submission.description,
+        },
+        update: {
+          micfdiRecordId: result.recordId,
+          portalUrl: result.portalUrl,
+          status: result.status,
+          errorMessage: null,
+          unitPrice: submission.unit_price,
+          paymentForm: submission.payment_form,
+          description: submission.description,
+        },
+      });
+    }
+
+    // Email the same concept the CFDI was submitted with, not the raw payment
+    // description, so the mail and the factura always agree.
+    const recipients = await deliverCfdiPortalLink(
+      {
+        id: payment.id,
+        policyId: payment.policyId,
+        paidBy: payment.paidBy,
+        amount: payment.amount,
+        description: record!.description ?? payment.description,
+      },
+      record!.portalUrl,
+    );
+
+    await this.prisma.policyActivity.create({
+      data: {
+        policyId: payment.policyId,
+        action: 'cfdi_link_resent',
+        description: generated
+          ? `Factura (CFDI) generada y enviada: ${payment.type}`
+          : `Factura (CFDI) reenviada: ${payment.type}`,
+        details: {
+          paymentId,
+          generated,
+          portalUrl: record!.portalUrl,
+          recipients: recipients.length,
+        },
+        performedById: resentById,
+        performedByType: 'user',
+      },
+    });
+
+    return {
+      paymentId,
+      generated,
+      portalUrl: record!.portalUrl,
+      status: record!.status,
+      recipients,
+    };
   }
 }
 
