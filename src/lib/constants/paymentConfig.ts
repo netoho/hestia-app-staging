@@ -35,3 +35,18 @@ export const SAT_FORMA_PAGO_OPTIONS: { value: string; label: string }[] = [
 
 /** Default forma de pago for a manual payment — most arrive as bank transfers. */
 export const DEFAULT_SAT_FORMA_PAGO = '03';
+
+/**
+ * CFDI record status badge config (#215). Keys are micfdi's vocabulary
+ * (registered → validated → invoiced, or error) plus our local "pending".
+ */
+export const CFDI_STATUS_CONFIG: Record<
+  string,
+  { label: string; variant: 'warning' | 'info' | 'success' | 'error' | 'muted' | 'outline' }
+> = {
+  pending: { label: 'Pendiente', variant: 'warning' },
+  registered: { label: 'Registrada', variant: 'info' },
+  validated: { label: 'En proceso', variant: 'info' },
+  invoiced: { label: 'Facturada', variant: 'success' },
+  error: { label: 'Error', variant: 'error' },
+};
