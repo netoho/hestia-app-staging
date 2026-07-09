@@ -94,7 +94,7 @@ const PaymentBreakdownShape = z.object({
 });
 
 /** Mirrors the cfdiRecord select in paymentService.getPaymentSummary (#215). */
-const CfdiRecordSummaryShape = z.object({
+export const CfdiRecordSummaryShape = z.object({
   id: z.string(),
   status: z.string(),
   portalUrl: z.string().nullable(),
@@ -177,6 +177,12 @@ export const PaymentCfdiResendOutput = z.object({
   recipients: z.array(z.object({ email: z.string(), name: z.string() })),
 });
 export type PaymentCfdiResendOutput = z.infer<typeof PaymentCfdiResendOutput>;
+
+// ===========================================================================
+// payment.refreshCfdiStatus — refreshed CfdiRecord summary (#216)
+// ===========================================================================
+export const PaymentCfdiRefreshOutput = CfdiRecordSummaryShape;
+export type PaymentCfdiRefreshOutput = z.infer<typeof PaymentCfdiRefreshOutput>;
 
 // ===========================================================================
 // payment.sendPaymentLinkToTenants — { sentTo }

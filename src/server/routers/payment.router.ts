@@ -9,6 +9,7 @@ import {
   type PaymentSummary,
 } from '@/lib/services/paymentService';
 import { cfdiIssuanceService } from '@/lib/services/cfdi/cfdiIssuanceService';
+import { cfdiReconciliationService } from '@/lib/services/cfdi/reconciliationService';
 import { ServiceError } from '@/lib/services/types/errors';
 import {
   PaymentListOutput,
@@ -19,6 +20,7 @@ import {
   PaymentGetByIdOutput,
   PaymentSessionOutput,
   PaymentCfdiResendOutput,
+  PaymentCfdiRefreshOutput,
   PaymentSendLinkOutput,
   PaymentStripeReceiptOutput,
   PaymentPublicInfoOutput,
@@ -329,6 +331,31 @@ export const paymentRouter = createTRPCRouter({
             });
           }
           // micfdi failure — surface its message so staff know why.
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * On-demand CFDI status refresh (#216): pull the record's current state from
+   * micfdi (status/folio/uuid/totals) and return the refreshed summary.
+   * Admin/Staff only.
+   */
+  refreshCfdiStatus: adminProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .output(PaymentCfdiRefreshOutput)
+    .mutation(async ({ input }) => {
+      try {
+        return await cfdiReconciliationService.refreshForPayment(input.paymentId);
+      } catch (error) {
+        if (error instanceof ServiceError) {
+          if (error.statusCode === 404) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'El pago no tiene factura registrada' });
+          }
+          if (error.statusCode === 400) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+          }
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
         }
         throw error;
