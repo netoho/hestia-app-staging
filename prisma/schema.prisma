@@ -1171,6 +1171,7 @@ model Payment {
   receiptUrl      String? // DEPRECATED: No longer used, kept for backwards compatibility
   receiptS3Key    String? // S3 key for uploaded payment proof
   receiptFileName String? // Original filename of receipt
+  satFormaPago    String? // SAT c_FormaPago code (e.g. "03") chosen by admin for a manual payment's CFDI; drives CfdiRecord.paymentForm
 
   // Verification Fields (for manual payments)
   verifiedBy        String? // User ID who verified the payment
