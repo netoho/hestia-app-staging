@@ -8,6 +8,8 @@ import {
   type PolicyPaymentSessionsResult,
   type PaymentSummary,
 } from '@/lib/services/paymentService';
+import { cfdiIssuanceService } from '@/lib/services/cfdi/cfdiIssuanceService';
+import { ServiceError } from '@/lib/services/types/errors';
 import {
   PaymentListOutput,
   PaymentSummaryOutput,
@@ -16,6 +18,7 @@ import {
   PaymentRecordOutput,
   PaymentGetByIdOutput,
   PaymentSessionOutput,
+  PaymentCfdiResendOutput,
   PaymentSendLinkOutput,
   PaymentStripeReceiptOutput,
   PaymentPublicInfoOutput,
@@ -298,6 +301,35 @@ export const paymentRouter = createTRPCRouter({
             code: 'BAD_REQUEST',
             message: 'Este pago no está pendiente de verificación',
           });
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * "Reenviar factura" (#215): self-healing CFDI resend for a completed payment.
+   * Generates the micfdi record if missing (or link-less), then re-emails the
+   * permanent portal link to the payer group. Admin/Staff only.
+   */
+  resendCfdiPortalLink: adminProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .output(PaymentCfdiResendOutput)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await cfdiIssuanceService.resendForPayment(input.paymentId, ctx.userId);
+      } catch (error) {
+        if (error instanceof ServiceError) {
+          if (error.statusCode === 404) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Pago no encontrado' });
+          }
+          if (error.statusCode === 400) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Solo los pagos completados pueden generar factura',
+            });
+          }
+          // micfdi failure — surface its message so staff know why.
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
         }
         throw error;
       }
