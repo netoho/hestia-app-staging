@@ -756,6 +756,61 @@ Gracias por tu pago. Si tienes alguna pregunta, contactanos en ${SUPPORT_EMAIL}.
   }
 };
 
+// CFDI portal link email data — sent to the payer group when a CfdiRecord is
+// created (#214). The permanent link lets the client self-stamp their CFDI.
+export interface CfdiPortalData {
+  email: string;
+  payerName?: string;
+  policyNumber: string;
+  paymentDescription: string;
+  amount: number;
+  portalUrl: string;
+}
+
+export const sendCfdiPortalEmail = async (data: CfdiPortalData): Promise<boolean> => {
+  try {
+    const { render } = await import('@react-email/render');
+    const { CfdiPortalEmail } = await import('../../templates/email/react-email/CfdiPortalEmail');
+
+    const html = await render(await CfdiPortalEmail({
+      payerName: data.payerName,
+      policyNumber: data.policyNumber,
+      paymentDescription: data.paymentDescription,
+      amount: data.amount,
+      portalUrl: data.portalUrl,
+    }));
+
+    const subject = emailSubject(`Genera tu factura (CFDI) - ${data.policyNumber}`);
+
+    const text = `
+Hola${data.payerName ? ` ${data.payerName}` : ''},
+
+Registramos tu pago y ya puedes generar tu factura (CFDI). En el portal ingresarás
+tu RFC y datos fiscales; el enlace es permanente y puedes usarlo cuando lo necesites.
+
+Póliza: ${data.policyNumber}
+Concepto: ${data.paymentDescription}
+Monto: ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(data.amount)}
+
+Genera tu factura aquí: ${data.portalUrl}
+
+Si tienes alguna pregunta, contactanos en ${SUPPORT_EMAIL}.
+
+© ${new Date().getFullYear()} Hestia PLP. Todos los derechos reservados.
+    `.trim();
+
+    return await EmailProvider.sendEmail({
+      to: data.email,
+      subject,
+      html,
+      text
+    });
+  } catch (error) {
+    console.error('Failed to send CFDI portal email:', error);
+    return false;
+  }
+};
+
 // All payments completed email data (for admin notification)
 export interface AllPaymentsCompletedData {
   adminEmail: string;

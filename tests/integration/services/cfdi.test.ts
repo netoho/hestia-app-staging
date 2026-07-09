@@ -1,9 +1,10 @@
 import { describe, test, expect, spyOn } from 'bun:test';
 import { prisma } from '../../utils/database';
-import { createPolicyWithActors } from '../scenarios';
-import { paymentFactory, completedPayment } from '../factories';
-import { PaymentStatus, PaymentType, PaymentMethod } from '@/prisma/generated/prisma-client/enums';
+import { createPolicyWithActors, createMultiTenantPolicy } from '../scenarios';
+import { paymentFactory, completedPayment, landlordFactory } from '../factories';
+import { PaymentStatus, PaymentType, PaymentMethod, PayerType } from '@/prisma/generated/prisma-client/enums';
 import { cfdiIssuanceService } from '@/lib/services/cfdi/cfdiIssuanceService';
+import { deliverCfdiPortalLink } from '@/lib/services/cfdi/delivery';
 import { paymentService } from '@/lib/services/paymentService';
 
 // micfdiService is mocked at preload (returns a canned "registered" record).
@@ -144,5 +145,52 @@ describe('verifyManualPayment → CFDI hook', () => {
     expect(updated!.satFormaPago).toBe('02'); // approver override wins over the recorded 03
 
     issueSpy.mockRestore();
+  });
+});
+
+// emailService is preload-mocked (sendCfdiPortalEmail is a no-op), so we assert
+// the RESOLVED recipients returned by deliverCfdiPortalLink — not a spyOn on the
+// mocked send fn (that binding flakes on CI; see memory).
+describe('deliverCfdiPortalLink (#214)', () => {
+  const url = 'https://portal.micfdi.test/r/abc';
+
+  test('TENANT-paid → every tenant of the policy', async () => {
+    const { policy, tenants } = await createMultiTenantPolicy({ tenantCount: 2 });
+    const recipients = await deliverCfdiPortalLink(
+      { id: 'pay_t', policyId: policy.id, paidBy: PayerType.TENANT, amount: 1000, description: 'Pago' },
+      url,
+    );
+    expect(recipients.map((r) => r.email).sort()).toEqual(tenants.map((t) => t.email).sort());
+    expect(recipients).toHaveLength(2);
+  });
+
+  test('LANDLORD-paid → every landlord (primary + co-owner)', async () => {
+    const { policy, landlord } = await createPolicyWithActors();
+    const coLandlord = await landlordFactory.create({}, { transient: { policyId: policy.id } });
+    const recipients = await deliverCfdiPortalLink(
+      { id: 'pay_l', policyId: policy.id, paidBy: PayerType.LANDLORD, amount: 1000, description: 'Pago' },
+      url,
+    );
+    expect(recipients.map((r) => r.email).sort()).toEqual([landlord.email, coLandlord.email].sort());
+  });
+
+  test('JOINT_OBLIGOR / AVAL → no auto-recipient rule yet (#219), returns empty', async () => {
+    const { policy } = await createPolicyWithActors();
+    for (const paidBy of [PayerType.JOINT_OBLIGOR, PayerType.AVAL]) {
+      const recipients = await deliverCfdiPortalLink(
+        { id: 'pay_g', policyId: policy.id, paidBy, amount: 1000, description: 'Pago' },
+        url,
+      );
+      expect(recipients).toEqual([]);
+    }
+  });
+
+  test('no portal_url → nothing delivered', async () => {
+    const { policy } = await createPolicyWithActors();
+    const recipients = await deliverCfdiPortalLink(
+      { id: 'pay_n', policyId: policy.id, paidBy: PayerType.TENANT, amount: 1000, description: 'Pago' },
+      null,
+    );
+    expect(recipients).toEqual([]);
   });
 });
