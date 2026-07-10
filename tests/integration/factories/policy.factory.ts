@@ -55,8 +55,10 @@ export const policyFactory = Factory.define<Policy, PolicyTransient>(
       approvedAt: null,
       activatedAt: null,
       expiresAt: null,
-      contractStartDate: null,
-      contractEndDate: null,
+      // Non-null by default: business rule (#225) — payments only exist once the
+      // contract dates are set, and CFDI issuance errors without a start date.
+      contractStartDate: new Date('2026-05-01T00:00:00.000Z'),
+      contractEndDate: new Date('2027-04-30T00:00:00.000Z'),
       reviewNotes: null,
       cancelledAt: null,
       cancellationReason: null,

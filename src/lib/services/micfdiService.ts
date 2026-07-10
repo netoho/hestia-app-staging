@@ -15,10 +15,19 @@ export interface MicfdiSubmissionInput {
   external_ref: string;
   description: string;
   payment_form: string;
-  /** IVA-exclusive; micfdi adds 16% IVA automatically. */
-  unit_price: number;
+  /** IVA-exclusive, 2-decimal STRING per the micfdi contract (e.g. "4310.34"). */
+  unit_price: string;
   quantity?: number;
   client?: { name?: string; email?: string };
+  /**
+   * Ownership facts (#225): what the client types at the partner search portal
+   * (facturacion.*) to find + stamp this record.
+   */
+  match_fields?: {
+    policy_number: string;
+    /** Date-only ISO, e.g. "2026-05-01". */
+    contract_start: string;
+  };
 }
 
 export interface MicfdiRecordResult {
@@ -45,11 +54,17 @@ export interface MicfdiRecordDetail {
 class MiCfdiService extends BaseService {
   private apiKey: string | undefined;
   private baseUrl: string;
+  private productKey: string | undefined;
+  private unitKey: string | undefined;
 
   constructor() {
     super();
     this.apiKey = process.env.MICFDI_API_KEY;
     this.baseUrl = (process.env.MICFDI_API_BASE_URL || DEFAULT_STAGING_URL).replace(/\/$/, '');
+    // SAT c_ClaveProdServ / c_ClaveUnidad for the line item (#225). When unset
+    // the fields are omitted and micfdi's issuer defaults apply (T1 behavior).
+    this.productKey = process.env.MICFDI_PRODUCT_KEY;
+    this.unitKey = process.env.MICFDI_UNIT_KEY;
   }
 
   private ensureConfigured(): void {
@@ -72,7 +87,12 @@ class MiCfdiService extends BaseService {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey!}`,
       },
-      body: JSON.stringify({ quantity: 1, ...input }),
+      body: JSON.stringify({
+        quantity: 1,
+        ...(this.productKey ? { product_key: this.productKey } : {}),
+        ...(this.unitKey ? { unit_key: this.unitKey } : {}),
+        ...input,
+      }),
       cache: 'no-store',
     });
 
@@ -90,6 +110,9 @@ class MiCfdiService extends BaseService {
         status: response.status,
         code,
         external_ref: input.external_ref,
+        // Full error body — micfdi's validation messages are the only clue
+        // when a live submission is rejected.
+        body: JSON.stringify(data),
       });
       throw new ServiceError(ErrorCode.INTERNAL_ERROR, `micfdi: ${message}`, 502, { code });
     }

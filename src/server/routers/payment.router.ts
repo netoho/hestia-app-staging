@@ -325,10 +325,9 @@ export const paymentRouter = createTRPCRouter({
             throw new TRPCError({ code: 'NOT_FOUND', message: 'Pago no encontrado' });
           }
           if (error.statusCode === 400) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Solo los pagos completados pueden generar factura',
-            });
+            // Two causes (not completed / missing contract start) — the
+            // service message says which.
+            throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
           }
           // micfdi failure — surface its message so staff know why.
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
